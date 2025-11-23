@@ -9,6 +9,9 @@ export default function BottomNav() {
     const pathname = usePathname();
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
 
+    // Hide BottomNav on Product Detail Page
+    if (pathname.startsWith("/product/")) return null;
+
     const navItems = [
         { href: "/", label: "خانه", icon: Home },
         { href: "/categories", label: "دسته‌بندی", icon: LayoutGrid },

@@ -6,6 +6,7 @@ import "swiper/css";
 import "swiper/css/free-mode";
 import { PRODUCTS } from "@/lib/mock/homeData";
 import { ChevronLeft, Percent } from "lucide-react";
+import Link from "next/link";
 
 export default function SpecialOfferRail() {
     return (
@@ -20,7 +21,7 @@ export default function SpecialOfferRail() {
                         <div className="w-5 h-5 border-[1.5px] border-white rounded-full flex items-center justify-center">
                             <Percent size={12} className="text-white fill-white" />
                         </div>
-                        <h2 className="text-base font-bold text-white">شگفت‌انگیز</h2>
+                        <h2 className="text-base font-bold text-white">فروش‌ویژه</h2>
                     </div>
 
                     {/* Center: Timer (Boxed) */}
@@ -51,44 +52,46 @@ export default function SpecialOfferRail() {
                 >
                     {PRODUCTS.map((product) => (
                         <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
-                            <div className="bg-white p-3 rounded-lg h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+                            <Link href={`/product/${product.id}`} className="block h-full">
+                                <div className="bg-white p-3 rounded-lg h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
 
-                                {/* Image */}
-                                <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
-                                    <div className="w-full h-full bg-gray-100 group-hover:scale-105 transition-transform duration-500" />
-                                </div>
-
-                                {/* Title */}
-                                <h3 className="text-[11px] font-bold text-gray-700 leading-5 line-clamp-2 mb-2 min-h-[40px]">
-                                    {product.name}
-                                </h3>
-
-                                {/* Price Section */}
-                                <div className="flex flex-col gap-1 mt-auto">
-                                    {/* Row 1: Old Price & Discount */}
-                                    <div className="flex items-center justify-between h-5">
-                                        {product.discount > 0 ? (
-                                            <>
-                                                {/* 👇👇👇 تغییر ۳: رنگ برچسب تخفیف به رنگ برند 👇👇👇 */}
-                                                <div className="bg-vita-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
-                                                    {product.discount}٪
-                                                </div>
-                                                <span className="text-[10px] text-gray-300 line-through decoration-gray-300">
-                                                    {(product.price * 1.1).toLocaleString("fa-IR")}
-                                                </span>
-                                            </>
-                                        ) : <div className="h-5" />}
+                                    {/* Image */}
+                                    <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                                        <div className="w-full h-full bg-gray-100 group-hover:scale-105 transition-transform duration-500" />
                                     </div>
 
-                                    {/* Row 2: Current Price */}
-                                    <div className="flex items-center justify-end gap-1 text-gray-800">
-                                        <span className="text-[15px] font-black tracking-tight">
-                                            {product.price.toLocaleString("fa-IR")}
-                                        </span>
-                                        <span className="text-[10px] font-medium text-gray-600">تومان</span>
+                                    {/* Title */}
+                                    <h3 className="text-[11px] font-bold text-gray-700 leading-5 line-clamp-2 mb-2 min-h-[40px]">
+                                        {product.name}
+                                    </h3>
+
+                                    {/* Price Section */}
+                                    <div className="flex flex-col gap-1 mt-auto">
+                                        {/* Row 1: Old Price & Discount */}
+                                        <div className="flex items-center justify-between h-5">
+                                            {product.discount > 0 ? (
+                                                <>
+                                                    {/* 👇👇👇 تغییر ۳: رنگ برچسب تخفیف به رنگ برند 👇👇👇 */}
+                                                    <div className="bg-vita-600 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                        {product.discount}٪
+                                                    </div>
+                                                    <span className="text-[10px] text-gray-300 line-through decoration-gray-300">
+                                                        {(product.price * 1.1).toLocaleString("fa-IR")}
+                                                    </span>
+                                                </>
+                                            ) : <div className="h-5" />}
+                                        </div>
+
+                                        {/* Row 2: Current Price */}
+                                        <div className="flex items-center justify-end gap-1 text-gray-800">
+                                            <span className="text-[15px] font-black tracking-tight">
+                                                {product.price.toLocaleString("fa-IR")}
+                                            </span>
+                                            <span className="text-[10px] font-medium text-gray-600">تومان</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </Link>
                         </SwiperSlide>
                     ))}
 
