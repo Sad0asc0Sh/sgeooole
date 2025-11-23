@@ -1,74 +1,108 @@
 "use client";
+
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 import { PRODUCTS } from "@/lib/mock/homeData";
-import { Timer } from "lucide-react";
+import { ChevronLeft, Percent } from "lucide-react";
 
 export default function SpecialOfferRail() {
     return (
-        <div className="py-8 bg-gray-600 relative overflow-hidden">
-            {/* Golden Strips Decoration */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-vita-400 to-vita-600 opacity-80" />
-            <div className="absolute bottom-0 right-0 w-full h-1 bg-gradient-to-l from-vita-400 to-vita-600 opacity-80" />
+        <div className="py-5 bg-[#ef4056] relative overflow-hidden">
+            <div className="container mx-auto">
+                {/* Header Section */}
+                <div className="px-4 mb-3 flex items-center justify-between">
 
-            <div className="px-4 mb-6 flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold">
-                        <span className="text-welf-900">محصولات </span>
-                        <span className="text-vita-600">شگفت‌انگیز</span>
-                    </h2>
-                    {/* Global Timer */}
-                    <div className="flex items-center gap-2 bg-welf-900 px-3 py-1.5 rounded-lg text-vita-500 font-mono text-sm font-bold shadow-sm">
-                        <Timer size={16} />
-                        <span>05:00:00</span>
+                    {/* Right: Title & Icon */}
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 border-[1.5px] border-white rounded-full flex items-center justify-center">
+                            <Percent size={12} className="text-white fill-white" />
+                        </div>
+                        <h2 className="text-base font-bold text-white">شگفت‌انگیز</h2>
                     </div>
+
+                    {/* Center: Timer (Boxed) */}
+                    <div className="flex items-center gap-1 text-white font-bold text-xs dir-ltr">
+                        <div className="bg-white text-[#ef4056] w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">05</div>
+                        <span className="mb-1">:</span>
+                        <div className="bg-white text-[#ef4056] w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">18</div>
+                        <span className="mb-1">:</span>
+                        <div className="bg-white text-[#ef4056] w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">10</div>
+                    </div>
+
+                    {/* Left: See All */}
+                    <button className="flex items-center gap-0.5 text-white text-xs font-medium hover:text-white/90 transition-colors">
+                        <span>همه</span>
+                        <ChevronLeft size={14} />
+                    </button>
                 </div>
-            </div>
 
-            <Swiper
-                modules={[FreeMode]}
-                freeMode={true}
-                spaceBetween={16}
-                slidesPerView={"auto"}
-                className="w-full !px-4"
-                grabCursor={true}
-            >
-                {PRODUCTS.map((product) => (
-                    <SwiperSlide key={product.id} style={{ width: "150px" }}>
-                        <div className="flex flex-col gap-2 bg-white p-3 rounded-2xl shadow-sm border border-white hover:border-vita-200 transition-colors cursor-pointer group">
-                            {/* Image */}
-                            <div className="aspect-square rounded-xl bg-gray-50 overflow-hidden relative">
-                                <div className="w-full h-full bg-gray-200 group-hover:scale-105 transition-transform duration-500" />
-                                {product.discount > 0 && (
-                                    <span className="absolute top-2 right-2 bg-vita-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                        {product.discount}%
-                                    </span>
-                                )}
-                            </div>
+                {/* Products Slider */}
+                <Swiper
+                    modules={[FreeMode]}
+                    freeMode={true}
+                    spaceBetween={8}
+                    slidesPerView={"auto"}
+                    className="w-full !px-4 !pb-2"
+                    grabCursor={true}
+                >
+                    {/* First Slide: Special Offer Banner (Optional placeholder) */}
 
-                            {/* Info */}
-                            <div className="flex flex-col gap-1">
-                                <h4 className="text-xs font-bold text-welf-800 truncate leading-relaxed">{product.name}</h4>
-                                <div className="flex flex-col items-end mt-1">
-                                    {product.discount > 0 && (
-                                        <span className="text-[10px] text-gray-400 line-through decoration-red-400">
-                                            {(product.price * 1.1).toLocaleString("fa-IR")}
-                                        </span>
-                                    )}
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-sm font-black text-welf-900">
+                    {PRODUCTS.map((product) => (
+                        <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
+                            <div className="bg-white p-3 rounded-lg h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
+
+                                {/* Image */}
+                                <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                                    <div className="w-full h-full bg-gray-100 group-hover:scale-105 transition-transform duration-500" />
+                                    {/* Placeholder for actual image - in real app use <Image /> */}
+                                </div>
+
+                                {/* Title */}
+                                <h3 className="text-[11px] font-bold text-gray-700 leading-5 line-clamp-2 mb-2 min-h-[40px]">
+                                    {product.name}
+                                </h3>
+
+                                {/* Price Section */}
+                                <div className="flex flex-col gap-1 mt-auto">
+                                    {/* Row 1: Old Price & Discount */}
+                                    <div className="flex items-center justify-between h-5">
+                                        {product.discount > 0 ? (
+                                            <>
+                                                <div className="bg-[#ef4056] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                    {product.discount}٪
+                                                </div>
+                                                <span className="text-[10px] text-gray-300 line-through decoration-gray-300">
+                                                    {(product.price * 1.1).toLocaleString("fa-IR")}
+                                                </span>
+                                            </>
+                                        ) : <div className="h-5" />}
+                                    </div>
+
+                                    {/* Row 2: Current Price */}
+                                    <div className="flex items-center justify-end gap-1 text-gray-800">
+                                        <span className="text-[15px] font-black tracking-tight">
                                             {product.price.toLocaleString("fa-IR")}
                                         </span>
-                                        <span className="text-[10px] text-welf-500 font-medium">تومان</span>
+                                        <span className="text-[10px] font-medium text-gray-600">تومان</span>
                                     </div>
                                 </div>
                             </div>
+                        </SwiperSlide>
+                    ))}
+
+                    {/* "See All" Card (Last Slide) */}
+                    <SwiperSlide style={{ width: "148px", height: "auto" }}>
+                        <div className="bg-white h-full rounded-lg flex flex-col items-center justify-center gap-3 cursor-pointer group border border-transparent hover:border-gray-100">
+                            <div className="w-12 h-12 border border-gray-100 rounded-full flex items-center justify-center text-[#ef4056] group-hover:bg-gray-50 transition-colors">
+                                <ChevronLeft size={24} />
+                            </div>
+                            <span className="text-sm font-bold text-gray-700">مشاهده همه</span>
                         </div>
                     </SwiperSlide>
-                ))}
-            </Swiper>
+                </Swiper>
+            </div>
         </div>
     );
 }
