@@ -32,6 +32,12 @@ export interface Product {
   countInStock: number;
   colors?: ProductColor[]; // Optional color variants
   specs?: ProductSpec[]; // Technical specifications
+
+  // Time-based promotion fields
+  isFlashDeal?: boolean;
+  flashDealEndTime?: string; // ISO date string
+  isSpecialOffer?: boolean;
+  specialOfferEndTime?: string; // ISO date string
 }
 
 // Backend MongoDB Product Interface (typical structure)
@@ -55,6 +61,12 @@ interface BackendProduct {
   discount?: number;
   colors?: ProductColor[];
   specs?: ProductSpec[];
+
+  // Time-based promotion fields (matching backend model)
+  isFlashDeal?: boolean;
+  flashDealEndTime?: string; // Date from backend becomes ISO string
+  isSpecialOffer?: boolean;
+  specialOfferEndTime?: string;
 }
 
 /**
@@ -128,6 +140,12 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
 
     // Specifications (optional)
     specs: backendProduct.specs,
+
+    // Time-based promotions
+    isFlashDeal: backendProduct.isFlashDeal,
+    flashDealEndTime: backendProduct.flashDealEndTime,
+    isSpecialOffer: backendProduct.isSpecialOffer,
+    specialOfferEndTime: backendProduct.specialOfferEndTime,
   };
 };
 
@@ -276,6 +294,40 @@ export const productService = {
       return items.map(mapBackendToFrontend);
     } catch (error) {
       console.error(`Error fetching products for category ${category}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch flash deal products (with active countdown timers)
+   * @param limit - Number of products to return (default: 10)
+   */
+  getFlashDeals: async (limit: number = 10): Promise<Product[]> => {
+    try {
+      // Query products with isFlashDeal=true and flashDealEndTime greater than now
+      const now = new Date().toISOString();
+      const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}`);
+      const items = productService._extractList(response);
+      return items.map(mapBackendToFrontend);
+    } catch (error) {
+      console.error("Error fetching flash deals:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch special offer products (with global countdown timer)
+   * @param limit - Number of products to return (default: 10)
+   */
+  getSpecialOffers: async (limit: number = 10): Promise<Product[]> => {
+    try {
+      // Query products with isSpecialOffer=true and specialOfferEndTime greater than now
+      const now = new Date().toISOString();
+      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}`);
+      const items = productService._extractList(response);
+      return items.map(mapBackendToFrontend);
+    } catch (error) {
+      console.error("Error fetching special offers:", error);
       throw error;
     }
   },

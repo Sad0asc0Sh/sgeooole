@@ -6,6 +6,7 @@ import "swiper/css";
 import "swiper/css/free-mode";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface ProductRailProps {
     title: string;
@@ -42,8 +43,12 @@ export default function ProductRail({ title, products }: ProductRailProps) {
 
                                 {/* Image */}
                                 <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
-                                    <div className={`w-full h-full bg-gray-100 group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? 'grayscale opacity-60' : ''}`} />
-                                    {/* Placeholder for actual image */}
+                                    <Image
+                                        src={product.image || "/placeholder.png"}
+                                        alt={product.name}
+                                        fill
+                                        className={`object-cover group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? 'grayscale opacity-60' : ''}`}
+                                    />
 
                                     {/* OUT OF STOCK OVERLAY */}
                                     {product.countInStock === 0 && (

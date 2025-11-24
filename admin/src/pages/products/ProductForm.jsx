@@ -44,6 +44,15 @@ function ProductForm() {
   const [newAttributeName, setNewAttributeName] = useState('')
   const [newAttributeValues, setNewAttributeValues] = useState('')
 
+  // ============================================
+  // State برای فروش ویژه و تایمر
+  // ============================================
+  const [discount, setDiscount] = useState(0)
+  const [isFlashDeal, setIsFlashDeal] = useState(false)
+  const [flashDealEndTime, setFlashDealEndTime] = useState('')
+  const [isSpecialOffer, setIsSpecialOffer] = useState(false)
+  const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
+
   // Category store (Zustand)
   const { categoriesTree, loading: categoriesLoading } = useCategoryStore(
     (state) => ({
@@ -75,6 +84,18 @@ function ProductForm() {
       .filter(Boolean)
   }
 
+  // Helper: Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
+  const toDatetimeLocal = (isoString) => {
+    if (!isoString) return ''
+    const date = new Date(isoString)
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  }
+
   // Load product for edit mode
   useEffect(() => {
     if (!isEdit) return
@@ -98,6 +119,13 @@ function ProductForm() {
           setProductType(p.productType || 'simple')
           setAttributes(p.attributes || [])
           setVariants(p.variants || [])
+
+          // Load promotion fields
+          setDiscount(p.discount || 0)
+          setIsFlashDeal(p.isFlashDeal || false)
+          setFlashDealEndTime(toDatetimeLocal(p.flashDealEndTime))
+          setIsSpecialOffer(p.isSpecialOffer || false)
+          setSpecialOfferEndTime(toDatetimeLocal(p.specialOfferEndTime))
         }
       } catch (err) {
         message.error(
@@ -285,6 +313,7 @@ function ProductForm() {
         brand: values.brand,
         description: values.description,
         productType,
+        discount,
       }
 
       // برای محصولات ساده، price و stock اضافه کن
@@ -297,6 +326,17 @@ function ProductForm() {
       if (productType === 'variable') {
         payload.attributes = attributes
         payload.variants = variants
+      }
+
+      // اضافه کردن فیلدهای فروش ویژه
+      payload.isFlashDeal = isFlashDeal
+      if (isFlashDeal && flashDealEndTime) {
+        payload.flashDealEndTime = new Date(flashDealEndTime).toISOString()
+      }
+
+      payload.isSpecialOffer = isSpecialOffer
+      if (isSpecialOffer && specialOfferEndTime) {
+        payload.specialOfferEndTime = new Date(specialOfferEndTime).toISOString()
       }
 
       if (!isEdit) {
@@ -559,6 +599,189 @@ function ProductForm() {
                       </p>
                     </Upload.Dragger>
                   </>
+                ),
+              },
+              {
+                key: 'promotions',
+                label: 'فروش ویژه و تخفیف',
+                children: (
+                  <Space direction="vertical" style={{ width: '100%' }} size="large">
+                    {/* بخش تخفیف عمومی */}
+                    <Card title="تخفیف محصول" size="small">
+                      <Form.Item label="درصد تخفیف (%)">
+                        <InputNumber
+                          value={discount}
+                          onChange={(value) => setDiscount(value || 0)}
+                          min={0}
+                          max={100}
+                          style={{ width: '200px' }}
+                          placeholder="مثلاً: 20"
+                        />
+                        <p style={{ marginTop: 8, color: '#888', fontSize: '13px' }}>
+                          این تخفیف روی کارت محصول نمایش داده می‌شود
+                        </p>
+                      </Form.Item>
+                    </Card>
+
+                    {/* بخش پیشنهاد لحظه‌ای (Flash Deal) */}
+                    <Card
+                      title="پیشنهاد لحظه‌ای (Flash Deal)"
+                      size="small"
+                      style={{
+                        borderLeft: isFlashDeal ? '4px solid #1890ff' : 'none'
+                      }}
+                    >
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <input
+                            type="checkbox"
+                            id="flashDeal"
+                            checked={isFlashDeal}
+                            onChange={(e) => setIsFlashDeal(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <label
+                            htmlFor="flashDeal"
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            فعال‌سازی پیشنهاد لحظه‌ای
+                          </label>
+                        </div>
+
+                        {isFlashDeal && (
+                          <div
+                            style={{
+                              marginTop: '16px',
+                              padding: '16px',
+                              background: '#f0f5ff',
+                              borderRadius: '8px',
+                              animation: 'fadeIn 0.3s ease-in'
+                            }}
+                          >
+                            <Form.Item
+                              label="زمان پایان تایمر"
+                              style={{ marginBottom: 0 }}
+                            >
+                              <input
+                                type="datetime-local"
+                                value={flashDealEndTime}
+                                onChange={(e) => setFlashDealEndTime(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '1px solid #d9d9d9',
+                                  borderRadius: '6px',
+                                  fontSize: '14px',
+                                  outline: 'none',
+                                  transition: 'border-color 0.3s',
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#1890ff'}
+                                onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
+                              />
+                              <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+                                محصول با تایمر شمارش معکوس در بخش "پیشنهادات لحظه‌ای" نمایش داده می‌شود
+                              </p>
+                            </Form.Item>
+                          </div>
+                        )}
+                      </Space>
+                    </Card>
+
+                    {/* بخش شگفت‌انگیز (Special Offer) */}
+                    <Card
+                      title="شگفت‌انگیز (Special Offer)"
+                      size="small"
+                      style={{
+                        borderLeft: isSpecialOffer ? '4px solid #f5222d' : 'none'
+                      }}
+                    >
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <input
+                            type="checkbox"
+                            id="specialOffer"
+                            checked={isSpecialOffer}
+                            onChange={(e) => setIsSpecialOffer(e.target.checked)}
+                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <label
+                            htmlFor="specialOffer"
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              userSelect: 'none'
+                            }}
+                          >
+                            فعال‌سازی پیشنهاد ویژه
+                          </label>
+                        </div>
+
+                        {isSpecialOffer && (
+                          <div
+                            style={{
+                              marginTop: '16px',
+                              padding: '16px',
+                              background: '#fff1f0',
+                              borderRadius: '8px',
+                              animation: 'fadeIn 0.3s ease-in'
+                            }}
+                          >
+                            <Form.Item
+                              label="زمان پایان کمپین"
+                              style={{ marginBottom: 0 }}
+                            >
+                              <input
+                                type="datetime-local"
+                                value={specialOfferEndTime}
+                                onChange={(e) => setSpecialOfferEndTime(e.target.value)}
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  border: '1px solid #d9d9d9',
+                                  borderRadius: '6px',
+                                  fontSize: '14px',
+                                  outline: 'none',
+                                  transition: 'border-color 0.3s',
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#f5222d'}
+                                onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
+                              />
+                              <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+                                محصول در بخش "پیشنهادهای ویژه" با تایمر مشترک نمایش داده می‌شود
+                              </p>
+                            </Form.Item>
+                          </div>
+                        )}
+                      </Space>
+                    </Card>
+
+                    {/* راهنمای استفاده */}
+                    <Card size="small" style={{ background: '#fafafa' }}>
+                      <h4 style={{ marginBottom: '12px', fontSize: '14px' }}>
+                        📌 راهنمای استفاده:
+                      </h4>
+                      <ul style={{ marginBottom: 0, paddingRight: '20px', fontSize: '13px', color: '#666' }}>
+                        <li style={{ marginBottom: '6px' }}>
+                          <strong>پیشنهاد لحظه‌ای:</strong> هر محصول تایمر جداگانه‌ای دارد
+                        </li>
+                        <li style={{ marginBottom: '6px' }}>
+                          <strong>شگفت‌انگیز:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
+                        </li>
+                        <li style={{ marginBottom: '6px' }}>
+                          می‌توانید هر دو را همزمان فعال کنید
+                        </li>
+                        <li>
+                          محصولات پس از اتمام زمان به صورت خودکار از لیست حذف می‌شوند
+                        </li>
+                      </ul>
+                    </Card>
+                  </Space>
                 ),
               },
               // تب ویژگی‌ها و متغیرها (فقط برای محصولات متغیر)

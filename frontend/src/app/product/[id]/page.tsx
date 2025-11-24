@@ -7,6 +7,7 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import Link from "next/link";
+import Image from "next/image";
 import { productService, Product, ProductColor } from "@/services/productService";
 
 export default function ProductDetailPage() {
@@ -116,9 +117,13 @@ export default function ProductDetailPage() {
                 <Swiper modules={[Pagination]} pagination={{ clickable: true }} className="h-full">
                     {product.images.map((img, index) => (
                         <SwiperSlide key={index} className="flex items-center justify-center">
-                            <div className="w-full h-full flex items-center justify-center text-gray-300">
-                                {/* Replace with <Image> later for real images */}
-                                <div className="w-64 h-64 bg-gray-200 rounded-xl animate-pulse" />
+                            <div className="w-full h-full flex items-center justify-center text-gray-300 relative">
+                                <Image
+                                    src={img}
+                                    alt={`${product.title} - ${index + 1}`}
+                                    fill
+                                    className="object-contain p-8"
+                                />
                             </div>
                         </SwiperSlide>
                     ))}
@@ -162,9 +167,8 @@ export default function ProductDetailPage() {
                                 <button
                                     key={c.id}
                                     onClick={() => setSelectedColor(c)}
-                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                                        selectedColor.id === c.id ? "border-vita-500" : "border-gray-200"
-                                    }`}
+                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${selectedColor.id === c.id ? "border-vita-500" : "border-gray-200"
+                                        }`}
                                 >
                                     <span
                                         className="w-6 h-6 rounded-full border border-gray-100"
@@ -250,11 +254,10 @@ export default function ProductDetailPage() {
                 </div>
                 <button
                     disabled={product.countInStock === 0}
-                    className={`flex-1 font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform ${
-                        product.countInStock === 0
+                    className={`flex-1 font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform ${product.countInStock === 0
                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                             : "bg-gradient-to-r from-vita-500 to-vita-600 text-white shadow-vita-200"
-                    }`}
+                        }`}
                 >
                     {product.countInStock === 0 ? "ناموجود" : "افزودن به سبد خرید"}
                 </button>

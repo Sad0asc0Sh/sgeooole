@@ -242,6 +242,9 @@ ProductSchema.index({ name: 'text', description: 'text' })
 ProductSchema.index({ category: 1 })
 ProductSchema.index({ brand: 1 })
 ProductSchema.index({ slug: 1 })
+// Time-based promotion indexes
+ProductSchema.index({ isFlashDeal: 1, flashDealEndTime: 1 })
+ProductSchema.index({ isSpecialOffer: 1, specialOfferEndTime: 1 })
 
 // Simple slug generator from name if not provided
 ProductSchema.pre('save', function (next) {
