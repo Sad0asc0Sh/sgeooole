@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { ChevronLeft, Heart, Share2, Star, ShieldCheck, Store, Info, AlertCircle, Loader2, Check } from "lucide-react";
+import { ChevronLeft, Heart, Share2, Star, ShieldCheck, Store, Info, AlertCircle, Loader2, Check, Minus, Plus, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
@@ -22,7 +23,8 @@ export default function ProductDetailPage() {
     const [addingToCart, setAddingToCart] = useState(false);
     const [addedToCart, setAddedToCart] = useState(false);
 
-    const { addToCart } = useCart();
+    const { addToCart, getItemQuantity, updateQuantity, removeFromCart } = useCart();
+    const quantity = product ? getItemQuantity(product.id) : 0;
 
     useEffect(() => {
         const loadProduct = async () => {
@@ -54,19 +56,34 @@ export default function ProductDetailPage() {
         try {
             setAddingToCart(true);
             await addToCart(product, 1, selectedColor?.hex);
-
-            // Show success state
             setAddedToCart(true);
-
-            // Reset success state after 2 seconds
-            setTimeout(() => {
-                setAddedToCart(false);
-            }, 2000);
+            setTimeout(() => setAddedToCart(false), 2000);
         } catch (err) {
             console.error("Error adding to cart:", err);
-            alert("خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.");
         } finally {
             setAddingToCart(false);
+        }
+    };
+
+    const handleIncrement = async () => {
+        if (!product) return;
+        try {
+            await updateQuantity(product.id, quantity + 1);
+        } catch (err) {
+            console.error("Error incrementing:", err);
+        }
+    };
+
+    const handleDecrement = async () => {
+        if (!product) return;
+        try {
+            if (quantity > 1) {
+                await updateQuantity(product.id, quantity - 1);
+            } else {
+                await removeFromCart(product.id);
+            }
+        } catch (err) {
+            console.error("Error decrementing:", err);
         }
     };
 
@@ -154,8 +171,8 @@ export default function ProductDetailPage() {
                                 {product.campaignLabel && (
                                     <div className="absolute top-4 left-4 z-20">
                                         <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${product.campaignTheme === 'gold-red' ? 'bg-gradient-to-r from-yellow-400 to-red-600' :
-                                                product.campaignTheme === 'red-purple' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                                                    'bg-gradient-to-r from-lime-500 to-orange-400'
+                                            product.campaignTheme === 'red-purple' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
+                                                'bg-gradient-to-r from-lime-500 to-orange-400'
                                             }`}>
                                             {product.campaignLabel}
                                         </span>
@@ -289,35 +306,72 @@ export default function ProductDetailPage() {
                         <span className="text-xs text-gray-500">تومان</span>
                     </div>
                 </div>
-                <button
-                    onClick={handleAddToCart}
-                    disabled={product.countInStock === 0 || addingToCart}
-                    className={`flex-1 font-bold py-3.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 ${
-                        product.countInStock === 0
-                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : addedToCart
-                            ? "bg-green-500 text-white shadow-green-200"
-                            : "bg-gradient-to-r from-vita-500 to-vita-600 text-white shadow-vita-200 active:scale-95"
-                    }`}
-                >
-                    {product.countInStock === 0 ? (
-                        "ناموجود"
-                    ) : addingToCart ? (
-                        <>
-                            <Loader2 className="animate-spin" size={18} />
-                            <span>در حال افزودن...</span>
-                        </>
-                    ) : addedToCart ? (
-                        <>
-                            <Check size={18} />
-                            <span>به سبد خرید اضافه شد</span>
-                        </>
-                    ) : (
-                        "افزودن به سبد خرید"
-                    )}
-                </button>
+                <div className="flex-1 h-[50px] relative flex justify-end">
+                    <AnimatePresence mode="wait" initial={false}>
+                        {quantity > 0 ? (
+                            <motion.div
+                                key="quantity-controls"
+                                initial={{ opacity: 0, width: "100%" }}
+                                animate={{ opacity: 1, width: "160px" }}
+                                exit={{ opacity: 0, width: "100%" }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="h-full flex items-center justify-between bg-white border border-gray-200 rounded-lg shadow-sm px-1"
+                            >
+                                <motion.button
+                                    whileTap={{ scale: 0.8 }}
+                                    onClick={handleDecrement}
+                                    className="w-10 h-10 flex items-center justify-center text-amber-700 rounded-full hover:bg-amber-50 transition-colors"
+                                >
+                                    {quantity === 1 ? <Trash2 size={20} /> : <Minus size={20} />}
+                                </motion.button>
+
+                                <motion.span
+                                    key={quantity}
+                                    initial={{ y: 10, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="text-lg font-bold text-amber-700 w-8 text-center"
+                                >
+                                    {quantity.toLocaleString("fa-IR")}
+                                </motion.span>
+
+                                <motion.button
+                                    whileTap={{ scale: 0.8 }}
+                                    onClick={handleIncrement}
+                                    className="w-10 h-10 flex items-center justify-center text-amber-700 rounded-full hover:bg-amber-50 transition-colors"
+                                >
+                                    <Plus size={20} />
+                                </motion.button>
+                            </motion.div>
+                        ) : (
+                            <motion.button
+                                key="add-to-cart"
+                                initial={{ opacity: 0, width: "160px" }}
+                                animate={{ opacity: 1, width: "100%" }}
+                                exit={{ opacity: 0, width: "160px" }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleAddToCart}
+                                disabled={product.countInStock === 0 || addingToCart}
+                                className={`h-full font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition-all ${product.countInStock === 0
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-100"
+                                    }`}
+                            >
+                                {product.countInStock === 0 ? (
+                                    "ناموجود"
+                                ) : addingToCart ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={20} />
+                                        <span>...</span>
+                                    </>
+                                ) : (
+                                    "افزودن به سبد خرید"
+                                )}
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
-        </div>
+        </div >
     );
 }
