@@ -14,9 +14,10 @@ export interface CountdownReturn {
  */
 export const useCountdown = (targetDate: string | Date | undefined): CountdownReturn => {
   const countDownDate = new Date(targetDate || '').getTime();
-  const [countDown, setCountDown] = useState(
-    countDownDate - new Date().getTime()
-  );
+  const [countDown, setCountDown] = useState<number>(() => {
+    if (!targetDate || isNaN(countDownDate)) return 0;
+    return countDownDate - new Date().getTime();
+  });
 
   useEffect(() => {
     if (!targetDate || isNaN(countDownDate)) {
@@ -42,6 +43,15 @@ export const useCountdown = (targetDate: string | Date | undefined): CountdownRe
  * Helper function to calculate and format time values
  */
 const getReturnValues = (countDown: number): CountdownReturn => {
+  if (!isFinite(countDown)) {
+    return {
+      hours: '00',
+      minutes: '00',
+      seconds: '00',
+      isExpired: true,
+    };
+  }
+
   // If countdown is negative (expired), return zeros
   if (countDown < 0) {
     return {

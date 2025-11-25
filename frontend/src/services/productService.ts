@@ -80,13 +80,28 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     ? Math.round(backendProduct.price / (1 - discount / 100))
     : undefined;
 
-  // Handle images - support both single image and images array
+  // Handle images - support string URLs and objects with `url`
+  const normalizeImage = (img: any): string | null => {
+    if (typeof img === "string" && img.trim() !== "") return img.trim();
+    if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim() !== "") {
+      return img.url.trim();
+    }
+    return null;
+  };
+
   let imageArray: string[] = [];
   if (backendProduct.images && backendProduct.images.length > 0) {
-    imageArray = backendProduct.images;
-  } else if (backendProduct.image) {
-    imageArray = [backendProduct.image];
-  } else {
+    imageArray = backendProduct.images
+      .map(normalizeImage)
+      .filter((x): x is string => Boolean(x));
+  }
+  if (imageArray.length === 0 && backendProduct.image) {
+    const normalized = normalizeImage(backendProduct.image);
+    if (normalized) {
+      imageArray = [normalized];
+    }
+  }
+  if (imageArray.length === 0) {
     imageArray = ["/placeholder-product.png"];
   }
 

@@ -5,6 +5,11 @@ const {
   getCartStats,
   sendEmailReminder,
   sendSmsReminder,
+  getMyCart,
+  syncCart,
+  addOrUpdateItem,
+  removeItem,
+  clearCart,
 } = require('../controllers/cartController')
 const { protect, authorize } = require('../middleware/auth')
 
@@ -52,10 +57,40 @@ router.post(
   sendSmsReminder,
 )
 
-// در آینده روت‌های زیر برای فرانت‌اند سایت مشتری اضافه خواهد شد:
-// POST   /api/carts          - افزودن آیتم به سبد
-// GET    /api/carts/my-cart  - دریافت سبد فعلی کاربر
-// PUT    /api/carts/my-cart  - به‌روزرسانی سبد
-// DELETE /api/carts/my-cart  - حذف سبد
+// ============================================
+// Customer-Facing Cart Routes
+// ============================================
+
+// ============================================
+// GET /api/cart - دریافت سبد خرید کاربر
+// نیاز به احراز هویت (مشتری لاگین شده)
+// ============================================
+router.get('/cart', protect, getMyCart)
+
+// ============================================
+// POST /api/cart/sync - همگام‌سازی سبد خرید localStorage با سرور
+// نیاز به احراز هویت (مشتری لاگین شده)
+// Body: { items: [{ product, quantity, variantOptions? }] }
+// ============================================
+router.post('/cart/sync', protect, syncCart)
+
+// ============================================
+// POST /api/cart/item - افزودن یا به‌روزرسانی آیتم در سبد
+// نیاز به احراز هویت (مشتری لاگین شده)
+// Body: { product, quantity, variantOptions? }
+// ============================================
+router.post('/cart/item', protect, addOrUpdateItem)
+
+// ============================================
+// DELETE /api/cart/item/:productId - حذف آیتم از سبد
+// نیاز به احراز هویت (مشتری لاگین شده)
+// ============================================
+router.delete('/cart/item/:productId', protect, removeItem)
+
+// ============================================
+// DELETE /api/cart - پاک کردن سبد خرید
+// نیاز به احراز هویت (مشتری لاگین شده)
+// ============================================
+router.delete('/cart', protect, clearCart)
 
 module.exports = router

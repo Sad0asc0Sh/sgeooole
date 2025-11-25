@@ -77,3 +77,16 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+
+/* --- SWIPER SLIDER FIX --- */
+.free-mode-slider .swiper-wrapper {
+  transition-timing-function: linear !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.free-mode-slider .swiper-slide {
+  flex-shrink: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}

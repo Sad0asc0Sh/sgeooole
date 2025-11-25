@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Spin } from 'antd'
 import { useAuthStore } from './stores'
 import MainLayout from './components/layout/MainLayout'
+import AdminDataProvider from './components/AdminDataProvider'
 
 // LoginPage - not lazy (needed immediately)
 import LoginPage from './pages/LoginPage'
@@ -107,9 +108,10 @@ function App() {
         path="/*"
         element={
           isAuthenticated ? (
-            <MainLayout>
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
+            <AdminDataProvider>
+              <MainLayout>
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
                 {/* Dashboard */}
                 <Route path="/" element={<Dashboard />} />
 
@@ -185,6 +187,7 @@ function App() {
               </Routes>
               </Suspense>
             </MainLayout>
+            </AdminDataProvider>
           ) : (
             <Navigate to="/login" />
           )

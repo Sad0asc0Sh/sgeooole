@@ -124,6 +124,14 @@ const ProductSchema = new mongoose.Schema(
       min: 0,
     },
 
+    // Discount percentage (0-100)
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+
     sku: {
       type: String,
       trim: true,

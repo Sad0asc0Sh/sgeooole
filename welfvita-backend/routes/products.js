@@ -75,7 +75,16 @@ const buildProductFilter = (query) => {
     filter.isActive = true
   }
 
-  // Advanced filters like isActive[eq]=true
+  // Handle simple boolean parameters (without operators)
+  // e.g., isFlashDeal=true, isSpecialOffer=true
+  if (query.isFlashDeal !== undefined) {
+    filter.isFlashDeal = query.isFlashDeal === 'true' || query.isFlashDeal === true
+  }
+  if (query.isSpecialOffer !== undefined) {
+    filter.isSpecialOffer = query.isSpecialOffer === 'true' || query.isSpecialOffer === true
+  }
+
+  // Advanced filters like isActive[eq]=true, flashDealEndTime[gt]=2025-11-24T...
   Object.keys(query).forEach((key) => {
     const match = key.match(/^(.+)\[(.+)\]$/)
     if (!match) return
@@ -90,12 +99,36 @@ const buildProductFilter = (query) => {
       return
     }
 
+    // Handle date fields (flashDealEndTime, specialOfferEndTime, etc.)
+    if (field.toLowerCase().includes('time') || field.toLowerCase().includes('date')) {
+      const dateValue = new Date(value)
+      if (!isNaN(dateValue.getTime())) {
+        if (op === 'eq') {
+          filter[field] = dateValue
+        } else if (op === 'lt') {
+          filter[field] = { $lt: dateValue }
+        } else if (op === 'gt') {
+          filter[field] = { $gt: dateValue }
+        } else if (op === 'gte') {
+          filter[field] = { $gte: dateValue }
+        } else if (op === 'lte') {
+          filter[field] = { $lte: dateValue }
+        }
+        return
+      }
+    }
+
+    // Handle numeric fields
     if (op === 'eq') {
       filter[field] = value
     } else if (op === 'lt') {
       filter[field] = { $lt: Number(value) }
     } else if (op === 'gt') {
       filter[field] = { $gt: Number(value) }
+    } else if (op === 'gte') {
+      filter[field] = { $gte: Number(value) }
+    } else if (op === 'lte') {
+      filter[field] = { $lte: Number(value) }
     }
   })
 

@@ -4,7 +4,14 @@
       "Bash(npm install:*)",
       "Bash(if not exist \"src\\lib\" mkdir \"src\\lib\")",
       "Bash(cat:*)",
-      "Bash(node /tmp/write-pdp.js:*)"
+      "Bash(node /tmp/write-pdp.js:*)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 37740)",
+      "Bash(taskkill //F //PID 37740)",
+      "Bash(taskkill //F //PID 39584)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

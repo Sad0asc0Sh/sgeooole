@@ -24,6 +24,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
+import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 function ProductForm() {
   const [form] = Form.useForm()
@@ -84,18 +85,6 @@ function ProductForm() {
       .filter(Boolean)
   }
 
-  // Helper: Convert ISO date to datetime-local format (YYYY-MM-DDTHH:mm)
-  const toDatetimeLocal = (isoString) => {
-    if (!isoString) return ''
-    const date = new Date(isoString)
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day}T${hours}:${minutes}`
-  }
-
   // Load product for edit mode
   useEffect(() => {
     if (!isEdit) return
@@ -120,12 +109,12 @@ function ProductForm() {
           setAttributes(p.attributes || [])
           setVariants(p.variants || [])
 
-          // Load promotion fields
+          // Load promotion fields (ISO strings for JalaliDateTimePicker)
           setDiscount(p.discount || 0)
           setIsFlashDeal(p.isFlashDeal || false)
-          setFlashDealEndTime(toDatetimeLocal(p.flashDealEndTime))
+          setFlashDealEndTime(p.flashDealEndTime || '')
           setIsSpecialOffer(p.isSpecialOffer || false)
-          setSpecialOfferEndTime(toDatetimeLocal(p.specialOfferEndTime))
+          setSpecialOfferEndTime(p.specialOfferEndTime || '')
         }
       } catch (err) {
         message.error(
@@ -331,12 +320,18 @@ function ProductForm() {
       // اضافه کردن فیلدهای فروش ویژه
       payload.isFlashDeal = isFlashDeal
       if (isFlashDeal && flashDealEndTime) {
-        payload.flashDealEndTime = new Date(flashDealEndTime).toISOString()
+        // flashDealEndTime might be Date object or ISO string
+        payload.flashDealEndTime = flashDealEndTime instanceof Date
+          ? flashDealEndTime.toISOString()
+          : new Date(flashDealEndTime).toISOString()
       }
 
       payload.isSpecialOffer = isSpecialOffer
       if (isSpecialOffer && specialOfferEndTime) {
-        payload.specialOfferEndTime = new Date(specialOfferEndTime).toISOString()
+        // specialOfferEndTime might be Date object or ISO string
+        payload.specialOfferEndTime = specialOfferEndTime instanceof Date
+          ? specialOfferEndTime.toISOString()
+          : new Date(specialOfferEndTime).toISOString()
       }
 
       if (!isEdit) {
@@ -664,24 +659,15 @@ function ProductForm() {
                             }}
                           >
                             <Form.Item
-                              label="زمان پایان تایمر"
+                              label="زمان پایان تایمر (تاریخ شمسی)"
                               style={{ marginBottom: 0 }}
                             >
-                              <input
-                                type="datetime-local"
+                              <JalaliDateTimePicker
                                 value={flashDealEndTime}
-                                onChange={(e) => setFlashDealEndTime(e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  border: '1px solid #d9d9d9',
-                                  borderRadius: '6px',
-                                  fontSize: '14px',
-                                  outline: 'none',
-                                  transition: 'border-color 0.3s',
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#1890ff'}
-                                onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
+                                onChange={(date) => setFlashDealEndTime(date)}
+                                placeholder="انتخاب تاریخ و زمان پایان"
+                                borderColor="#d9d9d9"
+                                focusColor="#1890ff"
                               />
                               <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
                                 محصول با تایمر شمارش معکوس در بخش "پیشنهادات لحظه‌ای" نمایش داده می‌شود
@@ -733,24 +719,15 @@ function ProductForm() {
                             }}
                           >
                             <Form.Item
-                              label="زمان پایان کمپین"
+                              label="زمان پایان کمپین (تاریخ شمسی)"
                               style={{ marginBottom: 0 }}
                             >
-                              <input
-                                type="datetime-local"
+                              <JalaliDateTimePicker
                                 value={specialOfferEndTime}
-                                onChange={(e) => setSpecialOfferEndTime(e.target.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  border: '1px solid #d9d9d9',
-                                  borderRadius: '6px',
-                                  fontSize: '14px',
-                                  outline: 'none',
-                                  transition: 'border-color 0.3s',
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = '#f5222d'}
-                                onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
+                                onChange={(date) => setSpecialOfferEndTime(date)}
+                                placeholder="انتخاب تاریخ و زمان پایان"
+                                borderColor="#d9d9d9"
+                                focusColor="#f5222d"
                               />
                               <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
                                 محصول در بخش "پیشنهادهای ویژه" با تایمر مشترک نمایش داده می‌شود

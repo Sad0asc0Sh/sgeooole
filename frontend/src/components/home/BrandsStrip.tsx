@@ -1,31 +1,86 @@
 "use client";
-import { useState } from "react";
-import { BRANDS } from "@/lib/mock/homeData";
+
 import { SectionTitle } from "@/components/ui/SectionTitle";
+import { useRef, useState, MouseEvent } from "react";
+
+const BRANDS = [
+  { id: 1, name: "SAILGIS", color: "text-[#fda4af]", hoverColor: "hover:text-[#f43f5e]" }, // Pink/Red
+  { id: 2, name: "SUZUKI", color: "text-[#9ca3af]", hoverColor: "hover:text-[#6b7280]" },  // Gray
+  { id: 3, name: "DAHUA", color: "text-[#93c5fd]", hoverColor: "hover:text-[#3b82f6]" },   // Blue
+  { id: 4, name: "HSB", color: "text-[#fdba74]", hoverColor: "hover:text-[#f97316]" },     // Orange
+  { id: 5, name: "VEKRA", color: "text-[#22c55e]", hoverColor: "hover:text-[#16a34a]" },   // Green
+];
 
 export default function BrandsStrip() {
-  const [activeBrand, setActiveBrand] = useState<number | null>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const [isDown, setIsDown] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    if (!sliderRef.current) return;
+    setIsDown(true);
+    setIsDragging(false);
+    setStartX(e.pageX - sliderRef.current.offsetLeft);
+    setScrollLeft(sliderRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDown(false);
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDown(false);
+    // We don't reset isDragging immediately here to allow onClick to check it
+    setTimeout(() => setIsDragging(false), 0);
+  };
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isDown || !sliderRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - sliderRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // Scroll-fast
+    sliderRef.current.scrollLeft = scrollLeft - walk;
+
+    // If moved more than a few pixels, consider it a drag
+    if (Math.abs(x - startX) > 5) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleBrandClick = (brandName: string) => {
+    if (isDragging) return;
+    console.log(`Clicked on ${brandName}`);
+    // Add navigation or other click logic here
+  };
 
   return (
     <div className="py-8 bg-white">
       <SectionTitle>برندهای همکار</SectionTitle>
-      <div className="flex items-center justify-between px-4 gap-2">
-        {BRANDS.slice(0, 5).map((brand) => (
+      <div
+        ref={sliderRef}
+        className={`
+          flex items-center justify-between px-6 overflow-x-auto gap-8 md:justify-center md:gap-12
+          no-scrollbar cursor-grab active:cursor-grabbing select-none
+        `}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+      >
+        {BRANDS.map((brand) => (
           <div
             key={brand.id}
-            onClick={() => setActiveBrand(brand.id)}
+            onClick={() => handleBrandClick(brand.name)}
             className={`
-              flex-shrink-0 transition-all duration-500 cursor-pointer
-              ${activeBrand === brand.id ? 'grayscale-0 scale-110 opacity-100' : 'grayscale opacity-70 scale-100'}
+              text-xl font-black tracking-wider transition-all duration-300 transform hover:scale-110
+              ${brand.color} ${brand.hoverColor}
+              min-w-max
             `}
           >
-            {/* Placeholder for Logo */}
-            <div className={`
-              w-14 h-14 rounded-full flex items-center justify-center text-[8px] font-bold border
-              ${activeBrand === brand.id ? 'bg-white border-vita-200 shadow-md text-vita-600' : 'bg-gray-50 border-gray-100 text-gray-400'}
-            `}>
-              {brand.name}
-            </div>
+            {brand.name}
           </div>
         ))}
       </div>

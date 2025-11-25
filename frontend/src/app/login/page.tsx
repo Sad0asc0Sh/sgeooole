@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Smartphone, Timer, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { authService } from "@/services/authService";
+import { cartService } from "@/services/cartService";
 
 export default function LoginPage() {
     const [step, setStep] = useState<"phone" | "otp">("phone");
@@ -47,6 +48,42 @@ export default function LoginPage() {
         }
     };
 
+    // Helper function to sync local cart with server
+    const syncLocalCart = async () => {
+        try {
+            const localCartKey = "welfvita_cart";
+            const localCartData = localStorage.getItem(localCartKey);
+
+            if (!localCartData) {
+                console.log("[CART SYNC] No local cart found, skipping sync");
+                return;
+            }
+
+            const localCart = JSON.parse(localCartData);
+
+            // Transform local cart format to backend format
+            // Local format: { id, name, price, qty, ... }
+            // Backend format: { product, quantity, variantOptions? }
+            const itemsToSync = localCart.map((item: any) => ({
+                product: item.id || item.product,
+                quantity: item.qty || item.quantity || 1,
+                variantOptions: item.variantOptions,
+            }));
+
+            if (itemsToSync.length > 0) {
+                console.log(`[CART SYNC] Syncing ${itemsToSync.length} items with server`);
+                await cartService.syncCart(itemsToSync);
+
+                // Clear local cart after successful sync
+                localStorage.removeItem(localCartKey);
+                console.log("[CART SYNC] Cart synced and local storage cleared");
+            }
+        } catch (error) {
+            console.error("[CART SYNC] Error syncing cart:", error);
+            // Don't throw error - cart sync failure shouldn't block login
+        }
+    };
+
     const handleOtpSubmit = async () => {
         if (otp.length < 4) return;
 
@@ -58,7 +95,12 @@ export default function LoginPage() {
             const response = await authService.verifyOtp(phone, otp);
 
             if (response.success && response.data?.token) {
-                // Authentication successful, redirect to profile
+                // Authentication successful
+
+                // Sync local cart with server (non-blocking)
+                await syncLocalCart();
+
+                // Redirect to profile
                 router.push("/profile");
             } else {
                 setError(response.message || "کد تایید نامعتبر است");
