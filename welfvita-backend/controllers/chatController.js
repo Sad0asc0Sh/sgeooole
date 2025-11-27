@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const ChatHistory = require('../models/ChatHistory');
 const { generateExpertResponse } = require('../utils/groqService');
 
 /**
@@ -7,13 +8,26 @@ const { generateExpertResponse } = require('../utils/groqService');
  */
 exports.handleMessage = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { message, userId } = req.body;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'پیام نمی‌تواند خالی باشد' });
     }
 
-    // 1. Find Context (Smart Search)
+    // 1. Fetch History (if userId exists)
+    let history = [];
+    let chatSession = null;
+
+    if (userId) {
+      chatSession = await ChatHistory.findOne({ userId });
+      if (!chatSession) {
+        chatSession = new ChatHistory({ userId, messages: [] });
+      }
+      // Pass plain objects to service
+      history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
+    }
+
+    // 2. Find Context (Smart Search)
     // Extract keywords > 3 chars to filter noise
     const keywords = message.split(" ").filter(w => w.length > 3);
 
@@ -39,10 +53,24 @@ exports.handleMessage = async (req, res) => {
       }
     }
 
-    // 2. Generate Answer
-    const reply = await generateExpertResponse(message, productContext);
+    // 3. Generate Answer (Pass history)
+    const reply = await generateExpertResponse(message, productContext, history);
 
-    // 3. Send Response (Frontend compatible)
+    // 4. Save History (if userId exists)
+    if (chatSession) {
+      chatSession.messages.push({ role: 'user', content: message });
+      chatSession.messages.push({ role: 'assistant', content: reply });
+
+      // Keep last 50 messages to prevent document from growing too large
+      if (chatSession.messages.length > 50) {
+        chatSession.messages = chatSession.messages.slice(-50);
+      }
+
+      chatSession.lastUpdated = new Date();
+      await chatSession.save();
+    }
+
+    // 5. Send Response (Frontend compatible)
     res.json({
       success: true,
       data: {

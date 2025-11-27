@@ -1,7 +1,7 @@
 const Groq = require('groq-sdk');
 const Settings = require('../models/Settings');
 
-exports.generateExpertResponse = async (userMessage, productContext) => {
+exports.generateExpertResponse = async (userMessage, productContext, chatHistory = []) => {
     try {
         // 1. Load Config
         // Explicitly select apiKey because it has select: false in schema
@@ -15,7 +15,10 @@ exports.generateExpertResponse = async (userMessage, productContext) => {
         const groq = new Groq({ apiKey });
 
         // 2. Load Admin-Defined Persona or use Default
-        const systemPersona = config.customSystemPrompt || `
+        // User wants FULL control via Admin Panel, so we use customSystemPrompt if available.
+        // If not, we use a default one.
+        // We DO NOT append extra strict rules here, as user requested to control "Knowledge" (System Prompt) via Admin Panel.
+        let systemPersona = config.customSystemPrompt || `
       نقش: شما مشاور فروش حرفه‌ای و دلسوز فروشگاه "ویلف‌ویتا" هستید.
       تخصص: دوربین مداربسته، دزدگیر و خانه هوشمند.
       زبان: فارسی سلیس و محترمانه.
@@ -28,17 +31,32 @@ exports.generateExpertResponse = async (userMessage, productContext) => {
       5. پاسخ‌هایتان کوتاه و راهگشا باشد.
     `;
 
-        // 3. Call AI
+        // 3. Prepare Messages
+        const messages = [
+            {
+                role: "system",
+                content: `${systemPersona}\n\n### 📦 لیست محصولات موجود مرتبط (فقط از این‌ها پیشنهاد دهید):\n${productContext || "هیچ محصول مرتبطی با جستجوی کاربر پیدا نشد."}`
+            }
+        ];
+
+        // Add History (Last 6 messages to save tokens)
+        if (chatHistory && Array.isArray(chatHistory)) {
+            chatHistory.slice(-6).forEach(msg => {
+                messages.push({
+                    role: msg.role === 'assistant' ? 'assistant' : 'user',
+                    content: msg.content
+                });
+            });
+        }
+
+        // Add Current Message
+        messages.push({ role: "user", content: userMessage });
+
+        // 4. Call AI
         const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `${systemPersona}\n\n### لیست محصولات موجود مرتبط:\n${productContext || "هیچ محصول مرتبطی در انبار پیدا نشد."}`
-                },
-                { role: "user", content: userMessage }
-            ],
+            messages: messages,
             model: "llama-3.3-70b-versatile",
-            temperature: 0.6, // Balanced creativity/fact
+            temperature: 0.5, // Lower temperature for more factual/strict responses
         });
 
         return completion.choices[0]?.message?.content || "متاسفانه پاسخی دریافت نشد.";
