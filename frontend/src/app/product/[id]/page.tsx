@@ -391,26 +391,50 @@ export default function ProductDetailPage() {
                 </div>
 
                 {/* Timer for Special Offers */}
-                {(product.flashDealEndTime || product.specialOfferEndTime) && (
-                    <div className="mb-4">
-                        <div className={`p-3 rounded-xl flex items-center justify-between ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-amber-50 text-amber-700' :
-                                product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-rose-50 text-rose-700' :
-                                    product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' ? 'bg-lime-50 text-lime-700' :
-                                        'bg-blue-50 text-blue-700'
-                            }`}>
-                            <span className="text-sm font-bold flex items-center gap-2">
-                                <Store size={16} />
-                                {product.campaignLabel || 'پیشنهاد ویژه'}
-                            </span>
-                            <div className="flex items-center gap-2" dir="ltr">
-                                <CountdownTimer
-                                    targetDate={product.flashDealEndTime || product.specialOfferEndTime}
-                                    className="text-sm font-bold"
-                                />
+                {/* Timer for Special Offers / Flash Deals */}
+                {(() => {
+                    // Helper logic for offer details
+                    let offer = null;
+                    if (product.isSpecialOffer && product.specialOfferEndTime) {
+                        offer = {
+                            label: 'پیشنهاد شگفت‌انگیز',
+                            themeClass: 'bg-red-50 text-red-600',
+                            targetDate: product.specialOfferEndTime
+                        };
+                    } else if (product.flashDealEndTime) {
+                        const theme = product.campaignTheme;
+                        const themeClass =
+                            theme === 'gold-red' || theme === 'gold' ? 'bg-amber-50 text-amber-700' :
+                                theme === 'red-purple' || theme === 'fire' || theme === 'red' ? 'bg-rose-50 text-rose-700' :
+                                    theme === 'lime-orange' || theme === 'lime' ? 'bg-lime-50 text-lime-700' :
+                                        'bg-blue-50 text-blue-700';
+
+                        offer = {
+                            label: product.campaignLabel || 'پیشنهاد ویژه',
+                            themeClass,
+                            targetDate: product.flashDealEndTime
+                        };
+                    }
+
+                    if (!offer) return null;
+
+                    return (
+                        <div className="mb-4">
+                            <div className={`p-3 rounded-xl flex items-center justify-between ${offer.themeClass}`}>
+                                <span className="text-sm font-bold flex items-center gap-2">
+                                    <Store size={16} />
+                                    {offer.label}
+                                </span>
+                                <div className="flex items-center gap-2" dir="ltr">
+                                    <CountdownTimer
+                                        targetDate={offer.targetDate}
+                                        className="text-sm font-bold"
+                                    />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
 
                 {/* Rating Section */}
                 {product.rating > 0 && (

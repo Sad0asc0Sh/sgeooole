@@ -33,7 +33,7 @@ console.log('DEBUG: sendEmailOtp type:', typeof sendEmailOtp);
 const JWT_SECRET =
   process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
 // مدت اعتبار توکن (پیش‌فرض ۹۰ دقیقه)
-const JWT_EXPIRE = process.env.JWT_EXPIRE || '90m'
+const JWT_EXPIRE = process.env.JWT_EXPIRE || '5h'
 
 // ============================================
 // Helper: generate JWT token

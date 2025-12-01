@@ -143,8 +143,8 @@ exports.createCategory = async (req, res) => {
       name,
       parent: parent && parent !== 'null' ? parent : null,
       description,
-      isFeatured,
-      isPopular,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isPopular: isPopular === 'true' || isPopular === true,
     }
 
     if (req.files) {

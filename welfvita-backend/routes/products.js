@@ -565,15 +565,48 @@ router.post(
         productType,
         attributes,
         variants,
+        isSpecialOffer,
+        specialOfferEndTime,
+        isFlashDeal,
+        flashDealEndTime,
+        discount,
+        images,
+        isFeatured,
+        isActive,
+        properties,
+        specifications,
       } = req.body
 
       const productData = {
         name,
-        category: category || null,
-        brand: brand || null,
         description: description || '',
         sku: sku || undefined,
         productType: productType || 'simple',
+        isSpecialOffer: isSpecialOffer || false,
+        specialOfferEndTime,
+        isFlashDeal: isFlashDeal || false,
+        flashDealEndTime,
+        discount: discount || 0,
+        images: images || [],
+        isFeatured: isFeatured || false,
+        isActive: isActive !== undefined ? isActive : true,
+        properties: properties || [],
+        specifications: specifications || {},
+      }
+
+      // Validate and assign Category
+      const mongoose = require('mongoose')
+      if (category && mongoose.Types.ObjectId.isValid(category)) {
+        productData.category = category
+      } else {
+        productData.category = null
+      }
+
+      // Validate and assign Brand
+      if (brand && mongoose.Types.ObjectId.isValid(brand)) {
+        productData.brand = brand
+      } else {
+        productData.brand = null
       }
 
       // فیلدهای قیمت و موجودی برای محصول ساده
@@ -587,6 +620,45 @@ router.post(
         productData.attributes = attributes || []
         productData.variants = variants || []
       }
+
+      // Helper function to sync offer timers
+      const syncOfferTimers = async (data) => {
+        const Product = require('../models/Product');
+        const now = new Date();
+
+        // --- 1. Special Offer Sync ---
+        if (data.isSpecialOffer === true) {
+          const activeMaster = await Product.findOne({
+            isSpecialOffer: true,
+            specialOfferEndTime: { $gt: now }
+          }).select('specialOfferEndTime');
+
+          if (activeMaster && activeMaster.specialOfferEndTime) {
+            console.log(`[SYNC SPECIAL] Enforcing master timer: ${activeMaster.specialOfferEndTime}`);
+            data.specialOfferEndTime = activeMaster.specialOfferEndTime;
+          }
+        } else {
+          data.specialOfferEndTime = null;
+        }
+
+        // --- 2. Flash Deal Sync ---
+        if (data.isFlashDeal === true) {
+          const activeMaster = await Product.findOne({
+            isFlashDeal: true,
+            flashDealEndTime: { $gt: now }
+          }).select('flashDealEndTime');
+
+          if (activeMaster && activeMaster.flashDealEndTime) {
+            console.log(`[SYNC FLASH] Enforcing master timer: ${activeMaster.flashDealEndTime}`);
+            data.flashDealEndTime = activeMaster.flashDealEndTime;
+          }
+        } else {
+          data.flashDealEndTime = null;
+        }
+      };
+
+      // Apply Timer Synchronization
+      await syncOfferTimers(productData);
 
       const product = await Product.create(productData)
 
@@ -721,6 +793,9 @@ router.put(
           delete updates.category
         }
       }
+
+      // Apply Timer Synchronization
+      await syncOfferTimers(updates, product);
 
       // Use findByIdAndUpdate for simple updates to avoid full validation
       console.log(`[UPDATE PRODUCT] ID: ${req.params.id}, Updates:`, updates)

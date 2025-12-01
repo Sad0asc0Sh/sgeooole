@@ -122,7 +122,6 @@ function ProductForm() {
             setFlashDealEndTime(p.flashDealEndTime || '')
             setIsSpecialOffer(p.isSpecialOffer || false)
             setSpecialOfferEndTime(p.specialOfferEndTime || '')
-            setSpecialOfferEndTime(p.specialOfferEndTime || '')
             setCampaignLabel(p.campaignLabel || '')
             setCampaignTheme(p.campaignTheme || '')
             setIsFromActiveSale(p.isFromActiveSale || false)
@@ -136,6 +135,31 @@ function ProductForm() {
         }
       })()
   }, [id, isEdit, form])
+
+  // Check for existing global Special Offer and Flash Deal timers
+  const [activeGlobalOfferTime, setActiveGlobalOfferTime] = useState(null);
+  const [activeGlobalFlashDealTime, setActiveGlobalFlashDealTime] = useState(null);
+
+  useEffect(() => {
+    const fetchGlobalTimers = async () => {
+      try {
+        const [resOffer, resFlash] = await Promise.all([
+          api.get('/products?isSpecialOffer=true&limit=1'),
+          api.get('/products?isFlashDeal=true&limit=1')
+        ]);
+
+        const activeOffer = resOffer.data.data.find(p => p.specialOfferEndTime && new Date(p.specialOfferEndTime) > new Date());
+        if (activeOffer) setActiveGlobalOfferTime(activeOffer.specialOfferEndTime);
+
+        const activeFlash = resFlash.data.data.find(p => p.flashDealEndTime && new Date(p.flashDealEndTime) > new Date());
+        if (activeFlash) setActiveGlobalFlashDealTime(activeFlash.flashDealEndTime);
+      } catch (err) {
+        console.error("Failed to check global offer times", err);
+      }
+    };
+
+    fetchGlobalTimers();
+  }, []);
 
   // ============================================
   // مدیریت ویژگی‌ها (Attributes)
@@ -654,7 +678,8 @@ function ProductForm() {
                       title="پیشنهاد لحظه‌ای (Flash Deal)"
                       size="small"
                       style={{
-                        borderLeft: isFlashDeal ? '4px solid #1890ff' : 'none'
+                        marginBottom: '16px',
+                        borderLeft: isFlashDeal ? '4px solid #faad14' : 'none'
                       }}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
@@ -675,7 +700,7 @@ function ProductForm() {
                               userSelect: 'none'
                             }}
                           >
-                            فعال‌سازی‌پیشنهاد‌لحظه ای
+                            فعال‌سازی پیشنهاد لحظه‌ای
                           </label>
                         </div>
 
@@ -684,22 +709,44 @@ function ProductForm() {
                             style={{
                               marginTop: '16px',
                               padding: '16px',
-                              background: '#f0f5ff',
+                              background: '#fffbe6',
                               borderRadius: '8px',
                               animation: 'fadeIn 0.3s ease-in'
                             }}
                           >
                             <Form.Item
-                              label="زمان پایان تایمر (تاریخ شمسی)"
-                              style={{ marginBottom: '16px' }}
+                              label="زمان پایان (تاریخ شمسی)"
+                              style={{ marginBottom: 0 }}
                             >
-                              <JalaliDateTimePicker
-                                value={flashDealEndTime}
-                                onChange={(date) => setFlashDealEndTime(date)}
-                                placeholder="انتخاب تاریخ و زمان پایان"
-                                borderColor="#d9d9d9"
-                                focusColor="#1890ff"
-                              />
+                              {activeGlobalFlashDealTime ? (
+                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #faad14', borderRadius: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#faad14', fontWeight: 'bold', fontSize: '13px' }}>
+                                    <span>⚡ زمان با سایر پیشنهادهای لحظه‌ای هماهنگ است</span>
+                                  </div>
+                                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
+                                    زمان پایان: {new Date(activeGlobalFlashDealTime).toLocaleString('fa-IR')}
+                                  </div>
+                                  <div style={{ display: 'none' }}>
+                                    <JalaliDateTimePicker
+                                      value={activeGlobalFlashDealTime}
+                                      onChange={() => { }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <JalaliDateTimePicker
+                                  value={flashDealEndTime}
+                                  onChange={(date) => setFlashDealEndTime(date)}
+                                  placeholder="انتخاب تاریخ و زمان پایان"
+                                  borderColor="#d9d9d9"
+                                  focusColor="#faad14"
+                                />
+                              )}
+                              <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
+                                {activeGlobalFlashDealTime
+                                  ? "این محصول به طور خودکار به تایمر فعال پیشنهاد لحظه‌ای می‌پیوندد."
+                                  : "این اولین پیشنهاد لحظه‌ای است. زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود."}
+                              </p>
                             </Form.Item>
 
 
@@ -778,15 +825,36 @@ function ProductForm() {
                               label="زمان پایان کمپین (تاریخ شمسی)"
                               style={{ marginBottom: 0 }}
                             >
-                              <JalaliDateTimePicker
-                                value={specialOfferEndTime}
-                                onChange={(date) => setSpecialOfferEndTime(date)}
-                                placeholder="انتخاب تاریخ و زمان پایان"
-                                borderColor="#d9d9d9"
-                                focusColor="#f5222d"
-                              />
+                              {activeGlobalOfferTime ? (
+                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #f5222d', borderRadius: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f5222d', fontWeight: 'bold', fontSize: '13px' }}>
+                                    <span>⏰ زمان با سایر محصولات شگفت‌انگیز هماهنگ است</span>
+                                  </div>
+                                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
+                                    زمان پایان: {new Date(activeGlobalOfferTime).toLocaleString('fa-IR')}
+                                  </div>
+                                  <div style={{ display: 'none' }}>
+                                    {/* Hidden input to ensure value is passed if needed, though backend handles sync */}
+                                    <JalaliDateTimePicker
+                                      value={activeGlobalOfferTime}
+                                      onChange={() => { }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <JalaliDateTimePicker
+                                  value={specialOfferEndTime}
+                                  onChange={(date) => setSpecialOfferEndTime(date)}
+                                  placeholder="انتخاب تاریخ و زمان پایان"
+                                  borderColor="#d9d9d9"
+                                  focusColor="#f5222d"
+                                />
+                              )}
+
                               <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
-                                محصول در بخش "پیشنهادهای ویژه" با تایمر مشترک نمایش داده می‌شود
+                                {activeGlobalOfferTime
+                                  ? "این محصول به طور خودکار به تایمر فعال شگفت‌انگیز می‌پیوندد."
+                                  : "این اولین محصول شگفت‌انگیز است. زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود."}
                               </p>
                             </Form.Item>
                           </div>
@@ -801,7 +869,7 @@ function ProductForm() {
                       </h4>
                       <ul style={{ marginBottom: 0, paddingRight: '20px', fontSize: '13px', color: '#666' }}>
                         <li style={{ marginBottom: '6px' }}>
-                          <strong>پیشنهاد لحظه‌ای:</strong> هر محصول تایمر جداگانه‌ای دارد
+                          <strong>پیشنهاد لحظه‌ای:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
                         </li>
                         <li style={{ marginBottom: '6px' }}>
                           <strong>شگفت‌انگیز:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند

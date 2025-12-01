@@ -53,7 +53,7 @@ export const categoryService = {
    * Get popular categories (flat list)
    */
   getPopular: async (): Promise<Category[]> => {
-    const { data } = await api.get<CategoryResponse>("/categories?isPopular=true");
+    const { data } = await api.get<CategoryResponse>(`/categories?isPopular=true&_t=${Date.now()}`);
     return data.data;
   },
 
@@ -61,7 +61,7 @@ export const categoryService = {
    * Get featured categories (flat list)
    */
   getFeatured: async (): Promise<Category[]> => {
-    const { data } = await api.get<CategoryResponse>("/categories?isFeatured=true");
+    const { data } = await api.get<CategoryResponse>(`/categories?isFeatured=true&_t=${Date.now()}`);
     return data.data;
   },
 
