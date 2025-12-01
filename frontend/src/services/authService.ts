@@ -13,6 +13,7 @@ export interface User {
   isActive: boolean;
   addresses?: any[];
   avatar?: string;
+  googleId?: string;
   // Personal Info
   nationalCode?: string;
   birthDate?: string | Date;
@@ -188,6 +189,7 @@ export const authService = {
         companyProvince: userData.companyProvince,
         companyCity: userData.companyCity,
         orderStats: mappedOrderStats,
+        googleId: userData.googleId,
       };
     } catch (error: any) {
       console.error("Error fetching profile:", error);
@@ -378,8 +380,8 @@ export const authService = {
    * @returns Promise with success status
    */
   completeProfile: async (data: {
-    name?: string;
-    username: string;
+    firstName: string;
+    lastName: string;
     password: string;
   }): Promise<{ success: boolean; message?: string }> => {
     try {
@@ -532,6 +534,8 @@ export const authService = {
     }
   },
 
+
+
   /**
    * Get My Orders
    */
@@ -599,6 +603,76 @@ export const authService = {
     } catch (error: any) {
       console.error("Error updating order status:", error);
       throw new Error(error.response?.data?.message || "خطا در تغییر وضعیت سفارش");
+    }
+  },
+
+  /**
+   * Bind Mobile: Send OTP
+   */
+  sendBindOtp: async (mobile: string): Promise<OtpResponse> => {
+    try {
+      console.log(`[AUTH] Sending bind OTP to ${mobile}`);
+      const response = await api.post("/auth/bind-mobile/send-otp", { mobile });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error sending bind OTP:", error);
+      throw new Error(error.response?.data?.message || "خطا در ارسال کد تایید");
+    }
+  },
+
+  /**
+   * Bind Mobile: Verify OTP
+   */
+  verifyBindOtp: async (mobile: string, code: string): Promise<AuthResponse> => {
+    try {
+      console.log(`[AUTH] Verifying bind OTP for ${mobile}`);
+      const response = await api.post("/auth/bind-mobile/verify", { mobile, code });
+
+      // Update local user data if successful
+      if (response.data.success && response.data.data?.user) {
+        const user = response.data.data.user;
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Error verifying bind OTP:", error);
+      throw new Error(error.response?.data?.message || "کد تایید نامعتبر است");
+    }
+  },
+
+  /**
+   * Change Email: Send OTP
+   */
+  sendEmailOtp: async (email: string): Promise<OtpResponse> => {
+    try {
+      console.log(`[AUTH] Sending email OTP to ${email}`);
+      const response = await api.post("/auth/change-email/send-otp", { email });
+      return response.data;
+    } catch (error: any) {
+      console.error("Error sending email OTP:", error);
+      throw new Error(error.response?.data?.message || "خطا در ارسال کد تایید");
+    }
+  },
+
+  /**
+   * Change Email: Verify OTP
+   */
+  verifyEmailOtp: async (email: string, code: string): Promise<AuthResponse> => {
+    try {
+      console.log(`[AUTH] Verifying email OTP for ${email}`);
+      const response = await api.post("/auth/change-email/verify", { email, code });
+
+      // Update local user data if successful
+      if (response.data.success && response.data.data?.user) {
+        const user = response.data.data.user;
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Error verifying email OTP:", error);
+      throw new Error(error.response?.data?.message || "کد تایید نامعتبر است");
     }
   },
 };

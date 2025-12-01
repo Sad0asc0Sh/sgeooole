@@ -15,7 +15,7 @@ export interface CountdownReturn {
 export const useCountdown = (targetDate: string | Date | undefined): CountdownReturn => {
   const countDownDate = new Date(targetDate || '').getTime();
   const [countDown, setCountDown] = useState<number>(() => {
-    if (!targetDate || isNaN(countDownDate)) return 0;
+    if (!targetDate || isNaN(countDownDate)) return -1;
     return countDownDate - new Date().getTime();
   });
 

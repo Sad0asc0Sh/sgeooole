@@ -26,6 +26,7 @@ interface Address {
     isDefault: boolean;
     recipientName?: string;
     recipientPhone?: string;
+    recipientNationalCode?: string;
 }
 
 export default function CheckoutPage() {
@@ -191,9 +192,12 @@ export default function CheckoutPage() {
             // Map addresses
             const userAddresses = (profileData.addresses || []).map((addr: any) => ({
                 ...addr,
-                fullName: addr.fullName || addr.recipientName,
-                mobile: addr.mobile || addr.recipientPhone,
-                nationalCode: addr.nationalCode || "",
+                fullName: addr.fullName, // Buyer Name
+                mobile: addr.mobile, // Buyer Mobile
+                nationalCode: addr.nationalCode || "", // Buyer National Code
+                recipientName: addr.recipientName || addr.fullName, // Fallback for legacy
+                recipientPhone: addr.recipientPhone || addr.mobile, // Fallback for legacy
+                recipientNationalCode: addr.recipientNationalCode || addr.nationalCode || "",
                 plaque: addr.plaque || "",
                 unit: addr.unit || ""
             }));
@@ -267,16 +271,17 @@ export default function CheckoutPage() {
         e.stopPropagation();
         setEditingAddress(addr);
 
-        const isMe = (addr.fullName === user?.name && addr.mobile === user?.mobile);
+        // Check if recipient matches buyer (or is undefined/legacy)
+        const isMe = (!addr.recipientName || (addr.recipientName === addr.fullName && addr.recipientPhone === addr.mobile));
         setIsRecipientMe(isMe);
 
-        // Buyer Info (Always load from user profile or current address if it matches)
-        const userSplit = splitName(user?.name || "");
+        // Buyer Info (Load from address record)
+        const buyerSplit = splitName(addr.fullName || "");
         setBuyerInfo({
-            firstName: userSplit.firstName,
-            lastName: userSplit.lastName,
-            mobile: user?.mobile || "",
-            nationalCode: isMe ? addr.nationalCode : ""
+            firstName: buyerSplit.firstName,
+            lastName: buyerSplit.lastName,
+            mobile: addr.mobile || "",
+            nationalCode: addr.nationalCode || ""
         });
 
         setAddressInfo({
@@ -291,12 +296,12 @@ export default function CheckoutPage() {
         });
 
         if (!isMe) {
-            const recipientSplit = splitName(addr.fullName);
+            const recipientSplit = splitName(addr.recipientName || "");
             setRecipientInfo({
                 firstName: recipientSplit.firstName,
                 lastName: recipientSplit.lastName,
-                mobile: addr.mobile,
-                nationalCode: addr.nationalCode
+                mobile: addr.recipientPhone || "",
+                nationalCode: addr.recipientNationalCode || ""
             });
         } else {
             setRecipientInfo({ firstName: "", lastName: "", mobile: "", nationalCode: "" });
@@ -327,9 +332,11 @@ export default function CheckoutPage() {
         }
 
         // 3. Validate Recipient Info (if !isRecipientMe)
-        let finalFullName = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim();
-        let finalMobile = buyerInfo.mobile;
-        let finalNationalCode = buyerInfo.nationalCode;
+        const buyerFullName = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim();
+
+        let finalRecipientName = buyerFullName;
+        let finalRecipientPhone = buyerInfo.mobile;
+        let finalRecipientNationalCode = buyerInfo.nationalCode;
 
         if (!isRecipientMe) {
             if (!recipientInfo.firstName || !recipientInfo.lastName) {
@@ -344,9 +351,9 @@ export default function CheckoutPage() {
                 alert("کد ملی گیرنده الزامی است و باید ۱۰ رقم باشد");
                 return;
             }
-            finalFullName = `${recipientInfo.firstName} ${recipientInfo.lastName}`.trim();
-            finalMobile = recipientInfo.mobile;
-            finalNationalCode = recipientInfo.nationalCode;
+            finalRecipientName = `${recipientInfo.firstName} ${recipientInfo.lastName}`.trim();
+            finalRecipientPhone = recipientInfo.mobile;
+            finalRecipientNationalCode = recipientInfo.nationalCode;
         }
 
         try {
@@ -354,12 +361,13 @@ export default function CheckoutPage() {
 
             const payload = {
                 ...addressInfo,
-                fullName: finalFullName,
-                mobile: finalMobile,
-                nationalCode: finalNationalCode,
-                recipientName: finalFullName,
-                recipientPhone: finalMobile,
-                phone: finalMobile
+                fullName: buyerFullName, // Always Buyer Name
+                mobile: buyerInfo.mobile, // Always Buyer Mobile
+                nationalCode: buyerInfo.nationalCode, // Always Buyer National Code
+                recipientName: finalRecipientName,
+                recipientPhone: finalRecipientPhone,
+                recipientNationalCode: finalRecipientNationalCode,
+                phone: finalRecipientPhone // For delivery contact
             };
 
             let response;
@@ -372,9 +380,12 @@ export default function CheckoutPage() {
             if (response.success) {
                 const updatedAddresses = response.data.map((addr: any) => ({
                     ...addr,
-                    fullName: addr.fullName || addr.recipientName,
-                    mobile: addr.mobile || addr.recipientPhone,
+                    fullName: addr.fullName,
+                    mobile: addr.mobile,
                     nationalCode: addr.nationalCode || "",
+                    recipientName: addr.recipientName || addr.fullName,
+                    recipientPhone: addr.recipientPhone || addr.mobile,
+                    recipientNationalCode: addr.recipientNationalCode || addr.nationalCode || "",
                     plaque: addr.plaque || "",
                     unit: addr.unit || ""
                 }));
@@ -431,6 +442,11 @@ export default function CheckoutPage() {
                 address: selectedAddress.address,
                 postalCode: selectedAddress.postalCode,
                 isDefault: selectedAddress.isDefault,
+                mobile: selectedAddress.mobile,
+                nationalCode: selectedAddress.nationalCode,
+                recipientName: selectedAddress.recipientName,
+                recipientPhone: selectedAddress.recipientPhone,
+                recipientNationalCode: selectedAddress.recipientNationalCode,
             };
 
             const orderData: CreateOrderRequest = {
@@ -690,8 +706,8 @@ export default function CheckoutPage() {
                                                 <label
                                                     key={gateway.id}
                                                     className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedGateway === gateway.id
-                                                            ? "border-amber-500 bg-amber-50"
-                                                            : "border-gray-200 hover:border-gray-300"
+                                                        ? "border-amber-500 bg-amber-50"
+                                                        : "border-gray-200 hover:border-gray-300"
                                                         }`}
                                                 >
                                                     <input

@@ -55,6 +55,7 @@ function ProductForm() {
   const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
   const [campaignLabel, setCampaignLabel] = useState('')
   const [campaignTheme, setCampaignTheme] = useState('')
+  const [isFromActiveSale, setIsFromActiveSale] = useState(false)
   const [removedImages, setRemovedImages] = useState([])
 
   // Category store (Zustand)
@@ -121,8 +122,10 @@ function ProductForm() {
             setFlashDealEndTime(p.flashDealEndTime || '')
             setIsSpecialOffer(p.isSpecialOffer || false)
             setSpecialOfferEndTime(p.specialOfferEndTime || '')
+            setSpecialOfferEndTime(p.specialOfferEndTime || '')
             setCampaignLabel(p.campaignLabel || '')
             setCampaignTheme(p.campaignTheme || '')
+            setIsFromActiveSale(p.isFromActiveSale || false)
           }
         } catch (err) {
           message.error(
@@ -340,6 +343,9 @@ function ProductForm() {
         payload.specialOfferEndTime = specialOfferEndTime instanceof Date
           ? specialOfferEndTime.toISOString()
           : new Date(specialOfferEndTime).toISOString()
+      } else if (!isSpecialOffer) {
+        // Explicitly clear the timer if special offer is disabled
+        payload.specialOfferEndTime = null
       }
 
       // اضافه کردن فیلدهای کمپین
@@ -696,14 +702,7 @@ function ProductForm() {
                               />
                             </Form.Item>
 
-                            <Form.Item label="عنوان کمپین (اختیاری)">
-                              <Input
-                                placeholder="مثلاً: فروش ویژه، حراج تابستانه"
-                                value={campaignLabel}
-                                onChange={(e) => setCampaignLabel(e.target.value)}
-                                allowClear
-                              />
-                            </Form.Item>
+
 
                             <Form.Item label="تم رنگی کمپین">
                               <Select
@@ -759,7 +758,13 @@ function ProductForm() {
                           </label>
                         </div>
 
-                        {isSpecialOffer && (
+                        {isFromActiveSale && (
+                          <div style={{ marginTop: '12px', padding: '8px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: '4px', fontSize: '12px' }}>
+                            این محصول در کمپین فعال <strong>{campaignLabel}</strong> قرار دارد و وضعیت شگفت‌انگیز آن توسط کمپین کنترل می‌شود.
+                          </div>
+                        )}
+
+                        {isSpecialOffer && !isFromActiveSale && (
                           <div
                             style={{
                               marginTop: '16px',

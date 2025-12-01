@@ -14,8 +14,6 @@ export default function ProfilePage() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [avatarLoading, setAvatarLoading] = useState(false);
 
     // Edit Profile State
     const [editSheetOpen, setEditSheetOpen] = useState(false);
@@ -29,6 +27,19 @@ export default function ProfilePage() {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordLoading, setPasswordLoading] = useState(false);
     const [passwordError, setPasswordError] = useState("");
+
+    // Bind Mobile State
+    const [bindMobileSheetOpen, setBindMobileSheetOpen] = useState(false);
+    const [bindMobile, setBindMobile] = useState("");
+    const [bindOtp, setBindOtp] = useState(["", "", "", ""]);
+    const [bindOtpSent, setBindOtpSent] = useState(false);
+    const [bindLoading, setBindLoading] = useState(false);
+
+    // Email OTP State
+    const [emailOtpSheetOpen, setEmailOtpSheetOpen] = useState(false);
+    const [emailOtp, setEmailOtp] = useState(["", "", "", ""]);
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [emailLoading, setEmailLoading] = useState(false);
 
     const [orderStats, setOrderStats] = useState({
         processing: 0,
@@ -59,13 +70,12 @@ export default function ProfilePage() {
                         stats = {
                             processing: orders.filter((o: any) => ['Pending', 'Processing'].includes(o.orderStatus)).length,
                             delivered: orders.filter((o: any) => o.orderStatus === 'Delivered').length,
-                            returned: orders.filter((o: any) => o.orderStatus === 'Returned').length, // Assuming 'Returned' status exists or mapped
+                            returned: orders.filter((o: any) => o.orderStatus === 'Returned').length,
                             cancelled: orders.filter((o: any) => o.orderStatus === 'Cancelled').length,
                         };
                     }
                 } catch (orderErr) {
                     console.error("Error fetching orders for stats:", orderErr);
-                    // Fallback to profile stats if available
                     if (profileData.orderStats) {
                         stats = profileData.orderStats;
                     }
@@ -91,43 +101,152 @@ export default function ProfilePage() {
         return () => { isMounted = false; };
     }, [router]);
 
+    // Sync edit state when sheet opens
+    useEffect(() => {
+        if (editSheetOpen && user) {
+            setEditName(user.name || "");
+            setEditEmail(user.email || "");
+        }
+    }, [editSheetOpen, user]);
+
     const handleLogout = () => {
         authService.logout();
     };
 
-    const handleAvatarClick = () => {
-        fileInputRef.current?.click();
+    // Bind Mobile Handlers
+    const handleSendBindOtp = async () => {
+        if (!bindMobile || bindMobile.length !== 11 || !bindMobile.startsWith("09")) {
+            alert("لطفا شماره موبایل معتبر وارد کنید");
+            return;
+        }
+        try {
+            setBindLoading(true);
+            await authService.sendBindOtp(bindMobile);
+            setBindOtpSent(true);
+        } catch (err: any) {
+            alert(err.message || "خطا در ارسال کد تایید");
+        } finally {
+            setBindLoading(false);
+        }
     };
 
-    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+    const handleVerifyBindOtp = async () => {
+        const code = bindOtp.join("");
+        if (code.length !== 4) {
+            alert("لطفا کد تایید ۴ رقمی را وارد کنید");
+            return;
+        }
         try {
-            setAvatarLoading(true);
-            const response = await authService.updateAvatar(file);
-            if (response.success && response.data) {
-                setUser(response.data);
-                // Force refresh to show new avatar if needed, or just rely on state
+            setBindLoading(true);
+            const response = await authService.verifyBindOtp(bindMobile, code);
+            if (response.success && response.data?.user) {
+                setUser(response.data.user);
+                setBindMobileSheetOpen(false);
+                alert("شماره موبایل با موفقیت ثبت شد");
             }
         } catch (err: any) {
-            alert(err.message || "خطا در آپلود تصویر");
+            alert(err.message || "کد تایید نامعتبر است");
         } finally {
-            setAvatarLoading(false);
+            setBindLoading(false);
+        }
+    };
+
+    const handleOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...bindOtp];
+        newOtp[index] = value;
+        setBindOtp(newOtp);
+        if (value && index < 3) {
+            const nextInput = document.getElementById(`otp-${index + 1}`);
+            nextInput?.focus();
+        }
+    };
+
+    const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Backspace" && !bindOtp[index] && index > 0) {
+            const prevInput = document.getElementById(`otp-${index - 1}`);
+            prevInput?.focus();
+        }
+    };
+
+    // Email OTP Handlers
+    const handleSendEmailOtp = async () => {
+        if (!editEmail || !/\S+@\S+\.\S+/.test(editEmail)) {
+            alert("لطفا ایمیل معتبر وارد کنید");
+            return;
+        }
+        try {
+            setEmailLoading(true);
+            await authService.sendEmailOtp(editEmail);
+            setEmailOtpSent(true);
+        } catch (err: any) {
+            alert(err.message || "خطا در ارسال کد تایید");
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    const handleVerifyEmailOtp = async () => {
+        const code = emailOtp.join("");
+        if (code.length !== 4) {
+            alert("لطفا کد تایید ۴ رقمی را وارد کنید");
+            return;
+        }
+        try {
+            setEmailLoading(true);
+            const response = await authService.verifyEmailOtp(editEmail, code);
+            if (response.success && response.data?.user) {
+                setUser(response.data.user);
+                setEmailOtpSheetOpen(false);
+                alert("ایمیل با موفقیت تغییر کرد");
+            }
+        } catch (err: any) {
+            alert(err.message || "کد تایید نامعتبر است");
+        } finally {
+            setEmailLoading(false);
+        }
+    };
+
+    const handleEmailOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...emailOtp];
+        newOtp[index] = value;
+        setEmailOtp(newOtp);
+        if (value && index < 3) {
+            const nextInput = document.getElementById(`email-otp-${index + 1}`);
+            nextInput?.focus();
+        }
+    };
+
+    const handleEmailOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Backspace" && !emailOtp[index] && index > 0) {
+            const prevInput = document.getElementById(`email-otp-${index - 1}`);
+            prevInput?.focus();
         }
     };
 
     const handleUpdateProfile = async () => {
         try {
             setEditLoading(true);
-            const response = await authService.updateProfile({
-                name: editName,
-                email: editEmail
-            });
-            if (response.success) {
-                setUser(prev => prev ? { ...prev, name: editName, email: editEmail } : null);
+
+            // Update Name if changed
+            if (editName !== user?.name) {
+                const response = await authService.updateProfile({
+                    name: editName,
+                });
+                if (response.success) {
+                    setUser(prev => prev ? { ...prev, name: editName } : null);
+                }
+            }
+
+            // Check Email Change
+            if (editEmail !== user?.email) {
+                setEditSheetOpen(false);
+                setEmailOtpSheetOpen(true);
+            } else {
                 setEditSheetOpen(false);
             }
+
         } catch (err: any) {
             alert(err.message || "خطا در ویرایش پروفایل");
         } finally {
@@ -161,15 +280,11 @@ export default function ProfilePage() {
     };
 
     const isVerified = !!user?.nationalCode;
-
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
         const fetchUnreadCount = async () => {
             try {
-                // We'll use a lightweight call or just fetch all and count
-                // Ideally backend should have an endpoint for count, but for now we can fetch all
-                // Or better, let's assume we can get it from the same notifications endpoint
                 const res = await import("@/lib/api").then(m => m.default.get('/notifications'));
                 if (res.data.success) {
                     const unread = res.data.data.filter((n: any) => !n.isRead).length;
@@ -230,39 +345,21 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-5">
                     <div className="relative">
                         <div
-                            className="w-20 h-20 rounded-full bg-gray-100 border-4 border-white shadow-md overflow-hidden cursor-pointer group relative"
-                            onClick={handleAvatarClick}
+                            className="w-20 h-20 rounded-full bg-gray-100 border-4 border-white shadow-md overflow-hidden relative"
                         >
                             {user.avatar ? (
                                 <img
                                     src={user.avatar.startsWith("http") ? user.avatar : `http://localhost:5000/${user.avatar}`}
                                     alt={user.name}
                                     className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
                                 />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
                                     <UserIcon size={32} />
                                 </div>
                             )}
-
-                            {/* Overlay for upload */}
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Camera size={20} className="text-white" />
-                            </div>
                         </div>
-                        <button
-                            onClick={handleAvatarClick}
-                            className="absolute -bottom-1 -right-1 bg-vita-500 text-white p-1.5 rounded-full shadow-sm border-2 border-white"
-                        >
-                            {avatarLoading ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Edit2 size={12} />}
-                        </button>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleAvatarChange}
-                        />
                     </div>
 
                     <div className="flex-1">
@@ -383,11 +480,47 @@ export default function ProfilePage() {
                                     type="text"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    disabled={!!user?.googleId}
                                 />
                                 <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             </div>
                         </div>
+
+                        {/* Mobile Field */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1.5">شماره موبایل</label>
+                            <div className="relative flex gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        value={user?.mobile || ""}
+                                        disabled
+                                        readOnly
+                                        className="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 pl-10 text-sm text-gray-500 cursor-not-allowed outline-none"
+                                        dir="ltr"
+                                        placeholder="شماره موبایل ثبت نشده"
+                                    />
+                                    <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                </div>
+                                {!user?.mobile && (
+                                    <button
+                                        onClick={() => {
+                                            setEditSheetOpen(false);
+                                            setBindMobileSheetOpen(true);
+                                        }}
+                                        className="bg-vita-500 text-white text-xs font-bold px-4 rounded-xl shadow-sm hover:bg-vita-600 transition-colors"
+                                    >
+                                        افزودن
+                                    </button>
+                                )}
+                            </div>
+                            {user?.mobile && (
+                                <p className="text-[10px] text-gray-400 mt-1">امکان تغییر شماره موبایل وجود ندارد.</p>
+                            )}
+                        </div>
+
+                        {/* Email Field */}
                         <div>
                             <label className="block text-xs font-bold text-gray-500 mb-1.5">ایمیل</label>
                             <div className="relative">
@@ -395,19 +528,154 @@ export default function ProfilePage() {
                                     type="email"
                                     value={editEmail}
                                     onChange={(e) => setEditEmail(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     dir="ltr"
+                                    disabled={!!user?.googleId}
                                 />
                                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             </div>
+                            {user?.googleId ? (
+                                <p className="text-[10px] text-amber-500 mt-1">اطلاعات حساب گوگل قابل تغییر نیست.</p>
+                            ) : (
+                                <p className="text-[10px] text-gray-400 mt-1">تغییر ایمیل نیازمند تایید کد ارسالی است.</p>
+                            )}
                         </div>
-                        <button
-                            onClick={handleUpdateProfile}
-                            disabled={editLoading}
-                            className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all"
-                        >
-                            {editLoading ? "در حال ذخیره..." : "ثبت تغییرات"}
-                        </button>
+
+                        {!user?.googleId && (
+                            <button
+                                onClick={handleUpdateProfile}
+                                disabled={editLoading}
+                                className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all"
+                            >
+                                {editLoading ? "در حال ذخیره..." : "ثبت تغییرات"}
+                            </button>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Bind Mobile Sheet */}
+            <Sheet open={bindMobileSheetOpen} onOpenChange={setBindMobileSheetOpen}>
+                <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-24">
+                    <SheetHeader className="mb-6">
+                        <SheetTitle className="text-center text-lg font-bold text-gray-800">افزودن شماره موبایل</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-4">
+                        {!bindOtpSent ? (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1.5">شماره موبایل</label>
+                                    <div className="relative">
+                                        <input
+                                            type="tel"
+                                            value={bindMobile}
+                                            onChange={(e) => setBindMobile(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all text-left"
+                                            dir="ltr"
+                                            placeholder="09xxxxxxxxx"
+                                            maxLength={11}
+                                        />
+                                        <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-2">
+                                        یک کد تایید برای احراز هویت به این شماره ارسال خواهد شد.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleSendBindOtp}
+                                    disabled={bindLoading || !bindMobile}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {bindLoading ? "در حال ارسال..." : "ارسال کد تایید"}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm text-gray-600">کد تایید به شماره {bindMobile} ارسال شد.</p>
+                                    <button onClick={() => setBindOtpSent(false)} className="text-xs text-vita-500 font-bold mt-1">ویرایش شماره</button>
+                                </div>
+                                <div className="flex justify-center gap-3 mb-6" dir="ltr">
+                                    {bindOtp.map((digit, index) => (
+                                        <input
+                                            key={index}
+                                            id={`otp-${index}`}
+                                            type="text"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleOtpChange(index, e.target.value)}
+                                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={handleVerifyBindOtp}
+                                    disabled={bindLoading || bindOtp.some(d => !d)}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {bindLoading ? "در حال بررسی..." : "تایید و ثبت شماره"}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Email OTP Sheet */}
+            <Sheet open={emailOtpSheetOpen} onOpenChange={setEmailOtpSheetOpen}>
+                <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-24">
+                    <SheetHeader className="mb-6">
+                        <SheetTitle className="text-center text-lg font-bold text-gray-800">تایید تغییر ایمیل</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-4">
+                        {!emailOtpSent ? (
+                            <>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm text-gray-600">
+                                        آیا از تغییر ایمیل به <span className="font-bold dir-ltr inline-block">{editEmail}</span> اطمینان دارید؟
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-2">
+                                        یک کد تایید به این ایمیل ارسال خواهد شد.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleSendEmailOtp}
+                                    disabled={emailLoading}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50"
+                                >
+                                    {emailLoading ? "در حال ارسال..." : "ارسال کد تایید"}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm text-gray-600">کد تایید به ایمیل {editEmail} ارسال شد.</p>
+                                    <button onClick={() => setEmailOtpSent(false)} className="text-xs text-vita-500 font-bold mt-1">ویرایش ایمیل</button>
+                                </div>
+                                <div className="flex justify-center gap-3 mb-6" dir="ltr">
+                                    {emailOtp.map((digit, index) => (
+                                        <input
+                                            key={index}
+                                            id={`email-otp-${index}`}
+                                            type="text"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleEmailOtpChange(index, e.target.value)}
+                                            onKeyDown={(e) => handleEmailOtpKeyDown(index, e)}
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={handleVerifyEmailOtp}
+                                    disabled={emailLoading || emailOtp.some(d => !d)}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {emailLoading ? "در حال بررسی..." : "تایید و ثبت ایمیل"}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </SheetContent>
             </Sheet>

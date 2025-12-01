@@ -53,7 +53,7 @@ exports.getSettings = async (req, res) => {
   try {
     // Select sensitive fields to check if they exist
     let settings = await Settings.findOne({ singletonKey: 'main_settings' })
-      .select('+aiConfig.apiKey +paymentGatewayKeys.apiKey +paymentGatewayKeys.apiSecret +notificationSettings.smsApiKey +kycSettings.apiKey +kycSettings.clientId +paymentConfig.zarinpal.merchantId +paymentConfig.sadad.merchantId +paymentConfig.sadad.terminalId +paymentConfig.sadad.terminalKey')
+      .select('+aiConfig.apiKey +paymentGatewayKeys.apiKey +paymentGatewayKeys.apiSecret +notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey +kycSettings.apiKey +kycSettings.clientId +paymentConfig.zarinpal.merchantId +paymentConfig.sadad.merchantId +paymentConfig.sadad.terminalId +paymentConfig.sadad.terminalKey')
 
     if (!settings) {
       settings = await Settings.create({})
@@ -66,6 +66,8 @@ exports.getSettings = async (req, res) => {
     if (settingsObj.aiConfig?.apiKey) settingsObj.aiConfig.apiKey = '****';
     if (settingsObj.paymentGatewayKeys?.apiKey) settingsObj.paymentGatewayKeys.apiKey = '****';
     if (settingsObj.paymentGatewayKeys?.apiSecret) settingsObj.paymentGatewayKeys.apiSecret = '****';
+    if (settingsObj.notificationSettings?.smsUsername) settingsObj.notificationSettings.smsUsername = '****';
+    if (settingsObj.notificationSettings?.smsPassword) settingsObj.notificationSettings.smsPassword = '****';
     if (settingsObj.notificationSettings?.smsApiKey) settingsObj.notificationSettings.smsApiKey = '****';
     if (settingsObj.kycSettings?.apiKey) settingsObj.kycSettings.apiKey = '****';
     if (settingsObj.kycSettings?.clientId) settingsObj.kycSettings.clientId = '****';
@@ -120,7 +122,25 @@ exports.updateSettings = async (req, res) => {
 
     // For nested objects (Notification Settings)
     if (updates.notificationSettings) {
-      settings.notificationSettings = { ...settings.notificationSettings, ...updates.notificationSettings }
+      // We need to be careful not to overwrite hidden fields like smsApiKey if they are not in the update
+      // But since we didn't fetch smsApiKey, we can't merge it from 'settings'.
+      // Best approach is to update fields individually or use Mongoose's set() if possible, 
+      // but here we will just update what we know.
+
+      const ns = updates.notificationSettings
+      if (ns.emailFrom) settings.notificationSettings.emailFrom = ns.emailFrom
+      if (ns.smsSenderNumber) settings.notificationSettings.smsSenderNumber = ns.smsSenderNumber
+
+      // Only update credentials if provided and not masked
+      if (ns.smsUsername && ns.smsUsername !== '****') {
+        settings.notificationSettings.smsUsername = ns.smsUsername
+      }
+      if (ns.smsPassword && ns.smsPassword !== '****') {
+        settings.notificationSettings.smsPassword = ns.smsPassword
+      }
+      if (ns.smsApiKey && ns.smsApiKey !== '****') {
+        settings.notificationSettings.smsApiKey = ns.smsApiKey
+      }
     }
 
     // For nested objects (Payment Gateway Keys)

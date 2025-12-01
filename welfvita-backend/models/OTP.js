@@ -6,12 +6,18 @@ const mongoose = require('mongoose')
  */
 const otpSchema = new mongoose.Schema(
   {
-    // Mobile number
+    // Mobile number (Optional if email is provided)
     mobile: {
       type: String,
-      required: true,
       trim: true,
-      match: /^09\d{9}$/,
+      // match: /^09\d{9}$/, // Validation moved to controller or conditional
+    },
+
+    // Email address (Optional if mobile is provided)
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
     },
 
     // 4-digit OTP code
@@ -55,12 +61,15 @@ const otpSchema = new mongoose.Schema(
 
 // Compound index for efficient queries
 otpSchema.index({ mobile: 1, createdAt: -1 })
+otpSchema.index({ email: 1, createdAt: -1 })
 otpSchema.index({ mobile: 1, code: 1, verified: 1 })
+otpSchema.index({ email: 1, code: 1, verified: 1 })
 
-// Static method to clean up old OTPs for a mobile number
-otpSchema.statics.cleanupOld = async function (mobile) {
+// Static method to clean up old OTPs for a mobile number or email
+otpSchema.statics.cleanupOld = async function (identifier) {
+  const query = identifier.includes('@') ? { email: identifier } : { mobile: identifier }
   return this.deleteMany({
-    mobile,
+    ...query,
     $or: [{ verified: true }, { expiresAt: { $lt: new Date() } }],
   })
 }

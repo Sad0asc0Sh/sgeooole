@@ -44,22 +44,6 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // ============================================
-// Database Connection
-// ============================================
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/welfvita', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => {
-    console.log('✅ MongoDB متصل شد')
-    console.log('📍 Database:', mongoose.connection.name)
-  })
-  .catch(err => {
-    console.error('❌ خطا در اتصال به MongoDB:', err.message)
-    process.exit(1)
-  })
-
-// ============================================
 // Routes
 // ============================================
 
@@ -169,7 +153,6 @@ app.use('/api/notifications', notificationRoutes)
 const adminManagementRoutes = require('./routes/adminManagement')
 app.use('/api/admin/management', adminManagementRoutes)
 // Settings Routes
-// Settings Routes
 const settingsRoutes = require('./routes/settings')
 app.use('/api/settings', settingsRoutes)
 
@@ -209,23 +192,55 @@ app.use((err, req, res, next) => {
 })
 
 // ============================================
-// Start Server
+// Database Connection & Server Start
 // ============================================
-const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')
-startOrderAutoCompleter()
-
 const PORT = process.env.PORT || 5000
 
-app.listen(PORT, () => {
-  console.log('╔════════════════════════════════════════╗')
-  console.log('║     Welfvita Backend Server            ║')
-  console.log('╚════════════════════════════════════════╝')
-  console.log(`🚀 Server running on port ${PORT}`)
-  console.log(`📍 API: http://localhost:${PORT}/api`)
-  console.log(`📁 Uploads: http://localhost:${PORT}/uploads`)
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  console.log('═══════════════════════════════════════════')
+const connectDB = async () => {
+  try {
+    console.log('⏳ در حال اتصال به دیتابیس...')
+    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/welfvita', {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging
+    })
+
+    console.log(`✅ MongoDB متصل شد: ${conn.connection.host}`)
+    console.log('📍 Database:', mongoose.connection.name)
+
+    // Start Server only after DB connection
+    app.listen(PORT, () => {
+      console.log('╔════════════════════════════════════════╗')
+      console.log('║     Welfvita Backend Server            ║')
+      console.log('╚════════════════════════════════════════╝')
+      console.log(`🚀 Server running on port ${PORT}`)
+      console.log(`📍 API: http://localhost:${PORT}/api`)
+      console.log(`📁 Uploads: http://localhost:${PORT}/uploads`)
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+      console.log('═══════════════════════════════════════════')
+    })
+
+    // Start Jobs
+    const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')
+    startOrderAutoCompleter()
+
+  } catch (err) {
+    console.error('❌ Error connecting to MongoDB:', err.message)
+    process.exit(1)
+  }
+}
+
+// Connection Events
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB disconnected')
 })
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err)
+})
+
+// Initialize
+connectDB()
 
 // Graceful Shutdown
 process.on('SIGTERM', () => {

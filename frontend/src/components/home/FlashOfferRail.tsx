@@ -10,7 +10,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { productService, Product } from "@/services/productService";
-import CountdownTimer from "@/components/ui/CountdownTimer";
+import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
 /**
  * Single flash deal card with:
@@ -52,7 +52,6 @@ function FlashDealCard({ product }: { product: Product }) {
       color: themeColor,
       borderColor: themeBorder,
       endTime: product.flashDealEndTime || product.specialOfferEndTime,
-      iconColor: themeColor
     };
   }
 
@@ -93,11 +92,7 @@ function FlashDealCard({ product }: { product: Product }) {
         <div className="w-full mb-2">
           <div className={`h-1 w-full ${headerConfig.borderColor}`} />
           <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
-            <div className={`text-[10px] font-bold whitespace-nowrap ${headerConfig.color}`}>
-              {headerConfig.endTime && (
-                <CountdownTimer targetDate={headerConfig.endTime} showSeconds={false} className="text-[10px]" />
-              )}
-            </div>
+
             <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
               {headerConfig.title}
             </div>
@@ -114,6 +109,14 @@ function FlashDealCard({ product }: { product: Product }) {
               fill
               className={`object-cover group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? 'grayscale opacity-60' : ''}`}
             />
+
+            {/* Timer Overlay (Top Right) */}
+            {(headerConfig?.endTime) && (
+              <ProductTimerBadge
+                targetDate={headerConfig.endTime}
+                color={headerConfig.color}
+              />
+            )}
 
             {/* Out of Stock Overlay */}
             {product.countInStock === 0 && (

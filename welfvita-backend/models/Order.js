@@ -66,6 +66,11 @@ const shippingAddressSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  mobile: String, // Buyer Mobile
+  nationalCode: String, // Buyer National Code
+  recipientName: String,
+  recipientPhone: String,
+  recipientNationalCode: String,
 })
 
 // ============================================

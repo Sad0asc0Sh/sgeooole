@@ -65,6 +65,7 @@ const getAllDescendantCategoryIds = async (parentId) => {
           connectFromField: '_id',
           connectToField: 'parent',
           as: 'descendants',
+          maxDepth: 10,
         },
       },
       {
@@ -344,7 +345,7 @@ router.get('/', async (req, res) => {
       ; (sale.products || []).forEach((pid) => {
         const key = pid.toString()
         if (!campaignMap.has(key)) {
-          campaignMap.set(key, { name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme })
+          campaignMap.set(key, { name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme, endDate: sale.endDate })
         }
       })
     })
@@ -361,6 +362,7 @@ router.get('/', async (req, res) => {
         if (campaignInfo.discount > 0) {
           newItem.discount = campaignInfo.discount
           newItem.isSpecialOffer = true
+          newItem.specialOfferEndTime = campaignInfo.endDate
 
           // Calculate final price
           const originalPrice = newItem.price
@@ -409,6 +411,65 @@ router.get('/', async (req, res) => {
 })
 
 // ============================================
+// PUT /api/products/special-offers/timer
+// Update timer for all active special offer products
+// ============================================
+router.put(
+  '/special-offers/timer',
+  protect,
+  authorize('admin', 'manager', 'superadmin'),
+  async (req, res) => {
+    try {
+      const { endTime, disable } = req.body
+
+      if (disable) {
+        // Clear timer for all special offer products
+        const result = await Product.updateMany(
+          { isSpecialOffer: true },
+          { $unset: { specialOfferEndTime: "" } }
+        )
+
+        return res.json({
+          success: true,
+          message: `Timer disabled for ${result.modifiedCount} products`,
+          data: { modifiedCount: result.modifiedCount }
+        })
+      }
+
+      if (!endTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'End time is required',
+        })
+      }
+
+      console.log('[ADMIN] Updating special offer timer to:', endTime)
+
+      // Update all products that have isSpecialOffer: true
+      const result = await Product.updateMany(
+        { isSpecialOffer: true },
+        { $set: { specialOfferEndTime: endTime } }
+      )
+
+      console.log('[ADMIN] Update result:', result)
+
+      res.json({
+        success: true,
+        message: `Updated timer for ${result.modifiedCount} products`,
+        data: { modifiedCount: result.modifiedCount }
+      })
+    } catch (error) {
+      console.error('Error updating special offer timer:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update timer',
+        error: error.message,
+      })
+    }
+  }
+)
+
+// ============================================
 // GET /api/products/:id
 // ============================================
 router.get('/:id', async (req, res) => {
@@ -437,7 +498,7 @@ router.get('/:id', async (req, res) => {
       endDate: { $gte: now },
       products: product._id,
     })
-      .select('name discountPercentage badgeTheme')
+      .select('name discountPercentage badgeTheme endDate')
       .lean()
 
     const productObj = product.toObject()
@@ -447,6 +508,8 @@ router.get('/:id', async (req, res) => {
       if (activeSale.discountPercentage > 0) {
         productObj.discount = activeSale.discountPercentage
         productObj.isSpecialOffer = true
+        productObj.isFromActiveSale = true
+        productObj.specialOfferEndTime = activeSale.endDate
 
         // Calculate final price
         const originalPrice = productObj.price
@@ -660,11 +723,15 @@ router.put(
       }
 
       // Use findByIdAndUpdate for simple updates to avoid full validation
+      console.log(`[UPDATE PRODUCT] ID: ${req.params.id}, Updates:`, updates)
+
       const updatedProduct = await Product.findByIdAndUpdate(
         req.params.id,
         { $set: updates },
         { new: true, runValidators: false }
       )
+
+      console.log(`[UPDATE PRODUCT] Result isSpecialOffer:`, updatedProduct.isSpecialOffer)
 
       res.json({
         success: true,

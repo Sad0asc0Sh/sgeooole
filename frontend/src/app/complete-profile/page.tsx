@@ -6,8 +6,8 @@ import { authService } from "@/services/authService";
 
 export default function CompleteProfilePage() {
     const [formData, setFormData] = useState({
-        name: "",
-        username: "",
+        firstName: "",
+        lastName: "",
         password: "",
         confirmPassword: "",
     });
@@ -29,18 +29,13 @@ export default function CompleteProfilePage() {
     };
 
     const validateForm = (): boolean => {
-        if (!formData.username.trim()) {
-            setError("نام کاربری الزامی است");
+        if (!formData.firstName.trim()) {
+            setError("نام الزامی است");
             return false;
         }
 
-        if (formData.username.length < 3) {
-            setError("نام کاربری باید حداقل 3 کاراکتر باشد");
-            return false;
-        }
-
-        if (!/^[a-z0-9_]+$/.test(formData.username)) {
-            setError("نام کاربری فقط می‌تواند شامل حروف انگلیسی کوچک، اعداد و _ باشد");
+        if (!formData.lastName.trim()) {
+            setError("نام خانوادگی الزامی است");
             return false;
         }
 
@@ -72,8 +67,8 @@ export default function CompleteProfilePage() {
             setError(null);
 
             await authService.completeProfile({
-                name: formData.name || undefined,
-                username: formData.username.toLowerCase(),
+                firstName: formData.firstName.trim(),
+                lastName: formData.lastName.trim(),
                 password: formData.password,
             });
 
@@ -99,7 +94,7 @@ export default function CompleteProfilePage() {
                         تکمیل حساب کاربری
                     </h1>
                     <p className="text-sm text-gray-500">
-                        برای امنیت بیشتر، لطفا یک رمز عبور تعیین کنید
+                        لطفا اطلاعات زیر را برای تکمیل ثبت‌نام وارد کنید
                     </p>
                 </div>
 
@@ -113,46 +108,44 @@ export default function CompleteProfilePage() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-5">
-                        {/* Name Field (Optional) */}
-                        <div>
-                            <label className="block text-sm font-bold text-welf-900 mb-2">
-                                نام و نام خانوادگی
-                                <span className="text-gray-400 font-normal text-xs mr-1">(اختیاری)</span>
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="علی احمدی"
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 pr-12 focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
-                                    value={formData.name}
-                                    onChange={(e) => handleChange("name", e.target.value)}
-                                />
-                                <User className="absolute right-4 top-4 text-gray-400" size={20} />
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* First Name Field */}
+                            <div>
+                                <label className="block text-sm font-bold text-welf-900 mb-2">
+                                    نام
+                                    <span className="text-red-500 mr-1">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="علی"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 pr-10 focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                        value={formData.firstName}
+                                        onChange={(e) => handleChange("firstName", e.target.value)}
+                                        required
+                                    />
+                                    <User className="absolute right-3 top-4 text-gray-400" size={18} />
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Username Field */}
-                        <div>
-                            <label className="block text-sm font-bold text-welf-900 mb-2">
-                                نام کاربری
-                                <span className="text-red-500 mr-1">*</span>
-                            </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="username"
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 pr-12 text-left focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
-                                    value={formData.username}
-                                    onChange={(e) => handleChange("username", e.target.value.toLowerCase())}
-                                    dir="ltr"
-                                    maxLength={20}
-                                    required
-                                />
-                                <User className="absolute right-4 top-4 text-gray-400" size={20} />
+                            {/* Last Name Field */}
+                            <div>
+                                <label className="block text-sm font-bold text-welf-900 mb-2">
+                                    نام خانوادگی
+                                    <span className="text-red-500 mr-1">*</span>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="احمدی"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 pr-10 focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                        value={formData.lastName}
+                                        onChange={(e) => handleChange("lastName", e.target.value)}
+                                        required
+                                    />
+                                    <User className="absolute right-3 top-4 text-gray-400" size={18} />
+                                </div>
                             </div>
-                            <p className="text-xs text-gray-400 mt-1 mr-1">
-                                فقط حروف انگلیسی کوچک، اعداد و _
-                            </p>
                         </div>
 
                         {/* Password Field */}
@@ -197,7 +190,7 @@ export default function CompleteProfilePage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={loading || !formData.username || !formData.password || !formData.confirmPassword}
+                            disabled={loading || !formData.firstName || !formData.lastName || !formData.password || !formData.confirmPassword}
                             className="w-full bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95 flex items-center justify-center gap-2"
                         >
                             {loading ? (
@@ -219,7 +212,7 @@ export default function CompleteProfilePage() {
                                 <p className="font-bold text-vita-700 mb-1">چرا رمز عبور؟</p>
                                 <p>
                                     با تنظیم رمز عبور، می‌توانید علاوه بر ورود با پیامک یا گوگل،
-                                    مستقیماً با نام کاربری و رمز عبور نیز وارد شوید.
+                                    مستقیماً با شماره موبایل(ایمیل) و رمز عبور نیز وارد شوید.
                                 </p>
                             </div>
                         </div>

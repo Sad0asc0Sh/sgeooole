@@ -6,10 +6,12 @@ interface CountdownTimerProps {
     targetDate: string;
     className?: string;
     showSeconds?: boolean;
+    onExpire?: () => void;
 }
 
-export default function CountdownTimer({ targetDate, className = "", showSeconds = true }: CountdownTimerProps) {
+export default function CountdownTimer({ targetDate, className = "", showSeconds = true, onExpire }: CountdownTimerProps) {
     const [timeLeft, setTimeLeft] = useState({
+        days: 0,
         hours: 0,
         minutes: 0,
         seconds: 0,
@@ -21,18 +23,27 @@ export default function CountdownTimer({ targetDate, className = "", showSeconds
 
             if (difference > 0) {
                 return {
-                    hours: Math.floor((difference / (1000 * 60 * 60))), // Total hours
+                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+                    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
                     minutes: Math.floor((difference / 1000 / 60) % 60),
                     seconds: Math.floor((difference / 1000) % 60),
                 };
             }
-            return { hours: 0, minutes: 0, seconds: 0 };
+            // Trigger onExpire if provided
+            if (onExpire) {
+                onExpire();
+            }
+            return { days: 0, hours: 0, minutes: 0, seconds: 0 };
         };
 
         setTimeLeft(calculateTimeLeft());
 
         const timer = setInterval(() => {
-            setTimeLeft(calculateTimeLeft());
+            const tl = calculateTimeLeft();
+            setTimeLeft(tl);
+            if (tl.days === 0 && tl.hours === 0 && tl.minutes === 0 && tl.seconds === 0) {
+                clearInterval(timer);
+            }
         }, 1000);
 
         return () => clearInterval(timer);
@@ -41,9 +52,21 @@ export default function CountdownTimer({ targetDate, className = "", showSeconds
     // Format with leading zeros
     const format = (num: number) => num.toString().padStart(2, "0");
 
-    // If time is up, don't render anything (or render 00:00:00)
-    if (timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0) {
-        return null;
+    // Debug logging
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`CountdownTimer target: ${targetDate}, now: ${new Date().toISOString()}`);
+        }
+    }, [targetDate]);
+
+    // If more than 24 hours (1 day), show days
+    if (timeLeft.days > 0) {
+        return (
+            <div className={`flex items-center gap-1 font-bold ${className}`} dir="rtl">
+                <span>{timeLeft.days}</span>
+                <span className="text-[10px] font-normal">روز</span>
+            </div>
+        );
     }
 
     return (

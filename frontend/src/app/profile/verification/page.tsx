@@ -10,6 +10,7 @@ import DatePicker from "react-multi-date-picker";
 import persian from "react-date-object/calendars/persian";
 import persian_fa from "react-date-object/locales/persian_fa";
 import { authService, User as UserType } from "@/services/authService";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export default function VerificationPage() {
     const router = useRouter();
@@ -18,6 +19,13 @@ export default function VerificationPage() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+
+    // Bind Mobile State
+    const [bindMobileSheetOpen, setBindMobileSheetOpen] = useState(false);
+    const [bindMobile, setBindMobile] = useState("");
+    const [bindOtp, setBindOtp] = useState(["", "", "", ""]);
+    const [bindOtpSent, setBindOtpSent] = useState(false);
+    const [bindLoading, setBindLoading] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -93,6 +101,62 @@ export default function VerificationPage() {
             }));
         } else {
             setFormData(prev => ({ ...prev, birthDate: "" }));
+        }
+    };
+
+    // Bind Mobile Handlers
+    const handleSendBindOtp = async () => {
+        if (!bindMobile || bindMobile.length !== 11 || !bindMobile.startsWith("09")) {
+            alert("لطفا شماره موبایل معتبر وارد کنید");
+            return;
+        }
+        try {
+            setBindLoading(true);
+            await authService.sendBindOtp(bindMobile);
+            setBindOtpSent(true);
+        } catch (err: any) {
+            alert(err.message || "خطا در ارسال کد تایید");
+        } finally {
+            setBindLoading(false);
+        }
+    };
+
+    const handleVerifyBindOtp = async () => {
+        const code = bindOtp.join("");
+        if (code.length !== 4) {
+            alert("لطفا کد تایید ۴ رقمی را وارد کنید");
+            return;
+        }
+        try {
+            setBindLoading(true);
+            const response = await authService.verifyBindOtp(bindMobile, code);
+            if (response.success && response.data?.user) {
+                setUser(response.data.user);
+                setBindMobileSheetOpen(false);
+                setSuccess("شماره موبایل با موفقیت ثبت شد");
+            }
+        } catch (err: any) {
+            alert(err.message || "کد تایید نامعتبر است");
+        } finally {
+            setBindLoading(false);
+        }
+    };
+
+    const handleOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...bindOtp];
+        newOtp[index] = value;
+        setBindOtp(newOtp);
+        if (value && index < 3) {
+            const nextInput = document.getElementById(`otp-${index + 1}`);
+            nextInput?.focus();
+        }
+    };
+
+    const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Backspace" && !bindOtp[index] && index > 0) {
+            const prevInput = document.getElementById(`otp-${index - 1}`);
+            prevInput?.focus();
         }
     };
 
@@ -195,13 +259,20 @@ export default function VerificationPage() {
                     </h2>
 
                     <div className="space-y-3">
-                        <Input
-                            label="نام و نام خانوادگی"
-                            name="name"
-                            value={formData.name}
-                            onChange={handleChange}
-                            placeholder="مثال: علی محمدی"
-                        />
+                        <div className="relative">
+                            <Input
+                                label="نام و نام خانوادگی"
+                                name="name"
+                                value={formData.name}
+                                onChange={handleChange}
+                                placeholder="مثال: علی محمدی"
+                                disabled={!!user?.googleId}
+                                className={user?.googleId ? "opacity-60 cursor-not-allowed" : ""}
+                            />
+                            {user?.googleId && (
+                                <p className="text-[10px] text-amber-500 mt-1 px-1">نامی که ابتدا اضافه کردید قابل تغییر نیست.</p>
+                            )}
+                        </div>
                         <Input
                             label="کد ملی"
                             name="nationalCode"
@@ -228,15 +299,22 @@ export default function VerificationPage() {
                             </div>
                         </div>
 
-                        <Input
-                            label="ایمیل"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            placeholder="example@domain.com"
-                            dir="ltr"
-                        />
+                        <div className="relative">
+                            <Input
+                                label="ایمیل"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleChange}
+                                placeholder="example@domain.com"
+                                dir="ltr"
+                                disabled={!!user?.googleId}
+                                className={user?.googleId ? "opacity-60 cursor-not-allowed" : ""}
+                            />
+                            {user?.googleId && (
+                                <p className="text-[10px] text-amber-500 mt-1 px-1">ایمیل حساب گوگل قابل تغییر نیست.</p>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -248,6 +326,36 @@ export default function VerificationPage() {
                     </h2>
 
                     <div className="space-y-3">
+                        {/* Mobile Field */}
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 mb-1.5 pr-1">شماره موبایل</label>
+                            <div className="relative flex gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        value={user?.mobile || ""}
+                                        disabled
+                                        readOnly
+                                        className="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm text-gray-500 cursor-not-allowed outline-none"
+                                        dir="ltr"
+                                        placeholder="شماره موبایل ثبت نشده"
+                                    />
+                                </div>
+                                {!user?.mobile && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setBindMobileSheetOpen(true)}
+                                        className="bg-vita-500 text-white text-xs font-bold px-4 rounded-xl shadow-sm hover:bg-vita-600 transition-colors"
+                                    >
+                                        افزودن
+                                    </button>
+                                )}
+                            </div>
+                            {user?.mobile && (
+                                <p className="text-[10px] text-gray-400 mt-1 pr-1">امکان تغییر شماره موبایل وجود ندارد.</p>
+                            )}
+                        </div>
+
                         <Input
                             label="تلفن ثابت"
                             name="landline"
@@ -360,6 +468,74 @@ export default function VerificationPage() {
                     )}
                 </button>
             </form>
+
+            {/* Bind Mobile Sheet */}
+            <Sheet open={bindMobileSheetOpen} onOpenChange={setBindMobileSheetOpen}>
+                <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-24">
+                    <SheetHeader className="mb-6">
+                        <SheetTitle className="text-center text-lg font-bold text-gray-800">افزودن شماره موبایل</SheetTitle>
+                    </SheetHeader>
+                    <div className="space-y-4">
+                        {!bindOtpSent ? (
+                            <>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1.5">شماره موبایل</label>
+                                    <div className="relative">
+                                        <input
+                                            type="tel"
+                                            value={bindMobile}
+                                            onChange={(e) => setBindMobile(e.target.value)}
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all text-left"
+                                            dir="ltr"
+                                            placeholder="09xxxxxxxxx"
+                                            maxLength={11}
+                                        />
+                                        <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 mt-2">
+                                        یک کد تایید برای احراز هویت به این شماره ارسال خواهد شد.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={handleSendBindOtp}
+                                    disabled={bindLoading || !bindMobile}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {bindLoading ? "در حال ارسال..." : "ارسال کد تایید"}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm text-gray-600">کد تایید به شماره {bindMobile} ارسال شد.</p>
+                                    <button onClick={() => setBindOtpSent(false)} className="text-xs text-vita-500 font-bold mt-1">ویرایش شماره</button>
+                                </div>
+                                <div className="flex justify-center gap-3 mb-6" dir="ltr">
+                                    {bindOtp.map((digit, index) => (
+                                        <input
+                                            key={index}
+                                            id={`otp-${index}`}
+                                            type="text"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleOtpChange(index, e.target.value)}
+                                            onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={handleVerifyBindOtp}
+                                    disabled={bindLoading || bindOtp.some(d => !d)}
+                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {bindLoading ? "در حال بررسی..." : "تایید و ثبت شماره"}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 }

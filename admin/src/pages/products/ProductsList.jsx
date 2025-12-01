@@ -21,9 +21,11 @@ import {
   DeleteOutlined,
   EditOutlined,
   InboxOutlined,
+  FieldTimeOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import api from '../../api'
+import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const { Dragger } = Upload
 
@@ -46,15 +48,17 @@ function ProductsList({ mode }) {
   const [categories, setCategories] = useState([])
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [timerModalVisible, setTimerModalVisible] = useState(false)
+  const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
 
   useEffect(() => {
-    ;(async () => {
+    ; (async () => {
       try {
         const res = await api.get('/categories', {
           params: { limit: 1000, fields: 'name,slug,_id' },
         })
         setCategories(res?.data?.data || [])
-      } catch (_) {}
+      } catch (_) { }
     })()
   }, [])
 
@@ -187,17 +191,27 @@ function ProductsList({ mode }) {
     ...(mode
       ? []
       : [
-          {
-            title: 'نوع محصول',
-            dataIndex: 'productType',
-            key: 'productType',
-            render: (type) => (type === 'variable' ? 'متغیر' : 'ساده'),
-          },
-        ]),
+        {
+          title: 'نوع محصول',
+          dataIndex: 'productType',
+          key: 'productType',
+          render: (type) => (type === 'variable' ? 'متغیر' : 'ساده'),
+        },
+      ]),
     {
       title: 'SKU',
       dataIndex: 'sku',
       key: 'sku',
+    },
+    {
+      title: 'ویژگی‌ها',
+      key: 'features',
+      render: (_, record) => (
+        <Space size={[0, 4]} wrap>
+          {record.isSpecialOffer && <Tag color="red">شگفت‌انگیز</Tag>}
+          {record.isFlashDeal && <Tag color="gold">لحظه‌ای</Tag>}
+        </Space>
+      ),
     },
     {
       title: 'دسته‌بندی',
@@ -358,6 +372,46 @@ function ProductsList({ mode }) {
     },
   }
 
+  const handleUpdateTimer = async () => {
+    try {
+      setLoading(true)
+      const endTime = specialOfferEndTime instanceof Date
+        ? specialOfferEndTime.toISOString()
+        : new Date(specialOfferEndTime).toISOString()
+
+      const res = await api.put('/products/special-offers/timer', { endTime })
+      const count = res?.data?.data?.modifiedCount || 0
+
+      if (count > 0) {
+        message.success(`زمان برای ${count} محصول با موفقیت به‌روزرسانی شد`)
+        setTimerModalVisible(false)
+        fetchProducts()
+      } else {
+        message.warning('هیچ محصولی با وضعیت «شگفت‌انگیز» پیدا نشد. لطفاً ابتدا تیک شگفت‌انگیز را برای محصولات مورد نظر فعال کنید.')
+      }
+    } catch (err) {
+      message.error(err?.message || 'خطا در به‌روزرسانی زمان')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDisableTimer = async () => {
+    try {
+      setLoading(true)
+      const res = await api.put('/products/special-offers/timer', { disable: true })
+      const count = res?.data?.data?.modifiedCount || 0
+
+      message.success(`تایمر برای ${count} محصول غیرفعال شد`)
+      setTimerModalVisible(false)
+      fetchProducts()
+    } catch (err) {
+      message.error(err?.message || 'خطا در غیرفعال‌سازی تایمر')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <div
@@ -372,6 +426,9 @@ function ProductsList({ mode }) {
         <Space>
           <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
             درون‌ریزی CSV
+          </Button>
+          <Button icon={<FieldTimeOutlined />} onClick={() => setTimerModalVisible(true)}>
+            تنظیم تایمر
           </Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>
             برون‌ریزی Excel
@@ -514,6 +571,39 @@ function ProductsList({ mode }) {
             فقط فایل‌های با پسوند .csv پذیرفته می‌شوند
           </p>
         </Dragger>
+      </Modal>
+
+      {/* Special Offer Timer Modal */}
+      <Modal
+        title="تنظیم تایمر پیشنهاد شگفت‌انگیز"
+        open={timerModalVisible}
+        onCancel={() => setTimerModalVisible(false)}
+        onOk={handleUpdateTimer}
+        okText="ذخیره زمان"
+        cancelText="انصراف"
+        confirmLoading={loading}
+        footer={[
+          <Button key="disable" danger onClick={handleDisableTimer} loading={loading}>
+            غیرفعال کردن تایمر
+          </Button>,
+          <Button key="back" onClick={() => setTimerModalVisible(false)}>
+            انصراف
+          </Button>,
+          <Button key="submit" type="primary" onClick={handleUpdateTimer} loading={loading}>
+            ذخیره زمان
+          </Button>,
+        ]}
+      >
+        <p style={{ marginBottom: 12, color: '#666' }}>
+          این زمان برای <strong>همه</strong> محصولاتی که تیک «شگفت‌انگیز» (Special Offer) دارند اعمال خواهد شد.
+        </p>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', marginBottom: 8 }}>زمان پایان:</label>
+          <JalaliDateTimePicker
+            value={specialOfferEndTime}
+            onChange={setSpecialOfferEndTime}
+          />
+        </div>
       </Modal>
     </div>
   )

@@ -89,7 +89,11 @@ const settingsSchema = new mongoose.Schema(
 
     // Notification settings
     notificationSettings: {
-      smsApiKey: { type: String, select: false },
+      // SMS Settings (Melipayamak)
+      smsUsername: { type: String, select: false }, // نام کاربری پنل ملی‌پیامک
+      smsPassword: { type: String, select: false }, // رمز عبور پنل ملی‌پیامک
+      smsApiKey: { type: String, select: false }, // توکن کنسول (اختیاری - برای API های جدیدتر)
+      smsSenderNumber: { type: String, default: '' }, // شماره فرستنده
       emailFrom: { type: String, default: 'noreply@example.com' },
     },
 

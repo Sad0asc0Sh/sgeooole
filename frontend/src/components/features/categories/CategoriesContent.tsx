@@ -162,7 +162,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                     <div className="h-px flex-1 bg-gray-100" />
                     {activeCategory && (
                         <button
-                            onClick={() => handleNavigation(`/products?category=${activeCategory.slug}`)}
+                            onClick={() => handleNavigation(`/products?category=${activeCategory.slug}&includeChildren=true`)}
                             className="text-[10px] text-vita-600 flex items-center hover:text-vita-700 transition-colors"
                         >
                             مشاهده همه <ChevronLeft size={12} />

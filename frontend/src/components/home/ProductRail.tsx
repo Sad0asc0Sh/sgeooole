@@ -7,7 +7,7 @@ import "swiper/css/free-mode";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import CountdownTimer from "@/components/ui/CountdownTimer";
+import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
 interface ProductRailProps {
   title: string;
@@ -96,11 +96,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                     <div className="w-full mb-2">
                       <div className={`h-1 w-full ${headerConfig.borderColor}`} />
                       <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
-                        <div className={`text-[10px] font-bold whitespace-nowrap ${headerConfig.color}`}>
-                          {headerConfig.endTime && (
-                            <CountdownTimer targetDate={headerConfig.endTime} showSeconds={false} className="text-[10px]" />
-                          )}
-                        </div>
+
                         <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
                           {headerConfig.title}
                         </div>
@@ -116,20 +112,19 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                         src={product.image || "/placeholder.png"}
                         alt={product.name}
                         fill
-                        className={`object-cover group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? "grayscale opacity-60" : ""}`}
+                        className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? "grayscale opacity-60" : ""}`}
                       />
 
-                      {/* Badges - Only show if no header, or adjust position */}
-                      {!headerConfig && product.campaignLabel && (
-                        <div className="absolute top-2 left-2 z-20">
-                          <span className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === 'gold-red' ? 'bg-gradient-to-r from-yellow-400 to-red-600' :
-                            product.campaignTheme === 'red-purple' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                              'bg-gradient-to-r from-lime-500 to-orange-400'
-                            }`}>
-                            {product.campaignLabel}
-                          </span>
-                        </div>
+                      {/* Timer Overlay (Top Right) */}
+                      {(headerConfig?.endTime) && (
+                        <ProductTimerBadge
+                          targetDate={headerConfig.endTime}
+                          color={headerConfig.color}
+                        />
                       )}
+
+                      {/* Badges - Only show if no header, or adjust position */}
+
 
                       {/* OUT OF STOCK OVERLAY */}
                       {product.countInStock === 0 && (
@@ -155,15 +150,17 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                       <div className="flex items-center justify-between h-5">
                         {product.countInStock > 0 && product.discount > 0 ? (
                           <>
-                            <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
-                              product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
-                                'bg-[#ef394e]'
-                              }`}>
-                              {product.discount.toLocaleString("fa-IR")}٪
+                            <div className="flex items-center gap-1">
+                              <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
+                                product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
+                                  'bg-[#ef394e]'
+                                }`}>
+                                {product.discount.toLocaleString("fa-IR")}٪
+                              </div>
+                              <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
+                                {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
+                              </span>
                             </div>
-                            <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
-                              {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
-                            </span>
                           </>
                         ) : (
                           <div className="h-5" />

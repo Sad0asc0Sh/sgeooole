@@ -21,7 +21,13 @@ const {
   addAddress, // NEW
   updateAddress, // NEW
   deleteAddress, // NEW
+  sendBindOtp, // NEW
+  verifyBindOtp, // NEW
+  sendEmailOtp,
+  verifyEmailOtp,
 } = require('../controllers/customerAuthController')
+
+console.log('DEBUG: sendEmailOtp type:', typeof sendEmailOtp);
 
 // JWT configuration
 const JWT_SECRET =
@@ -87,6 +93,18 @@ router.get('/profile', protect, getCustomerProfile)
 // PUT /api/auth/me/update
 // Update customer profile (name, email, password)
 router.put('/me/update', protect, updateProfile)
+
+// POST /api/auth/bind-mobile/send-otp
+router.post('/bind-mobile/send-otp', protect, sendBindOtp)
+
+// POST /api/auth/bind-mobile/verify
+router.post('/bind-mobile/verify', protect, verifyBindOtp)
+
+// POST /api/auth/change-email/send-otp
+router.post('/change-email/send-otp', protect, sendEmailOtp)
+
+// POST /api/auth/change-email/verify
+router.post('/change-email/verify', protect, verifyEmailOtp)
 
 // PUT /api/auth/me/avatar
 // Update customer avatar
@@ -463,4 +481,3 @@ router.put('/admin/reset-password/:token', async (req, res) => {
 // router.put('/me/avatar', protect, upload.single('avatar'), updateMyAvatar) // REMOVED: Replaced by customerAuthController.updateAvatar
 
 module.exports = router
-

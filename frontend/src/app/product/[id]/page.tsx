@@ -12,6 +12,7 @@ import "swiper/css/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { productService, Product, ProductColor } from "@/services/productService";
+import CountdownTimer from "@/components/ui/CountdownTimer";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 
@@ -389,6 +390,28 @@ export default function ProductDetailPage() {
                     </div>
                 </div>
 
+                {/* Timer for Special Offers */}
+                {(product.flashDealEndTime || product.specialOfferEndTime) && (
+                    <div className="mb-4">
+                        <div className={`p-3 rounded-xl flex items-center justify-between ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-amber-50 text-amber-700' :
+                                product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-rose-50 text-rose-700' :
+                                    product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' ? 'bg-lime-50 text-lime-700' :
+                                        'bg-blue-50 text-blue-700'
+                            }`}>
+                            <span className="text-sm font-bold flex items-center gap-2">
+                                <Store size={16} />
+                                {product.campaignLabel || 'پیشنهاد ویژه'}
+                            </span>
+                            <div className="flex items-center gap-2" dir="ltr">
+                                <CountdownTimer
+                                    targetDate={product.flashDealEndTime || product.specialOfferEndTime}
+                                    className="text-sm font-bold"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Rating Section */}
                 {product.rating > 0 && (
                     <div className="flex items-center gap-1 mb-6">
@@ -459,9 +482,9 @@ export default function ProductDetailPage() {
                         <div className="flex items-center gap-2 mb-1">
                             {product.discount > 0 && (
                                 <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
-                                        product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                                            product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
-                                                product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-[#ef394e]'
+                                    product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
+                                        product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
+                                            product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-[#ef394e]'
                                     }`}>
                                     {product.discount.toLocaleString("fa-IR")}٪
                                 </div>

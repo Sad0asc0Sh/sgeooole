@@ -1,5 +1,38 @@
 const nodemailer = require('nodemailer')
 const Kavenegar = require('kavenegar')
+const { SocksProxyAgent } = require('socks')
+const axios = require('axios')
+const Settings = require('../models/Settings')
+
+// ============================================
+// Email Transporter Configuration
+// ============================================
+const createTransporter = () => {
+  const config = {
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+    port: Number(process.env.EMAIL_PORT) || 587,
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS ? process.env.EMAIL_PASS.replace(/\s+/g, '') : '',
+    },
+    tls: {
+      rejectUnauthorized: false
+    },
+    family: 4,
+    connectionTimeout: 60000,
+    greetingTimeout: 30000,
+    socketTimeout: 60000,
+  }
+
+  if (process.env.EMAIL_PROXY) {
+    console.log(`[EMAIL] Using Proxy: ${process.env.EMAIL_PROXY}`)
+    config.proxy_socks_module = require('socks')
+    config.agent = new SocksProxyAgent(process.env.EMAIL_PROXY)
+  }
+
+  return nodemailer.createTransport(config)
+}
 
 /**
  * @desc    ارسال ایمیل یادآوری سبد خرید
@@ -10,16 +43,7 @@ const Kavenegar = require('kavenegar')
  */
 exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
   try {
-    // تنظیمات nodemailer (از متغیرهای محیطی بخوانید)
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER, // ایمیل فرستنده
-        pass: process.env.EMAIL_PASS, // رمز عبور
-      },
-    })
+    const transporter = createTransporter()
 
     // ساخت محتوای HTML ایمیل
     let itemsHtml = ''
@@ -156,16 +180,7 @@ exports.sendReminderSMS = async (phoneNumber, userName, itemsCount) => {
  */
 exports.sendResetPasswordEmail = async (userEmail, userName, resetUrl) => {
   try {
-    // تنظیمات nodemailer (از متغیرهای محیطی بخوانید)
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USER, // ایمیل فرستنده
-        pass: process.env.EMAIL_PASS, // رمز عبور
-      },
-    })
+    const transporter = createTransporter()
 
     const mailOptions = {
       from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
@@ -211,5 +226,115 @@ exports.sendResetPasswordEmail = async (userEmail, userName, resetUrl) => {
   } catch (error) {
     console.error('Error sending reset password email:', error)
     throw error
+  }
+}
+
+/**
+ * @desc    ارسال ایمیل تایید (OTP)
+ * @param   {String} userEmail - ایمیل کاربر
+ * @param   {String} code - کد تایید
+ * @returns {Promise}
+ */
+exports.sendVerificationEmail = async (userEmail, code) => {
+  try {
+    const transporter = createTransporter()
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
+      to: userEmail,
+      subject: 'کد تایید ایمیل - ویلف ویتا',
+      html: `
+        <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+          <h2 style="color: #333; text-align: center;">کد تایید ایمیل</h2>
+          <p style="color: #555; font-size: 14px;">
+            کاربر گرامی،
+          </p>
+          <p style="color: #555; font-size: 14px;">
+            برای تایید آدرس ایمیل خود، لطفا کد زیر را وارد کنید:
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <span style="background-color: #f0f0f0; color: #333; padding: 15px 30px; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; border: 1px solid #ccc;">
+              ${code}
+            </span>
+          </div>
+          <p style="color: #d9534f; font-size: 13px; margin-top: 20px;">
+            ⚠️ این کد فقط برای <strong>2 دقیقه</strong> معتبر است.
+          </p>
+          <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+            با تشکر، تیم ویلف ویتا
+          </p>
+        </div>
+      `,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log('Verification email sent: %s', info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error('Error sending verification email:', error)
+    throw error
+  }
+}
+
+/**
+ * @desc    ارسال پیامک OTP (ملی پیامک REST API)
+ * @param   {String} mobile - شماره موبایل
+ * @param   {String} code - کد تایید
+ * @returns {Promise}
+ */
+exports.sendOtpSMS = async (mobile, code) => {
+  try {
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' })
+      .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey')
+
+    const { smsUsername, smsPassword, smsSenderNumber } = settings?.notificationSettings || {}
+
+    if (!smsUsername || !smsPassword) {
+      console.log('[SMS] نام کاربری یا رمز عبور پنل ملی‌پیامک تنظیم نشده است. پیامک ارسال نمی‌شود.')
+      return { success: false, message: 'تنظیمات پیامک ناقص است' }
+    }
+
+    console.log(`[SMS] در حال ارسال پیامک به ${mobile} از طریق ملی‌پیامک...`)
+
+    // Melipayamak REST API (روش استاندارد با username/password)
+    const payload = {
+      username: smsUsername,
+      password: smsPassword,
+      to: mobile,
+      from: smsSenderNumber || smsUsername, // اگر شماره فرستنده تنظیم نشده، از username استفاده می‌شود
+      text: `کد تایید شما: ${code}\nویلف ویتا\nلغو11`,
+      isflash: false
+    }
+
+    console.log('[SMS] ارسال به:', payload.to, 'از:', payload.from)
+
+    // استفاده از REST API ملی‌پیامک
+    const response = await axios.post(
+      'https://rest.payamak-panel.com/api/SendSMS/SendSMS',
+      payload,
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      }
+    )
+
+    console.log('[SMS] پاسخ سرور:', response.data)
+
+    // بررسی وضعیت پاسخ
+    // RetStatus کدهای مختلفی دارد:
+    // 1 = موفق
+    // 35 = اطلاعات نامعتبر
+    // و غیره...
+    if (response.data.RetStatus === 1) {
+      console.log('[SMS] ✅ پیامک با موفقیت ارسال شد')
+      return { success: true, data: response.data }
+    } else {
+      console.error('[SMS] ❌ خطا در ارسال:', response.data.StrRetStatus)
+      return { success: false, message: response.data.StrRetStatus, data: response.data }
+    }
+
+  } catch (error) {
+    console.error('[SMS] ❌ خطا در ارسال پیامک:', error.response?.data || error.message)
+    return { success: false, message: error.message }
   }
 }

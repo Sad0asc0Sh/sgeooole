@@ -159,6 +159,9 @@ const userSchema = new mongoose.Schema(
           type: Boolean,
           default: false,
         },
+        recipientName: String,
+        recipientPhone: String,
+        recipientNationalCode: String,
       },
     ],
 

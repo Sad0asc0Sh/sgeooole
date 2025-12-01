@@ -47,10 +47,11 @@ function SettingsPage() {
         storePhone: data.storePhone || '',
         storeAddress: data.storeAddress || '',
         notificationSettings: {
-          ...(data.notificationSettings || {}),
-          emailFrom:
-            (data.notificationSettings && data.notificationSettings.emailFrom) ||
-            'noreply@example.com',
+          smsUsername: data.notificationSettings?.smsUsername || '',
+          smsPassword: data.notificationSettings?.smsPassword || '',
+          smsApiKey: data.notificationSettings?.smsApiKey || '',
+          smsSenderNumber: data.notificationSettings?.smsSenderNumber || '',
+          emailFrom: data.notificationSettings?.emailFrom || 'noreply@example.com',
         },
         cartSettings: {
           cartTTLHours: data.cartSettings?.cartTTLHours || 1,
@@ -151,12 +152,42 @@ function SettingsPage() {
           ns.emailFrom = values.notificationSettings.emailFrom
         }
 
+        // SMS Username
+        if (
+          values.notificationSettings.smsUsername !== undefined &&
+          values.notificationSettings.smsUsername !== null &&
+          values.notificationSettings.smsUsername !== '' &&
+          values.notificationSettings.smsUsername !== '****'
+        ) {
+          ns.smsUsername = values.notificationSettings.smsUsername
+        }
+
+        // SMS Password
+        if (
+          values.notificationSettings.smsPassword !== undefined &&
+          values.notificationSettings.smsPassword !== null &&
+          values.notificationSettings.smsPassword !== '' &&
+          values.notificationSettings.smsPassword !== '****'
+        ) {
+          ns.smsPassword = values.notificationSettings.smsPassword
+        }
+
+        // SMS API Key (optional - for future compatibility)
         if (
           values.notificationSettings.smsApiKey !== undefined &&
           values.notificationSettings.smsApiKey !== null &&
-          values.notificationSettings.smsApiKey !== ''
+          values.notificationSettings.smsApiKey !== '' &&
+          values.notificationSettings.smsApiKey !== '****'
         ) {
           ns.smsApiKey = values.notificationSettings.smsApiKey
+        }
+
+        // SMS Sender Number
+        if (
+          values.notificationSettings.smsSenderNumber !== undefined &&
+          values.notificationSettings.smsSenderNumber !== null
+        ) {
+          ns.smsSenderNumber = values.notificationSettings.smsSenderNumber
         }
 
         if (Object.keys(ns).length > 0) {
@@ -490,12 +521,67 @@ function SettingsPage() {
       label: 'تنظیمات اعلان‌ها',
       children: (
         <>
+          <Alert
+            message="📱 تنظیمات سرویس پیامک (ملی‌پیامک)"
+            description={
+              <div>
+                <p>برای ارسال پیامک OTP به کاربران، نیاز به اتصال به سرویس ملی‌پیامک دارید.</p>
+                <ol style={{ marginRight: 20, marginTop: 10 }}>
+                  <li>وارد پنل خود شوید: <a href="https://console.melipayamak.com" target="_blank" rel="noreferrer">console.melipayamak.com</a></li>
+                  <li>نام کاربری و رمز عبور پنل خود را در فیلدهای زیر وارد کنید</li>
+                  <li>شماره فرستنده (خط اختصاصی یا اشتراکی) را از پنل کپی کنید</li>
+                </ol>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
+
           <Form.Item
-            name={['notificationSettings', 'smsApiKey']}
-            label="SMS API Key"
+            name={['notificationSettings', 'smsUsername']}
+            label="نام کاربری پنل ملی‌پیامک"
+            extra="نام کاربری (username) که با آن وارد پنل می‌شوید"
+            rules={[
+              {
+                required: false,
+                message: 'نام کاربری الزامی است'
+              }
+            ]}
           >
-            <Input placeholder="مثلاً: کلید API سرویس SMS" />
+            <Input.Password
+              placeholder="نام کاربری پنل (معمولاً شماره موبایل یا ایمیل)"
+              dir="ltr"
+              autoComplete="new-username"
+            />
           </Form.Item>
+
+          <Form.Item
+            name={['notificationSettings', 'smsPassword']}
+            label="رمز عبور پنل ملی‌پیامک"
+            extra="رمز عبوری که برای ورود به پنل استفاده می‌کنید"
+            rules={[
+              {
+                required: false,
+                message: 'رمز عبور الزامی است'
+              }
+            ]}
+          >
+            <Input.Password
+              placeholder="رمز عبور پنل"
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name={['notificationSettings', 'smsSenderNumber']}
+            label="شماره فرستنده پیامک"
+            extra="شماره اختصاصی یا اشتراکی که از پنل دریافت کرده‌اید (مثلاً 5000...، 3000... یا 10 رقمی)"
+          >
+            <Input placeholder="مثلاً: 50002710012443" dir="ltr" />
+          </Form.Item>
+
+          <Divider />
 
           <Form.Item
             name={['notificationSettings', 'emailFrom']}
@@ -503,6 +589,14 @@ function SettingsPage() {
           >
             <Input placeholder="noreply@example.com" />
           </Form.Item>
+
+          <Alert
+            message="⚠️ نکته امنیتی"
+            description="اطلاعات حساس شما (نام کاربری، رمز عبور) به صورت رمزنگاری شده در دیتابیس ذخیره می‌شوند و هیچ‌گاه در لاگ‌ها یا پاسخ‌های API نمایش داده نمی‌شوند."
+            type="warning"
+            showIcon
+            style={{ marginTop: 24 }}
+          />
         </>
       ),
     },

@@ -11,6 +11,11 @@ export interface ShippingAddress {
   address: string;
   postalCode: string;
   isDefault?: boolean;
+  mobile?: string;
+  nationalCode?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  recipientNationalCode?: string;
 }
 
 /**
