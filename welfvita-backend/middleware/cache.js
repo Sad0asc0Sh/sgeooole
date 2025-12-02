@@ -19,6 +19,15 @@ const cacheMiddleware = (ttlSeconds = DEFAULT_TTL) => {
       return next()
     }
 
+    // ✅ FIX: Disable caching for admin requests (skipDiscount=true)
+    // This prevents browser from caching admin panel data
+    if (req.query.skipDiscount === 'true') {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private')
+      res.setHeader('Pragma', 'no-cache')
+      res.setHeader('Expires', '0')
+      return next()
+    }
+
     const key = buildKey(req)
     const cached = cache.get(key)
 

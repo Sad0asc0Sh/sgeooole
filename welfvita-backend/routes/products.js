@@ -193,12 +193,15 @@ const syncOfferTimers = async (data, currentProduct = {}) => {
 // ============================================
 // GET /api/products
 // Public products list with filters & pagination
+// Query params:
+// - skipDiscount=true: Returns raw product data without discount calculation (for admin panel)
 // ============================================
 router.get('/', cacheMiddleware(300), async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1
     const limit = parseInt(req.query.limit, 10) || 20
     const skip = (page - 1) * limit
+    const skipDiscount = req.query.skipDiscount === 'true';
 
     const sort = req.query.sort || '-createdAt'
     const fields = req.query.fields ? req.query.fields.split(',').join(' ') : undefined
@@ -430,14 +433,14 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
       }
     }
 
-    // Apply discounts to products
-    const itemsWithCampaign = items.map((item) => {
+    // Apply discounts to products (skip if skipDiscount is true for admin panel)
+    const itemsWithCampaign = skipDiscount ? items : items.map((item) => {
       const productId = item._id ? item._id.toString() : null
       const categoryId = item.category ? item.category.toString() : null
-      
+
       // Priority 1: Direct product campaign
       let campaignInfo = productId ? campaignMap.get(productId) : undefined
-      
+
       // Priority 2: Category-based campaign (if no direct campaign)
       if (!campaignInfo && categoryId) {
         campaignInfo = categoryDiscountMap.get(categoryId)
@@ -561,12 +564,15 @@ router.put(
 
 // ============================================
 // GET /api/products/:id
+// Query params:
+// - skipDiscount=true: Returns raw product data without discount calculation (for admin editing)
 // ============================================
 router.get('/:id', cacheMiddleware(3600), async (req, res) => {
   try {
     let product;
     const mongoose = require('mongoose');
     const { id } = req.params;
+    const skipDiscount = req.query.skipDiscount === 'true';
 
     // 1. Try finding by ID if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(id)) {
@@ -603,8 +609,19 @@ router.get('/:id', cacheMiddleware(3600), async (req, res) => {
       })
     }
 
+    const productObj = product.toObject()
+
+    // If skipDiscount is true, return raw product data without discount calculation
+    // This is used for admin editing to preserve original prices
+    if (skipDiscount) {
+      return res.json({
+        success: true,
+        data: productObj,
+      })
+    }
+
     const now = new Date()
-    
+
     // Check for direct product campaign
     let activeSale = await Sale.findOne({
       isActive: true,
@@ -618,7 +635,7 @@ router.get('/:id', cacheMiddleware(3600), async (req, res) => {
     // If no direct campaign, check category-based campaign
     if (!activeSale && product.category) {
       const categoryId = typeof product.category === 'object' ? product.category._id : product.category
-      
+
       const categorySale = await Sale.findOne({
         isActive: true,
         startDate: { $lte: now },
@@ -633,7 +650,6 @@ router.get('/:id', cacheMiddleware(3600), async (req, res) => {
       }
     }
 
-    const productObj = product.toObject()
     if (activeSale) {
       productObj.campaignLabel = activeSale.name
       productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'

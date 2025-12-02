@@ -75,6 +75,8 @@ function ProductsList({ mode }) {
       params.set('limit', String(pageSize))
       params.set('sort', '-createdAt')
       params.set('fields', 'name,sku,price,stock,isActive,images,_id,category,productType')
+      // ✅ FIX: Get raw prices for admin panel (without discount calculation)
+      params.set('skipDiscount', 'true')
 
       if (filters.search) params.set('search', filters.search)
       if (filters.category) {

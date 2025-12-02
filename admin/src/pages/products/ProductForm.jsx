@@ -98,7 +98,9 @@ function ProductForm() {
       ; (async () => {
         setLoading(true)
         try {
-          const res = await api.get(`/products/${id}`)
+          // ✅ FIX: Use skipDiscount=true to get raw product data without discount calculation
+          // This ensures we get the original price, not the discounted price
+          const res = await api.get(`/products/${id}?skipDiscount=true`)
           const p = res?.data?.data
           if (p) {
             form.setFieldsValue({
