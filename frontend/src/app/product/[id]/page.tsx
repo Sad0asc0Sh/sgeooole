@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ProductDetailClient from "./ProductDetailClient";
+import ProductStructuredData from "./ProductStructuredData";
 import { fetchProductById, fetchProductsForStatic, PRODUCT_REVALIDATE } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 
@@ -72,85 +73,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         notFound();
     }
 
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
-    const productUrl = `${siteUrl ? siteUrl : ""}/product/${product.slug || product.id}`;
-    const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "فروشگاه";
-
-    const breadcrumbItems = [
-        {
-            "@type": "ListItem",
-            position: 1,
-            name: "صفحه اصلی",
-            item: siteUrl || "/",
-        },
-    ];
-
-    if (product.categoryPath && product.categoryPath.length > 0) {
-        const lastCategory = product.categoryPath[product.categoryPath.length - 1];
-        breadcrumbItems.push({
-            "@type": "ListItem",
-            position: 2,
-            name: lastCategory.name,
-            item: `${siteUrl || ""}/products?category=${encodeURIComponent(lastCategory.slug || lastCategory.id)}`,
-        });
-        breadcrumbItems.push({
-            "@type": "ListItem",
-            position: 3,
-            name: product.title,
-            item: productUrl,
-        });
-    }
-
-    const structuredData = {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "Product",
-                name: product.title,
-                description: product.description || product.title,
-                image: product.images,
-                brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
-                sku: product.id,
-                offers: {
-                    "@type": "Offer",
-                    priceCurrency: "IRR",
-                    price: product.price,
-                    availability: product.countInStock > 0
-                        ? "https://schema.org/InStock"
-                        : "https://schema.org/OutOfStock",
-                    seller: {
-                        "@type": "Organization",
-                        name: siteName,
-                    },
-                    url: productUrl,
-                },
-                aggregateRating:
-                    product.rating > 0
-                        ? {
-                            "@type": "AggregateRating",
-                            ratingValue: product.rating,
-                            reviewCount: product.reviewCount,
-                        }
-                        : undefined,
-            },
-            ...(breadcrumbItems.length > 1
-                ? [
-                    {
-                        "@type": "BreadcrumbList",
-                        itemListElement: breadcrumbItems,
-                    },
-                ]
-                : []),
-        ],
-    };
-
     return (
         <>
-            <script
-                type="application/ld+json"
-                suppressHydrationWarning
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-            />
+            <ProductStructuredData product={product} />
             <ProductDetailClient product={product} />
         </>
     );

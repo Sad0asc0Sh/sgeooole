@@ -3,6 +3,8 @@ import { Vazirmatn } from "next/font/google";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
+import ThirdPartyScripts from "@/components/ThirdPartyScripts";
+import CanonicalTag from "@/components/CanonicalTag";
 import { Suspense } from "react";
 
 const vazirmatn = Vazirmatn({
@@ -22,11 +24,13 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body className={`font-sans antialiased bg-gray-50 text-gray-900 ${vazirmatn.className}`}>
+        <CanonicalTag />
         <GoogleAuthProvider>
           <Suspense fallback={null}>
             <ClientLayout>{children}</ClientLayout>
           </Suspense>
         </GoogleAuthProvider>
+        <ThirdPartyScripts />
       </body>
     </html>
   );

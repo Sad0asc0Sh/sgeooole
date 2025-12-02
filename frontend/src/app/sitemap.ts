@@ -71,20 +71,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryPages: MetadataRoute.Sitemap = categories.map((category) => {
     const slug = category.slug || category._id;
     return {
-      url: `${SITE_URL}/categories/${slug}`,
+      url: `${SITE_URL}/products?category=${slug}`,
       lastModified: category.updatedAt ? new Date(category.updatedAt) : now,
-      changeFrequency: "daily",
-      priority: 0.9,
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
     };
   });
 
-  const productPages: MetadataRoute.Sitemap = products.map((product) => {
-    const slug = product.slug || product._id;
+  const productPages: MetadataRoute.Sitemap = products.map((product: any) => {
+    // Build product URL with categoryPath if available
+    const buildProductUrl = (p: any): string => {
+      const path = Array.isArray(p?.categoryPath)
+        ? p.categoryPath.map((c: any) => c.slug).filter(Boolean).join("/")
+        : "product";
+      return `${SITE_URL}/${path}/${p.slug || p._id || p.id}`;
+    };
+
     return {
-      url: `${SITE_URL}/product/${slug}`,
+      url: buildProductUrl(product),
       lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
-      changeFrequency: "weekly",
-      priority: 0.8,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     };
   });
 
