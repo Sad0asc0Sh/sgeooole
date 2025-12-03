@@ -476,4 +476,31 @@ export const productService = {
       throw error;
     }
   },
+
+  /**
+   * Fetch related products by category (excludes current product)
+   * @param categoryId - Category ID to fetch products from
+   * @param currentProductId - Current product ID to exclude from results
+   * @param limit - Number of products to return (default: 10)
+   */
+  getRelated: async (categoryId: string, currentProductId: string, limit: number = 10): Promise<Product[]> => {
+    try {
+      // Fetch extra products to ensure we have enough after filtering
+      const fetchLimit = limit + 5;
+      const response = await api.get(`/products?category=${categoryId}&limit=${fetchLimit}&_t=${Date.now()}`);
+      const items = productService._extractList(response);
+
+      // Filter out the current product and limit results
+      const relatedProducts = items
+        .filter(item => item._id !== currentProductId)
+        .slice(0, limit)
+        .map(mapBackendToFrontend);
+
+      return relatedProducts;
+    } catch (error) {
+      console.error(`Error fetching related products for category ${categoryId}:`, error);
+      // Return empty array instead of throwing to prevent page crash
+      return [];
+    }
+  },
 };

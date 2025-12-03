@@ -50,6 +50,7 @@ export default function ProductStructuredData({ product }: ProductStructuredData
                     "@type": "Offer",
                     priceCurrency: "IRR",
                     price: product.price,
+                    itemCondition: "https://schema.org/NewCondition",
                     availability: product.countInStock > 0
                         ? "https://schema.org/InStock"
                         : "https://schema.org/OutOfStock",

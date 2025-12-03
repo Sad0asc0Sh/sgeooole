@@ -4,6 +4,7 @@ import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
 import { fetchProductById, fetchProductsForStatic, PRODUCT_REVALIDATE } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
+import ProductRail from "@/components/home/ProductRail";
 
 export const revalidate = PRODUCT_REVALIDATE;
 export const dynamicParams = true;
@@ -67,7 +68,28 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const product = await fetchProductById(id);
+
+    // Parallel data fetching to avoid waterfall
+    const [product, relatedProducts] = await Promise.all([
+        fetchProductById(id),
+        // Fetch related products only if we have a category
+        (async () => {
+            try {
+                const currentProduct = await fetchProductById(id);
+                if (!currentProduct) return [];
+
+                // Get the last category in the path (most specific)
+                const categoryId = currentProduct.categoryPath?.[currentProduct.categoryPath.length - 1]?.id;
+                if (!categoryId) return [];
+
+                const { productService } = await import('@/services/productService');
+                return await productService.getRelated(categoryId, id, 10);
+            } catch (error) {
+                console.error('Error fetching related products:', error);
+                return []; // Return empty array on error to prevent page crash
+            }
+        })()
+    ]);
 
     if (!product) {
         notFound();
@@ -77,6 +99,16 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
         <>
             <ProductStructuredData product={product} />
             <ProductDetailClient product={product} />
+
+            {/* Related Products Section */}
+            {relatedProducts.length > 0 && (
+                <div className="pb-4">
+                    <ProductRail
+                        title="محصولات مشابه"
+                        products={relatedProducts}
+                    />
+                </div>
+            )}
         </>
     );
 }

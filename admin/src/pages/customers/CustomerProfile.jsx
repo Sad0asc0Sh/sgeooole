@@ -239,8 +239,70 @@ function CustomerProfile() {
                   <Descriptions.Item label="آخرین ورود">
                     {formatPersianDate(user.lastLogin, true)}
                   </Descriptions.Item>
+                  <Descriptions.Item label="شماره موبایل">
+                    {user.mobile || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="موجودی کیف پول">
+                    {user.wallet ? `${new Intl.NumberFormat('fa-IR').format(user.wallet)} تومان` : '0 تومان'}
+                  </Descriptions.Item>
                 </Descriptions>
               </div>
+
+              {/* ✅ اطلاعات شخصی */}
+              {(user.nationalCode || user.birthDate || user.landline || user.province || user.city || user.shebaNumber) && (
+                <div style={{ marginBottom: 24 }}>
+                  <h3>اطلاعات شخصی</h3>
+                  <Descriptions bordered size="small" column={2}>
+                    {user.nationalCode && (
+                      <Descriptions.Item label="کد ملی">{user.nationalCode}</Descriptions.Item>
+                    )}
+                    {user.birthDate && (
+                      <Descriptions.Item label="تاریخ تولد">{formatPersianDate(user.birthDate)}</Descriptions.Item>
+                    )}
+                    {user.landline && (
+                      <Descriptions.Item label="تلفن ثابت">{user.landline}</Descriptions.Item>
+                    )}
+                    {user.province && (
+                      <Descriptions.Item label="استان">{user.province}</Descriptions.Item>
+                    )}
+                    {user.city && (
+                      <Descriptions.Item label="شهر">{user.city}</Descriptions.Item>
+                    )}
+                    {user.shebaNumber && (
+                      <Descriptions.Item label="شماره شبا" span={2}>
+                        <span style={{ fontFamily: 'monospace', direction: 'ltr', display: 'inline-block' }}>{user.shebaNumber}</span>
+                      </Descriptions.Item>
+                    )}
+                  </Descriptions>
+                </div>
+              )}
+
+              {/* ✅ اطلاعات حقوقی */}
+              {user.isLegal && (
+                <div style={{ marginBottom: 24 }}>
+                  <h3>اطلاعات شخص حقوقی</h3>
+                  <Descriptions bordered size="small" column={2}>
+                    {user.companyName && (
+                      <Descriptions.Item label="نام شرکت/سازمان" span={2}>{user.companyName}</Descriptions.Item>
+                    )}
+                    {user.companyNationalId && (
+                      <Descriptions.Item label="شناسه ملی">{user.companyNationalId}</Descriptions.Item>
+                    )}
+                    {user.companyRegistrationId && (
+                      <Descriptions.Item label="شماره ثبت">{user.companyRegistrationId}</Descriptions.Item>
+                    )}
+                    {user.companyLandline && (
+                      <Descriptions.Item label="تلفن ثابت شرکت">{user.companyLandline}</Descriptions.Item>
+                    )}
+                    {user.companyProvince && (
+                      <Descriptions.Item label="استان">{user.companyProvince}</Descriptions.Item>
+                    )}
+                    {user.companyCity && (
+                      <Descriptions.Item label="شهر">{user.companyCity}</Descriptions.Item>
+                    )}
+                  </Descriptions>
+                </div>
+              )}
 
               <Divider />
 

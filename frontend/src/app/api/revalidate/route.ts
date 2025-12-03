@@ -16,12 +16,12 @@ export async function POST(request: Request) {
     }
 
     if (body.path) {
-      await revalidatePath(body.path);
+      revalidatePath(body.path, 'page');
       return NextResponse.json({ revalidated: true, path: body.path });
     }
 
     if (body.tag) {
-      await revalidateTag(body.tag);
+      revalidateTag(body.tag, 'max');
       return NextResponse.json({ revalidated: true, tag: body.tag });
     }
 

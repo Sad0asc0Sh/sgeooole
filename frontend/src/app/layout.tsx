@@ -14,6 +14,7 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://welfvita.ir'),
   title: "فروشگاه ولفویتا | خرید آنلاین محصولات",
   description: "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
 };

@@ -174,6 +174,7 @@ exports.getProfile = async (req, res) => {
       }),
     ])
 
+    // ✅ FIX: Return complete user profile including personal and legal info
     res.json({
       success: true,
       data: {
@@ -190,6 +191,23 @@ exports.getProfile = async (req, res) => {
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
         googleId: user.googleId,
+        avatar: user.avatar,
+        username: user.username,
+        // Personal Info
+        nationalCode: user.nationalCode,
+        birthDate: user.birthDate,
+        landline: user.landline,
+        province: user.province,
+        city: user.city,
+        shebaNumber: user.shebaNumber,
+        // Legal Entity Info
+        isLegal: user.isLegal,
+        companyName: user.companyName,
+        companyNationalId: user.companyNationalId,
+        companyRegistrationId: user.companyRegistrationId,
+        companyLandline: user.companyLandline,
+        companyProvince: user.companyProvince,
+        companyCity: user.companyCity,
         orderStats: {
           processing: processingCount,
           delivered: deliveredCount,
@@ -1027,11 +1045,30 @@ exports.verifyEmailOtp = async (req, res) => {
 }
 
 // ======================
-// Update Profile (Name, Email, Password)
+// Update Profile (Name, Email, Password, Personal Info, Legal Info)
 // ======================
 exports.updateProfile = async (req, res) => {
   try {
-    const { name, email, password } = req.body
+    const {
+      name,
+      email,
+      password,
+      // Personal Info
+      nationalCode,
+      birthDate,
+      landline,
+      province,
+      city,
+      shebaNumber,
+      // Legal Entity Info
+      isLegal,
+      companyName,
+      companyNationalId,
+      companyRegistrationId,
+      companyLandline,
+      companyProvince,
+      companyCity
+    } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
     const user = await User.findById(userId).select('+password')
@@ -1039,7 +1076,8 @@ exports.updateProfile = async (req, res) => {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
     }
 
-    if (name) user.name = name
+    // ✅ FIX: Update all profile fields
+    if (name !== undefined) user.name = name
 
     // Email update logic REMOVED. Must use verifyEmailOtp.
     // if (email) ...
@@ -1051,7 +1089,26 @@ exports.updateProfile = async (req, res) => {
       user.password = password
     }
 
+    // ✅ FIX: Update Personal Info
+    if (nationalCode !== undefined) user.nationalCode = nationalCode
+    if (birthDate !== undefined) user.birthDate = birthDate
+    if (landline !== undefined) user.landline = landline
+    if (province !== undefined) user.province = province
+    if (city !== undefined) user.city = city
+    if (shebaNumber !== undefined) user.shebaNumber = shebaNumber
+
+    // ✅ FIX: Update Legal Entity Info
+    if (isLegal !== undefined) user.isLegal = isLegal
+    if (companyName !== undefined) user.companyName = companyName
+    if (companyNationalId !== undefined) user.companyNationalId = companyNationalId
+    if (companyRegistrationId !== undefined) user.companyRegistrationId = companyRegistrationId
+    if (companyLandline !== undefined) user.companyLandline = companyLandline
+    if (companyProvince !== undefined) user.companyProvince = companyProvince
+    if (companyCity !== undefined) user.companyCity = companyCity
+
     await user.save()
+
+    console.log(`[AUTH] Profile updated for user: ${user._id}`)
 
     res.json({
       success: true,
@@ -1067,7 +1124,22 @@ exports.updateProfile = async (req, res) => {
           isActive: user.isActive,
           username: user.username,
           avatar: user.avatar,
-          googleId: user.googleId
+          googleId: user.googleId,
+          // Personal Info
+          nationalCode: user.nationalCode,
+          birthDate: user.birthDate,
+          landline: user.landline,
+          province: user.province,
+          city: user.city,
+          shebaNumber: user.shebaNumber,
+          // Legal Info
+          isLegal: user.isLegal,
+          companyName: user.companyName,
+          companyNationalId: user.companyNationalId,
+          companyRegistrationId: user.companyRegistrationId,
+          companyLandline: user.companyLandline,
+          companyProvince: user.companyProvince,
+          companyCity: user.companyCity
         }
       }
     })

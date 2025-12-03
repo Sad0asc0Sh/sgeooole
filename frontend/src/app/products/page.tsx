@@ -16,13 +16,14 @@ type SearchParams = {
 
 const humanizeCategory = (slug: string) => slug.replace(/[-_]/g, " ");
 
-export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
-  const category = typeof searchParams.category === "string" ? searchParams.category : undefined;
-  const search = typeof searchParams.search === "string" ? searchParams.search : undefined;
-  const sort = typeof searchParams.sort === "string" ? searchParams.sort : undefined;
-  const pageParam = typeof searchParams.page === "string" ? Number(searchParams.page) : undefined;
-  const minPrice = typeof searchParams.minPrice === "string" ? searchParams.minPrice : undefined;
-  const maxPrice = typeof searchParams.maxPrice === "string" ? searchParams.maxPrice : undefined;
+export async function generateMetadata({ searchParams }: { searchParams: Promise<SearchParams> }): Promise<Metadata> {
+  const params = await searchParams;
+  const category = typeof params.category === "string" ? params.category : undefined;
+  const search = typeof params.search === "string" ? params.search : undefined;
+  const sort = typeof params.sort === "string" ? params.sort : undefined;
+  const pageParam = typeof params.page === "string" ? Number(params.page) : undefined;
+  const minPrice = typeof params.minPrice === "string" ? params.minPrice : undefined;
+  const maxPrice = typeof params.maxPrice === "string" ? params.maxPrice : undefined;
 
   const canonicalPath = category ? `/products?category=${encodeURIComponent(category)}` : "/products";
   const canonical = SITE_URL ? `${SITE_URL}${canonicalPath}` : canonicalPath;

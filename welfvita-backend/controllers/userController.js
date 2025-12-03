@@ -1,4 +1,5 @@
-const User = require('../models/Admin')
+// ✅ FIX: Use correct User model (Customer model, not Admin model)
+const User = require('../models/User')
 
 // Role hierarchy used for safety checks
 const ROLE_LEVELS = {
