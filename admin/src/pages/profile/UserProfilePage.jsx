@@ -84,6 +84,7 @@ const UserProfilePage = () => {
             form.setFieldsValue({
                 name: user.name,
                 email: user.email,
+                mobile: user.mobile,
                 nationalCode: user.nationalCode,
                 landline: user.landline,
                 shebaNumber: user.shebaNumber,
@@ -220,9 +221,21 @@ const UserProfilePage = () => {
                         </Col>
                         <Col xs={24} md={12}>
                             <Form.Item
+                                name="mobile"
+                                label="شماره موبایل"
+                                rules={[
+                                    { required: true, message: 'لطفاً شماره موبایل را وارد کنید' },
+                                    { validator: validateMobile }
+                                ]}
+                            >
+                                <Input prefix={<PhoneOutlined />} placeholder="09xxxxxxxxx" maxLength={11} dir="ltr" />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={12}>
+                            <Form.Item
                                 name="landline"
                                 label="تلفن ثابت"
-                                rules={[{ required: true, message: 'لطفاً تلفن ثابت را وارد کنید' }]}
+                                rules={[{ required: false, message: 'لطفاً تلفن ثابت را وارد کنید' }]}
                             >
                                 <Input prefix={<PhoneOutlined />} placeholder="به همراه کد شهر" />
                             </Form.Item>

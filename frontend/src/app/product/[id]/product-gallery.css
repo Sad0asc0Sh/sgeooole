@@ -1,0 +1,76 @@
+/* Product Gallery Swiper Custom Styles */
+
+/* Force Swiper and SwiperSlide to have proper dimensions */
+.product-gallery-swiper {
+  height: 380px !important;
+  width: 100% !important;
+  min-height: 380px !important;
+}
+
+.product-gallery-swiper .swiper-wrapper {
+  height: 380px !important;
+  width: 100% !important;
+  min-height: 380px !important;
+}
+
+.product-gallery-swiper .swiper-slide {
+  height: 380px !important;
+  width: 100% !important;
+  min-height: 380px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Ensure Image container has proper dimensions */
+.product-image-container {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 380px !important;
+}
+
+/* Fix for Next.js Image with fill */
+.product-image-container img {
+  object-fit: contain;
+}
+
+/* Thumbnail styles */
+.product-thumbnails {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  overflow-x: auto;
+  margin-top: 0.5rem;
+  padding-bottom: 1rem;
+}
+
+.product-thumbnails::-webkit-scrollbar {
+  display: none;
+}
+
+.product-thumbnail {
+  position: relative;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.product-thumbnail.active {
+  border-color: #10b981;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
+}
+
+.product-thumbnail:not(.active) {
+  opacity: 0.6;
+}
+
+.product-thumbnail:hover {
+  opacity: 1;
+}

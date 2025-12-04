@@ -105,7 +105,7 @@ exports.getUserByIdAsAdmin = async (req, res) => {
 // ============================================
 exports.updateUserAsAdmin = async (req, res) => {
   try {
-    const { name, email, phoneNumber, isActive, role } = req.body || {}
+    const { name, email, mobile, isActive, role } = req.body || {} // ✅ FIX: تغییر phoneNumber به mobile
 
     const currentRole = req.user?.role || 'user'
     const currentLevel = ROLE_LEVELS[currentRole] || 0
@@ -172,7 +172,19 @@ exports.updateUserAsAdmin = async (req, res) => {
 
     if (name !== undefined) user.name = name
     if (email !== undefined) user.email = email
-    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber
+    if (mobile !== undefined) {
+      // ✅ FIX: Check if mobile already exists for another user
+      if (mobile !== user.mobile) {
+        const existingUser = await User.findOne({ mobile, _id: { $ne: user._id } })
+        if (existingUser) {
+          return res.status(400).json({
+            success: false,
+            message: 'این شماره موبایل قبلاً ثبت شده است.'
+          })
+        }
+      }
+      user.mobile = mobile // ✅ FIX: تغییر از phoneNumber به mobile
+    }
     if (isActive !== undefined) user.isActive = isActive
 
     await user.save()

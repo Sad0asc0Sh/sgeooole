@@ -1,20 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Pagination, Zoom, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/zoom";
 import "swiper/css/navigation";
+
 import Image from "next/image";
-import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import type { Swiper as SwiperType } from "swiper";
-
-const Swiper = dynamic(() => import("swiper/react").then((mod) => mod.Swiper), { ssr: false });
-const SwiperSlide = dynamic(() => import("swiper/react").then((mod) => mod.SwiperSlide), { ssr: false });
+import { Swiper, SwiperSlide } from "swiper/react";
 
 type ProductGalleryProps = {
     product: Product;
@@ -25,6 +23,13 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [initialSlide, setInitialSlide] = useState(0);
     const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return <div className="h-[380px] w-full bg-gray-50" />;
 
     return (
         <>
@@ -32,14 +37,17 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
             <div className="relative bg-gray-50 w-full pb-10">
                 <div className="h-[380px] w-full">
                     <Swiper
+                        key={product.id}
                         modules={[Pagination]}
                         pagination={{ clickable: true }}
-                        className="h-full"
+                        slidesPerView={1}
+                        className="h-full w-full"
+                        style={{ height: '380px' }}
                         onSwiper={setSwiperInstance}
                         onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                     >
                         {product.images.map((img, index) => (
-                            <SwiperSlide key={index} className="flex items-center justify-center">
+                            <SwiperSlide key={index} className="flex items-center justify-center w-full h-full">
                                 <div
                                     className="w-full h-full flex items-center justify-center text-gray-300 relative cursor-zoom-in"
                                     onClick={() => {
@@ -51,6 +59,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                         src={img}
                                         alt={`${product.title} - ${index + 1}`}
                                         fill
+                                        unoptimized
                                         className="object-contain p-8"
                                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                         loading={index === 0 ? undefined : "lazy"}
@@ -91,6 +100,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 src={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
+                                unoptimized
                                 className="object-cover"
                                 sizes="64px"
                                 loading="lazy"
@@ -155,6 +165,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                                     src={img}
                                                     alt={`${product.title} - ${index + 1}`}
                                                     fill
+                                                    unoptimized
                                                     className="object-contain"
                                                     priority={index === initialSlide}
                                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

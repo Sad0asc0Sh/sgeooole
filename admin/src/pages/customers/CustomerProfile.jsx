@@ -70,7 +70,7 @@ function CustomerProfile() {
       form.setFieldsValue({
         name: userData?.name || '',
         email: userData?.email || '',
-        phoneNumber: userData?.phoneNumber || '',
+        mobile: userData?.mobile || '', // ✅ FIX: تغییر از phoneNumber به mobile
         isActive: userData?.isActive ?? true,
         role: userData?.role || 'user',
       })
@@ -119,7 +119,7 @@ function CustomerProfile() {
       await api.put(`/users/admin/${id}`, {
         name: values.name,
         email: values.email,
-        phoneNumber: values.phoneNumber,
+        mobile: values.mobile, // ✅ FIX: تغییر از phoneNumber به mobile
         isActive: values.isActive,
         role: values.role,
       })
@@ -331,10 +331,21 @@ function CustomerProfile() {
                   </Form.Item>
 
                   <Form.Item
-                    name="phoneNumber"
-                    label="شماره تماس"
+                    name="mobile"
+                    label="شماره موبایل"
+                    rules={[
+                      {
+                        pattern: /^09\d{9}$/,
+                        message: 'شماره موبایل باید با 09 شروع شود و ۱۱ رقم باشد'
+                      }
+                    ]}
                   >
-                    <Input placeholder="شماره تماس" size="large" />
+                    <Input
+                      placeholder="09xxxxxxxxx"
+                      size="large"
+                      maxLength={11}
+                      dir="ltr"
+                    />
                   </Form.Item>
 
                   <Form.Item name="role" label="نقش کاربر">

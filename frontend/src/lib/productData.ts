@@ -103,12 +103,12 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
   const category =
     typeof backend.category === "object" && backend.category !== null
       ? (() => {
-          const cat: BackendCategory = backend.category as BackendCategory;
-          if (cat.parent?.name) {
-            return `${cat.parent.name} > ${cat.name}`;
-          }
-          return cat.name || "نامشخص";
-        })()
+        const cat: BackendCategory = backend.category as BackendCategory;
+        if (cat.parent?.name) {
+          return `${cat.parent.name} > ${cat.name}`;
+        }
+        return cat.name || "نامشخص";
+      })()
       : backend.category || "نامشخص";
 
   const categoryPath: Product["categoryPath"] = (() => {
@@ -184,7 +184,6 @@ const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/ap
 export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
   const response = await fetch(`${apiBaseUrl}/products/${id}?_t=${Date.now()}`, {
     next: { revalidate: PRODUCT_REVALIDATE },
-    cache: 'no-store', // Prevent browser caching for real-time discount updates
   });
 
   if (!response.ok) {
@@ -206,7 +205,6 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
     // Try a slug endpoint first
     const resSlug = await fetch(`${apiBaseUrl}/products/slug/${slug}?_t=${Date.now()}`, {
       next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'no-store', // Prevent browser caching for real-time discount updates
     });
     if (resSlug.ok) {
       const payload = await resSlug.json();
@@ -221,7 +219,6 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   try {
     const res = await fetch(`${apiBaseUrl}/products?slug=${slug}&_t=${Date.now()}`, {
       next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'no-store', // Prevent browser caching for real-time discount updates
     });
     if (res.ok) {
       const payload = await res.json();
@@ -240,7 +237,6 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
   try {
     const response = await fetch(`${apiBaseUrl}/products?limit=${limit}&_t=${Date.now()}`, {
       next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'no-store', // Prevent browser caching for real-time discount updates
     });
     if (!response.ok) return [];
     const payload = await response.json();

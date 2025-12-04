@@ -1053,6 +1053,7 @@ exports.updateProfile = async (req, res) => {
       name,
       email,
       password,
+      mobile, // ✅ ADD: Mobile number
       // Personal Info
       nationalCode,
       birthDate,
@@ -1087,6 +1088,19 @@ exports.updateProfile = async (req, res) => {
         return res.status(400).json({ success: false, message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.' })
       }
       user.password = password
+    }
+
+    // ✅ FIX: Update Mobile (with validation)
+    if (mobile !== undefined && mobile !== user.mobile) {
+      // Check if mobile already exists for another user
+      const existingUser = await User.findOne({ mobile, _id: { $ne: userId } })
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'این شماره موبایل قبلاً ثبت شده است.'
+        })
+      }
+      user.mobile = mobile
     }
 
     // ✅ FIX: Update Personal Info

@@ -834,6 +834,8 @@ router.put(
         updates.images = []
       } else if (Array.isArray(imagesToRemove) && imagesToRemove.length > 0) {
         const toRemove = imagesToRemove
+        console.log('[DEBUG] imagesToRemove:', JSON.stringify(toRemove, null, 2))
+        console.log('[DEBUG] product.images (before):', JSON.stringify(product.images, null, 2))
 
         const remainingImages = []
 
@@ -858,12 +860,20 @@ router.put(
               const rPublicId =
                 r && typeof r === 'object' && r.public_id ? r.public_id : undefined
 
+              console.log(`[DEBUG] Comparing:
+                Existing - ID: ${existingPublicId}, URL: ${existingUrl}
+                Remove - ID: ${rPublicId}, URL: ${rUrl}`)
+
               if (existingPublicId && rPublicId) {
-                return existingPublicId === rPublicId
+                const match = existingPublicId === rPublicId
+                if (match) console.log('[DEBUG] Match found by public_id')
+                return match
               }
 
               if (!existingPublicId && existingUrl && rUrl) {
-                return existingUrl === rUrl
+                const match = existingUrl === rUrl
+                if (match) console.log('[DEBUG] Match found by URL')
+                return match
               }
 
               return false
@@ -872,6 +882,7 @@ router.put(
             if (shouldRemove) {
               if (existingPublicId) {
                 try {
+                  console.log('[DEBUG] Deleting from Cloudinary:', existingPublicId)
                   await cloudinary.uploader.destroy(existingPublicId)
                 } catch (err) {
                   console.error(
@@ -886,6 +897,7 @@ router.put(
           }
         }
 
+        console.log('[DEBUG] remainingImages:', JSON.stringify(remainingImages, null, 2))
         updates.images = remainingImages
       }
 
@@ -983,6 +995,96 @@ router.post(
       res.status(500).json({
         success: false,
         message: 'Failed to upload images',
+        error: error.message,
+      })
+    }
+  },
+)
+
+// ============================================
+// DELETE /api/products/:id/images/:publicId
+// حذف یک عکس خاص از محصول
+// ============================================
+router.delete(
+  '/:id/images/:publicId',
+  protect,
+  authorize('admin', 'manager', 'superadmin'),
+  async (req, res) => {
+    try {
+      const { id } = req.params
+      // Decode publicId چون از فرانت‌اند URL encoded می‌آید
+      const publicId = decodeURIComponent(req.params.publicId)
+
+      console.log(`[DELETE IMAGE] Product ID: ${id}, Public ID: ${publicId}`)
+
+      // پیدا کردن محصول
+      const product = await Product.findById(id)
+      if (!product) {
+        console.error(`[DELETE IMAGE] Product not found: ${id}`)
+        return res.status(404).json({
+          success: false,
+          message: 'محصول یافت نشد',
+        })
+      }
+
+      // پیدا کردن عکس با public_id
+      const imageToDelete = product.images?.find(
+        (img) => img.public_id === publicId
+      )
+
+      if (!imageToDelete) {
+        console.error(`[DELETE IMAGE] Image not found in product. Public ID: ${publicId}`)
+        console.error(`[DELETE IMAGE] Available images:`, product.images?.map(img => img.public_id))
+        return res.status(404).json({
+          success: false,
+          message: 'تصویر در محصول یافت نشد',
+        })
+      }
+
+      console.log(`[DELETE IMAGE] Found image:`, imageToDelete)
+
+      // حذف از Cloudinary
+      try {
+        const cloudinaryResult = await cloudinary.uploader.destroy(publicId)
+        console.log(`[DELETE IMAGE] Cloudinary result:`, cloudinaryResult)
+
+        if (cloudinaryResult.result !== 'ok' && cloudinaryResult.result !== 'not found') {
+          console.warn(`[DELETE IMAGE] Cloudinary deletion warning: ${cloudinaryResult.result}`)
+        }
+      } catch (cloudinaryError) {
+        console.error(`[DELETE IMAGE] Cloudinary error:`, cloudinaryError)
+        // ادامه می‌دهیم حتی اگر حذف از Cloudinary ناموفق باشد
+        // چون ممکن است عکس قبلاً از Cloudinary حذف شده باشد
+      }
+
+      // حذف از آرایه images محصول
+      product.images = product.images.filter(
+        (img) => img.public_id !== publicId
+      )
+
+      // ذخیره محصول
+      await product.save()
+
+      console.log(`[DELETE IMAGE] Image deleted successfully. Remaining images: ${product.images.length}`)
+
+      // پاک کردن کش
+      clearCacheByKey(`/api/products/${id}`)
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      res.json({
+        success: true,
+        message: 'تصویر با موفقیت حذف شد',
+        data: {
+          product,
+          deletedImage: imageToDelete,
+        },
+      })
+    } catch (error) {
+      console.error('[DELETE IMAGE] Error:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در حذف تصویر',
         error: error.message,
       })
     }
