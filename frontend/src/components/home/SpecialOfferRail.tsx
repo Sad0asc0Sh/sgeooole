@@ -127,6 +127,9 @@ export default function SpecialOfferRail() {
               product.specialOfferEndTime &&
               new Date(product.specialOfferEndTime).getTime() > now
             );
+            const displayPrice = (!hasSpecialOfferCountdown && product.oldPrice)
+              ? product.oldPrice
+              : product.price;
 
             return (
               <SwiperSlide
@@ -174,7 +177,7 @@ export default function SpecialOfferRail() {
                       </h3>
 
                       {/* Price Section */}
-                      <div className="flex flex-col gap-1 mt-auto">
+                        <div className="flex flex-col gap-1 mt-auto">
                         <div className="flex items-center justify-between h-5">
                           {product.countInStock > 0 && product.discount > 0 && hasSpecialOfferCountdown ? (
                             <>
@@ -197,7 +200,7 @@ export default function SpecialOfferRail() {
 
                         <div className={`flex items-center justify-end gap-1 ${product.countInStock === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
                           <span className="text-[15px] font-black tracking-tight">
-                            {product.price.toLocaleString("fa-IR")}
+                            {displayPrice.toLocaleString("fa-IR")}
                           </span>
                           <span className={`text-[10px] font-medium ${product.countInStock === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
                             تومان

@@ -22,6 +22,9 @@ export default function ProductActions({ product, selectedColor }: ProductAction
         product.specialOfferEndTime &&
         new Date(product.specialOfferEndTime).getTime() > now
     );
+    const displayPrice = (!hasSpecialOfferCountdown && product.isSpecialOffer && product.oldPrice)
+        ? product.oldPrice
+        : product.price;
 
     // Calculate quantity for the SPECIFIC selected variant
     const [quantity, setQuantity] = useState(0);
@@ -84,7 +87,7 @@ export default function ProductActions({ product, selectedColor }: ProductAction
             <div className="flex flex-col">
                 {product.oldPrice && (!product.isSpecialOffer || hasSpecialOfferCountdown) && (
                     <div className="flex items-center gap-2 mb-1">
-                        {product.discount > 0 && (
+                        {product.discount > 0 && hasSpecialOfferCountdown && (
                             <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
                                     product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
@@ -99,8 +102,8 @@ export default function ProductActions({ product, selectedColor }: ProductAction
                     </div>
                 )}
                 <div className="flex items-center gap-1">
-                    <span className="text-xl font-black text-black">
-                        {product.price.toLocaleString("fa-IR")}
+                        <span className="text-xl font-black text-black">
+                        {displayPrice.toLocaleString("fa-IR")}
                     </span>
                     <span className="text-xs text-gray-500">تومان</span>
                 </div>

@@ -108,6 +108,11 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             !(headerConfig?.type === 'amazing') ||
             isSpecialOfferCountdownActive ||
             !product.isSpecialOffer;
+          const effectiveDiscount = showSpecialOfferPricing ? product.discount : 0;
+          const displayPrice =
+            (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+              ? product.oldPrice
+              : product.price;
 
           return (
             <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
@@ -171,14 +176,14 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                     <div className="flex flex-col gap-1 mt-auto">
                       {/* Row 1: Old Price (if discount and in stock) */}
                       <div className="flex items-center justify-between h-5">
-                        {product.countInStock > 0 && product.discount > 0 && showSpecialOfferPricing ? (
+                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
                           <>
                             <div className="flex items-center gap-1">
                               <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
                                 product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
                                   'bg-[#ef394e]'
                                 }`}>
-                                {product.discount.toLocaleString("fa-IR")}٪
+                                {effectiveDiscount.toLocaleString("fa-IR")}٪
                               </div>
                               <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
                                 {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
@@ -196,7 +201,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                           }`}
                       >
                         <span className="text-[15px] font-black tracking-tight">
-                          {product.price.toLocaleString("fa-IR")}
+                          {displayPrice.toLocaleString("fa-IR")}
                         </span>
                         <span
                           className={`text-[10px] font-medium ${product.countInStock === 0 ? "text-gray-400" : "text-gray-600"

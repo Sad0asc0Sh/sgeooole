@@ -37,6 +37,10 @@ export default function ProductCard({ product }: ProductCardProps) {
         product.specialOfferEndTime &&
         new Date(product.specialOfferEndTime).getTime() > now
     );
+    const shouldShowSpecialDiscount = product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive);
+    const displayPrice = (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+        ? product.oldPrice
+        : product.price;
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
@@ -136,8 +140,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         !product.isSpecialOffer;
     const showSpecialOfferPricing =
         !(headerConfig?.type === 'amazing') ||
-        isSpecialOfferCountdownActive ||
-        !product.isSpecialOffer;
+        shouldShowSpecialDiscount;
 
     return (
         <div
@@ -252,7 +255,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <div className="flex flex-col">
                         {product.oldPrice && showSpecialOfferPricing && (
                             <div className="flex items-center gap-1 mb-1">
-                                {discountPercentage > 0 && (
+                                {shouldShowSpecialDiscount && (
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                                         {discountPercentage}%
                                     </span>
@@ -264,7 +267,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                         )}
                         <div className="flex items-center gap-1">
                             <span className="text-base font-black text-gray-900">
-                                {product.price.toLocaleString("fa-IR")}
+                                {displayPrice.toLocaleString("fa-IR")}
                             </span>
                             <span className="text-[10px] text-gray-500">تومان</span>
                         </div>

@@ -63,6 +63,9 @@ export default function RecentPage() {
                             (product as any).specialOfferEndTime &&
                             new Date((product as any).specialOfferEndTime).getTime() > now
                         );
+                        const displayPrice = (!hasSpecialOfferCountdown && (product as any).isSpecialOffer && product.price)
+                            ? product.price
+                            : (product.finalPrice || product.price);
 
                         return (
                             <Link href={`/product/${product.slug || product._id}`} key={product._id} className="block group">
@@ -91,7 +94,7 @@ export default function RecentPage() {
                                             )}
                                             <div className="flex items-baseline gap-1">
                                                 <span className="text-sm font-black text-gray-800">
-                                                    {(product.finalPrice || product.price)?.toLocaleString('fa-IR')}
+                                                    {displayPrice?.toLocaleString('fa-IR')}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400">تومان</span>
                                             </div>

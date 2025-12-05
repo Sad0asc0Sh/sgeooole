@@ -104,13 +104,27 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
   const flashActive = Boolean(backendProduct.isFlashDeal && isFuture(backendProduct.flashDealEndTime));
   const specialActive = Boolean(backendProduct.isSpecialOffer && isFuture(backendProduct.specialOfferEndTime));
 
+  const rawDiscount = backendProduct.discount || 0;
+
   // Only allow discount when a promotion is currently active
   const hasActivePromotion = flashActive || specialActive || backendProduct.campaignLabel;
-  const discount = hasActivePromotion ? (backendProduct.discount || 0) : 0;
+  const discount = hasActivePromotion ? rawDiscount : 0;
 
-  const oldPrice = discount > 0
-    ? Math.round(backendProduct.price / (1 - discount / 100))
-    : undefined;
+  // Calculate price/oldPrice with fallback to base price when promo is over
+  let price = backendProduct.price;
+  let oldPrice: number | undefined = undefined;
+
+  if (hasActivePromotion && discount > 0) {
+    oldPrice = Math.round(backendProduct.price / (1 - discount / 100));
+  } else {
+    // Promo expired: if compareAtPrice exists use it as base price
+    if (backendProduct.compareAtPrice) {
+      price = backendProduct.compareAtPrice;
+    } else if (rawDiscount > 0) {
+      // derive base price from stored discounted price
+      price = Math.round(backendProduct.price / (1 - rawDiscount / 100));
+    }
+  }
 
   // Handle images - support string URLs and objects with `url`
   const normalizeImage = (img: any): string | null => {
