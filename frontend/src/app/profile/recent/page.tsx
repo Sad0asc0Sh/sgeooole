@@ -7,9 +7,15 @@ import { useEffect, useState } from "react";
 export default function RecentPage() {
     const { viewedProducts, clearHistory } = useHistoryStore();
     const [mounted, setMounted] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
 
     useEffect(() => {
         setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
     }, []);
 
     if (!mounted) return null;
@@ -51,42 +57,50 @@ export default function RecentPage() {
                 </div>
             ) : (
                 <div className="p-4 grid grid-cols-2 gap-4">
-                    {viewedProducts.map((product) => (
-                        <Link href={`/product/${product.slug || product._id}`} key={product._id} className="block group">
-                            <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 h-full flex flex-col">
-                                <div className="aspect-square bg-gray-50 rounded-xl mb-3 overflow-hidden relative">
-                                    <img
-                                        src={product.image?.startsWith('http') ? product.image : `http://localhost:5000/${product.image}`}
-                                        alt={product.title}
-                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                                    />
-                                    {product.discount && product.discount > 0 && (
-                                        <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
-                                            {product.discount}%
-                                        </span>
-                                    )}
-                                </div>
-                                <h3 className="text-xs font-bold text-gray-800 line-clamp-2 mb-auto leading-5 min-h-[2.5rem]">
-                                    {product.title}
-                                </h3>
-                                <div className="mt-3 flex items-end justify-between">
-                                    <div className="flex flex-col">
-                                        {product.discount && product.discount > 0 && (
-                                            <span className="text-[10px] text-gray-400 line-through decoration-red-400">
-                                                {product.price?.toLocaleString('fa-IR')}
+                    {viewedProducts.map((product) => {
+                        const hasSpecialOfferCountdown = Boolean(
+                            (product as any).isSpecialOffer &&
+                            (product as any).specialOfferEndTime &&
+                            new Date((product as any).specialOfferEndTime).getTime() > now
+                        );
+
+                        return (
+                            <Link href={`/product/${product.slug || product._id}`} key={product._id} className="block group">
+                                <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 h-full flex flex-col">
+                                    <div className="aspect-square bg-gray-50 rounded-xl mb-3 overflow-hidden relative">
+                                        <img
+                                            src={product.image?.startsWith('http') ? product.image : `http://localhost:5000/${product.image}`}
+                                            alt={product.title}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                        {product.discount && product.discount > 0 && (!((product as any).isSpecialOffer) || hasSpecialOfferCountdown) && (
+                                            <span className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow-sm">
+                                                {product.discount}%
                                             </span>
                                         )}
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-sm font-black text-gray-800">
-                                                {(product.finalPrice || product.price)?.toLocaleString('fa-IR')}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400">تومان</span>
+                                    </div>
+                                    <h3 className="text-xs font-bold text-gray-800 line-clamp-2 mb-auto leading-5 min-h-[2.5rem]">
+                                        {product.title}
+                                    </h3>
+                                    <div className="mt-3 flex items-end justify-between">
+                                        <div className="flex flex-col">
+                                            {product.discount && product.discount > 0 && (!((product as any).isSpecialOffer) || hasSpecialOfferCountdown) && (
+                                                <span className="text-[10px] text-gray-400 line-through decoration-red-400">
+                                                    {product.price?.toLocaleString('fa-IR')}
+                                                </span>
+                                            )}
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-sm font-black text-gray-800">
+                                                    {(product.finalPrice || product.price)?.toLocaleString('fa-IR')}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">تومان</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Link>
-                    ))}
+                            </Link>
+                        );
+                    })}
                 </div>
             )}
         </div>

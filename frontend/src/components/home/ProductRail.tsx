@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -15,6 +16,13 @@ interface ProductRailProps {
 }
 
 export default function ProductRail({ title, products }: ProductRailProps) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
     <div className="py-4 bg-white border-b border-gray-100">
       {/* Header Section */}
@@ -40,6 +48,12 @@ export default function ProductRail({ title, products }: ProductRailProps) {
         grabCursor
       >
         {products.map((product) => {
+          const isSpecialOfferCountdownActive = Boolean(
+            product.isSpecialOffer &&
+            product.specialOfferEndTime &&
+            new Date(product.specialOfferEndTime).getTime() > now
+          );
+
           // Determine Header Type
           let headerConfig = null;
 
@@ -76,7 +90,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
               endTime: product.flashDealEndTime || product.specialOfferEndTime,
               iconColor: themeColor
             };
-          } else if (product.isSpecialOffer || (product.discount && product.discount > 0)) {
+          } else if ((product.isSpecialOffer && isSpecialOfferCountdownActive) || (!product.isSpecialOffer && product.discount && product.discount > 0)) {
             headerConfig = {
               type: 'amazing',
               title: 'شگفت‌انگیز',
@@ -86,13 +100,22 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             };
           }
 
+          const showSpecialOfferChrome =
+            !(headerConfig?.type === 'amazing') ||
+            isSpecialOfferCountdownActive ||
+            !product.isSpecialOffer;
+          const showSpecialOfferPricing =
+            !(headerConfig?.type === 'amazing') ||
+            isSpecialOfferCountdownActive ||
+            !product.isSpecialOffer;
+
           return (
             <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
               <Link href={`/product/${product.id}`} className="block h-full">
                 <div className={`bg-white rounded-lg border border-gray-200 h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group ${headerConfig ? 'pt-0' : 'p-3'}`}>
 
                   {/* Special Header Line */}
-                  {headerConfig && (
+                  {headerConfig && showSpecialOfferChrome && (
                     <div className="w-full mb-2">
                       <div className={`h-1 w-full ${headerConfig.borderColor}`} />
                       <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
@@ -148,7 +171,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
                     <div className="flex flex-col gap-1 mt-auto">
                       {/* Row 1: Old Price (if discount and in stock) */}
                       <div className="flex items-center justify-between h-5">
-                        {product.countInStock > 0 && product.discount > 0 ? (
+                        {product.countInStock > 0 && product.discount > 0 && showSpecialOfferPricing ? (
                           <>
                             <div className="flex items-center gap-1">
                               <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :

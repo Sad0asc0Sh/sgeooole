@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Heart from "lucide-react/dist/esm/icons/heart";
@@ -28,9 +28,20 @@ export default function ProductCard({ product }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [isHovered, setIsHovered] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
 
     const isFavorite = isInWishlist(product.id);
     const discountPercentage = product.discount || 0;
+    const isSpecialOfferCountdownActive = Boolean(
+        product.isSpecialOffer &&
+        product.specialOfferEndTime &&
+        new Date(product.specialOfferEndTime).getTime() > now
+    );
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -108,7 +119,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             endTime: product.flashDealEndTime || product.specialOfferEndTime,
             iconColor: themeColor
         };
-    } else if (product.isSpecialOffer || (product.discount && product.discount > 0)) {
+    } else if ((product.isSpecialOffer && isSpecialOfferCountdownActive) || (!product.isSpecialOffer && product.discount && product.discount > 0)) {
         headerConfig = {
             type: 'amazing',
             title: 'شگفت‌انگیز',
@@ -119,6 +130,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         };
     }
 
+    const showSpecialOfferChrome =
+        !(headerConfig?.type === 'amazing') ||
+        isSpecialOfferCountdownActive ||
+        !product.isSpecialOffer;
+    const showSpecialOfferPricing =
+        !(headerConfig?.type === 'amazing') ||
+        isSpecialOfferCountdownActive ||
+        !product.isSpecialOffer;
+
     return (
         <div
             className={`group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-lg border-gray-200' : 'border-gray-100'}`}
@@ -126,7 +146,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Special Header Line */}
-            {headerConfig && (
+            {headerConfig && showSpecialOfferChrome && (
                 <div className="w-full">
                     {/* Colored Line */}
                     <div className={`h-1 w-full ${headerConfig.borderColor}`} />
@@ -230,7 +250,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <div className="mt-auto pt-3 flex items-end justify-between">
                     {/* Price */}
                     <div className="flex flex-col">
-                        {product.oldPrice && (
+                        {product.oldPrice && showSpecialOfferPricing && (
                             <div className="flex items-center gap-1 mb-1">
                                 {discountPercentage > 0 && (
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">

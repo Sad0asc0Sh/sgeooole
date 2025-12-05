@@ -82,6 +82,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     const endTime = product.specialOfferEndTime || product.flashDealEndTime;
                     if (!endTime) return null;
 
+                    const endTs = Date.parse(endTime);
+                    const isCountdownActive = !Number.isNaN(endTs) && endTs > Date.now();
+                    if (!isCountdownActive) return null;
+
                     // Determine theme class based on campaignTheme
                     const theme = product.campaignTheme;
                     let themeClass = 'bg-red-50 text-red-600'; // Default for Special Offer
@@ -104,7 +108,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         } else if (product.isFlashDeal) {
                             label = 'پیشنهاد لحظه‌ای';
                         } else {
-                            label = 'پیشنهاد ویژه';
+                            label = 'فروش ویژه';
                         }
                     }
 

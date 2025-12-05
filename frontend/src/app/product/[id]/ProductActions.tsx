@@ -16,6 +16,12 @@ type ProductActionsProps = {
 export default function ProductActions({ product, selectedColor }: ProductActionsProps) {
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
+    const [now, setNow] = useState(() => Date.now());
+    const hasSpecialOfferCountdown = Boolean(
+        product.isSpecialOffer &&
+        product.specialOfferEndTime &&
+        new Date(product.specialOfferEndTime).getTime() > now
+    );
 
     // Calculate quantity for the SPECIFIC selected variant
     const [quantity, setQuantity] = useState(0);
@@ -32,6 +38,11 @@ export default function ProductActions({ product, selectedColor }: ProductAction
         });
         setQuantity(matchedItem?.qty || 0);
     }, [cartItems, product.id, selectedColor]);
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     const handleAddToCart = async () => {
         try {
@@ -71,7 +82,7 @@ export default function ProductActions({ product, selectedColor }: ProductAction
     return (
         <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col">
-                {product.oldPrice && (
+                {product.oldPrice && (!product.isSpecialOffer || hasSpecialOfferCountdown) && (
                     <div className="flex items-center gap-2 mb-1">
                         {product.discount > 0 && (
                             <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :

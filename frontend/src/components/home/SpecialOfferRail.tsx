@@ -16,6 +16,7 @@ export default function SpecialOfferRail() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const earliestEndTime =
     products.length > 0
@@ -46,6 +47,11 @@ export default function SpecialOfferRail() {
 
     fetchProducts();
     fetchProducts();
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
   }, []);
 
   // Debug logging
@@ -116,6 +122,11 @@ export default function SpecialOfferRail() {
         >
           {products.map((product) => {
             const isOutOfStock = product.countInStock === 0;
+            const hasSpecialOfferCountdown = Boolean(
+              product.isSpecialOffer &&
+              product.specialOfferEndTime &&
+              new Date(product.specialOfferEndTime).getTime() > now
+            );
 
             return (
               <SwiperSlide
@@ -165,7 +176,7 @@ export default function SpecialOfferRail() {
                       {/* Price Section */}
                       <div className="flex flex-col gap-1 mt-auto">
                         <div className="flex items-center justify-between h-5">
-                          {product.countInStock > 0 && product.discount > 0 ? (
+                          {product.countInStock > 0 && product.discount > 0 && hasSpecialOfferCountdown ? (
                             <>
                               <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :

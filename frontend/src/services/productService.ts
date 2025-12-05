@@ -93,10 +93,19 @@ interface BackendProduct {
  * This prevents backend schema changes from breaking the UI
  */
 const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
-  // Calculate old price if discount exists
-  // Enforce rule: Discount is valid ONLY if isFlashDeal, isSpecialOffer, OR a Campaign is active
-  // The user requested that discounts should not be applied unless one of these options is selected.
-  const hasActivePromotion = backendProduct.isFlashDeal || backendProduct.isSpecialOffer || backendProduct.campaignLabel;
+  const now = Date.now();
+  const isFuture = (date?: string) => {
+    if (!date) return false;
+    const ts = Date.parse(date);
+    return !Number.isNaN(ts) && ts > now;
+  };
+
+  // Evaluate time-based flags
+  const flashActive = Boolean(backendProduct.isFlashDeal && isFuture(backendProduct.flashDealEndTime));
+  const specialActive = Boolean(backendProduct.isSpecialOffer && isFuture(backendProduct.specialOfferEndTime));
+
+  // Only allow discount when a promotion is currently active
+  const hasActivePromotion = flashActive || specialActive || backendProduct.campaignLabel;
   const discount = hasActivePromotion ? (backendProduct.discount || 0) : 0;
 
   const oldPrice = discount > 0
@@ -238,9 +247,9 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
 
     // Time-based promotions
     isFlashDeal: backendProduct.isFlashDeal,
-    flashDealEndTime: backendProduct.flashDealEndTime,
-    isSpecialOffer: backendProduct.isSpecialOffer,
-    specialOfferEndTime: backendProduct.specialOfferEndTime,
+    flashDealEndTime: flashActive ? backendProduct.flashDealEndTime : undefined,
+    isSpecialOffer: specialActive,
+    specialOfferEndTime: specialActive ? backendProduct.specialOfferEndTime : undefined,
   };
 };
 
