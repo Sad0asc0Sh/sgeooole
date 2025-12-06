@@ -2,16 +2,24 @@ import { create } from 'zustand';
 import { cartService, CartItem } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { Product } from "@/services/productService";
+import { resolvePricing } from "@/lib/pricing";
 
 // Local cart item format (for guest users)
 export interface LocalCartItem {
     id: string; // Product ID
     name: string;
     price: number;
+    originalPrice?: number;
     image: string;
     color?: string;
     qty: number;
     discount?: number;
+    compareAtPrice?: number;
+    isFlashDeal?: boolean;
+    flashDealEndTime?: string;
+    isSpecialOffer?: boolean;
+    specialOfferEndTime?: string;
+    campaignLabel?: string;
     variantOptions?: Array<{
         name: string;
         value: string;
@@ -36,32 +44,70 @@ interface CartState {
 
 // Helper to transform backend items to local format
 const transformBackendItems = (backendItems: CartItem[]): LocalCartItem[] => {
-    const transformedItems: LocalCartItem[] = backendItems.map(
-        (item: CartItem) => {
-            let productId: string;
-            let discount = 0;
+    const now = Date.now();
 
-            if (typeof item.product === 'string') {
-                productId = item.product;
-            } else if (typeof item.product === 'object' && item.product !== null) {
-                productId = (item.product as any)._id || (item.product as any).id || '';
-                discount = (item.product as any).discount || 0;
-            } else {
-                productId = (item as any)._id || '';
-            }
+    const transformedItems: LocalCartItem[] = backendItems.map((item: CartItem) => {
+        const rawItem: any = item as any;
+        const productData = typeof item.product === "object" && item.product !== null ? (item.product as any) : null;
+        const productId =
+            typeof item.product === "string"
+                ? item.product
+                : productData?._id || productData?.id || rawItem._id || "";
 
-            return {
-                id: String(productId),
-                name: item.name,
-                price: item.price,
-                image: item.images && item.images.length > 0 ? item.images[0].url : "/placeholder.svg",
-                qty: Number(item.quantity),
-                variantOptions: item.variantOptions,
-                color: (item as any).color,
-                discount: discount,
-            };
-        }
-    );
+        const discountValue = Number.isFinite(rawItem.discount)
+            ? Number(rawItem.discount)
+            : Number(productData?.discount ?? 0);
+
+        const priceInput = Number(
+            (rawItem.finalPrice ?? rawItem.price ?? productData?.price ?? 0)
+        ) || 0;
+
+        const compareAtInput = Number(
+            rawItem.originalPrice ?? productData?.compareAtPrice ?? rawItem.compareAtPrice ?? 0
+        ) || undefined;
+
+        const pricing = resolvePricing({
+            price: priceInput,
+            discount: discountValue,
+            compareAtPrice: compareAtInput,
+            isFlashDeal: rawItem.isFlashDeal ?? productData?.isFlashDeal,
+            flashDealEndTime: rawItem.flashDealEndTime ?? productData?.flashDealEndTime,
+            isSpecialOffer: rawItem.isSpecialOffer ?? productData?.isSpecialOffer,
+            specialOfferEndTime: rawItem.specialOfferEndTime ?? productData?.specialOfferEndTime,
+            campaignLabel: rawItem.campaignLabel ?? productData?.campaignLabel,
+            now,
+        });
+
+        const image =
+            rawItem.image ||
+            (Array.isArray(productData?.images) && productData.images.length > 0
+                ? productData.images[0]?.url ?? productData.images[0]
+                : null) ||
+            (Array.isArray(rawItem.images) && rawItem.images.length > 0
+                ? rawItem.images[0]?.url ?? rawItem.images[0]
+                : null) ||
+            "/placeholder.svg";
+
+        const quantity = Number(rawItem.quantity ?? rawItem.qty ?? 1);
+
+        return {
+            id: String(productId),
+            name: rawItem.name || productData?.name || "",
+            price: pricing.finalPrice,
+            originalPrice: pricing.basePrice ?? priceInput,
+            image,
+            qty: quantity,
+            variantOptions: item.variantOptions,
+            color: rawItem.color,
+            discount: pricing.discount,
+            compareAtPrice: pricing.basePrice ?? compareAtInput,
+            isFlashDeal: Boolean(rawItem.isFlashDeal ?? productData?.isFlashDeal),
+            flashDealEndTime: rawItem.flashDealEndTime ?? productData?.flashDealEndTime,
+            isSpecialOffer: Boolean(rawItem.isSpecialOffer ?? productData?.isSpecialOffer),
+            specialOfferEndTime: rawItem.specialOfferEndTime ?? productData?.specialOfferEndTime,
+            campaignLabel: rawItem.campaignLabel ?? productData?.campaignLabel,
+        };
+    });
 
     // Deduplicate items
     return transformedItems.reduce((acc, item) => {
@@ -99,11 +145,9 @@ export const useCartStore = create<CartState>((set, get) => ({
 
     refreshCart: async () => {
         const isAuthenticated = authService.isAuthenticated();
-        set({ loading: true, error: null });
+        set({ loading: true, error: null, mutating: true });
 
         try {
-            set({ mutating: true });
-            set({ mutating: true });
             if (isAuthenticated) {
                 const response = await cartService.getCart();
                 if (response.success && response.data) {
@@ -120,12 +164,13 @@ export const useCartStore = create<CartState>((set, get) => ({
             console.error("[useCartStore] Error loading cart:", err);
             set({ error: err.message || "خطا در بارگذاری سبد خرید" });
         } finally {
-            set({ loading: false });
+            set({ loading: false, mutating: false });
         }
     },
 
     addToCart: async (product, quantity = 1, variantOptions) => {
         if (get().mutating) return;
+        set({ mutating: true });
         const isAuthenticated = authService.isAuthenticated();
         const { cartItems } = get();
 
@@ -133,13 +178,31 @@ export const useCartStore = create<CartState>((set, get) => ({
             if (isAuthenticated) {
                 // Optimistic Update
                 const previousCart = [...cartItems];
+                const pricing = resolvePricing({
+                    price: product.price,
+                    discount: product.discount,
+                    compareAtPrice: product.compareAtPrice || product.oldPrice,
+                    isFlashDeal: product.isFlashDeal,
+                    flashDealEndTime: (product as any).flashDealEndTime,
+                    isSpecialOffer: product.isSpecialOffer,
+                    specialOfferEndTime: (product as any).specialOfferEndTime,
+                    campaignLabel: product.campaignLabel,
+                    now: Date.now(),
+                });
                 const newItem: LocalCartItem = {
                     id: String(product.id),
                     name: product.title,
-                    price: product.price,
+                    price: pricing.finalPrice,
+                    originalPrice: pricing.basePrice,
                     image: product.images[0] || "/placeholder.svg",
                     qty: quantity,
-                    discount: product.discount || 0,
+                    discount: pricing.discount,
+                    compareAtPrice: product.compareAtPrice,
+                    isFlashDeal: product.isFlashDeal,
+                    flashDealEndTime: (product as any).flashDealEndTime,
+                    isSpecialOffer: product.isSpecialOffer,
+                    specialOfferEndTime: (product as any).specialOfferEndTime,
+                    campaignLabel: product.campaignLabel,
                     variantOptions: variantOptions,
                 };
 
@@ -153,7 +216,20 @@ export const useCartStore = create<CartState>((set, get) => ({
                 });
 
                 if (existingIndex > -1) {
-                    updatedCart[existingIndex].qty += quantity;
+                    const existing = updatedCart[existingIndex];
+                    updatedCart[existingIndex] = {
+                        ...existing,
+                        qty: existing.qty + quantity,
+                        price: pricing.finalPrice,
+                        originalPrice: pricing.basePrice,
+                        discount: pricing.discount,
+                        compareAtPrice: product.compareAtPrice,
+                        isFlashDeal: product.isFlashDeal,
+                        flashDealEndTime: (product as any).flashDealEndTime,
+                        isSpecialOffer: product.isSpecialOffer,
+                        specialOfferEndTime: (product as any).specialOfferEndTime,
+                        campaignLabel: product.campaignLabel,
+                    };
                 } else {
                     updatedCart.push(newItem);
                 }
@@ -172,6 +248,17 @@ export const useCartStore = create<CartState>((set, get) => ({
             } else {
                 // Guest
                 const currentCart = [...cartItems];
+                const pricing = resolvePricing({
+                    price: product.price,
+                    discount: product.discount,
+                    compareAtPrice: product.compareAtPrice || product.oldPrice,
+                    isFlashDeal: product.isFlashDeal,
+                    flashDealEndTime: (product as any).flashDealEndTime,
+                    isSpecialOffer: product.isSpecialOffer,
+                    specialOfferEndTime: (product as any).specialOfferEndTime,
+                    campaignLabel: product.campaignLabel,
+                    now: Date.now(),
+                });
                 const existingIndex = currentCart.findIndex((item) => {
                     if (item.id !== String(product.id)) return false;
                     const itemVariants = item.variantOptions || [];
@@ -181,15 +268,35 @@ export const useCartStore = create<CartState>((set, get) => ({
                 });
 
                 if (existingIndex > -1) {
-                    currentCart[existingIndex].qty += quantity;
+                    const existing = currentCart[existingIndex];
+                    currentCart[existingIndex] = {
+                        ...existing,
+                        qty: existing.qty + quantity,
+                        price: pricing.finalPrice,
+                        originalPrice: pricing.basePrice,
+                        discount: pricing.discount,
+                        compareAtPrice: product.compareAtPrice,
+                        isFlashDeal: product.isFlashDeal,
+                        flashDealEndTime: (product as any).flashDealEndTime,
+                        isSpecialOffer: product.isSpecialOffer,
+                        specialOfferEndTime: (product as any).specialOfferEndTime,
+                        campaignLabel: product.campaignLabel,
+                    };
                 } else {
                     const newItem: LocalCartItem = {
                         id: String(product.id),
                         name: product.title,
-                        price: product.price,
+                        price: pricing.finalPrice,
+                        originalPrice: pricing.basePrice,
                         image: product.images[0] || "/placeholder.svg",
                         qty: quantity,
-                        discount: product.discount || 0,
+                        discount: pricing.discount,
+                        compareAtPrice: product.compareAtPrice,
+                        isFlashDeal: product.isFlashDeal,
+                        flashDealEndTime: (product as any).flashDealEndTime,
+                        isSpecialOffer: product.isSpecialOffer,
+                        specialOfferEndTime: (product as any).specialOfferEndTime,
+                        campaignLabel: product.campaignLabel,
                         variantOptions: variantOptions,
                     };
                     currentCart.push(newItem);

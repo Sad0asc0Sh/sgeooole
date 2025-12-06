@@ -8,6 +8,15 @@ export interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  originalPrice?: number;
+  finalPrice?: number;
+  compareAtPrice?: number;
+  campaignLabel?: string;
+  isFlashDeal?: boolean;
+  flashDealEndTime?: string;
+  isSpecialOffer?: boolean;
+  specialOfferEndTime?: string;
+  totalItemPrice?: number;
   variantOptions?: Array<{
     name: string;
     value: string;

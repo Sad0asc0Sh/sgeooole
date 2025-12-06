@@ -4,6 +4,8 @@ const Product = require('../models/Product')
 const Settings = require('../models/Settings')
 const { sendReminderEmail, sendReminderSMS } = require('../utils/notificationService')
 
+const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants'
+
 // Helper function to get cart settings
 async function getCartSettings() {
   try {
@@ -26,6 +28,151 @@ async function getCartSettings() {
     }
   }
 }
+
+const findMatchingVariant = (product, variantOptions) => {
+  if (
+    !product ||
+    product.productType !== 'variable' ||
+    !Array.isArray(product.variants) ||
+    !Array.isArray(variantOptions) ||
+    variantOptions.length === 0
+  ) {
+    return null
+  }
+
+  return product.variants.find((variant) => {
+    if (!Array.isArray(variant.options) || variant.options.length === 0) return false
+
+    return variant.options.every((opt) =>
+      variantOptions.some(
+        (vo) =>
+          vo &&
+          opt &&
+          String(vo.name).trim() === String(opt.name).trim() &&
+          String(vo.value).trim() === String(opt.value).trim(),
+      ),
+    )
+  })
+}
+
+const computeItemPricing = (item, now = new Date()) => {
+  const product = item?.product || {}
+  const quantity = Number(item.quantity || item.qty || 1) || 1
+  const matchingVariant = findMatchingVariant(product, item.variantOptions)
+
+  const basePrice =
+    Number(
+      (matchingVariant && matchingVariant.price) ??
+        product.price ??
+        item.price ??
+        0,
+    ) || 0
+
+  const rawDiscount = Number(product.discount) || 0
+  const flashEnd = product.flashDealEndTime ? new Date(product.flashDealEndTime) : null
+  const specialEnd = product.specialOfferEndTime ? new Date(product.specialOfferEndTime) : null
+
+  const flashActive = Boolean(product.isFlashDeal && (!flashEnd || flashEnd > now))
+  const specialActive = Boolean(product.isSpecialOffer && (!specialEnd || specialEnd > now))
+
+  let appliedDiscount = 0
+  let campaignLabel = product.campaignLabel || null
+
+  if (flashActive) {
+    appliedDiscount = rawDiscount
+    campaignLabel = campaignLabel || '??????? ???????'
+  } else if (specialActive) {
+    appliedDiscount = rawDiscount
+    campaignLabel = campaignLabel || '??????????'
+  } else if (!product.isFlashDeal && !product.isSpecialOffer && rawDiscount > 0) {
+    // Non-timer discounts remain valid when no countdown flags are set
+    appliedDiscount = rawDiscount
+  }
+
+  const finalPrice =
+    appliedDiscount > 0
+      ? Math.max(0, basePrice - (basePrice * appliedDiscount) / 100)
+      : basePrice
+
+  return {
+    basePrice,
+    finalPrice,
+    discount: appliedDiscount,
+    campaignLabel,
+    flashActive,
+    specialActive,
+    quantity,
+  }
+}
+
+const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => {
+  if (!cartId) {
+    return {
+      items: [],
+      totalPrice: 0,
+    }
+  }
+
+  const populatedCart = await Cart.findById(cartId)
+    .populate('items.product', CART_PRODUCT_FIELDS)
+    .lean()
+
+  if (!populatedCart) {
+    return {
+      items: [],
+      totalPrice: 0,
+    }
+  }
+
+  const now = new Date()
+
+  const enhancedItems = (populatedCart.items || []).map((item) => {
+    const pricing = computeItemPricing(item, now)
+    const product = item.product || {}
+
+    const normalizedImage =
+      item.image ||
+      (Array.isArray(product.images) && product.images.length > 0
+        ? typeof product.images[0] === 'string'
+          ? product.images[0]
+          : product.images[0]?.url
+        : null)
+
+    return {
+      ...item,
+      price: pricing.basePrice, // original/base price
+      originalPrice: pricing.basePrice,
+      finalPrice: pricing.finalPrice,
+      discount: pricing.discount,
+      campaignLabel: pricing.campaignLabel,
+      isFlashDeal: Boolean(product.isFlashDeal),
+      flashDealEndTime: product.flashDealEndTime
+        ? new Date(product.flashDealEndTime).toISOString()
+        : undefined,
+      isSpecialOffer: Boolean(product.isSpecialOffer),
+      specialOfferEndTime: product.specialOfferEndTime
+        ? new Date(product.specialOfferEndTime).toISOString()
+        : undefined,
+      quantity: Number(item.quantity || item.qty || 1),
+      qty: Number(item.quantity || item.qty || 1),
+      totalItemPrice: pricing.finalPrice * (Number(item.quantity || item.qty || 1)),
+      image: normalizedImage,
+    }
+  })
+
+  const totalPrice = enhancedItems.reduce((acc, item) => acc + (item.totalItemPrice || 0), 0)
+
+  if (updateStoredTotal) {
+    await Cart.updateOne({ _id: cartId }, { $set: { totalPrice } })
+  }
+
+  return {
+    items: enhancedItems,
+    totalPrice,
+    couponCode: populatedCart.couponCode,
+  }
+}
+
 
 // ============================================
 // GET /api/carts/admin/abandoned - دریافت سبدهای رها شده
@@ -277,9 +424,7 @@ exports.getMyCart = async (req, res) => {
   try {
     const userId = req.user._id
 
-    let cart = await Cart.findOne({ user: userId, status: 'active' })
-      .populate('items.product', 'name price images countInStock discount')
-      .lean()
+    const cart = await Cart.findOne({ user: userId, status: 'active' }).select('_id couponCode')
 
     if (!cart) {
       return res.json({
@@ -291,17 +436,14 @@ exports.getMyCart = async (req, res) => {
       })
     }
 
-    // محاسبه totalPrice
-    const totalPrice = cart.items.reduce((total, item) => {
-      return total + (item.price * item.quantity)
-    }, 0)
+    const pricedCart = await buildCartResponse(cart._id, { updateStoredTotal: true })
 
     res.json({
       success: true,
       data: {
-        items: cart.items,
-        totalPrice,
-        couponCode: cart.couponCode,
+        items: pricedCart.items,
+        totalPrice: pricedCart.totalPrice,
+        couponCode: pricedCart.couponCode,
       },
     })
   } catch (error) {
@@ -380,16 +522,15 @@ exports.syncCart = async (req, res) => {
     cart.calculateTotal()
     await cart.save()
 
-    // بازگرداندن سبد populated
-    const populatedCart = await Cart.findById(cart._id)
-      .populate('items.product', 'name price images countInStock discount')
-      .lean()
+    // بازگرداندن سبد populated با اعمال تخفیف‌های فعال
+    const pricedCart = await buildCartResponse(cart._id, { updateStoredTotal: true })
 
     res.json({
       success: true,
       data: {
-        items: populatedCart.items,
-        totalPrice: populatedCart.totalPrice,
+        items: pricedCart.items,
+        totalPrice: pricedCart.totalPrice,
+        couponCode: pricedCart.couponCode,
       },
     })
   } catch (error) {
@@ -565,16 +706,14 @@ exports.addOrUpdateItem = async (req, res) => {
     await cart.save()
     console.log('[CART] Cart saved successfully')
 
-    // بازگرداندن سبد populated
-    const populatedCart = await Cart.findById(cart._id)
-      .populate('items.product', 'name price images countInStock discount')
-      .lean()
+    // بازگرداندن سبد populated با تخفیف‌های فعال
+    const pricedCart = await buildCartResponse(cart._id, { updateStoredTotal: true })
 
     res.json({
       success: true,
       data: {
-        items: populatedCart.items,
-        totalPrice: populatedCart.totalPrice,
+        items: pricedCart.items,
+        totalPrice: pricedCart.totalPrice,
         expiresAt: cart.expiresAt,
       },
     })
@@ -647,16 +786,14 @@ exports.removeItem = async (req, res) => {
     cart.calculateTotal()
     await cart.save()
 
-    // بازگرداندن سبد populated
-    const populatedCart = await Cart.findById(cart._id)
-      .populate('items.product', 'name price images countInStock discount')
-      .lean()
+    // بازگرداندن سبد populated با محاسبه تخفیف‌های فعال
+    const pricedCart = await buildCartResponse(cart._id, { updateStoredTotal: true })
 
     res.json({
       success: true,
       data: {
-        items: populatedCart.items,
-        totalPrice: populatedCart.totalPrice,
+        items: pricedCart.items,
+        totalPrice: pricedCart.totalPrice,
       },
     })
   } catch (error) {

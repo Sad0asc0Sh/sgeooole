@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import { resolvePricing } from "@/lib/pricing";
 
 // Color Interface
 export interface ProductColor {
@@ -93,38 +94,16 @@ interface BackendProduct {
  * This prevents backend schema changes from breaking the UI
  */
 const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
-  const now = Date.now();
-  const isFuture = (date?: string) => {
-    if (!date) return false;
-    const ts = Date.parse(date);
-    return !Number.isNaN(ts) && ts > now;
-  };
-
-  // Evaluate time-based flags
-  const flashActive = Boolean(backendProduct.isFlashDeal && isFuture(backendProduct.flashDealEndTime));
-  const specialActive = Boolean(backendProduct.isSpecialOffer && isFuture(backendProduct.specialOfferEndTime));
-
-  const rawDiscount = backendProduct.discount || 0;
-
-  // Only allow discount when a promotion is currently active
-  const hasActivePromotion = flashActive || specialActive || backendProduct.campaignLabel;
-  const discount = hasActivePromotion ? rawDiscount : 0;
-
-  // Calculate price/oldPrice with fallback to base price when promo is over
-  let price = backendProduct.price;
-  let oldPrice: number | undefined = undefined;
-
-  if (hasActivePromotion && discount > 0) {
-    oldPrice = Math.round(backendProduct.price / (1 - discount / 100));
-  } else {
-    // Promo expired: if compareAtPrice exists use it as base price
-    if (backendProduct.compareAtPrice) {
-      price = backendProduct.compareAtPrice;
-    } else if (rawDiscount > 0) {
-      // derive base price from stored discounted price
-      price = Math.round(backendProduct.price / (1 - rawDiscount / 100));
-    }
-  }
+  const pricing = resolvePricing({
+    price: backendProduct.price,
+    discount: backendProduct.discount,
+    compareAtPrice: backendProduct.compareAtPrice,
+    isFlashDeal: backendProduct.isFlashDeal,
+    flashDealEndTime: backendProduct.flashDealEndTime,
+    isSpecialOffer: backendProduct.isSpecialOffer,
+    specialOfferEndTime: backendProduct.specialOfferEndTime,
+    campaignLabel: backendProduct.campaignLabel,
+  });
 
   // Handle images - support string URLs and objects with `url`
   const normalizeImage = (img: any): string | null => {
@@ -188,10 +167,10 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     enTitle: backendProduct.enTitle,
 
     // Price calculations
-    price: backendProduct.price,
-    oldPrice: backendProduct.compareAtPrice || oldPrice,
-    compareAtPrice: backendProduct.compareAtPrice,
-    discount: discount,
+    price: pricing.finalPrice,
+    oldPrice: pricing.oldPrice,
+    compareAtPrice: pricing.basePrice,
+    discount: pricing.discount,
 
     // Images
     image: imageArray[0], // First image as main image
@@ -260,10 +239,10 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     campaignTheme: backendProduct.campaignTheme,
 
     // Time-based promotions
-    isFlashDeal: backendProduct.isFlashDeal,
-    flashDealEndTime: flashActive ? backendProduct.flashDealEndTime : undefined,
-    isSpecialOffer: specialActive,
-    specialOfferEndTime: specialActive ? backendProduct.specialOfferEndTime : undefined,
+    isFlashDeal: pricing.flashActive,
+    flashDealEndTime: pricing.flashActive ? backendProduct.flashDealEndTime : undefined,
+    isSpecialOffer: pricing.specialActive,
+    specialOfferEndTime: pricing.specialActive ? backendProduct.specialOfferEndTime : undefined,
   };
 };
 

@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { Product, ProductColor } from "@/services/productService";
 import { buildProductUrl } from "./paths";
+import { resolvePricing } from "@/lib/pricing";
 
 // Reduced from 3600 (1 hour) to 30 seconds for real-time discount updates from admin panel
 export const PRODUCT_REVALIDATE = 30;
@@ -71,14 +72,16 @@ const normalizeImage = (img: BackendImage, assetBase: string): string | null => 
 export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Product & { isActive?: boolean } => {
   const assetBase = getAssetBase(apiUrl);
 
-  const hasActivePromotion = backend.isFlashDeal || backend.isSpecialOffer || backend.campaignLabel;
-  const discount = hasActivePromotion ? backend.discount || 0 : 0;
-
-  const computedOldPrice =
-    backend.compareAtPrice ||
-    (discount > 0 && backend.price
-      ? Math.round(backend.price / (1 - discount / 100))
-      : undefined);
+  const pricing = resolvePricing({
+    price: backend.price ?? 0,
+    discount: backend.discount,
+    compareAtPrice: backend.compareAtPrice,
+    isFlashDeal: backend.isFlashDeal,
+    flashDealEndTime: backend.flashDealEndTime,
+    isSpecialOffer: backend.isSpecialOffer,
+    specialOfferEndTime: backend.specialOfferEndTime,
+    campaignLabel: backend.campaignLabel,
+  });
 
   let images: string[] = [];
   if (backend.images && backend.images.length > 0) {
@@ -154,10 +157,10 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     title: backend.title || backend.name,
     slug: backend.slug,
     enTitle: backend.enTitle,
-    price: backend.price ?? 0,
-    oldPrice: computedOldPrice,
-    compareAtPrice: backend.compareAtPrice,
-    discount,
+    price: pricing.finalPrice,
+    oldPrice: pricing.oldPrice,
+    compareAtPrice: pricing.basePrice,
+    discount: pricing.discount,
     image: images[0],
     images,
     category,
@@ -171,10 +174,10 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     specs: backend.specs,
     campaignLabel: backend.campaignLabel,
     campaignTheme: backend.campaignTheme,
-    isFlashDeal: backend.isFlashDeal,
-    flashDealEndTime: backend.flashDealEndTime,
-    isSpecialOffer: backend.isSpecialOffer,
-    specialOfferEndTime: backend.specialOfferEndTime,
+    isFlashDeal: pricing.flashActive,
+    flashDealEndTime: pricing.flashActive ? backend.flashDealEndTime : undefined,
+    isSpecialOffer: pricing.specialActive,
+    specialOfferEndTime: pricing.specialActive ? backend.specialOfferEndTime : undefined,
     isActive: backend.isActive,
   };
 };

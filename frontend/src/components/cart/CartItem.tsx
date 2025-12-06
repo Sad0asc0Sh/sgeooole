@@ -1,22 +1,35 @@
 "use client";
 import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
-import Image from "next/image";
 
 interface CartItemProps {
     item: {
         id: string;
         name: string;
         price: number;
+        originalPrice?: number;
         image: string;
         color?: string;
         qty: number;
         discount?: number;
+        campaignLabel?: string;
     };
     onIncrease: () => void;
     onDecrease: () => void;
 }
 
 export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps) {
+    const basePrice = item.originalPrice ?? item.price;
+    const priceDrop = basePrice > item.price;
+    const computedDiscount = priceDrop && basePrice > 0 ? Math.max(0, Math.round((1 - item.price / basePrice) * 100)) : 0;
+    const discountValue = computedDiscount || item.discount || 0;
+    const hasDiscount = priceDrop && discountValue > 0;
+    const cleanLabel = item.campaignLabel?.replace(/\?/g, "").trim();
+    const campaignBadge = cleanLabel
+        ? `${cleanLabel}${discountValue ? ` • ${discountValue}%` : ""}`
+        : discountValue
+            ? `${discountValue}%`
+            : null;
+
     return (
         <div className="bg-white p-3 rounded-2xl shadow-sm flex gap-3">
             {/* Image */}
@@ -38,25 +51,27 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
                         className="w-3 h-3 rounded-full border border-gray-200"
                         style={{ backgroundColor: item.color || "#e5e7eb" }}
                     />
-                    <span className="text-[10px] text-gray-500">موجود در انبار</span>
+                    <span className="text-[10px] text-gray-500">رنگ / گزینه‌های انتخابی</span>
                 </div>
 
                 {/* Price & Actions Row */}
                 <div className="flex items-end justify-between mt-2">
                     <div className="flex flex-col">
-                        {item.discount && item.discount > 0 ? (
+                        {hasDiscount ? (
                             <>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-white bg-red-500 px-1.5 rounded-full font-bold">
-                                        {item.discount}%
-                                    </span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {campaignBadge && (
+                                        <span className="text-[10px] text-white bg-red-500 px-2 py-0.5 rounded-full font-bold">
+                                            {campaignBadge}
+                                        </span>
+                                    )}
                                     <span className="text-[10px] text-gray-400 line-through decoration-gray-400">
-                                        {item.price.toLocaleString("fa-IR")}
+                                        {basePrice.toLocaleString("fa-IR")}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <span className="text-sm font-black text-gray-900">
-                                        {Math.round(item.price * (1 - item.discount / 100)).toLocaleString("fa-IR")}
+                                        {item.price.toLocaleString("fa-IR")}
                                     </span>
                                     <span className="text-[9px] text-gray-400">تومان</span>
                                 </div>

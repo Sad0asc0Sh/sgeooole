@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle } from "lucide-react";
+import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle, ShoppingCart } from "lucide-react";
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -204,6 +204,63 @@ export default function SettingsPage() {
                         </div>
                         <p className="text-xs text-gray-400 leading-relaxed">
                             حداکثر طول پاسخ هوش مصنوعی (1000 توکن ≈ 750 کلمه)
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Cart Settings Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                    <div className="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center text-green-600 shadow-sm">
+                        <ShoppingCart size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">تنظیمات سبد خرید</h2>
+                        <p className="text-sm text-gray-500">مدیریت ماندگاری و انقضای سبد خرید</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* Cart Persist Toggle */}
+                    <div className="col-span-full flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-200">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${settings.cartConfig?.persistCart !== false ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                            <div>
+                                <span className="font-bold text-gray-700">ماندگاری سبد خرید</span>
+                                <p className="text-xs text-gray-400 mt-1">سبد خرید کاربران مهمان در مرورگر ذخیره شود</p>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={settings.cartConfig?.persistCart !== false}
+                                onChange={(e) => setSettings({ ...settings, cartConfig: { ...settings.cartConfig, persistCart: e.target.checked } })}
+                            />
+                            <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:right-[unset] rtl:after:right-[2px] rtl:after:left-[unset] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-600"></div>
+                        </label>
+                    </div>
+
+                    {/* Cart Expiration Days */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                            <ShoppingCart size={18} className="text-gray-400" />
+                            مدت نگهداری سبد خرید
+                        </label>
+                        <div className="relative">
+                            <input
+                                type="number"
+                                min="0"
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                                value={settings.cartConfig?.cartExpirationDays ?? 30}
+                                onChange={(e) => setSettings({ ...settings, cartConfig: { ...settings.cartConfig, cartExpirationDays: Number(e.target.value) } })}
+                            />
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">روز</span>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed flex items-start gap-1">
+                            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                            تعداد روزهایی که سبد خرید در مرورگر باقی می‌ماند (۰ = بی‌نهایت)
                         </p>
                     </div>
                 </div>
