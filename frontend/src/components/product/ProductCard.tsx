@@ -37,10 +37,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         product.specialOfferEndTime &&
         new Date(product.specialOfferEndTime).getTime() > now
     );
-    const shouldShowSpecialDiscount = product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive);
-    const displayPrice = (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
-        ? product.oldPrice
-        : product.price;
+    const effectiveDiscount =
+        product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
+            ? product.discount
+            : 0;
+    const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
+    const displayPrice =
+        !isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice
+            ? product.oldPrice
+            : product.price;
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
@@ -138,9 +143,6 @@ export default function ProductCard({ product }: ProductCardProps) {
         !(headerConfig?.type === 'amazing') ||
         isSpecialOfferCountdownActive ||
         !product.isSpecialOffer;
-    const showSpecialOfferPricing =
-        !(headerConfig?.type === 'amazing') ||
-        shouldShowSpecialDiscount;
 
     return (
         <div
@@ -255,9 +257,9 @@ export default function ProductCard({ product }: ProductCardProps) {
                     <div className="flex flex-col">
                         {product.oldPrice && showSpecialOfferPricing && (
                             <div className="flex items-center gap-1 mb-1">
-                                {shouldShowSpecialDiscount && (
+                                {effectiveDiscount > 0 && (
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                        {discountPercentage}%
+                                        {effectiveDiscount}%
                                     </span>
                                 )}
                                 <span className="text-[11px] text-gray-400 line-through decoration-red-500/50">

@@ -127,6 +127,9 @@ export default function SpecialOfferRail() {
               product.specialOfferEndTime &&
               new Date(product.specialOfferEndTime).getTime() > now
             );
+            const effectiveDiscount = product.discount > 0 && (!product.isSpecialOffer || hasSpecialOfferCountdown)
+              ? product.discount
+              : 0;
             const displayPrice = (!hasSpecialOfferCountdown && product.oldPrice)
               ? product.oldPrice
               : product.price;
@@ -179,7 +182,7 @@ export default function SpecialOfferRail() {
                       {/* Price Section */}
                         <div className="flex flex-col gap-1 mt-auto">
                         <div className="flex items-center justify-between h-5">
-                          {product.countInStock > 0 && product.discount > 0 && hasSpecialOfferCountdown ? (
+                          {product.countInStock > 0 && effectiveDiscount > 0 && hasSpecialOfferCountdown ? (
                             <>
                               <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :

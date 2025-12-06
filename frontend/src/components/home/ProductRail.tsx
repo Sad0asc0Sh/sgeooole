@@ -104,11 +104,11 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             !(headerConfig?.type === 'amazing') ||
             isSpecialOfferCountdownActive ||
             !product.isSpecialOffer;
-          const showSpecialOfferPricing =
-            !(headerConfig?.type === 'amazing') ||
-            isSpecialOfferCountdownActive ||
-            !product.isSpecialOffer;
-          const effectiveDiscount = showSpecialOfferPricing ? product.discount : 0;
+          const effectiveDiscount =
+            product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
+              ? product.discount
+              : 0;
+          const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
           const displayPrice =
             (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
               ? product.oldPrice
