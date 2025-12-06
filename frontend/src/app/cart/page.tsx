@@ -4,6 +4,7 @@ import { ChevronLeft, ShoppingBag, Loader2 } from "lucide-react";
 import Link from "next/link";
 import CartItem from "@/components/cart/CartItem";
 import CartSummary from "@/components/cart/CartSummary";
+import CartExpiryWarning from "@/components/cart/CartExpiryWarning";
 import { useCart } from "@/hooks/useCart";
 
 import api from "@/lib/api";
@@ -123,6 +124,9 @@ export default function CartPage() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 pb-40 space-y-4 no-scrollbar">
+                {/* Cart Expiry Warning for Guest Users */}
+                <CartExpiryWarning />
+
                 {/* Items */}
                 {cartItems.map((item, index) => {
                     // Create unique key using product ID (string), color, and variants

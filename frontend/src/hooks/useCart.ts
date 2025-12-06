@@ -97,6 +97,7 @@ export const useCart = () => {
     totalOriginalPrice,
     totalProfit,
     itemCount,
+    cartConfig: store.cartConfig,
 
     // Methods
     addToCart: store.addToCart,
@@ -104,6 +105,7 @@ export const useCart = () => {
     removeFromCart: store.removeFromCart,
     clearCart: store.clearCart,
     refreshCart: store.refreshCart,
+    refreshCartConfig: store.refreshCartConfig,
     isInCart,
     getItemQuantity,
 
@@ -112,4 +114,3 @@ export const useCart = () => {
     isAuthenticated,
   };
 };
-

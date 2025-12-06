@@ -3,6 +3,12 @@ import { cartService, CartItem } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { Product } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
+import { settingsService } from "@/services/settingsService";
+import {
+    setLocalStorageWithExpiry,
+    getLocalStorageWithExpiry,
+    removeLocalStorage
+} from "@/lib/localStorageHelper";
 
 // Local cart item format (for guest users)
 export interface LocalCartItem {
@@ -28,14 +34,36 @@ export interface LocalCartItem {
 
 const LOCAL_CART_KEY = "welfvita_cart";
 
+// Helper to save local cart with admin settings (expiration)
+const saveLocalCart = (cartItems: LocalCartItem[], cartConfig: { persistCart: boolean; cartExpirationDays: number }) => {
+    if (typeof window === "undefined") return;
+
+    if (!cartConfig.persistCart) {
+        console.log("[useCartStore] Cart persistence disabled, not saving to localStorage");
+        return;
+    }
+
+    // Use localStorageHelper with expiration from admin settings
+    setLocalStorageWithExpiry(LOCAL_CART_KEY, cartItems, cartConfig.cartExpirationDays);
+    console.log(`[useCartStore] Saved cart with ${cartItems.length} items, expiry: ${cartConfig.cartExpirationDays === 0 ? 'never' : cartConfig.cartExpirationDays + ' days'}`);
+};
+
+// Cart configuration from admin settings
+interface CartConfig {
+    persistCart: boolean;
+    cartExpirationDays: number; // 0 = بی‌نهایت
+}
+
 interface CartState {
     cartItems: LocalCartItem[];
     loading: boolean;
     error: string | null;
     initialized: boolean;
     mutating: boolean;
+    cartConfig: CartConfig;
 
     refreshCart: () => Promise<void>;
+    refreshCartConfig: () => Promise<CartConfig>;
     addToCart: (product: Product, quantity?: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     updateQuantity: (productId: string, quantity: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     removeFromCart: (productId: string, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
@@ -142,12 +170,36 @@ export const useCartStore = create<CartState>((set, get) => ({
     error: null,
     initialized: false,
     mutating: false,
+    cartConfig: {
+        persistCart: true,
+        cartExpirationDays: 30, // Default values
+    },
+
+    refreshCartConfig: async () => {
+        try {
+            console.log("[useCartStore] Fetching cart config from server...");
+            const config = await settingsService.getCartConfig();
+            set({ cartConfig: config });
+            console.log("[useCartStore] Cart config loaded:", config);
+            return config;
+        } catch (err: any) {
+            console.error("[useCartStore] Error fetching cart config:", err);
+            // Return default config
+            return {
+                persistCart: true,
+                cartExpirationDays: 30,
+            };
+        }
+    },
 
     refreshCart: async () => {
         const isAuthenticated = authService.isAuthenticated();
         set({ loading: true, error: null, mutating: true });
 
         try {
+            // Fetch cart config from admin settings first
+            const config = await get().refreshCartConfig();
+
             if (isAuthenticated) {
                 const response = await cartService.getCart();
                 if (response.success && response.data) {
@@ -156,8 +208,23 @@ export const useCartStore = create<CartState>((set, get) => ({
                 }
             } else {
                 if (typeof window !== "undefined") {
-                    const localCart = localStorage.getItem(LOCAL_CART_KEY);
-                    set({ cartItems: localCart ? JSON.parse(localCart) : [], initialized: true });
+                    // Check if cart persistence is enabled
+                    if (!config.persistCart) {
+                        console.log("[useCartStore] Cart persistence is disabled. Clearing local cart.");
+                        removeLocalStorage(LOCAL_CART_KEY);
+                        set({ cartItems: [], initialized: true });
+                    } else {
+                        // Use localStorageHelper with expiration support
+                        const localCart = getLocalStorageWithExpiry<LocalCartItem[]>(LOCAL_CART_KEY, config.cartExpirationDays);
+
+                        if (localCart === null) {
+                            console.log("[useCartStore] No valid local cart found (expired or empty).");
+                            set({ cartItems: [], initialized: true });
+                        } else {
+                            console.log("[useCartStore] Local cart loaded with", localCart.length, "items");
+                            set({ cartItems: localCart, initialized: true });
+                        }
+                    }
                 }
             }
         } catch (err: any) {
@@ -302,7 +369,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     currentCart.push(newItem);
                 }
 
-                localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(currentCart));
+                saveLocalCart(currentCart, get().cartConfig);
                 set({ cartItems: currentCart });
             }
         } catch (err: any) {
@@ -364,7 +431,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     return isMatch ? { ...item, qty: Number(quantity) } : item;
                 });
 
-                localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(currentCart));
+                saveLocalCart(currentCart, get().cartConfig);
                 set({ cartItems: currentCart });
             }
         } catch (err: any) {
@@ -415,7 +482,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     return !isMatch;
                 });
 
-                localStorage.setItem(LOCAL_CART_KEY, JSON.stringify(currentCart));
+                saveLocalCart(currentCart, get().cartConfig);
                 set({ cartItems: currentCart });
             }
         } catch (err: any) {
@@ -445,7 +512,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     throw err;
                 }
             } else {
-                localStorage.removeItem(LOCAL_CART_KEY);
+                removeLocalStorage(LOCAL_CART_KEY);
                 set({ cartItems: [] });
             }
         } catch (err: any) {

@@ -228,6 +228,14 @@ const connectDB = async () => {
     const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')
     startOrderAutoCompleter()
 
+    // Start Cart Expiry Warning Job
+    const startCartExpiryWarningJob = require('./jobs/cartExpiryWarningJob')
+    startCartExpiryWarningJob()
+
+    // Start Cart Cleanup Job (cleans up expired carts)
+    const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
+    startCartCleanupJob()
+
   } catch (err) {
     console.error('❌ Error connecting to MongoDB:', err.message)
     process.exit(1)

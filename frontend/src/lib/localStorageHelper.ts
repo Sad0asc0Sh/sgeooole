@@ -46,37 +46,58 @@ export function setLocalStorageWithExpiry<T>(
  * دریافت داده از localStorage با بررسی تاریخ انقضا
  *
  * @param key - کلید localStorage
+ * @param defaultExpirationDays - تعداد روز پیش‌فرض برای داده‌های قدیمی (برای migration)
  * @returns داده یا null اگر منقضی شده باشد
  */
-export function getLocalStorageWithExpiry<T>(key: string): T | null {
+export function getLocalStorageWithExpiry<T>(key: string, defaultExpirationDays: number = 30): T | null {
     if (typeof window === "undefined") return null;
 
     try {
         const item = localStorage.getItem(key);
         if (!item) return null;
 
-        const storedData: StoredData<T> = JSON.parse(item);
+        const parsed = JSON.parse(item);
 
-        // اگر expirationDays برابر 0 باشد، هیچ وقت منقضی نمیشود
-        if (
-            storedData.expirationDays === undefined ||
-            storedData.expirationDays === 0
-        ) {
+        // بررسی اینکه آیا داده در فرمت جدید است (دارای timestamp)
+        if (parsed && typeof parsed === 'object' && 'timestamp' in parsed && 'data' in parsed) {
+            // فرمت جدید StoredData
+            const storedData: StoredData<T> = parsed;
+
+            // اگر expirationDays برابر 0 باشد، هیچ وقت منقضی نمیشود
+            if (
+                storedData.expirationDays === undefined ||
+                storedData.expirationDays === 0
+            ) {
+                return storedData.data;
+            }
+
+            // بررسی تاریخ انقضا
+            const now = Date.now();
+            const expirationTime =
+                storedData.timestamp + storedData.expirationDays * 24 * 60 * 60 * 1000;
+
+            if (now > expirationTime) {
+                console.log(`[LOCAL_STORAGE] "${key}" has expired. Removing...`);
+                localStorage.removeItem(key);
+                return null;
+            }
+
             return storedData.data;
+        } else {
+            // فرمت قدیمی: داده raw بدون wrapper
+            // Migration: ذخیره مجدد با فرمت جدید
+            console.log(`[LOCAL_STORAGE] Migrating "${key}" from legacy format to new format with ${defaultExpirationDays} days expiry`);
+
+            const newStoredData: StoredData<T> = {
+                data: parsed as T,
+                timestamp: Date.now(),
+                expirationDays: defaultExpirationDays,
+            };
+
+            localStorage.setItem(key, JSON.stringify(newStoredData));
+
+            return parsed as T;
         }
-
-        // بررسی تاریخ انقضا
-        const now = Date.now();
-        const expirationTime =
-            storedData.timestamp + storedData.expirationDays * 24 * 60 * 60 * 1000;
-
-        if (now > expirationTime) {
-            console.log(`[LOCAL_STORAGE] "${key}" has expired. Removing...`);
-            localStorage.removeItem(key);
-            return null;
-        }
-
-        return storedData.data;
     } catch (error) {
         console.error(`[LOCAL_STORAGE] Error reading "${key}":`, error);
         return null;
@@ -156,32 +177,46 @@ export function getLocalStorageExpiryInfo(key: string): {
         const item = localStorage.getItem(key);
         if (!item) return null;
 
-        const storedData: StoredData<any> = JSON.parse(item);
+        const parsed = JSON.parse(item);
 
-        // اگر بی‌نهایت باشد
-        if (
-            storedData.expirationDays === undefined ||
-            storedData.expirationDays === 0
-        ) {
+        // بررسی اینکه آیا داده در فرمت جدید است (دارای timestamp)
+        if (parsed && typeof parsed === 'object' && 'timestamp' in parsed && 'data' in parsed) {
+            const storedData: StoredData<any> = parsed;
+
+            // اگر بی‌نهایت باشد
+            if (
+                storedData.expirationDays === undefined ||
+                storedData.expirationDays === 0
+            ) {
+                return {
+                    expiresAt: null,
+                    daysRemaining: null,
+                    isExpired: false,
+                };
+            }
+
+            const expirationTime =
+                storedData.timestamp + storedData.expirationDays * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            const daysRemaining = Math.ceil(
+                (expirationTime - now) / (24 * 60 * 60 * 1000)
+            );
+
+            return {
+                expiresAt: new Date(expirationTime),
+                daysRemaining: Math.max(0, daysRemaining),
+                isExpired: now > expirationTime,
+            };
+        } else {
+            // فرمت قدیمی: داده فاقد اطلاعات انقضا
+            // داده هنوز migrate نشده - نمی‌دانیم تاریخ ایجادش
+            console.log(`[LOCAL_STORAGE] "${key}" is in legacy format - no expiry info available`);
             return {
                 expiresAt: null,
                 daysRemaining: null,
                 isExpired: false,
             };
         }
-
-        const expirationTime =
-            storedData.timestamp + storedData.expirationDays * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        const daysRemaining = Math.ceil(
-            (expirationTime - now) / (24 * 60 * 60 * 1000)
-        );
-
-        return {
-            expiresAt: new Date(expirationTime),
-            daysRemaining: Math.max(0, daysRemaining),
-            isExpired: now > expirationTime,
-        };
     } catch (error) {
         console.error(
             `[LOCAL_STORAGE] Error getting expiry info for "${key}":`,

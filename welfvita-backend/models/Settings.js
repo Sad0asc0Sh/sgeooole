@@ -133,6 +133,12 @@ const settingsSchema = new mongoose.Schema(
         min: 5, // حداقل: 5 دقیقه
         max: 120, // حداکثر: 2 ساعت
       },
+      // نوع اعلان برای هشدار انقضا (email, sms, both)
+      notificationType: {
+        type: String,
+        enum: ['email', 'sms', 'both'],
+        default: 'both', // پیش‌فرض: هم ایمیل و هم پیامک
+      },
     },
 
     // KYC / Identity Verification Settings

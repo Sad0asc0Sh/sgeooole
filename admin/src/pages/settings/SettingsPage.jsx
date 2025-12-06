@@ -60,6 +60,7 @@ function SettingsPage() {
           permanentCart: data.cartSettings?.permanentCart || false,
           expiryWarningEnabled: data.cartSettings?.expiryWarningEnabled || false,
           expiryWarningMinutes: data.cartSettings?.expiryWarningMinutes || 30,
+          notificationType: data.cartSettings?.notificationType || 'both',
         },
         kycSettings: {
           provider: data.kycSettings?.provider || 'mock',
@@ -270,6 +271,10 @@ function SettingsPage() {
 
         if (values.cartSettings.expiryWarningMinutes !== undefined) {
           cs.expiryWarningMinutes = values.cartSettings.expiryWarningMinutes
+        }
+
+        if (values.cartSettings.notificationType !== undefined) {
+          cs.notificationType = values.cartSettings.notificationType
         }
 
         if (Object.keys(cs).length > 0) {
@@ -808,56 +813,81 @@ function SettingsPage() {
                       const isWarningEnabled = getFieldValue2(['cartSettings', 'expiryWarningEnabled'])
 
                       return (
-                        <Form.Item
-                          name={['cartSettings', 'expiryWarningMinutes']}
-                          label="🔔 چه زمانی به کاربر هشدار بدهیم؟"
-                          rules={[
-                            {
-                              required: isWarningEnabled && !isPermanent,
-                              message: 'لطفاً زمان هشدار را وارد کنید',
-                            },
-                            ({ getFieldValue }) => ({
-                              validator(_, value) {
-                                const ttlHours = getFieldValue(['cartSettings', 'cartTTLHours']) || 1
-                                const ttlMinutes = ttlHours * 60
-
-                                if (!value) return Promise.resolve()
-
-                                if (value >= ttlMinutes) {
-                                  return Promise.reject(
-                                    new Error(
-                                      `زمان هشدار (${value} دقیقه) نمی‌تواند بیشتر از مهلت سبد (${ttlMinutes} دقیقه) باشد!`
-                                    )
-                                  )
-                                }
-
-                                if (value < 5) {
-                                  return Promise.reject(new Error('حداقل 5 دقیقه قبل هشدار بدهید'))
-                                }
-
-                                return Promise.resolve()
+                        <>
+                          <Form.Item
+                            name={['cartSettings', 'expiryWarningMinutes']}
+                            label="🔔 چه زمانی به کاربر هشدار بدهیم؟"
+                            rules={[
+                              {
+                                required: isWarningEnabled && !isPermanent,
+                                message: 'لطفاً زمان هشدار را وارد کنید',
                               },
-                            }),
-                          ]}
-                          extra={
-                            <div>
-                              <div><strong>مثال:</strong> اگر سبد 1 ساعت (60 دقیقه) مهلت دارد:</div>
-                              <div>• 15 دقیقه قبل: هشدار زودهنگام (45 دقیقه بعد از اضافه کردن)</div>
-                              <div>• 30 دقیقه قبل: متعادل و توصیه شده ⭐</div>
-                              <div>• 45 دقیقه قبل: هشدار دیرهنگام (فقط 15 دقیقه فرصت)</div>
-                            </div>
-                          }
-                          tooltip="این هشدار به ایمیل و پیامک کاربر ارسال می‌شود تا فرصت تکمیل خرید داشته باشد"
-                        >
-                          <InputNumber
-                            min={5}
-                            max={120}
-                            step={5}
-                            style={{ width: '100%' }}
-                            placeholder="30"
-                            disabled={!isWarningEnabled || isPermanent}
-                          />
-                        </Form.Item>
+                              ({ getFieldValue }) => ({
+                                validator(_, value) {
+                                  const ttlHours = getFieldValue(['cartSettings', 'cartTTLHours']) || 1
+                                  const ttlMinutes = ttlHours * 60
+
+                                  if (!value) return Promise.resolve()
+
+                                  if (value >= ttlMinutes) {
+                                    return Promise.reject(
+                                      new Error(
+                                        `زمان هشدار (${value} دقیقه) نمی‌تواند بیشتر از مهلت سبد (${ttlMinutes} دقیقه) باشد!`
+                                      )
+                                    )
+                                  }
+
+                                  if (value < 5) {
+                                    return Promise.reject(new Error('حداقل 5 دقیقه قبل هشدار بدهید'))
+                                  }
+
+                                  return Promise.resolve()
+                                },
+                              }),
+                            ]}
+                            extra={
+                              <div>
+                                <div><strong>مثال:</strong> اگر سبد 1 ساعت (60 دقیقه) مهلت دارد:</div>
+                                <div>• 15 دقیقه قبل: هشدار زودهنگام (45 دقیقه بعد از اضافه کردن)</div>
+                                <div>• 30 دقیقه قبل: متعادل و توصیه شده ⭐</div>
+                                <div>• 45 دقیقه قبل: هشدار دیرهنگام (فقط 15 دقیقه فرصت)</div>
+                              </div>
+                            }
+                            tooltip="این هشدار به ایمیل و پیامک کاربر ارسال می‌شود تا فرصت تکمیل خرید داشته باشد"
+                          >
+                            <InputNumber
+                              min={5}
+                              max={120}
+                              step={5}
+                              style={{ width: '100%' }}
+                              placeholder="30"
+                              disabled={!isWarningEnabled || isPermanent}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            name={['cartSettings', 'notificationType']}
+                            label="📧 نوع هشدار خودکار"
+                            extra={
+                              <div>
+                                <div>انتخاب کنید که هشدار انقضای سبد از چه طریقی ارسال شود:</div>
+                                <div>• فقط ایمیل: مناسب کاربران با ایمیل فعال</div>
+                                <div>• فقط پیامک: مناسب کاربران ایرانی</div>
+                                <div>• هم ایمیل و هم پیامک: اطمینان بیشتر ⭐</div>
+                              </div>
+                            }
+                            tooltip="تعیین می‌کند هشدار به چه صورت ارسال شود"
+                          >
+                            <Select
+                              disabled={!isWarningEnabled || isPermanent}
+                              placeholder="انتخاب نوع هشدار"
+                            >
+                              <Select.Option value="email">📧 فقط ایمیل</Select.Option>
+                              <Select.Option value="sms">📱 فقط پیامک</Select.Option>
+                              <Select.Option value="both">📧📱 هم ایمیل و هم پیامک</Select.Option>
+                            </Select>
+                          </Form.Item>
+                        </>
                       )
                     }}
                   </Form.Item>

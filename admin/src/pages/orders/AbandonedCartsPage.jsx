@@ -262,7 +262,7 @@ function AbandonedCartsPage() {
   const handleSmsReminder = async (cart) => {
     Modal.confirm({
       title: 'ارسال پیامک یادآوری',
-      content: `آیا می‌خواهید پیامک یادآوری به شماره ${cart.user?.phone || 'نامشخص'} ارسال شود؟`,
+      content: `آیا می‌خواهید پیامک یادآوری به شماره ${cart.user?.mobile || 'نامشخص'} ارسال شود؟`,
       okText: 'ارسال',
       cancelText: 'لغو',
       onOk: async () => {
@@ -678,7 +678,7 @@ function AbandonedCartsPage() {
                   {selectedCart.user?.email || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="تلفن">
-                  {selectedCart.user?.phone || '—'}
+                  {selectedCart.user?.mobile || '—'}
                 </Descriptions.Item>
                 <Descriptions.Item label="آخرین فعالیت">
                   {getTimeAgo(selectedCart.updatedAt)} (

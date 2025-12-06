@@ -21,6 +21,9 @@ export interface Settings {
     cartConfig?: {
         persistCart: boolean; // آیا سبد خرید باید ماندگار باشد
         cartExpirationDays: number; // تعداد روزهایی که سبد خرید نگهداری میشود (0 = بی‌نهایت)
+        notificationType?: 'email' | 'sms' | 'both'; // نوع هشدار خودکار
+        expiryWarningEnabled?: boolean; // فعال‌سازی هشدار قبل از انقضا
+        expiryWarningMinutes?: number; // چند دقیقه قبل از انقضا هشدار داده شود
     };
 }
 

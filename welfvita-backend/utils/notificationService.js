@@ -123,7 +123,8 @@ exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
 }
 
 /**
- * @desc    ارسال پیامک یادآوری سبد خرید
+ * @desc    ارسال پیامک یادآوری سبد خرید (ملی‌پیامک)
+ *          از خط تبلیغاتی 2170006555 استفاده می‌شود که به لیست سیاه هم ارسال می‌کند
  * @param   {String} phoneNumber - شماره موبایل کاربر
  * @param   {String} userName - نام کاربر
  * @param   {Number} itemsCount - تعداد آیتم‌های سبد
@@ -131,43 +132,176 @@ exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
  */
 exports.sendReminderSMS = async (phoneNumber, userName, itemsCount) => {
   try {
-    // تنظیمات Kavenegar
-    const apiKey = process.env.KAVENEGAR_API_KEY
-    if (!apiKey) {
-      throw new Error('KAVENEGAR_API_KEY is not defined in environment variables')
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' })
+      .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsSenderNumber')
+
+    const { smsUsername, smsPassword, smsSenderNumber } = settings?.notificationSettings || {}
+
+    if (!smsUsername || !smsPassword) {
+      console.log('[SMS Reminder] تنظیمات پنل پیامک ناقص است')
+      throw new Error('تنظیمات پنل پیامک تنظیم نشده است')
     }
 
-    const api = Kavenegar.KavenegarApi({
-      apikey: apiKey,
-    })
+    const message = `${userName || 'کاربر گرامی'}، شما ${itemsCount} محصول در سبد خرید ویلف ویتا دارید. برای تکمیل خرید خود به سایت مراجعه کنید.\nویلف ویتا\nلغو11`
 
-    // پیام پیامک
-    const message = `${userName || 'کاربر گرامی'}، شما ${itemsCount} محصول در سبد خرید ویلف ویتا دارید. برای تکمیل خرید خود به سایت مراجعه کنید.`
+    // استفاده از همان خط OTP تا زمانی که خط تبلیغاتی فعال شود
+    const senderLine = smsSenderNumber || smsUsername
 
-    // شماره فرستنده (خط خدماتی کاوه‌نگار)
-    const sender = process.env.KAVENEGAR_SENDER || '10004346'
+    console.log(`[SMS Reminder] ارسال به ${phoneNumber} از خط ${senderLine}...`)
 
-    return new Promise((resolve, reject) => {
-      api.Send(
-        {
-          message,
-          sender,
-          receptor: phoneNumber,
-        },
-        (response, status) => {
-          if (status === 200) {
-            console.log('SMS sent successfully:', response)
-            resolve({ success: true, response })
-          } else {
-            console.error('SMS sending failed:', response)
-            reject(new Error('Failed to send SMS'))
-          }
-        }
-      )
-    })
+    const response = await axios.post(
+      'https://rest.payamak-panel.com/api/SendSMS/SendSMS',
+      {
+        username: smsUsername,
+        password: smsPassword,
+        to: phoneNumber,
+        from: senderLine,
+        text: message,
+        isflash: false
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      }
+    )
+
+    if (response.data.RetStatus === 1) {
+      console.log('[SMS Reminder] ✅ پیامک ارسال شد')
+      return { success: true, data: response.data }
+    } else {
+      console.error('[SMS Reminder] ❌ خطا:', response.data.StrRetStatus)
+      throw new Error(response.data.StrRetStatus || 'خطا در ارسال پیامک')
+    }
+
   } catch (error) {
-    console.error('Error sending SMS:', error)
+    console.error('[SMS Reminder] ❌ خطا:', error.message)
     throw error
+  }
+}
+
+/**
+ * @desc    ارسال ایمیل هشدار انقضای سبد خرید
+ * @param   {String} userEmail - ایمیل کاربر
+ * @param   {Object} params - پارامترهای هشدار
+ * @param   {String} params.userName - نام کاربر
+ * @param   {Number} params.itemCount - تعداد آیتم‌ها
+ * @param   {Number} params.totalPrice - قیمت کل
+ * @param   {Number} params.expiryMinutes - دقایق باقیمانده تا انقضا
+ * @returns {Promise}
+ */
+exports.sendExpiryWarningEmail = async (userEmail, params) => {
+  try {
+    const transporter = createTransporter()
+    const { userName, itemCount, totalPrice, expiryMinutes } = params
+
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
+      to: userEmail,
+      subject: '⏰ هشدار: سبد خرید شما در حال انقضا است!',
+      html: `
+        <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff8e6;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <span style="font-size: 48px;">⏰</span>
+          </div>
+          <h2 style="color: #d48806; text-align: center;">هشدار انقضای سبد خرید</h2>
+          <p style="color: #333; font-size: 14px; text-align: center;">
+            سلام <strong>${userName || 'کاربر گرامی'}</strong>!
+          </p>
+          <div style="background-color: #fff; border: 2px solid #fa8c16; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+            <p style="color: #d48806; font-size: 18px; font-weight: bold; margin: 0;">
+              ⚠️ سبد خرید شما تا ${expiryMinutes} دقیقه دیگر منقضی می‌شود!
+            </p>
+          </div>
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="color: #555; font-size: 14px; margin: 5px 0;">
+              📦 تعداد محصولات: <strong>${itemCount}</strong>
+            </p>
+            <p style="color: #555; font-size: 14px; margin: 5px 0;">
+              💰 مبلغ کل: <strong>${(totalPrice || 0).toLocaleString('fa-IR')} تومان</strong>
+            </p>
+          </div>
+          <p style="color: #555; font-size: 14px; text-align: center;">
+            برای جلوگیری از از دست دادن محصولات خود، همین الان خرید را تکمیل کنید.
+          </p>
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/cart"
+               style="background-color: #fa8c16; color: white; padding: 15px 40px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+              🛒 تکمیل خرید
+            </a>
+          </div>
+          <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+            با تشکر، تیم ویلف ویتا
+          </p>
+        </div>
+      `,
+    }
+
+    const info = await transporter.sendMail(mailOptions)
+    console.log('[EXPIRY WARNING] Email sent:', info.messageId)
+    return { success: true, messageId: info.messageId }
+  } catch (error) {
+    console.error('[EXPIRY WARNING] Error sending email:', error)
+    throw error
+  }
+}
+
+/**
+ * @desc    ارسال پیامک هشدار انقضای سبد خرید (ملی‌پیامک)
+ * @param   {String} phoneNumber - شماره موبایل کاربر
+ * @param   {Object} params - پارامترهای هشدار
+ * @param   {String} params.userName - نام کاربر
+ * @param   {Number} params.itemCount - تعداد آیتم‌ها
+ * @param   {Number} params.expiryMinutes - دقایق باقیمانده تا انقضا
+ * @returns {Promise}
+ */
+exports.sendExpiryWarningSMS = async (phoneNumber, params) => {
+  try {
+    const { userName, itemCount, expiryMinutes } = params
+
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' })
+      .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsSenderNumber')
+
+    const { smsUsername, smsPassword, smsSenderNumber } = settings?.notificationSettings || {}
+
+    if (!smsUsername || !smsPassword) {
+      console.log('[EXPIRY WARNING SMS] تنظیمات پیامک ناقص است')
+      return { success: false, message: 'تنظیمات پیامک ناقص است' }
+    }
+
+    const message = `${userName || 'کاربر گرامی'}، سبد خرید شما (${itemCount} محصول) تا ${expiryMinutes} دقیقه دیگر منقضی می‌شود. همین الان خرید را تکمیل کنید.\nویلف ویتا\nلغو11`
+
+    // استفاده از همان خط OTP تا زمانی که خط تبلیغاتی فعال شود
+    const senderLine = smsSenderNumber || smsUsername
+
+    console.log(`[EXPIRY WARNING SMS] ارسال به ${phoneNumber} از خط ${senderLine}...`)
+
+    const response = await axios.post(
+      'https://rest.payamak-panel.com/api/SendSMS/SendSMS',
+      {
+        username: smsUsername,
+        password: smsPassword,
+        to: phoneNumber,
+        from: senderLine,
+        text: message,
+        isflash: false
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000
+      }
+    )
+
+    if (response.data.RetStatus === 1) {
+      console.log('[EXPIRY WARNING SMS] ✅ ارسال شد')
+      return { success: true, data: response.data }
+    } else {
+      console.error('[EXPIRY WARNING SMS] ❌ خطا:', response.data.StrRetStatus)
+      return { success: false, message: response.data.StrRetStatus }
+    }
+
+  } catch (error) {
+    console.error('[EXPIRY WARNING SMS] ❌ خطا:', error.message)
+    return { success: false, message: error.message }
   }
 }
 

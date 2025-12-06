@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const Cart = require('../models/Cart')
 const Product = require('../models/Product')
 const Settings = require('../models/Settings')
-const { sendReminderEmail, sendReminderSMS } = require('../utils/notificationService')
+const { sendReminderEmail, sendReminderSMS, sendExpiryWarningEmail, sendExpiryWarningSMS } = require('../utils/notificationService')
 
 const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants'
 
@@ -16,6 +16,7 @@ async function getCartSettings() {
       permanentCart: settings?.cartSettings?.permanentCart || false,
       expiryWarningEnabled: settings?.cartSettings?.expiryWarningEnabled || false,
       expiryWarningMinutes: settings?.cartSettings?.expiryWarningMinutes || 30,
+      notificationType: settings?.cartSettings?.notificationType || 'both',
     }
   } catch (error) {
     console.error('Error fetching cart settings:', error)
@@ -25,6 +26,7 @@ async function getCartSettings() {
       permanentCart: false,
       expiryWarningEnabled: false,
       expiryWarningMinutes: 30,
+      notificationType: 'both',
     }
   }
 }
@@ -63,9 +65,9 @@ const computeItemPricing = (item, now = new Date()) => {
   const basePrice =
     Number(
       (matchingVariant && matchingVariant.price) ??
-        product.price ??
-        item.price ??
-        0,
+      product.price ??
+      item.price ??
+      0,
     ) || 0
 
   const rawDiscount = Number(product.discount) || 0
@@ -217,7 +219,7 @@ exports.getAbandonedCarts = async (req, res) => {
     console.log('[ABANDONED] Filter:', JSON.stringify(filter, null, 2))
 
     const carts = await Cart.find(filter)
-      .populate('user', 'name email phone')
+      .populate('user', 'name email mobile')
       .populate('items.product', 'name images sku price')
       .sort({ updatedAt: -1 })
       .lean()
@@ -369,7 +371,7 @@ exports.sendSmsReminder = async (req, res) => {
 
     // یافتن سبد خرید و populate کردن اطلاعات
     const cart = await Cart.findById(cartId)
-      .populate('user', 'name phone')
+      .populate('user', 'name mobile')
       .lean()
 
     if (!cart) {
@@ -380,7 +382,7 @@ exports.sendSmsReminder = async (req, res) => {
     }
 
     // بررسی وجود شماره موبایل کاربر
-    if (!cart.user || !cart.user.phone) {
+    if (!cart.user || !cart.user.mobile) {
       return res.status(400).json({
         success: false,
         message: 'شماره موبایل کاربر یافت نشد',
@@ -397,7 +399,7 @@ exports.sendSmsReminder = async (req, res) => {
 
     // ارسال پیامک
     const itemsCount = cart.items.reduce((sum, item) => sum + item.quantity, 0)
-    await sendReminderSMS(cart.user.phone, cart.user.name, itemsCount)
+    await sendReminderSMS(cart.user.mobile, cart.user.name, itemsCount)
 
     res.json({
       success: true,
@@ -969,7 +971,7 @@ exports.sendExpiryWarnings = async (req, res) => {
         $gt: now,
       },
     })
-      .populate('user', 'name email phone')
+      .populate('user', 'name email mobile')
       .lean()
 
     let successCount = 0
@@ -982,30 +984,32 @@ exports.sendExpiryWarnings = async (req, res) => {
 
         const minutesRemaining = Math.floor((new Date(cart.expiresAt) - now) / (60 * 1000))
 
-        // ارسال ایمیل
-        if (user.email) {
+        // ارسال ایمیل (اگر در تنظیمات فعال است)
+        if ((cartSettings.notificationType === 'email' || cartSettings.notificationType === 'both') && user.email) {
           try {
-            await sendReminderEmail(user.email, {
+            await sendExpiryWarningEmail(user.email, {
               userName: user.name || 'کاربر',
               itemCount: cart.items?.length || 0,
               totalPrice: cart.totalPrice || 0,
               expiryMinutes: minutesRemaining,
               isWarning: true,
             })
+            console.log(`[EXPIRY WARNING] Email sent to ${user.email}`)
           } catch (emailErr) {
             console.error('Error sending expiry warning email:', emailErr)
           }
         }
 
-        // ارسال پیامک
-        if (user.phone) {
+        // ارسال پیامک (اگر در تنظیمات فعال است)
+        if ((cartSettings.notificationType === 'sms' || cartSettings.notificationType === 'both') && user.mobile) {
           try {
-            await sendReminderSMS(user.phone, {
+            await sendExpiryWarningSMS(user.mobile, {
               userName: user.name || 'کاربر',
               itemCount: cart.items?.length || 0,
               expiryMinutes: minutesRemaining,
               isWarning: true,
             })
+            console.log(`[EXPIRY WARNING] SMS sent to ${user.mobile}`)
           } catch (smsErr) {
             console.error('Error sending expiry warning SMS:', smsErr)
           }

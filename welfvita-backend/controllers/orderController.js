@@ -159,7 +159,7 @@ exports.getAllOrders = async (req, res) => {
 exports.getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-      .populate('user', 'name email phone')
+      .populate('user', 'name email mobile')
       .populate('orderItems.product', 'name images sku')
       .lean()
 
@@ -338,7 +338,7 @@ exports.payOrder = async (req, res) => {
     const orderId = req.params.id
 
     // پیدا کردن سفارش
-    const order = await Order.findById(orderId).populate('user', 'email phone')
+    const order = await Order.findById(orderId).populate('user', 'email mobile')
 
     if (!order) {
       return res.status(404).json({
@@ -378,7 +378,7 @@ exports.payOrder = async (req, res) => {
       callbackUrl: callbackUrl,
       description: `پرداخت سفارش #${order._id.toString().substring(0, 8)}`,
       email: order.user.email || '',
-      mobile: order.user.phone || order.shippingAddress.phone || '',
+      mobile: order.user.mobile || order.shippingAddress.phone || '',
       orderId: order._id.toString(), // برای Sadad الزامی
       gatewayName: selectedGateway, // ارسال نام درگاه انتخابی
     })

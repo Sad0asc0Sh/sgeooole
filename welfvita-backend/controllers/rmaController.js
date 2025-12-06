@@ -60,7 +60,7 @@ exports.getAllRMAs = async (req, res) => {
 exports.getRMAById = async (req, res) => {
   try {
     const rma = await RMA.findById(req.params.id)
-      .populate('user', 'name email phone')
+      .populate('user', 'name email mobile')
       .populate({
         path: 'order',
         select: '_id orderStatus totalPrice createdAt orderItems shippingAddress',

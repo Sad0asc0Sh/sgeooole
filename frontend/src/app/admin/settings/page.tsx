@@ -217,7 +217,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                         <h2 className="text-lg font-bold text-gray-800">تنظیمات سبد خرید</h2>
-                        <p className="text-sm text-gray-500">مدیریت ماندگاری و انقضای سبد خرید</p>
+                        <p className="text-sm text-gray-500">مدیریت ماندگاری، انقضا و هشدارهای سبد خرید</p>
                     </div>
                 </div>
 
@@ -263,6 +263,72 @@ export default function SettingsPage() {
                             تعداد روزهایی که سبد خرید در مرورگر باقی می‌ماند (۰ = بی‌نهایت)
                         </p>
                     </div>
+
+                    {/* Notification Type */}
+                    <div className="space-y-3">
+                        <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                            <Mail size={18} className="text-gray-400" />
+                            نوع هشدار خودکار
+                        </label>
+                        <select
+                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                            value={settings.cartConfig?.notificationType ?? 'both'}
+                            onChange={(e) => setSettings({ ...settings, cartConfig: { ...settings.cartConfig, notificationType: e.target.value } })}
+                        >
+                            <option value="email">فقط ایمیل</option>
+                            <option value="sms">فقط پیامک</option>
+                            <option value="both">هم ایمیل و هم پیامک</option>
+                        </select>
+                        <p className="text-xs text-gray-400 leading-relaxed flex items-start gap-1">
+                            <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                            نحوه ارسال هشدار به کاربران دارای سبد رها شده
+                        </p>
+                    </div>
+
+                    {/* Expiry Warning Toggle */}
+                    <div className="col-span-full flex items-center justify-between p-5 bg-amber-50 rounded-2xl border border-amber-200">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${settings.cartConfig?.expiryWarningEnabled ? 'bg-amber-500' : 'bg-gray-300'}`}></div>
+                            <div>
+                                <span className="font-bold text-gray-700">هشدار خودکار انقضای سبد</span>
+                                <p className="text-xs text-gray-400 mt-1">ارسال هشدار خودکار قبل از انقضای سبد خرید</p>
+                            </div>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={settings.cartConfig?.expiryWarningEnabled || false}
+                                onChange={(e) => setSettings({ ...settings, cartConfig: { ...settings.cartConfig, expiryWarningEnabled: e.target.checked } })}
+                            />
+                            <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-100 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:right-[unset] rtl:after:right-[2px] rtl:after:left-[unset] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-amber-500"></div>
+                        </label>
+                    </div>
+
+                    {/* Expiry Warning Minutes (only show if enabled) */}
+                    {settings.cartConfig?.expiryWarningEnabled && (
+                        <div className="space-y-3">
+                            <label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                <AlertCircle size={18} className="text-amber-500" />
+                                زمان هشدار قبل از انقضا
+                            </label>
+                            <div className="relative">
+                                <input
+                                    type="number"
+                                    min="5"
+                                    max="120"
+                                    className="w-full px-4 py-3 rounded-xl border border-amber-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all bg-amber-50 focus:bg-white"
+                                    value={settings.cartConfig?.expiryWarningMinutes ?? 30}
+                                    onChange={(e) => setSettings({ ...settings, cartConfig: { ...settings.cartConfig, expiryWarningMinutes: Number(e.target.value) } })}
+                                />
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-amber-600 font-bold">دقیقه</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-relaxed flex items-start gap-1">
+                                <AlertCircle size={12} className="mt-0.5 shrink-0" />
+                                چند دقیقه قبل از انقضا هشدار ارسال شود (۵ تا ۱۲۰ دقیقه)
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
 
