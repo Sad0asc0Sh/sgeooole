@@ -15,12 +15,11 @@ export async function generateStaticParams() {
   });
 }
 
-type CatchAllProps = {
-  params: { slug?: string[] };
-};
+type CatchAllParams = Promise<{ slug?: string[] }>;
 
-export default async function CatchAllPage({ params }: CatchAllProps) {
-  const segments = params.slug || [];
+export default async function CatchAllPage({ params }: { params: CatchAllParams }) {
+  const resolved = await params;
+  const segments = resolved.slug || [];
   if (segments.length === 0) {
     redirect("/");
   }

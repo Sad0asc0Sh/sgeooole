@@ -103,17 +103,16 @@ export default function AvatarUpload({
       setUploading(true);
       setError(null);
 
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const response = await authService.updateAvatar(formData);
+      const response = await authService.updateAvatar(file);
 
       if (response.success) {
-        const newAvatar = response.data?.user?.avatar;
-        const newAvatarUrl = typeof newAvatar === 'object' ? newAvatar.url : newAvatar;
+        const newAvatar = response.data?.avatar as string | { url: string; public_id: string } | undefined;
+        const newAvatarUrl = typeof newAvatar === 'object' && newAvatar !== null ? newAvatar.url : newAvatar;
 
         // Success callback
-        onUploadSuccess?.(newAvatarUrl);
+        if (newAvatarUrl) {
+          onUploadSuccess?.(newAvatarUrl);
+        }
 
         // Show success message briefly
         setTimeout(() => {
@@ -152,9 +151,8 @@ export default function AvatarUpload({
       {/* Avatar Display */}
       <div className="relative">
         <div
-          className={`w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border-4 border-white shadow-lg overflow-hidden ${
-            uploading ? 'opacity-50' : ''
-          }`}
+          className={`w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border-4 border-white shadow-lg overflow-hidden ${uploading ? 'opacity-50' : ''
+            }`}
         >
           {avatarUrl ? (
             <img
@@ -181,9 +179,8 @@ export default function AvatarUpload({
         <button
           onClick={handleClick}
           disabled={uploading}
-          className={`absolute bottom-0 right-0 w-9 h-9 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-110 ${
-            uploading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
+          className={`absolute bottom-0 right-0 w-9 h-9 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-110 ${uploading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           title="تغییر تصویر پروفایل"
         >
           {uploading ? (

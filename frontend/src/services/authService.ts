@@ -424,7 +424,7 @@ export const authService = {
    * Uploads a new profile picture
    * @param file - Image file
    */
-  updateAvatar: async (file: File): Promise<{ success: boolean; data: User }> => {
+  updateAvatar: async (file: File): Promise<{ success: boolean; data: User; message?: string }> => {
     try {
       console.log("[AUTH] Updating avatar");
       const formData = new FormData();

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Vazirmatn } from "next/font/google";
 import "./globals.css";
+import "swiper/css";
+import "swiper/css/free-mode";
 import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";

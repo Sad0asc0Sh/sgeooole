@@ -25,8 +25,7 @@ type ApiResponse<T> = { data?: T };
 async function fetchFeaturedCategories(): Promise<Category[]> {
   try {
     const res = await fetch(`${API_BASE}/categories/featured?_t=${Date.now()}`, {
-      next: { revalidate },
-      cache: 'no-store'
+      next: { revalidate }
     });
     if (!res.ok) throw new Error("failed featured");
     const json: ApiResponse<Category[]> = await res.json();
@@ -40,8 +39,7 @@ async function fetchFeaturedCategories(): Promise<Category[]> {
 async function fetchPopularCategories(): Promise<Category[]> {
   try {
     const res = await fetch(`${API_BASE}/categories/popular?_t=${Date.now()}`, {
-      next: { revalidate },
-      cache: 'no-store'
+      next: { revalidate }
     });
     if (!res.ok) throw new Error("failed popular");
     const json: ApiResponse<Category[]> = await res.json();

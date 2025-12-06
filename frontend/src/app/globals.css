@@ -90,3 +90,29 @@
   width: auto !important;
   height: auto !important;
 }
+
+/* Flash Offer rail hardening: force horizontal flex layout */
+.flash-offer-swiper .swiper-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+}
+
+.flash-offer-swiper .swiper-slide {
+  flex-shrink: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  scroll-snap-align: start;
+}
+
+/* Fallback: if Swiper fails to move slides into wrapper, keep row layout */
+.flash-offer-swiper {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.flash-offer-swiper > .swiper-slide {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
