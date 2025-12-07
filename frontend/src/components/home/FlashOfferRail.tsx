@@ -9,13 +9,14 @@ import Image from "next/image";
 import { productService, Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
- * Uses the exact same card structure as ProductRail for consistency
+ * Custom Design: Gold & Gray Glassmorphism (Dark Theme)
+ * Shape: Top & Bottom Zigzag (Sawtooth/Tech)
  */
 export default function FlashOfferRail() {
   const [flashDeals, setFlashDeals] = useState<Product[]>([]);
@@ -59,18 +60,35 @@ export default function FlashOfferRail() {
   }
 
   return (
-    <div className="py-4 bg-white border-b border-gray-100">
-      {/* Header Section - Exactly matches ProductRail */}
-      <div className="px-4 mb-4 flex items-center justify-between">
+    <div
+      className="py-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-amber-500/20 shadow-inner relative overflow-hidden"
+      style={{
+        // CSS Mask for Zigzag (Sawtooth) Edges - Adjusted for smaller padding
+        // 20px width => 10px height zigzag. py-6 (24px) leaves 14px visual padding.
+        WebkitMask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x",
+        mask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x"
+      }}
+    >
+      {/* Decorative Background Glow */}
+      <div className="absolute top-0 left-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Header Section */}
+      <div className="px-4 mb-5 flex items-center justify-between relative z-10">
         <div className="flex flex-col gap-1">
-          <h3 className="text-base font-bold text-gray-900">پیشنهاد لحظه‌ای</h3>
-          <span className="text-[11px] text-gray-400 font-medium">
-            محصولات منتخب برای شما
+          <div className="flex items-center gap-2">
+            <Sparkles className="text-amber-400 w-5 h-5 animate-pulse" />
+            <h3 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-200 via-amber-400 to-amber-500 drop-shadow-sm">
+              پیشنهاد لحظه‌ای
+            </h3>
+          </div>
+          <span className="text-[11px] text-gray-400 font-medium mr-7">
+            فرصت محدود خرید با تخفیف ویژه
           </span>
         </div>
         <Link
           href="/products?sort=flash"
-          className="flex items-center gap-0.5 text-blue-500 text-xs font-bold hover:text-blue-600 transition-colors"
+          className="flex items-center gap-1 text-amber-400 text-xs font-bold hover:text-amber-300 transition-colors bg-gray-800/50 px-3 py-1.5 rounded-full border border-amber-500/20 backdrop-blur-sm"
         >
           <span>مشاهده همه</span>
           <ChevronLeft size={14} />
@@ -78,12 +96,15 @@ export default function FlashOfferRail() {
       </div>
 
       {loading ? (
-        // Loading skeleton - Exactly matches ProductRailContainer
-        <div className="px-4 flex gap-3 overflow-hidden">
+        // Loading skeleton - Dark Theme
+        <div className="px-4 flex gap-3 overflow-hidden relative z-10">
           {[...Array(5)].map((_, i) => (
             <div
               key={i}
-              className="min-w-[148px] h-[240px] bg-gray-100 rounded-lg animate-pulse"
+              className="min-w-[148px] h-[240px] bg-gray-800/50 rounded-xl border border-gray-700 animate-pulse"
+              style={{
+                clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)"
+              }}
             />
           ))}
         </div>
@@ -93,7 +114,7 @@ export default function FlashOfferRail() {
           freeMode
           spaceBetween={12}
           slidesPerView={"auto"}
-          className="w-full !px-4 !pb-4"
+          className="w-full !px-4 !pb-4 relative z-10"
           grabCursor
         >
           {flashDeals.map((product) => {
@@ -110,77 +131,14 @@ export default function FlashOfferRail() {
               new Date(product.specialOfferEndTime).getTime() > now
             );
 
-            // Determine Header Type - Same logic as ProductRail
-            let headerConfig = null;
-
-            if (product.isFlashDeal) {
-              // Default Flash Deal Style
-              let themeColor = 'text-amber-500';
-              let themeBorder = 'bg-amber-500';
-              let themeTitle = 'پیشنهاد لحظه‌ای';
-
-              // Override with campaign theme if present
-              if (product.campaignLabel || product.campaignTheme) {
-                themeTitle = product.campaignLabel || 'پیشنهاد لحظه‌ای';
-
-                if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-                  themeColor = 'text-amber-600';
-                  themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
-                } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-                  themeColor = 'text-rose-600';
-                  themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
-                } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-                  themeColor = 'text-lime-600';
-                  themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
-                } else {
-                  themeColor = 'text-blue-600';
-                  themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
-                }
-              }
-
-              headerConfig = {
-                type: 'flash',
-                title: themeTitle,
-                color: themeColor,
-                borderColor: themeBorder,
-                endTime: product.flashDealEndTime,
-              };
-            } else if (product.campaignLabel || product.campaignTheme) {
-              let themeColor = 'text-blue-600';
-              let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
-
-              if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-                themeColor = 'text-amber-600';
-                themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
-              } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-                themeColor = 'text-rose-600';
-                themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
-              } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-                themeColor = 'text-lime-600';
-                themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
-              }
-
-              headerConfig = {
-                type: 'campaign',
-                title: product.campaignLabel || 'فروش ویژه',
-                color: themeColor,
-                borderColor: themeBorder,
-                endTime: product.flashDealEndTime || product.specialOfferEndTime,
-              };
-            } else if ((product.isSpecialOffer && isSpecialOfferCountdownActive) || (!product.isSpecialOffer && product.discount && product.discount > 0)) {
-              headerConfig = {
-                type: 'amazing',
-                title: 'شگفت‌انگیز',
-                color: 'text-red-500',
-                borderColor: 'bg-red-500',
-                endTime: product.specialOfferEndTime,
-              };
-            }
-
-            const showSpecialOfferChrome =
-              !(headerConfig?.type === 'amazing') ||
-              isSpecialOfferCountdownActive ||
-              !product.isSpecialOffer;
+            // Force Gold/Dark Theme for this section
+            const headerConfig = {
+              type: 'flash',
+              title: 'پیشنهاد طلایی',
+              color: 'text-amber-950',
+              borderColor: 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500',
+              endTime: product.flashDealEndTime || product.specialOfferEndTime,
+            };
 
             const effectiveDiscount =
               product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
@@ -197,24 +155,39 @@ export default function FlashOfferRail() {
             return (
               <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
                 <Link href={buildProductUrl(product)} className="block h-full">
-                  <div className={`bg-white rounded-lg border border-gray-200 h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group ${headerConfig ? 'pt-0' : 'p-3'}`}>
+                  <div
+                    className={`
+                      bg-gray-800/40 backdrop-blur-md
+                      border border-amber-500/30
+                      h-full flex flex-col justify-between
+                      cursor-pointer
+                      hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:bg-gray-800/60
+                      transition-all duration-300
+                      relative overflow-hidden group pt-4 pb-4
+                    `}
+                    style={{
+                      clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)",
+                      borderRadius: "0" // Remove border radius as clip-path defines shape
+                    }}
+                  >
 
-                    {/* Special Header Line - Exactly matches ProductRail */}
-                    {headerConfig && showSpecialOfferChrome && (
-                      <div className="w-full mb-2">
-                        <div className={`h-1 w-full ${headerConfig.borderColor}`} />
-                        <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
-                          <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
-                            {headerConfig.title}
-                          </div>
-                        </div>
-                        <div className="h-px w-full bg-gray-100" />
+                    {/* Gold Header Line - Adjusted for clip-path */}
+                    <div className="w-full mb-1 absolute top-0 left-0 right-0 z-20 opacity-50">
+                      {/* Optional: Add a subtle top border glow that follows the shape?
+                           Standard borders get clipped. We rely on the container border which is also clipped.
+                       */}
+                    </div>
+
+                    <div className="px-3 pb-1 pt-1">
+                      {/* Header Title - Centered below the V notch */}
+                      <div className="flex justify-center mb-2">
+                        <span className="text-[10px] font-black text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-500/20">
+                          {headerConfig.title}
+                        </span>
                       </div>
-                    )}
 
-                    <div className={headerConfig ? "px-3 pb-3" : ""}>
-                      {/* Image - Exactly matches ProductRail */}
-                      <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                      {/* Image */}
+                      <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-700/30 rounded-lg overflow-hidden border border-white/5">
                         <Image
                           src={product.image || "/placeholder.png"}
                           alt={product.name}
@@ -231,42 +204,40 @@ export default function FlashOfferRail() {
                         {(headerConfig?.endTime) && (
                           <ProductTimerBadge
                             targetDate={headerConfig.endTime}
-                            color={headerConfig.color}
+                            color="text-amber-500"
+                            className="bg-gray-900/90 border border-amber-500/30 backdrop-blur-sm shadow-lg"
                           />
                         )}
 
                         {/* OUT OF STOCK OVERLAY */}
                         {product.countInStock === 0 && (
-                          <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
-                            <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                          <div className="absolute inset-0 bg-gray-900/70 z-10 flex items-center justify-center backdrop-blur-[2px]">
+                            <span className="bg-gray-800 text-gray-300 border border-gray-600 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
                               ناموجود
                             </span>
                           </div>
                         )}
                       </div>
 
-                      {/* Title - Exactly matches ProductRail */}
+                      {/* Title */}
                       <h3
-                        className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${product.countInStock === 0 ? "text-gray-400" : "text-gray-700"
-                          }`}
+                        className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${product.countInStock === 0 ? "text-gray-500" : "text-gray-200"
+                          } group-hover:text-amber-200 transition-colors text-center`}
                       >
                         {product.name}
                       </h3>
 
-                      {/* Price Section - Exactly matches ProductRail */}
+                      {/* Price Section */}
                       <div className="flex flex-col gap-1 mt-auto">
                         {/* Row 1: Old Price (if discount and in stock) */}
-                        <div className="flex items-center justify-between h-5">
+                        <div className="flex items-center justify-center h-5">
                           {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
                             <>
                               <div className="flex items-center gap-1">
-                                <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
-                                  product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
-                                    'bg-[#ef394e]'
-                                  }`}>
+                                <div className="text-amber-950 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
                                   {effectiveDiscount.toLocaleString("fa-IR")}٪
                                 </div>
-                                <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
+                                <span className="text-[11px] text-gray-500 line-through decoration-gray-500">
                                   {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
                                 </span>
                               </div>
@@ -278,14 +249,14 @@ export default function FlashOfferRail() {
 
                         {/* Row 2: Current Price */}
                         <div
-                          className={`flex items-center justify-end gap-1 ${product.countInStock === 0 ? "text-gray-400" : "text-gray-800"
+                          className={`flex items-center justify-center gap-1 ${product.countInStock === 0 ? "text-gray-500" : "text-gray-100"
                             }`}
                         >
-                          <span className="text-[15px] font-black tracking-tight">
+                          <span className="text-[15px] font-black tracking-tight text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.3)]">
                             {displayPrice.toLocaleString("fa-IR")}
                           </span>
                           <span
-                            className={`text-[10px] font-medium ${product.countInStock === 0 ? "text-gray-400" : "text-gray-600"
+                            className={`text-[10px] font-medium ${product.countInStock === 0 ? "text-gray-600" : "text-gray-400"
                               }`}
                           >
                             تومان
@@ -299,14 +270,20 @@ export default function FlashOfferRail() {
             );
           })}
 
-          {/* "See All" Card (Last Slide) - Exactly matches ProductRail */}
+          {/* "See All" Card (Last Slide) */}
           <SwiperSlide style={{ width: "148px", height: "auto" }}>
             <Link href="/products?sort=flash" className="block h-full">
-              <div className="bg-white h-full rounded-lg border border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-gray-300 transition-colors">
-                <div className="w-10 h-10 border border-gray-200 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-50 transition-colors">
-                  <ChevronLeft size={20} />
+              <div
+                className="bg-gray-800/40 backdrop-blur-md h-full border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400 hover:bg-gray-800/60 transition-all duration-300 pt-4 pb-4"
+                style={{
+                  clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)",
+                  borderRadius: "0"
+                }}
+              >
+                <div className="w-12 h-12 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400 group-hover:bg-amber-500/10 group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                  <ChevronLeft size={24} />
                 </div>
-                <span className="text-sm font-bold text-gray-700">مشاهده همه</span>
+                <span className="text-sm font-bold text-gray-300 group-hover:text-amber-400 transition-colors">مشاهده همه</span>
               </div>
             </Link>
           </SwiperSlide>
