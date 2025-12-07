@@ -90,18 +90,38 @@ export const settingsService = {
      *
      * @returns Promise with cart config
      */
+    /**
+     * Get Public Settings (No Auth Required)
+     * Fetches public settings from the server - suitable for all users including guests
+     */
+    getPublicSettings: async (): Promise<{ success: boolean; data: any }> => {
+        try {
+            console.log("[SETTINGS] Fetching public settings");
+            const response = await api.get("/settings/public");
+            return response.data;
+        } catch (error: any) {
+            console.error("Error fetching public settings:", error);
+            throw new Error(
+                error.response?.data?.message || "خطا در دریافت تنظیمات عمومی"
+            );
+        }
+    },
+
     getCartConfig: async (): Promise<{
         persistCart: boolean;
         cartExpirationDays: number;
     }> => {
         try {
-            const response = await settingsService.getSettings();
-            return (
-                response.data.cartConfig || {
-                    persistCart: true,
-                    cartExpirationDays: 30, // Default: 30 days
-                }
-            );
+            // Use public endpoint - no auth required
+            const response = await settingsService.getPublicSettings();
+            const cartSettings = response.data.cartSettings;
+
+            return {
+                persistCart: true,
+                cartExpirationDays: cartSettings?.cartTTLHours
+                    ? Math.ceil(cartSettings.cartTTLHours / 24)
+                    : 30, // Convert hours to days, default: 30 days
+            };
         } catch (error) {
             // Return default config if failed
             return {
