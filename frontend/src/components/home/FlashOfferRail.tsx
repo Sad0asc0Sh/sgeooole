@@ -9,7 +9,7 @@ import Image from "next/image";
 import { productService, Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { ChevronLeft, Flame } from "lucide-react";
 import Link from "next/link";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
@@ -77,7 +77,7 @@ export default function FlashOfferRail() {
       <div className="px-4 mb-5 flex items-center justify-between relative z-10">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <Sparkles className="text-amber-400 w-5 h-5 animate-pulse" />
+            <Flame className="text-amber-500 w-6 h-6 animate-pulse drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
             <h3 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-200 via-amber-400 to-amber-500 drop-shadow-sm">
               پیشنهاد لحظه‌ای
             </h3>
