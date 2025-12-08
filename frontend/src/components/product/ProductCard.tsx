@@ -16,6 +16,7 @@ import { useWishlist } from "@/hooks/useWishlist";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
+import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
 const Swiper = dynamic(() => import("swiper/react").then((mod) => mod.Swiper), { ssr: false });
 const SwiperSlide = dynamic(() => import("swiper/react").then((mod) => mod.SwiperSlide), { ssr: false });
@@ -32,20 +33,37 @@ export default function ProductCard({ product }: ProductCardProps) {
 
     const isFavorite = isInWishlist(product.id);
     const discountPercentage = product.discount || 0;
+
+    // Check if flash deal countdown is still active
+    const isFlashDealActive = Boolean(
+        product.isFlashDeal &&
+        product.flashDealEndTime &&
+        new Date(product.flashDealEndTime).getTime() > now
+    );
+
     const isSpecialOfferCountdownActive = Boolean(
         product.isSpecialOffer &&
         product.specialOfferEndTime &&
         new Date(product.specialOfferEndTime).getTime() > now
     );
+    const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
+
+    // Effective discount: only apply if flash deal is active OR special offer is active
     const effectiveDiscount =
-        product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
+        product.discount > 0 &&
+            (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
             ? product.discount
             : 0;
+
     const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
+
+    // Price reversion: when flash deal or special offer expires, revert to original price
     const displayPrice =
-        !isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice
+        (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
             ? product.oldPrice
-            : product.price;
+            : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+                ? product.oldPrice
+                : product.price;
 
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
@@ -64,10 +82,13 @@ export default function ProductCard({ product }: ProductCardProps) {
         toggleWishlist(product);
     };
 
-    // Determine Header Type
+    // Determine Header Type - Only show flash header if countdown is active
     let headerConfig = null;
+    const shouldShowCampaignHeader =
+        (product.campaignLabel || product.campaignTheme) &&
+        (!hasFlashLabel || isFlashDealActive);
 
-    if (product.isFlashDeal) {
+    if (isFlashDealActive) {
         // Default Flash Deal Style (Amber)
         let themeColor = 'text-amber-500';
         let themeBorder = 'bg-amber-500';
@@ -101,7 +122,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             endTime: product.flashDealEndTime,
             iconColor: themeColor
         };
-    } else if (product.campaignLabel || product.campaignTheme) {
+    } else if (shouldShowCampaignHeader) {
         // Map campaign themes to colors
         let themeColor = 'text-blue-600';
         let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';

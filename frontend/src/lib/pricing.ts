@@ -37,10 +37,16 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const rawPrice = Number.isFinite(input.price) ? input.price : 0;
   const rawDiscount = Number.isFinite(input.discount ?? 0) ? (input.discount as number) : 0;
 
-  const flashActive = Boolean(input.isFlashDeal && (!input.flashDealEndTime || isFuture(input.flashDealEndTime)));
-  const specialActive = Boolean(input.isSpecialOffer && (!input.specialOfferEndTime || isFuture(input.specialOfferEndTime)));
-  const hasPromotionFlag = Boolean(input.isFlashDeal || input.isSpecialOffer || input.campaignLabel);
-  const hasActivePromotion = flashActive || specialActive || Boolean(input.campaignLabel);
+  const flashFlag = Boolean(input.isFlashDeal);
+  const specialFlag = Boolean(input.isSpecialOffer);
+  const flashActive = Boolean(flashFlag && (!input.flashDealEndTime || isFuture(input.flashDealEndTime)));
+  const specialActive = Boolean(specialFlag && (!input.specialOfferEndTime || isFuture(input.specialOfferEndTime)));
+
+  // Only treat campaign label as an active promotion when it is NOT tied to a timed flash/special flag.
+  const labelActive = Boolean(input.campaignLabel) && !flashFlag && !specialFlag;
+  const hasPromotionFlag = Boolean(flashFlag || specialFlag || input.campaignLabel);
+  const hasActivePromotion = flashActive || specialActive || labelActive;
+
   const discountEligible = hasActivePromotion || (!hasPromotionFlag && rawDiscount > 0);
   const discount = discountEligible ? rawDiscount : 0;
 

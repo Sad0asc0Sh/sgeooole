@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -17,6 +17,9 @@ import ProductTimerBadge from "@/components/product/ProductTimerBadge";
  * Flash Offer Rail Component - horizontal strip of flash deals
  * Custom Design: Gold & Gray Glassmorphism (Dark Theme)
  * Shape: Top & Bottom Zigzag (Sawtooth/Tech)
+ * 
+ * BEHAVIOR: When countdown expires for a product, it's removed from this section.
+ * When ALL products expire, the entire section disappears from homepage.
  */
 export default function FlashOfferRail() {
   const [flashDeals, setFlashDeals] = useState<Product[]>([]);
@@ -55,7 +58,19 @@ export default function FlashOfferRail() {
     };
   }, []);
 
-  if (!loading && flashDeals.length === 0) {
+
+  // Filter products with active countdown - removes expired products in real-time
+  const activeFlashDeals = useMemo(() => {
+    return flashDeals.filter((product) => {
+      // Strict filter: must have isFlashDeal=true AND valid flashDealEndTime
+      if (!product.isFlashDeal || !product.flashDealEndTime) return false;
+      // Only include products where countdown hasn't expired yet
+      return new Date(product.flashDealEndTime).getTime() > now;
+    });
+  }, [flashDeals, now]);
+
+  // Hide entire section when no active flash deals remain
+  if (!loading && activeFlashDeals.length === 0) {
     return null;
   }
 
@@ -117,14 +132,9 @@ export default function FlashOfferRail() {
           className="w-full !px-4 !pb-4 relative z-10"
           grabCursor
         >
-          {flashDeals.map((product) => {
-            // Calculate active states
-            const isFlashDealActive = Boolean(
-              product.isFlashDeal &&
-              product.flashDealEndTime &&
-              new Date(product.flashDealEndTime).getTime() > now
-            );
-
+          {activeFlashDeals.map((product) => {
+            // All products here have active countdowns (filtered by activeFlashDeals)
+            // Only need to check special offer countdown for price display logic
             const isSpecialOfferCountdownActive = Boolean(
               product.isSpecialOffer &&
               product.specialOfferEndTime &&
@@ -140,10 +150,8 @@ export default function FlashOfferRail() {
               endTime: product.flashDealEndTime || product.specialOfferEndTime,
             };
 
-            const effectiveDiscount =
-              product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
-                ? product.discount
-                : 0;
+            // Flash deals in this section always have discount applied (they're active)
+            const effectiveDiscount = product.discount > 0 ? product.discount : 0;
 
             const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 

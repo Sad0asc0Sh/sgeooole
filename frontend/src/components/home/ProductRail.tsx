@@ -9,6 +9,7 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
+import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
 interface ProductRailProps {
   title: string;
@@ -48,16 +49,27 @@ export default function ProductRail({ title, products }: ProductRailProps) {
         grabCursor
       >
         {products.map((product) => {
+          // Check if flash deal countdown is still active
+          const isFlashDealActive = Boolean(
+            product.isFlashDeal &&
+            product.flashDealEndTime &&
+            new Date(product.flashDealEndTime).getTime() > now
+          );
+
           const isSpecialOfferCountdownActive = Boolean(
             product.isSpecialOffer &&
             product.specialOfferEndTime &&
             new Date(product.specialOfferEndTime).getTime() > now
           );
+          const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
+          const shouldShowCampaignHeader =
+            (product.campaignLabel || product.campaignTheme) &&
+            (!hasFlashLabel || isFlashDealActive);
 
-          // Determine Header Type
+          // Determine Header Type - Only show flash header if countdown is active
           let headerConfig = null;
 
-          if (product.isFlashDeal) {
+          if (isFlashDealActive) {
             headerConfig = {
               type: 'flash',
               title: 'پیشنهاد لحظه‌ای',
@@ -65,7 +77,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
               borderColor: 'bg-amber-500',
               endTime: product.flashDealEndTime,
             };
-          } else if (product.campaignLabel || product.campaignTheme) {
+          } else if (shouldShowCampaignHeader) {
             // Map campaign themes to colors
             let themeColor = 'text-blue-600';
             let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
@@ -104,15 +116,23 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             !(headerConfig?.type === 'amazing') ||
             isSpecialOfferCountdownActive ||
             !product.isSpecialOffer;
+
+          // Effective discount: only apply if flash deal is active OR special offer is active
           const effectiveDiscount =
-            product.discount > 0 && (!product.isSpecialOffer || isSpecialOfferCountdownActive)
+            product.discount > 0 &&
+              (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
               ? product.discount
               : 0;
+
           const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
+
+          // Price reversion: when flash deal or special offer expires, revert to original price
           const displayPrice =
-            (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+            (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
               ? product.oldPrice
-              : product.price;
+              : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+                ? product.oldPrice
+                : product.price;
 
           return (
             <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>

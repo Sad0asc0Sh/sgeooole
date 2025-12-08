@@ -19,6 +19,13 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
         product.colors && product.colors.length > 0 ? product.colors[0] : null
     );
+    const [now, setNow] = useState(() => Date.now());
+
+    // Update now every second for real-time countdown checks
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     useEffect(() => {
         if (product.colors && product.colors.length > 0) {
@@ -76,14 +83,13 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 {/* Timer for Special Offers / Flash Deals / Campaign Offers */}
                 {(() => {
                     // Helper logic for offer details - Priority: Campaign > Special Offer > Flash Deal
-                    let offer = null;
-
                     // Check if we have an active campaign or time-based offer
                     const endTime = product.specialOfferEndTime || product.flashDealEndTime;
                     if (!endTime) return null;
 
                     const endTs = Date.parse(endTime);
-                    const isCountdownActive = !Number.isNaN(endTs) && endTs > Date.now();
+                    // Use real-time now state for countdown check
+                    const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
                     if (!isCountdownActive) return null;
 
                     // Determine theme class based on campaignTheme
@@ -112,24 +118,16 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         }
                     }
 
-                    offer = {
-                        label,
-                        themeClass,
-                        targetDate: endTime
-                    };
-
-                    if (!offer) return null;
-
                     return (
                         <div className="mb-4">
-                            <div className={`p-3 rounded-xl flex items-center justify-between ${offer.themeClass}`}>
+                            <div className={`p-3 rounded-xl flex items-center justify-between ${themeClass}`}>
                                 <span className="text-sm font-bold flex items-center gap-2">
                                     <Store size={16} />
-                                    {offer.label}
+                                    {label}
                                 </span>
                                 <div className="flex items-center gap-2" dir="ltr">
                                     <CountdownTimer
-                                        targetDate={offer.targetDate}
+                                        targetDate={endTime}
                                         className="text-sm font-bold"
                                     />
                                 </div>

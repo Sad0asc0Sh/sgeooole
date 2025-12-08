@@ -17,14 +17,30 @@ export default function ProductActions({ product, selectedColor }: ProductAction
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
     const [now, setNow] = useState(() => Date.now());
+
+    // Check if flash deal countdown is still active
+    const isFlashDealActive = Boolean(
+        product.isFlashDeal &&
+        product.flashDealEndTime &&
+        new Date(product.flashDealEndTime).getTime() > now
+    );
+
     const hasSpecialOfferCountdown = Boolean(
         product.isSpecialOffer &&
         product.specialOfferEndTime &&
         new Date(product.specialOfferEndTime).getTime() > now
     );
-    const displayPrice = (!hasSpecialOfferCountdown && product.isSpecialOffer && product.oldPrice)
-        ? product.oldPrice
-        : product.price;
+
+    // Any active countdown (flash deal or special offer)
+    const hasActivePromotion = isFlashDealActive || hasSpecialOfferCountdown;
+
+    // Price reversion: when flash deal or special offer expires, revert to original price
+    const displayPrice =
+        (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
+            ? product.oldPrice
+            : (!hasSpecialOfferCountdown && product.isSpecialOffer && product.oldPrice)
+                ? product.oldPrice
+                : product.price;
 
     // Calculate quantity for the SPECIFIC selected variant
     const [quantity, setQuantity] = useState(0);
@@ -85,13 +101,15 @@ export default function ProductActions({ product, selectedColor }: ProductAction
     return (
         <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col">
-                {product.oldPrice && (!product.isSpecialOffer || hasSpecialOfferCountdown) && (
+                {/* Show old price and discount badge only when there's an active promotion */}
+                {product.oldPrice && hasActivePromotion && (
                     <div className="flex items-center gap-2 mb-1">
-                        {product.discount > 0 && hasSpecialOfferCountdown && (
+                        {product.discount > 0 && (
                             <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
                                     product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
-                                        product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' : 'bg-[#ef394e]'
+                                        product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
+                                            isFlashDealActive ? 'bg-amber-500' : 'bg-[#ef394e]'
                                 }`}>
                                 {product.discount.toLocaleString("fa-IR")}٪
                             </div>
@@ -102,7 +120,7 @@ export default function ProductActions({ product, selectedColor }: ProductAction
                     </div>
                 )}
                 <div className="flex items-center gap-1">
-                        <span className="text-xl font-black text-black">
+                    <span className="text-xl font-black text-black">
                         {displayPrice.toLocaleString("fa-IR")}
                     </span>
                     <span className="text-xs text-gray-500">تومان</span>

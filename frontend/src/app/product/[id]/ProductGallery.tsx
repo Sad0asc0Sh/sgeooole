@@ -13,6 +13,7 @@ import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
+import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
 type ProductGalleryProps = {
     product: Product;
@@ -23,13 +24,30 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [initialSlide, setInitialSlide] = useState(0);
     const [swiperInstance, setSwiperInstance] = useState<SwiperType | null>(null);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [now, setNow] = useState(() => Date.now());
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
+
     if (!mounted) return <div className="h-[380px] w-full bg-gray-50" />;
+
+    const isFlashDealActive = Boolean(
+        product.isFlashDeal &&
+        product.flashDealEndTime &&
+        new Date(product.flashDealEndTime).getTime() > now
+    );
+
+    const showCampaignBadge = Boolean(
+        product.campaignLabel &&
+        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive)
+    );
 
     return (
         <>
@@ -68,7 +86,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                         blurDataURL={getBlurDataURL()}
                                         priority={index === 0}
                                     />
-                                    {product.campaignLabel && (
+                                    {showCampaignBadge && (
                                         <div className="absolute top-20 left-4 z-20">
                                             <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :

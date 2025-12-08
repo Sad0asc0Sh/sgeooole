@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
 type SimpleGalleryProps = {
     product: Product;
@@ -15,10 +16,27 @@ type SimpleGalleryProps = {
  */
 export default function SimpleGallery({ product }: SimpleGalleryProps) {
     const [activeIndex, setActiveIndex] = useState(0);
+    const [now, setNow] = useState(() => Date.now());
 
     // Ensure images array exists and has at least one image
     const images = product.images && product.images.length > 0 ? product.images : [product.image];
     const hasMultipleImages = images.length > 1;
+
+    const isFlashDealActive = Boolean(
+        product.isFlashDeal &&
+        product.flashDealEndTime &&
+        new Date(product.flashDealEndTime).getTime() > now
+    );
+
+    const showCampaignBadge = Boolean(
+        product.campaignLabel &&
+        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive)
+    );
+
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     const handlePrev = () => {
         setActiveIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
@@ -87,7 +105,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                 )}
 
                 {/* Campaign Badge */}
-                {product.campaignLabel && (
+                {showCampaignBadge && (
                     <div className="absolute top-4 left-4 z-20">
                         <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${
                             product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold'
