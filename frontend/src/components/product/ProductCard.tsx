@@ -149,7 +149,10 @@ export default function ProductCard({ product }: ProductCardProps) {
             endTime: product.flashDealEndTime || product.specialOfferEndTime,
             iconColor: themeColor
         };
-    } else if ((product.isSpecialOffer && isSpecialOfferCountdownActive) || (!product.isSpecialOffer && product.discount && product.discount > 0)) {
+    } else if (
+        (product.isSpecialOffer && isSpecialOfferCountdownActive) ||
+        (!product.isFlashDeal && !product.isSpecialOffer && product.discount && product.discount > 0)
+    ) {
         headerConfig = {
             type: 'amazing',
             title: 'شگفت‌انگیز',
