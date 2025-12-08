@@ -751,27 +751,6 @@ function ProductForm() {
                               </p>
                             </Form.Item>
 
-
-
-                            <Form.Item label="تم رنگی کمپین">
-                              <Select
-                                value={campaignTheme}
-                                onChange={(val) => setCampaignTheme(val)}
-                                placeholder="انتخاب تم رنگی"
-                                allowClear
-                                options={[
-                                  { value: 'gold', label: 'طلایی (لوکس/نوروز)' },
-                                  { value: 'fire', label: 'آتشین (حراج ویژه/قرمز)' },
-                                  { value: 'lime', label: 'سبز لیمویی (بهاره)' },
-                                  { value: 'blue', label: 'آبی (پیش‌فرض)' },
-                                ]}
-                              />
-                            </Form.Item>
-
-                            <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
-                              محصول با تایمر شمارش معکوس در بخش "پیشنهادات لحظه‌ای" نمایش داده می‌شود.
-                              اگر تم رنگی انتخاب کنید، ظاهر کارت محصول تغییر خواهد کرد.
-                            </p>
                           </div>
                         )}
                       </Space>
