@@ -165,11 +165,11 @@ export default function FlashOfferRail() {
                 <Link href={buildProductUrl(product)} className="block h-full">
                   <div
                     className={`
-                      bg-gray-800/40 backdrop-blur-md
+                      bg-gray-800/70
                       border border-amber-500/30
                       h-full flex flex-col justify-between
                       cursor-pointer
-                      hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:bg-gray-800/60
+                      hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:bg-gray-800/80
                       transition-all duration-300
                       relative overflow-hidden group pt-4 pb-4
                     `}
@@ -178,13 +178,6 @@ export default function FlashOfferRail() {
                       borderRadius: "0" // Remove border radius as clip-path defines shape
                     }}
                   >
-
-                    {/* Gold Header Line - Adjusted for clip-path */}
-                    <div className="w-full mb-1 absolute top-0 left-0 right-0 z-20 opacity-50">
-                      {/* Optional: Add a subtle top border glow that follows the shape?
-                           Standard borders get clipped. We rely on the container border which is also clipped.
-                       */}
-                    </div>
 
                     <div className="px-3 pb-1 pt-1">
                       {/* Header Title - Centered below the V notch */}
@@ -282,7 +275,7 @@ export default function FlashOfferRail() {
           <SwiperSlide style={{ width: "148px", height: "auto" }}>
             <Link href="/products?sort=flash" className="block h-full">
               <div
-                className="bg-gray-800/40 backdrop-blur-md h-full border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400 hover:bg-gray-800/60 transition-all duration-300 pt-4 pb-4"
+                className="bg-gray-800/70 h-full border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400 hover:bg-gray-800/80 transition-all duration-300 pt-4 pb-4"
                 style={{
                   clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)",
                   borderRadius: "0"
