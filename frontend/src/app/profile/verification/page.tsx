@@ -61,7 +61,11 @@ export default function VerificationPage() {
                     name: userData.name || "",
                     email: userData.email || "",
                     nationalCode: userData.nationalCode || "",
-                    birthDate: userData.birthDate || "",
+                    birthDate: userData.birthDate
+                        ? (typeof userData.birthDate === 'string'
+                            ? userData.birthDate
+                            : userData.birthDate.toISOString())
+                        : "",
                     landline: userData.landline || "",
                     province: userData.province || "",
                     city: userData.city || "",

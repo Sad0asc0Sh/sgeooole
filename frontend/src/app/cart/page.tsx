@@ -47,7 +47,7 @@ export default function CartPage() {
         }
     };
 
-    const handleIncrease = async (id: string, variantOptions?: Array<{ name: string; value: string }>) => {
+    const handleIncrease = (id: string, variantOptions?: Array<{ name: string; value: string }>) => {
         const item = cartItems.find(item => {
             if (item.id !== id) return false;
 
@@ -63,15 +63,18 @@ export default function CartPage() {
         });
 
         if (item) {
-            await updateQuantity(id, item.qty + 1, variantOptions);
+            // UI updates instantly, server sync is debounced
+            updateQuantity(id, item.qty + 1, variantOptions);
         }
     };
 
-    const handleDecrease = async (id: string, qty: number, variantOptions?: Array<{ name: string; value: string }>) => {
+    const handleDecrease = (id: string, qty: number, variantOptions?: Array<{ name: string; value: string }>) => {
         if (qty === 1) {
-            await removeFromCart(id, variantOptions);
+            // Removal is not debounced (instant server call)
+            removeFromCart(id, variantOptions);
         } else {
-            await updateQuantity(id, qty - 1, variantOptions);
+            // UI updates instantly, server sync is debounced
+            updateQuantity(id, qty - 1, variantOptions);
         }
     };
 

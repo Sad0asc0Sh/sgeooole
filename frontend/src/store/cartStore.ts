@@ -10,6 +10,10 @@ import {
     removeLocalStorage
 } from "@/lib/localStorageHelper";
 
+// Debounce timeout map for quantity updates (per product)
+const debounceTimeouts = new Map<string, NodeJS.Timeout>();
+const DEBOUNCE_DELAY = 500; // 500ms delay for batching rapid clicks
+
 // Local cart item format (for guest users)
 export interface LocalCartItem {
     id: string; // Product ID
@@ -382,7 +386,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     },
 
     updateQuantity: async (productId, quantity, variantOptions) => {
-        if (get().mutating) return;
+        // Handle removal separately (no debounce for removal)
         if (quantity < 1) {
             return get().removeFromCart(productId, variantOptions);
         }
@@ -390,57 +394,69 @@ export const useCartStore = create<CartState>((set, get) => ({
         const isAuthenticated = authService.isAuthenticated();
         const { cartItems } = get();
 
-        try {
-            set({ mutating: true });
-            if (isAuthenticated) {
-                // Optimistic Update
-                const previousCart = [...cartItems];
-                const updatedCart = cartItems.map(item => {
-                    if (item.id !== productId) return item;
-                    const itemVariants = item.variantOptions || [];
-                    const targetVariants = variantOptions || [];
-                    if (itemVariants.length !== targetVariants.length) return item;
-                    const isMatch = itemVariants.every(v1 => targetVariants.some(v2 => v1.name === v2.name && v1.value === v2.value));
-                    return isMatch ? { ...item, qty: Number(quantity) } : item;
-                });
-                set({ cartItems: updatedCart });
+        // Create unique key for this product+variant combination
+        const variantKey = variantOptions
+            ?.map((v) => `${v.name}:${v.value}`)
+            .sort()
+            .join("|") || "no-variant";
+        const debounceKey = `${productId}-${variantKey}`;
 
-                // Debounce logic is complex in store, simplifying for now to direct call
-                // Ideally we should keep the debounce logic, but for fixing the infinite loop, direct call is safer.
-                // If performance is an issue, we can add debounce back later.
+        // 1. INSTANT UI UPDATE (Optimistic)
+        const previousCart = [...cartItems];
+        const updatedCart = cartItems.map(item => {
+            if (item.id !== productId) return item;
+            const itemVariants = item.variantOptions || [];
+            const targetVariants = variantOptions || [];
+            if (itemVariants.length !== targetVariants.length) return item;
+            const isMatch = itemVariants.every(v1 => targetVariants.some(v2 => v1.name === v2.name && v1.value === v2.value));
+            return isMatch ? { ...item, qty: Number(quantity) } : item;
+        });
+        set({ cartItems: updatedCart });
 
-                try {
-                    const response = await cartService.updateItem(productId, quantity, variantOptions);
-                    if (response.success && response.data) {
-                        const items = transformBackendItems(response.data.items);
-                        set({ cartItems: items });
-                    }
-                } catch (err) {
-                    set({ cartItems: previousCart });
-                    throw err;
-                }
-
-            } else {
-                // Guest
-                const currentCart = cartItems.map((item) => {
-                    if (item.id !== productId) return item;
-                    const itemVariants = item.variantOptions || [];
-                    const targetVariants = variantOptions || [];
-                    if (itemVariants.length !== targetVariants.length) return item;
-                    const isMatch = itemVariants.every((v1) => targetVariants.some((v2) => v1.name === v2.name && v1.value === v2.value));
-                    return isMatch ? { ...item, qty: Number(quantity) } : item;
-                });
-
-                saveLocalCart(currentCart, get().cartConfig);
-                set({ cartItems: currentCart });
-            }
-        } catch (err: any) {
-            console.error("[useCartStore] Error updating quantity:", err);
-            set({ error: err.message || "خطا در به‌روزرسانی تعداد" });
-            throw err;
-        } finally {
-            set({ mutating: false });
+        // 2. DEBOUNCED SERVER SYNC
+        // Clear any existing timeout for this product
+        const existingTimeout = debounceTimeouts.get(debounceKey);
+        if (existingTimeout) {
+            clearTimeout(existingTimeout);
         }
+
+        // Set new debounced timeout
+        const timeoutId = setTimeout(async () => {
+            debounceTimeouts.delete(debounceKey);
+
+            if (isAuthenticated) {
+                try {
+                    console.log(`[CartStore] Syncing quantity for ${productId}: ${quantity}`);
+                    const response = await cartService.updateItem(productId, quantity, variantOptions);
+
+                    if (response.success && response.data) {
+                        // Only update if this is still the latest data
+                        // (user might have clicked again while waiting)
+                        const currentCart = get().cartItems;
+                        const currentItem = currentCart.find(i => i.id === productId);
+
+                        // If current quantity matches what we sent, sync with server response
+                        if (currentItem?.qty === quantity) {
+                            const items = transformBackendItems(response.data.items);
+                            set({ cartItems: items });
+                        }
+                    }
+                } catch (err: any) {
+                    console.error("[CartStore] Error syncing quantity:", err);
+                    // Rollback on error
+                    set({
+                        cartItems: previousCart,
+                        error: err.message || "خطا در به‌روزرسانی تعداد"
+                    });
+                }
+            } else {
+                // Guest: Sync to localStorage (already updated in UI, just persist)
+                const currentCart = get().cartItems;
+                saveLocalCart(currentCart, get().cartConfig);
+            }
+        }, DEBOUNCE_DELAY);
+
+        debounceTimeouts.set(debounceKey, timeoutId);
     },
 
     removeFromCart: async (productId, variantOptions) => {
