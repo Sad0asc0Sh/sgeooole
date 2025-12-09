@@ -89,6 +89,11 @@ CategorySchema.index({ parent: 1 })
 CategorySchema.index({ isActive: 1 })
 // Ensure category name is unique per parent (allows same name under different parents)
 CategorySchema.index({ parent: 1, name: 1 }, { unique: true })
+// Indexes for featured and popular category queries (used on homepage)
+CategorySchema.index({ isFeatured: 1, isActive: 1 })
+CategorySchema.index({ isPopular: 1, isActive: 1 })
+CategorySchema.index({ slug: 1 })
+CategorySchema.index({ order: 1 })
 
 // Pre-save hook: generate unique slug from name (supports non-Latin chars)
 CategorySchema.pre('save', async function (next) {

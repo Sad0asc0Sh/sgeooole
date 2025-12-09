@@ -7,6 +7,7 @@ import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import CanonicalTag from "@/components/CanonicalTag";
+import SWRProvider from "@/providers/SWRProvider";
 import { Suspense } from "react";
 
 const vazirmatn = Vazirmatn({
@@ -29,12 +30,15 @@ export default function RootLayout({
       <body className={`font-sans antialiased bg-gray-50 text-gray-900 ${vazirmatn.className}`}>
         <CanonicalTag />
         <GoogleAuthProvider>
-          <Suspense fallback={null}>
-            <ClientLayout>{children}</ClientLayout>
-          </Suspense>
+          <SWRProvider>
+            <Suspense fallback={null}>
+              <ClientLayout>{children}</ClientLayout>
+            </Suspense>
+          </SWRProvider>
         </GoogleAuthProvider>
         <ThirdPartyScripts />
       </body>
     </html>
   );
 }
+

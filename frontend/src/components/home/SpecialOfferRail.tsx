@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
@@ -8,66 +8,41 @@ import "swiper/css/free-mode";
 import { ChevronLeft, Percent } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { productService, Product } from "@/services/productService";
+import { Product } from "@/services/productService";
+import { useSpecialOffers } from "@/hooks/useProducts";
 import { useCountdown } from "@/hooks/useCountdown";
-import CountdownTimer from "@/components/ui/CountdownTimer";
 
-export default function SpecialOfferRail() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * Special Offer Rail Component
+ * OPTIMIZED: Uses SWR for caching, useMemo for computed values
+ */
+function SpecialOfferRail() {
+  // SWR-based fetching with automatic caching
+  const { specialOffers: products, isLoading, error } = useSpecialOffers(10);
   const [now, setNow] = useState(() => Date.now());
 
-  const earliestEndTime =
-    products.length > 0
-      ? products
-        .filter((p) => p.specialOfferEndTime)
-        .map((p) => new Date(p.specialOfferEndTime!).getTime())
-        .sort((a, b) => a - b)[0]
-      : undefined;
+  // Calculate earliest end time for global countdown
+  const earliestEndTime = useMemo(() => {
+    if (products.length === 0) return undefined;
+    const times = products
+      .filter((p) => p.specialOfferEndTime)
+      .map((p) => new Date(p.specialOfferEndTime!).getTime())
+      .sort((a, b) => a - b);
+    return times[0];
+  }, [products]);
 
   const { hours, minutes, seconds, isExpired } = useCountdown(
     earliestEndTime ? new Date(earliestEndTime).toISOString() : undefined
   );
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await productService.getSpecialOffers(10);
-        setProducts(data);
-      } catch (err) {
-        console.error("Failed to fetch special offer products:", err);
-        setError("خطا در دریافت پیشنهادهای ویژه");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-    fetchProducts();
-  }, []);
-
+  // Update timer every second
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    if (products.length > 0) {
-      console.log('SpecialOfferRail Products:', products.map(p => ({
-        id: p.id,
-        name: p.name,
-        isSpecialOffer: p.isSpecialOffer,
-        specialOfferEndTime: p.specialOfferEndTime
-      })));
-      console.log('Earliest End Time:', earliestEndTime);
-    }
-  }, [products, earliestEndTime]);
-
-  if (loading || error || products.length === 0 || isExpired) {
+  // Hide section if loading, error, no products, or expired
+  if (isLoading || error || products.length === 0 || isExpired) {
     return null;
   }
 
@@ -180,7 +155,7 @@ export default function SpecialOfferRail() {
                       </h3>
 
                       {/* Price Section */}
-                        <div className="flex flex-col gap-1 mt-auto">
+                      <div className="flex flex-col gap-1 mt-auto">
                         <div className="flex items-center justify-between h-5">
                           {product.countInStock > 0 && effectiveDiscount > 0 && hasSpecialOfferCountdown ? (
                             <>
@@ -233,3 +208,6 @@ export default function SpecialOfferRail() {
     </div>
   );
 }
+
+// Export with memo for component-level memoization
+export default memo(SpecialOfferRail);

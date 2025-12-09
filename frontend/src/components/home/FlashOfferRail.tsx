@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
 import Image from "next/image";
-import { productService, Product } from "@/services/productService";
+import { Product } from "@/services/productService";
+import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { ChevronLeft, Flame } from "lucide-react";
@@ -15,47 +16,22 @@ import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
- * Custom Design: Gold & Gray Glassmorphism (Dark Theme)
- * Shape: Top & Bottom Zigzag (Sawtooth/Tech)
+ * OPTIMIZED: Uses SWR for caching, React.memo for card components
  * 
- * BEHAVIOR: When countdown expires for a product, it's removed from this section.
- * When ALL products expire, the entire section disappears from homepage.
+ * PERFORMANCE IMPROVEMENTS:
+ * - SWR caching: Instant data on subsequent renders
+ * - Memoized card components: Prevents unnecessary re-renders
+ * - Optimized timer: Only updates active countdown displays
  */
-export default function FlashOfferRail() {
-  const [flashDeals, setFlashDeals] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+function FlashOfferRail() {
+  // SWR-based fetching with automatic caching
+  const { flashDeals, isLoading } = useFlashDeals(10);
   const [now, setNow] = useState(() => Date.now());
 
+  // Update timer every second - only for countdown display
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    let isCancelled = false;
-    const fetchFlashDeals = async () => {
-      try {
-        setLoading(true);
-        const deals = await productService.getFlashDeals(10);
-        if (!isCancelled) {
-          setFlashDeals(deals);
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("Error loading flash deals:", error);
-        }
-      } finally {
-        if (!isCancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchFlashDeals();
-
-    return () => {
-      isCancelled = true;
-    };
   }, []);
 
 
@@ -71,7 +47,7 @@ export default function FlashOfferRail() {
 
   // Hide entire section during loading AND when no active flash deals remain
   // This prevents the section from appearing momentarily during load
-  if (loading || activeFlashDeals.length === 0) {
+  if (isLoading || activeFlashDeals.length === 0) {
     return null;
   }
 
@@ -279,3 +255,6 @@ export default function FlashOfferRail() {
     </div>
   );
 }
+
+// Export with memo for component-level memoization
+export default memo(FlashOfferRail);

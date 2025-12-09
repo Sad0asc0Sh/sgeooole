@@ -277,9 +277,22 @@ ProductSchema.index({ name: 'text', description: 'text' })
 ProductSchema.index({ category: 1 })
 ProductSchema.index({ brand: 1 })
 ProductSchema.index({ slug: 1 })
-// Time-based promotion indexes
+// Time-based promotion indexes (for Flash Deals and Special Offers)
 ProductSchema.index({ isFlashDeal: 1, flashDealEndTime: 1 })
 ProductSchema.index({ isSpecialOffer: 1, specialOfferEndTime: 1 })
+// Compound indexes for active promotions (most common queries)
+ProductSchema.index({ isActive: 1, isFlashDeal: 1, flashDealEndTime: 1 })
+ProductSchema.index({ isActive: 1, isSpecialOffer: 1, specialOfferEndTime: 1 })
+// Sorting indexes for common sort patterns
+ProductSchema.index({ createdAt: -1 }) // For "Newest" sorting
+ProductSchema.index({ salesCount: -1 }) // For "Best Sellers" sorting
+ProductSchema.index({ views: -1 }) // For "Most Viewed" sorting
+ProductSchema.index({ price: 1 }) // For price sorting (low to high)
+ProductSchema.index({ price: -1 }) // For price sorting (high to low)
+// Compound index for category filtering with sorting
+ProductSchema.index({ category: 1, createdAt: -1 })
+ProductSchema.index({ category: 1, salesCount: -1 })
+ProductSchema.index({ isActive: 1, createdAt: -1 })
 
 // Simple slug generator from name if not provided
 ProductSchema.pre('save', function (next) {

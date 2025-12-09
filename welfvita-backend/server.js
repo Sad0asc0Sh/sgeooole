@@ -2,15 +2,36 @@ const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')
 const path = require('path')
+const compression = require('compression')
 require('dotenv').config()
 
 const app = express()
 
 // ============================================
-// Middleware
+// Performance Middleware
 // ============================================
 
-// CORS
+// GZIP/Brotli Compression for all responses
+app.use(compression({
+  level: 6, // Balanced compression level (1-9)
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    // Skip compression for already compressed or SSE responses
+    if (req.headers['x-no-compression']) return false
+    return compression.filter(req, res)
+  }
+}))
+
+// Performance caching headers for static assets
+app.use('/uploads', (req, res, next) => {
+  // Cache static files for 30 days
+  res.setHeader('Cache-Control', 'public, max-age=2592000, immutable')
+  next()
+})
+
+// ============================================
+// CORS Middleware
+// ============================================
 const allowedOriginsEnv = process.env.CLIENT_URL || process.env.FRONTEND_URL
 const allowedOrigins = allowedOriginsEnv
   ? allowedOriginsEnv.split(',').map(origin => origin.trim()).filter(Boolean)

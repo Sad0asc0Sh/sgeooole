@@ -163,7 +163,7 @@ const syncOfferTimers = async (data, currentProduct = {}) => {
     const activeMaster = await Product.findOne({
       isSpecialOffer: true,
       specialOfferEndTime: { $gt: now },
-    }).select('specialOfferEndTime')
+    }).select('specialOfferEndTime').lean()
 
     if (activeMaster && activeMaster.specialOfferEndTime) {
       console.log(`[SYNC SPECIAL] Enforcing master timer: ${activeMaster.specialOfferEndTime}`)
@@ -179,7 +179,7 @@ const syncOfferTimers = async (data, currentProduct = {}) => {
     const activeMaster = await Product.findOne({
       isFlashDeal: true,
       flashDealEndTime: { $gt: now },
-    }).select('flashDealEndTime')
+    }).select('flashDealEndTime').lean()
 
     if (activeMaster && activeMaster.flashDealEndTime) {
       console.log(`[SYNC FLASH] Enforcing master timer: ${activeMaster.flashDealEndTime}`)

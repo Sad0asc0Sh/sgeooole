@@ -151,11 +151,6 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
       ? Number(backendProduct.countInStock)
       : 0);
 
-  // Debug logging (can be removed after verification)
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`[STOCK DEBUG] Product: ${backendProduct.name}, Backend stock: ${backendProduct.stock}, countInStock: ${backendProduct.countInStock}, Mapped: ${countInStock}`);
-  }
-
   return {
     // MongoDB uses _id, our UI expects id
     id: backendProduct._id,
@@ -257,26 +252,12 @@ export const productService = {
   _extractList: (response: any): BackendProduct[] => {
     const payload = response?.data;
 
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DATA EXTRACT] Response structure:', {
-        hasData: !!payload,
-        isArray: Array.isArray(payload),
-        hasNestedData: !!(payload && payload.data),
-        firstItemSample: Array.isArray(payload) && payload[0] ? {
-          name: payload[0].name,
-          countInStock: payload[0].countInStock
-        } : 'N/A'
-      });
-    }
-
     if (Array.isArray(payload)) {
       return payload;
     }
     if (payload && Array.isArray(payload.data)) {
       return payload.data;
     }
-    console.warn("Unexpected products list payload shape:", payload);
     return [];
   },
 
@@ -286,15 +267,6 @@ export const productService = {
    */
   _extractItem: (response: any): BackendProduct => {
     const payload = response?.data;
-
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[DATA EXTRACT] Single item response:', {
-        hasData: !!payload,
-        hasNestedData: !!(payload && payload.data),
-        countInStock: payload?.countInStock || payload?.data?.countInStock
-      });
-    }
 
     if (payload && !Array.isArray(payload) && payload.data) {
       return payload.data;
@@ -323,7 +295,9 @@ export const productService = {
    */
   getNewest: async (limit: number = 10): Promise<Product[]> => {
     try {
-      const response = await api.get(`/products?sort=-createdAt&limit=${limit}&_t=${Date.now()}`);
+      // OPTIMIZED: Only fetch fields needed for rail display
+      const fields = 'name,slug,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime';
+      const response = await api.get(`/products?sort=-createdAt&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
@@ -338,8 +312,9 @@ export const productService = {
    */
   getBestSellers: async (limit: number = 10): Promise<Product[]> => {
     try {
-      // Assuming backend supports sorting by sales or numReviews
-      const response = await api.get(`/products?sort=-numReviews&limit=${limit}&_t=${Date.now()}`);
+      // OPTIMIZED: Only fetch fields needed for rail display, sort by salesCount
+      const fields = 'name,slug,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,salesCount';
+      const response = await api.get(`/products?sort=-salesCount&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
@@ -402,8 +377,10 @@ export const productService = {
   getFlashDeals: async (limit: number = 10): Promise<Product[]> => {
     try {
       // Query products with isFlashDeal=true and flashDealEndTime greater than now
+      // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
-      const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&_t=${Date.now()}`);
+      const fields = 'name,slug,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
+      const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
@@ -419,8 +396,10 @@ export const productService = {
   getSpecialOffers: async (limit: number = 10): Promise<Product[]> => {
     try {
       // Query products with isSpecialOffer=true and specialOfferEndTime greater than now
+      // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
-      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&_t=${Date.now()}`);
+      const fields = 'name,slug,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
+      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {

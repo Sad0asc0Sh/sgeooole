@@ -116,3 +116,44 @@
   flex: 0 0 auto;
   scroll-snap-align: start;
 }
+
+/* --- SKELETON SHIMMER ANIMATION --- */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* --- OPTIMIZED TRANSITIONS --- */
+@layer utilities {
+  .transition-fast {
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .transition-smooth {
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* --- PERFORMANCE OPTIMIZATIONS --- */
+@layer base {
+  /* Force GPU acceleration for smoother animations */
+  .swiper-slide,
+  .swiper-wrapper {
+    will-change: transform;
+  }
+  
+  /* Optimize image rendering */
+  img {
+    content-visibility: auto;
+  }
+}
