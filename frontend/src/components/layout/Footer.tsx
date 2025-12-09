@@ -64,7 +64,7 @@ export default function Footer() {
                 </div>
 
                 <div className="text-center text-xs text-gray-400 mt-4">
-                    © ۱۴۰۳ تمامی حقوق محفوظ است.
+                    ۱۴۰۴-۱۳۹۶ تمامی حقوق برای ویلف‌ویتا محفوظ است.
                 </div>
             </div>
         </footer>

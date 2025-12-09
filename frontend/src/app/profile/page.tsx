@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,6 +8,59 @@ import {
 } from "lucide-react";
 import { authService, User } from "@/services/authService";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+
+// ============================================
+// Skeleton Components for Fast Initial Render
+// ============================================
+const ProfileSkeleton = () => (
+    <div className="min-h-screen bg-gray-50 pb-24 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="bg-white p-6 pb-8 pt-8 rounded-b-[2.5rem] shadow-sm">
+            <div className="flex items-center gap-5">
+                <div className="w-20 h-20 rounded-full bg-gray-200" />
+                <div className="flex-1">
+                    <div className="h-6 w-32 bg-gray-200 rounded mb-2" />
+                    <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
+                    <div className="flex gap-2">
+                        <div className="h-6 w-20 bg-gray-200 rounded-full" />
+                        <div className="h-6 w-24 bg-gray-200 rounded-full" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Wallet Skeleton */}
+        <div className="px-4 -mt-6 mb-6 relative z-20">
+            <div className="bg-gray-300 p-5 rounded-2xl h-24" />
+        </div>
+
+        {/* Orders Skeleton */}
+        <div className="bg-white mx-4 rounded-2xl p-5 shadow-sm mb-6">
+            <div className="h-5 w-24 bg-gray-200 rounded mb-5" />
+            <div className="grid grid-cols-4 gap-2">
+                {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-200" />
+                        <div className="h-3 w-12 bg-gray-200 rounded" />
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        {/* Menu Skeleton */}
+        <div className="bg-white mx-4 rounded-2xl shadow-sm overflow-hidden mb-8">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-8 h-8 rounded-full bg-gray-200" />
+                        <div className="h-4 w-24 bg-gray-200 rounded" />
+                    </div>
+                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default function ProfilePage() {
     const router = useRouter();
@@ -48,46 +101,51 @@ export default function ProfilePage() {
         cancelled: 0,
     });
 
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    // ============================================
+    // OPTIMIZED: Load all data in parallel
+    // ============================================
     useEffect(() => {
         let isMounted = true;
+
         const loadUserData = async () => {
+            // Quick check - don't wait for async
+            if (!authService.isAuthenticated()) {
+                router.push("/login");
+                return;
+            }
+
             try {
-                if (!authService.isAuthenticated()) {
-                    router.push("/login");
-                    return;
-                }
-                setLoading(true);
+                // 🚀 OPTIMIZATION: Use getMyOrderStats for FAST order counting
+                // This uses aggregation on backend instead of fetching all orders
+                const [profileData, orderStatsRes, notificationsRes] = await Promise.all([
+                    authService.getProfile(),
+                    authService.getMyOrderStats().catch(() => ({ success: false, data: { processing: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 } })),
+                    import("@/lib/api").then(m => m.default.get('/notifications')).catch(() => ({ data: { success: false, data: [] } }))
+                ]);
 
-                // Fetch Profile
-                const profileData = await authService.getProfile();
+                if (!isMounted) return;
 
-                // Fetch Orders for Stats
-                let stats = { processing: 0, delivered: 0, returned: 0, cancelled: 0 };
-                try {
-                    const ordersResponse = await authService.getMyOrders();
-                    if (ordersResponse.success && Array.isArray(ordersResponse.data)) {
-                        const orders = ordersResponse.data;
-                        stats = {
-                            processing: orders.filter((o: any) => ['Pending', 'Processing'].includes(o.orderStatus)).length,
-                            delivered: orders.filter((o: any) => o.orderStatus === 'Delivered').length,
-                            returned: orders.filter((o: any) => o.orderStatus === 'Returned').length,
-                            cancelled: orders.filter((o: any) => o.orderStatus === 'Cancelled').length,
-                        };
-                    }
-                } catch (orderErr) {
-                    console.error("Error fetching orders for stats:", orderErr);
-                    if (profileData.orderStats) {
-                        stats = profileData.orderStats;
-                    }
+                // Process profile
+                setUser(profileData);
+                setEditName(profileData.name || "");
+                setEditEmail(profileData.email || "");
+
+                // Process order stats (already aggregated from backend)
+                if (orderStatsRes.success && orderStatsRes.data) {
+                    setOrderStats(orderStatsRes.data);
+                } else if (profileData.orderStats) {
+                    setOrderStats(profileData.orderStats);
                 }
 
-                if (isMounted) {
-                    setUser(profileData);
-                    setOrderStats(stats);
-                    setEditName(profileData.name || "");
-                    setEditEmail(profileData.email || "");
-                    setLoading(false);
+                // Process notifications
+                if (notificationsRes?.data?.success) {
+                    const unread = notificationsRes.data.data.filter((n: any) => !n.isRead).length;
+                    setUnreadCount(unread);
                 }
+
+                setLoading(false);
             } catch (err: any) {
                 console.error("Profile load error:", err);
                 if (isMounted) {
@@ -97,6 +155,7 @@ export default function ProfilePage() {
                 }
             }
         };
+
         loadUserData();
         return () => { isMounted = false; };
     }, [router]);
@@ -109,9 +168,9 @@ export default function ProfilePage() {
         }
     }, [editSheetOpen, user]);
 
-    const handleLogout = () => {
+    const handleLogout = useCallback(() => {
         authService.logout();
-    };
+    }, []);
 
     // Bind Mobile Handlers
     const handleSendBindOtp = async () => {
@@ -151,23 +210,25 @@ export default function ProfilePage() {
         }
     };
 
-    const handleOtpChange = (index: number, value: string) => {
+    const handleOtpChange = useCallback((index: number, value: string) => {
         if (isNaN(Number(value))) return;
-        const newOtp = [...bindOtp];
-        newOtp[index] = value;
-        setBindOtp(newOtp);
+        setBindOtp(prev => {
+            const newOtp = [...prev];
+            newOtp[index] = value;
+            return newOtp;
+        });
         if (value && index < 3) {
             const nextInput = document.getElementById(`otp-${index + 1}`);
             nextInput?.focus();
         }
-    };
+    }, []);
 
-    const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleOtpKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Backspace" && !bindOtp[index] && index > 0) {
             const prevInput = document.getElementById(`otp-${index - 1}`);
             prevInput?.focus();
         }
-    };
+    }, [bindOtp]);
 
     // Email OTP Handlers
     const handleSendEmailOtp = async () => {
@@ -207,23 +268,25 @@ export default function ProfilePage() {
         }
     };
 
-    const handleEmailOtpChange = (index: number, value: string) => {
+    const handleEmailOtpChange = useCallback((index: number, value: string) => {
         if (isNaN(Number(value))) return;
-        const newOtp = [...emailOtp];
-        newOtp[index] = value;
-        setEmailOtp(newOtp);
+        setEmailOtp(prev => {
+            const newOtp = [...prev];
+            newOtp[index] = value;
+            return newOtp;
+        });
         if (value && index < 3) {
             const nextInput = document.getElementById(`email-otp-${index + 1}`);
             nextInput?.focus();
         }
-    };
+    }, []);
 
-    const handleEmailOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleEmailOtpKeyDown = useCallback((index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Backspace" && !emailOtp[index] && index > 0) {
             const prevInput = document.getElementById(`email-otp-${index - 1}`);
             prevInput?.focus();
         }
-    };
+    }, [emailOtp]);
 
     const handleUpdateProfile = async () => {
         try {
@@ -280,27 +343,9 @@ export default function ProfilePage() {
     };
 
     const isVerified = !!user?.nationalCode;
-    const [unreadCount, setUnreadCount] = useState(0);
 
-    useEffect(() => {
-        const fetchUnreadCount = async () => {
-            try {
-                const res = await import("@/lib/api").then(m => m.default.get('/notifications'));
-                if (res.data.success) {
-                    const unread = res.data.data.filter((n: any) => !n.isRead).length;
-                    setUnreadCount(unread);
-                }
-            } catch (error) {
-                console.error("Error fetching notification count:", error);
-            }
-        };
-
-        if (authService.isAuthenticated()) {
-            fetchUnreadCount();
-        }
-    }, []);
-
-    const menuItems = [
+    // Memoize menu items to prevent re-renders
+    const menuItems = useMemo(() => [
         {
             icon: UserCheck,
             label: "اطلاعات‌حساب‌کاربری",
@@ -313,18 +358,11 @@ export default function ProfilePage() {
         { icon: MapPin, label: "آدرس‌ها", href: "/profile/addresses" },
         { icon: Bell, label: "پیغام‌ها", badge: unreadCount > 0 ? unreadCount : undefined, href: "/profile/messages" },
         { icon: Clock, label: "بازدیدهای اخیر", href: "/profile/recent" },
-    ];
+    ], [isVerified, unreadCount]);
 
+    // 🚀 OPTIMIZATION: Show skeleton immediately while loading
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-pulse flex flex-col items-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full mb-4"></div>
-                    <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 w-24 bg-gray-200 rounded"></div>
-                </div>
-            </div>
-        );
+        return <ProfileSkeleton />;
     }
 
     if (error || !user) {

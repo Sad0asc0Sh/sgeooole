@@ -551,6 +551,21 @@ export const authService = {
   },
 
   /**
+   * Get My Order Stats (FAST)
+   * Optimized endpoint for profile page order counts
+   */
+  getMyOrderStats: async (): Promise<{ success: boolean; data: { processing: number; delivered: number; returned: number; cancelled: number; total: number } }> => {
+    try {
+      const response = await api.get("/orders/my-stats");
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching order stats:", error);
+      // Return default stats on error instead of throwing
+      return { success: false, data: { processing: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 } };
+    }
+  },
+
+  /**
    * Get Single Order
    */
   getOrder: async (id: string): Promise<{ success: boolean; data: any }> => {

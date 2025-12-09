@@ -309,11 +309,16 @@ exports.updateOrderStatus = async (req, res) => {
 
 // ============================================
 // GET /api/orders/my-orders - دریافت سفارشات کاربر جاری
+// OPTIMIZED: Only select necessary fields for profile page
 // ============================================
 exports.getMyOrders = async (req, res) => {
   try {
+    // 🚀 OPTIMIZATION: Only select fields needed for display
+    // This reduces data transfer and speeds up the query
     const orders = await Order.find({ user: req.user._id })
+      .select('_id orderStatus totalPrice createdAt isPaid itemsPrice shippingPrice orderItems')
       .sort({ createdAt: -1 })
+      .limit(50) // Limit to last 50 orders for performance
       .lean()
 
     res.json({
@@ -325,6 +330,59 @@ exports.getMyOrders = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'خطا در دریافت سفارشات',
+      error: error.message,
+    })
+  }
+}
+
+// ============================================
+// GET /api/orders/my-stats - آمار سریع سفارشات کاربر
+// FAST endpoint for profile page order counts
+// ============================================
+exports.getMyOrderStats = async (req, res) => {
+  try {
+    // 🚀 OPTIMIZATION: Use aggregation pipeline for fast counting
+    const stats = await Order.aggregate([
+      { $match: { user: req.user._id } },
+      {
+        $group: {
+          _id: '$orderStatus',
+          count: { $sum: 1 }
+        }
+      }
+    ])
+
+    // Transform to expected format
+    const result = {
+      processing: 0,
+      delivered: 0,
+      returned: 0,
+      cancelled: 0,
+      total: 0
+    }
+
+    stats.forEach(stat => {
+      result.total += stat.count
+      if (['Pending', 'Processing'].includes(stat._id)) {
+        result.processing += stat.count
+      } else if (stat._id === 'Delivered') {
+        result.delivered = stat.count
+      } else if (stat._id === 'Returned') {
+        result.returned = stat.count
+      } else if (stat._id === 'Cancelled') {
+        result.cancelled = stat.count
+      }
+    })
+
+    res.json({
+      success: true,
+      data: result,
+    })
+  } catch (error) {
+    console.error('Error fetching order stats:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت آمار سفارشات',
       error: error.message,
     })
   }

@@ -6,6 +6,7 @@ const {
   getOrderById,
   updateOrderStatus,
   getMyOrders,
+  getMyOrderStats,
   payOrder,
   verifyPayment,
 } = require('../controllers/orderController')
@@ -14,6 +15,9 @@ const { protect, authorize } = require('../middleware/auth')
 // ============================================
 // Customer-Facing Routes
 // ============================================
+
+// GET /api/orders/my-stats - آمار سریع سفارشات (FAST)
+router.get('/my-stats', protect, getMyOrderStats)
 
 // GET /api/orders/my-orders - دریافت سفارشات خود کاربر
 router.get('/my-orders', protect, getMyOrders)
