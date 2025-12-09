@@ -130,16 +130,21 @@ function ProductForm() {
         try {
           // ✅ FIX: Use skipDiscount=true to get raw product data without discount calculation
           // This ensures we get the original price, not the discounted price
-          const res = await api.get(`/products/${id}?skipDiscount=true`)
+          // Add timestamp to bypass cache and get fresh data
+          const res = await api.get(`/products/${id}?skipDiscount=true&_t=${Date.now()}`)
           const p = res?.data?.data
           if (p) {
+            // Extract IDs from populated category and brand objects
+            const categoryId = typeof p.category === 'object' && p.category ? p.category._id : p.category
+            const brandId = typeof p.brand === 'object' && p.brand ? p.brand._id : p.brand
+
             form.setFieldsValue({
               name: p.name,
               sku: p.sku,
               price: p.price,
               stock: p.stock,
-              category: p.category,
-              brand: p.brand,
+              category: categoryId,
+              brand: brandId,
               description: p.description,
               productType: p.productType || 'simple',
             })

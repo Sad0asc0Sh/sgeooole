@@ -6,6 +6,8 @@ const brandController = require('../controllers/brandController')
 
 // روت‌های عمومی (دسترسی آزاد برای خواندن)
 router.get('/', brandController.getAllBrands)
+router.get('/homepage', brandController.getHomepageBrands) // برندهای صفحه اصلی
+router.get('/slug/:slug', brandController.getBrandBySlug) // دریافت برند با slug
 router.get('/:id', brandController.getBrandById)
 
 // روت‌های ادمین (نیاز به احراز هویت)

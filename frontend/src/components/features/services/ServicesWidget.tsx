@@ -48,7 +48,7 @@ export default function ServicesWidget() {
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-xl h-[50vh]">
                 <SheetHeader>
-                    <SheetTitle className="text-center font-bold font-sans">خدمات وب‌سایت</SheetTitle>
+                    <SheetTitle className="text-center font-bold font-sans">خدمات ویلف‌ویتا</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
                     <div className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100">پیگیری سفارش</div>

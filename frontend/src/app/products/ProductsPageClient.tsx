@@ -8,6 +8,7 @@ import "rc-slider/assets/index.css";
 import { Loader2, SlidersHorizontal, X, Search, ArrowUpDown, Check, ChevronDown } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
 import { Product, productService, CategoryProperty, CategoryDetails } from "@/services/productService";
+import { brandService, Brand } from "@/services/brandService";
 
 function ProductListingContent() {
   const router = useRouter();
@@ -16,6 +17,7 @@ function ProductListingContent() {
 
   // URL Params
   const categorySlug = searchParams.get("category");
+  const brandSlug = searchParams.get("brand");
   const searchQuery = searchParams.get("search");
   const sortParam = searchParams.get("sort") || "newest";
   const minPriceParam = searchParams.get("minPrice");
@@ -34,6 +36,9 @@ function ProductListingContent() {
   // Category properties state for dynamic filters
   const [categoryDetails, setCategoryDetails] = useState<CategoryDetails | null>(null);
   const [selectedProperties, setSelectedProperties] = useState<Record<string, string>>({});
+
+  // Brand state
+  const [brandDetails, setBrandDetails] = useState<Brand | null>(null);
   const [expandedFilters, setExpandedFilters] = useState<Record<string, boolean>>({});
 
   // Parse property filters from URL
@@ -68,6 +73,24 @@ function ProductListingContent() {
     fetchCategoryDetails();
   }, [categorySlug]);
 
+  // Fetch brand details when brand changes
+  useEffect(() => {
+    const fetchBrandDetails = async () => {
+      if (brandSlug) {
+        try {
+          const brand = await brandService.getBySlug(brandSlug);
+          setBrandDetails(brand);
+        } catch (error) {
+          console.error("Failed to fetch brand:", error);
+          setBrandDetails(null);
+        }
+      } else {
+        setBrandDetails(null);
+      }
+    };
+    fetchBrandDetails();
+  }, [brandSlug]);
+
   // Sync URL property filters to state
   useEffect(() => {
     setSelectedProperties(getPropertyFiltersFromUrl());
@@ -85,6 +108,7 @@ function ProductListingContent() {
           limit: 20,
           sort: sortParam,
           category: categorySlug || undefined,
+          brand: brandSlug || undefined,
           search: searchQuery || undefined,
           minPrice: minPriceParam ? Number(minPriceParam) : undefined,
           maxPrice: maxPriceParam ? Number(maxPriceParam) : undefined,
@@ -119,7 +143,7 @@ function ProductListingContent() {
     };
 
     fetchData();
-  }, [categorySlug, searchQuery, sortParam, minPriceParam, maxPriceParam, includeChildrenParam, searchParams, getPropertyFiltersFromUrl]);
+  }, [categorySlug, brandSlug, searchQuery, sortParam, minPriceParam, maxPriceParam, includeChildrenParam, searchParams, getPropertyFiltersFromUrl]);
 
   // Handlers
   const handleSortChange = (sort: string) => {
@@ -136,7 +160,13 @@ function ProductListingContent() {
   };
 
   const handleClearFilters = () => {
-    router.push(categorySlug ? `/products?category=${categorySlug}` : "/products");
+    if (brandSlug) {
+      router.push(`/products?brand=${brandSlug}`);
+    } else if (categorySlug) {
+      router.push(`/products?category=${categorySlug}`);
+    } else {
+      router.push("/products");
+    }
   };
 
   const handlePropertyFilter = (propertyName: string, value: string) => {
@@ -172,248 +202,273 @@ function ProductListingContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-6">
-      <div className="container mx-auto max-w-7xl px-4 flex gap-6">
-        {itemList && (
-          <script
-            type="application/ld+json"
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
-          />
+      <div className="container mx-auto max-w-7xl px-4">
+        {/* Brand Header */}
+        {brandDetails && (
+          <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <div className="flex items-center gap-4">
+              {brandDetails.logo?.url && (
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 flex items-center justify-center">
+                  <img
+                    src={brandDetails.logo.url}
+                    alt={brandDetails.name}
+                    className="max-w-full max-h-full object-contain"
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">محصولات {brandDetails.name}</h1>
+                {brandDetails.description && (
+                  <p className="text-sm text-gray-500 mt-1">{brandDetails.description}</p>
+                )}
+              </div>
+            </div>
+          </div>
         )}
-        {/* Sidebar (Filters) */}
-        <aside
-          className={`
+
+        <div className="flex gap-6">
+          {itemList && (
+            <script
+              type="application/ld+json"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+            />
+          )}
+          {/* Sidebar (Filters) */}
+          <aside
+            className={`
           fixed inset-0 z-[100] bg-white lg:static lg:bg-transparent lg:z-auto lg:w-64 lg:block
           ${showFilters ? "block" : "hidden"}
         `}
-        >
-          <div className="h-full lg:h-auto overflow-y-auto p-5 lg:p-0 bg-white lg:bg-transparent">
-            <div className="flex items-center justify-between lg:hidden mb-6">
-              <span className="font-bold text-lg">فیلترها</span>
-              <button onClick={() => setShowFilters(false)}>
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {/* Active Filters Summary */}
-              {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
-                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-gray-500">فیلترهای فعال</span>
-                    <button onClick={handleClearFilters} className="text-[10px] text-red-500 hover:underline">
-                      حذف همه
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {minPriceParam && (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
-                        از {Number(minPriceParam).toLocaleString()} تومان
-                      </span>
-                    )}
-                    {maxPriceParam && (
-                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
-                        تا {Number(maxPriceParam).toLocaleString()} تومان
-                      </span>
-                    )}
-                    {Object.entries(selectedProperties).map(([key, value]) => (
-                      <button
-                        key={key}
-                        onClick={() => handlePropertyFilter(key, '')}
-                        className="bg-vita-100 text-vita-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-vita-200"
-                      >
-                        {key}: {value}
-                        <X size={10} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Price Range */}
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                <h3 className="font-bold text-sm text-gray-800 mb-4">بازه قیمت (تومان)</h3>
-                <div className="px-2 mb-6">
-                  <Slider
-                    range
-                    min={priceRange.min}
-                    max={priceRange.max}
-                    value={sliderValue}
-                    onChange={(val) => setSliderValue(val as [number, number])}
-                    trackStyle={[{ backgroundColor: "#f97316" }]}
-                    handleStyle={[
-                      { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
-                      { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
-                    ]}
-                    railStyle={{ backgroundColor: "#e5e7eb" }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-600 mb-4 font-medium">
-                  <span>{sliderValue[0].toLocaleString()}</span>
-                  <span>{sliderValue[1].toLocaleString()}</span>
-                </div>
-                <button
-                  onClick={() => {
-                    handlePriceFilter();
-                    setShowFilters(false);
-                  }}
-                  className="w-full bg-gray-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-gray-800 transition-colors"
-                >
-                  اعمال بازه قیمت
+          >
+            <div className="h-full lg:h-auto overflow-y-auto p-5 lg:p-0 bg-white lg:bg-transparent">
+              <div className="flex items-center justify-between lg:hidden mb-6">
+                <span className="font-bold text-lg">فیلترها</span>
+                <button onClick={() => setShowFilters(false)}>
+                  <X size={24} />
                 </button>
               </div>
 
-              {/* Mobile Availability Toggle */}
-              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-                <span className="text-sm font-bold text-gray-700">فقط کالاهای موجود</span>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={searchParams.get("inStock") === "true"}
-                    onChange={(e) => {
-                      const params = new URLSearchParams(searchParams.toString());
-                      if (e.target.checked) params.set("inStock", "true");
-                      else params.delete("inStock");
-                      router.push(`/products?${params.toString()}`);
-                    }}
-                  />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-vita-500"></div>
-                </label>
-              </div>
-
-              {/* Dynamic Category Properties Filters */}
-              {categoryDetails && categoryDetails.properties.length > 0 && (
-                <div className="space-y-3">
-                  {categoryDetails.properties.map((prop) => (
-                    <div key={prop.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                      <button
-                        onClick={() => toggleFilterExpanded(prop.name)}
-                        className="w-full flex items-center justify-between p-4 text-right"
-                      >
-                        <span className="font-bold text-sm text-gray-800">
-                          {prop.name}
-                          {prop.unit && <span className="font-normal text-gray-500 text-xs mr-1">({prop.unit})</span>}
-                        </span>
-                        <ChevronDown
-                          className={`text-gray-400 transition-transform ${expandedFilters[prop.name] ? 'rotate-180' : ''}`}
-                          size={18}
-                        />
+              <div className="space-y-6">
+                {/* Active Filters Summary */}
+                {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
+                  <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-bold text-gray-500">فیلترهای فعال</span>
+                      <button onClick={handleClearFilters} className="text-[10px] text-red-500 hover:underline">
+                        حذف همه
                       </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {minPriceParam && (
+                        <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
+                          از {Number(minPriceParam).toLocaleString()} تومان
+                        </span>
+                      )}
+                      {maxPriceParam && (
+                        <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
+                          تا {Number(maxPriceParam).toLocaleString()} تومان
+                        </span>
+                      )}
+                      {Object.entries(selectedProperties).map(([key, value]) => (
+                        <button
+                          key={key}
+                          onClick={() => handlePropertyFilter(key, '')}
+                          className="bg-vita-100 text-vita-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-vita-200"
+                        >
+                          {key}: {value}
+                          <X size={10} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                      {expandedFilters[prop.name] && (
-                        <div className="px-4 pb-4">
-                          {prop.type === 'select' && prop.options && prop.options.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {prop.options.map((option) => {
-                                const isSelected = selectedProperties[prop.name] === option;
-                                return (
-                                  <button
-                                    key={option}
-                                    onClick={() => {
-                                      handlePropertyFilter(prop.name, isSelected ? '' : option);
-                                      setShowFilters(false);
-                                    }}
-                                    className={`
+                {/* Price Range */}
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                  <h3 className="font-bold text-sm text-gray-800 mb-4">بازه قیمت (تومان)</h3>
+                  <div className="px-2 mb-6">
+                    <Slider
+                      range
+                      min={priceRange.min}
+                      max={priceRange.max}
+                      value={sliderValue}
+                      onChange={(val) => setSliderValue(val as [number, number])}
+                      trackStyle={[{ backgroundColor: "#f97316" }]}
+                      handleStyle={[
+                        { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
+                        { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
+                      ]}
+                      railStyle={{ backgroundColor: "#e5e7eb" }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-600 mb-4 font-medium">
+                    <span>{sliderValue[0].toLocaleString()}</span>
+                    <span>{sliderValue[1].toLocaleString()}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handlePriceFilter();
+                      setShowFilters(false);
+                    }}
+                    className="w-full bg-gray-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    اعمال بازه قیمت
+                  </button>
+                </div>
+
+                {/* Mobile Availability Toggle */}
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                  <span className="text-sm font-bold text-gray-700">فقط کالاهای موجود</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={searchParams.get("inStock") === "true"}
+                      onChange={(e) => {
+                        const params = new URLSearchParams(searchParams.toString());
+                        if (e.target.checked) params.set("inStock", "true");
+                        else params.delete("inStock");
+                        router.push(`/products?${params.toString()}`);
+                      }}
+                    />
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-vita-500"></div>
+                  </label>
+                </div>
+
+                {/* Dynamic Category Properties Filters */}
+                {categoryDetails && categoryDetails.properties.length > 0 && (
+                  <div className="space-y-3">
+                    {categoryDetails.properties.map((prop) => (
+                      <div key={prop.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        <button
+                          onClick={() => toggleFilterExpanded(prop.name)}
+                          className="w-full flex items-center justify-between p-4 text-right"
+                        >
+                          <span className="font-bold text-sm text-gray-800">
+                            {prop.name}
+                            {prop.unit && <span className="font-normal text-gray-500 text-xs mr-1">({prop.unit})</span>}
+                          </span>
+                          <ChevronDown
+                            className={`text-gray-400 transition-transform ${expandedFilters[prop.name] ? 'rotate-180' : ''}`}
+                            size={18}
+                          />
+                        </button>
+
+                        {expandedFilters[prop.name] && (
+                          <div className="px-4 pb-4">
+                            {prop.type === 'select' && prop.options && prop.options.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {prop.options.map((option) => {
+                                  const isSelected = selectedProperties[prop.name] === option;
+                                  return (
+                                    <button
+                                      key={option}
+                                      onClick={() => {
+                                        handlePropertyFilter(prop.name, isSelected ? '' : option);
+                                        setShowFilters(false);
+                                      }}
+                                      className={`
                                       px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                                       ${isSelected
-                                        ? 'bg-vita-500 text-white shadow-sm'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                      }
+                                          ? 'bg-vita-500 text-white shadow-sm'
+                                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        }
                                     `}
-                                  >
-                                    {option}
-                                    {isSelected && <Check size={12} className="inline mr-1" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <input
-                              type={prop.type === 'number' ? 'number' : 'text'}
-                              placeholder={`جستجو در ${prop.name}...`}
-                              value={selectedProperties[prop.name] || ''}
-                              onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-vita-200 focus:border-vita-400"
-                            />
-                          )}
-                        </div>
-                      )}
-                    </div>
+                                    >
+                                      {option}
+                                      {isSelected && <Check size={12} className="inline mr-1" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <input
+                                type={prop.type === 'number' ? 'number' : 'text'}
+                                placeholder={`جستجو در ${prop.name}...`}
+                                value={selectedProperties[prop.name] || ''}
+                                onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-vita-200 focus:border-vita-400"
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Content (Grid) */}
+          <main className="flex-1">
+            {/* Filter & Sort Bar */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowSortSheet(true)}
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                >
+                  <ArrowUpDown size={16} />
+                  <span className="hidden sm:inline">مرتب‌سازی بر اساس:</span>
+                  <span className="text-vita-600">
+                    {sortParam === "newest" && "جدیدترین"}
+                    {sortParam === "priceAsc" && "ارزان‌ترین"}
+                    {sortParam === "priceDesc" && "گران‌ترین"}
+                    {sortParam === "popularity" && "محبوب‌ترین"}
+                    {sortParam === "bestSelling" && "پرفروش‌ترین"}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                >
+                  <SlidersHorizontal size={16} />
+                  فیلترها
+                </button>
+              </div>
+
+              <div className="text-xs text-gray-500">
+                <span className="font-bold text-gray-800">{total}</span> محصول
+              </div>
+            </div>
+
+            {/* Products Grid */}
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                <Search size={48} className="mb-4" />
+                <p className="text-lg font-bold">محصولی یافت نشد</p>
+                <p className="text-sm">فیلترها را تغییر دهید یا عبارت دیگری جستجو کنید</p>
+              </div>
+            ) : (
+              <motion.div
+                layout
+                className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
+              >
+                <AnimatePresence mode="popLayout">
+                  {products.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ProductCard product={product} />
+                    </motion.div>
                   ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content (Grid) */}
-        <main className="flex-1">
-          {/* Filter & Sort Bar */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowSortSheet(true)}
-                className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
-              >
-                <ArrowUpDown size={16} />
-                <span className="hidden sm:inline">مرتب‌سازی بر اساس:</span>
-                <span className="text-vita-600">
-                  {sortParam === "newest" && "جدیدترین"}
-                  {sortParam === "priceAsc" && "ارزان‌ترین"}
-                  {sortParam === "priceDesc" && "گران‌ترین"}
-                  {sortParam === "popularity" && "محبوب‌ترین"}
-                  {sortParam === "bestSelling" && "پرفروش‌ترین"}
-                </span>
-              </button>
-
-              <button
-                onClick={() => setShowFilters(true)}
-                className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
-              >
-                <SlidersHorizontal size={16} />
-                فیلترها
-              </button>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              <span className="font-bold text-gray-800">{total}</span> محصول
-            </div>
-          </div>
-
-          {/* Products Grid */}
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
-            </div>
-          ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <Search size={48} className="mb-4" />
-              <p className="text-lg font-bold">محصولی یافت نشد</p>
-              <p className="text-sm">فیلترها را تغییر دهید یا عبارت دیگری جستجو کنید</p>
-            </div>
-          ) : (
-            <motion.div
-              layout
-              className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
-            >
-              <AnimatePresence mode="popLayout">
-                {products.map((product) => (
-                  <motion.div
-                    key={product.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <ProductCard product={product} />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </main>
+                </AnimatePresence>
+              </motion.div>
+            )}
+          </main>
+        </div>
       </div>
 
       {/* Sort Bottom Sheet (Mobile) */}

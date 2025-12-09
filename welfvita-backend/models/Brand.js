@@ -27,6 +27,30 @@ const brandSchema = new mongoose.Schema(
       url: { type: String, default: null },
       public_id: { type: String, default: null },
     },
+
+    // نمایش در صفحه اصلی
+    showOnHomepage: {
+      type: Boolean,
+      default: false,
+    },
+
+    // ترتیب نمایش در صفحه اصلی
+    displayOrder: {
+      type: Number,
+      default: 0,
+    },
+
+    // رنگ متن برند (برای نمایش در صفحه اصلی)
+    textColor: {
+      type: String,
+      default: '#6b7280', // خاکستری پیش‌فرض
+    },
+
+    // رنگ هاور برند
+    hoverColor: {
+      type: String,
+      default: '#374151',
+    },
   },
   {
     timestamps: true,

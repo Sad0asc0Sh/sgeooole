@@ -38,6 +38,29 @@ exports.getAllBrands = async (req, res) => {
   }
 }
 
+// GET /api/brands/homepage - برندهای صفحه اصلی
+exports.getHomepageBrands = async (req, res) => {
+  try {
+    const brands = await Brand.find({ showOnHomepage: true })
+      .sort({ displayOrder: 1, name: 1 })
+      .select('name slug logo textColor hoverColor displayOrder')
+      .lean()
+
+    res.json({
+      success: true,
+      data: brands,
+      count: brands.length,
+    })
+  } catch (error) {
+    console.error('Error fetching homepage brands:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت برندهای صفحه اصلی',
+      error: error.message,
+    })
+  }
+}
+
 // GET /api/brands/:id
 exports.getBrandById = async (req, res) => {
   try {
@@ -64,10 +87,47 @@ exports.getBrandById = async (req, res) => {
   }
 }
 
+// GET /api/brands/slug/:slug - دریافت برند با slug
+exports.getBrandBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params
+
+    // First try to find by slug
+    let brand = await Brand.findOne({ slug: slug })
+
+    // If not found by slug, try by ObjectId (for backward compatibility)
+    if (!brand) {
+      const mongoose = require('mongoose')
+      if (mongoose.Types.ObjectId.isValid(slug)) {
+        brand = await Brand.findById(slug)
+      }
+    }
+
+    if (!brand) {
+      return res.status(404).json({
+        success: false,
+        message: 'برند مورد نظر یافت نشد',
+      })
+    }
+
+    res.json({
+      success: true,
+      data: brand,
+    })
+  } catch (error) {
+    console.error('Error fetching brand by slug:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت اطلاعات برند',
+      error: error.message,
+    })
+  }
+}
+
 // POST /api/brands
 exports.createBrand = async (req, res) => {
   try {
-    const { name, description } = req.body
+    const { name, description, showOnHomepage, displayOrder, textColor, hoverColor } = req.body
 
     if (!name) {
       return res.status(400).json({
@@ -79,6 +139,10 @@ exports.createBrand = async (req, res) => {
     const brandData = {
       name,
       description,
+      showOnHomepage: showOnHomepage === 'true' || showOnHomepage === true,
+      displayOrder: parseInt(displayOrder, 10) || 0,
+      textColor: textColor || '#6b7280',
+      hoverColor: hoverColor || '#374151',
     }
 
     // اگر لوگو آپلود شده باشد، اطلاعات آن را ذخیره کن
@@ -115,7 +179,7 @@ exports.updateBrand = async (req, res) => {
       })
     }
 
-    const { name, description, removeLogo } = req.body
+    const { name, description, removeLogo, showOnHomepage, displayOrder, textColor, hoverColor } = req.body
     const hasNewLogo = Boolean(req.file)
 
     // مدیریت لوگو: اگر لوگو جدید آپلود شده، لوگو قدیمی را از Cloudinary حذف کن
@@ -143,6 +207,14 @@ exports.updateBrand = async (req, res) => {
     // به‌روزرسانی فیلدهای اصلی
     if (name !== undefined) brand.name = name
     if (description !== undefined) brand.description = description
+    if (showOnHomepage !== undefined) {
+      brand.showOnHomepage = showOnHomepage === 'true' || showOnHomepage === true
+    }
+    if (displayOrder !== undefined) {
+      brand.displayOrder = parseInt(displayOrder, 10) || 0
+    }
+    if (textColor !== undefined) brand.textColor = textColor
+    if (hoverColor !== undefined) brand.hoverColor = hoverColor
 
     const updatedBrand = await brand.save()
 

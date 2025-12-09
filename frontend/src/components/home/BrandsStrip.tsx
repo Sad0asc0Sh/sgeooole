@@ -1,22 +1,39 @@
 "use client";
 
 import { SectionTitle } from "@/components/ui/SectionTitle";
-import { useRef, useState, MouseEvent } from "react";
-
-const BRANDS = [
-  { id: 1, name: "SAILGIS", color: "text-[#fda4af]", hoverColor: "hover:text-[#f43f5e]" }, // Pink/Red
-  { id: 2, name: "SUZUKI", color: "text-[#9ca3af]", hoverColor: "hover:text-[#6b7280]" },  // Gray
-  { id: 3, name: "DAHUA", color: "text-[#93c5fd]", hoverColor: "hover:text-[#3b82f6]" },   // Blue
-  { id: 4, name: "HSB", color: "text-[#fdba74]", hoverColor: "hover:text-[#f97316]" },     // Orange
-  { id: 5, name: "VEKRA", color: "text-[#22c55e]", hoverColor: "hover:text-[#16a34a]" },   // Green
-];
+import { brandService, HomepageBrand } from "@/services/brandService";
+import { useRef, useState, MouseEvent, useEffect } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 export default function BrandsStrip() {
+  const router = useRouter();
   const sliderRef = useRef<HTMLDivElement>(null);
   const [isDown, setIsDown] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [brands, setBrands] = useState<HomepageBrand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hoveredBrand, setHoveredBrand] = useState<string | null>(null);
+
+  // Fetch homepage brands
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        setLoading(true);
+        const data = await brandService.getHomepageBrands();
+        setBrands(data);
+      } catch (error) {
+        console.error("Error fetching homepage brands:", error);
+        setBrands([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
 
   const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
     if (!sliderRef.current) return;
@@ -33,7 +50,6 @@ export default function BrandsStrip() {
 
   const handleMouseUp = () => {
     setIsDown(false);
-    // We don't reset isDragging immediately here to allow onClick to check it
     setTimeout(() => setIsDragging(false), 0);
   };
 
@@ -41,49 +57,81 @@ export default function BrandsStrip() {
     if (!isDown || !sliderRef.current) return;
     e.preventDefault();
     const x = e.pageX - sliderRef.current.offsetLeft;
-    const walk = (x - startX) * 2; // Scroll-fast
+    const walk = (x - startX) * 2;
     sliderRef.current.scrollLeft = scrollLeft - walk;
 
-    // If moved more than a few pixels, consider it a drag
     if (Math.abs(x - startX) > 5) {
       setIsDragging(true);
     }
   };
 
-  const handleBrandClick = (brandName: string) => {
+  const handleBrandClick = (brandSlug: string) => {
     if (isDragging) return;
-    console.log(`Clicked on ${brandName}`);
-    // Add navigation or other click logic here
+    // Use Next.js router for client-side navigation
+    router.push(`/brands/${brandSlug}`);
   };
+
+  // Don't render the section if there are no brands
+  if (!loading && brands.length === 0) {
+    return null;
+  }
 
   return (
     <div className="py-8 bg-white">
       <SectionTitle>برندهای همکار</SectionTitle>
-      <div
-        ref={sliderRef}
-        className={`
-          flex items-center justify-between px-6 overflow-x-auto gap-8 md:justify-center md:gap-12
-          no-scrollbar cursor-grab active:cursor-grabbing select-none
-        `}
-        onMouseDown={handleMouseDown}
-        onMouseLeave={handleMouseLeave}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-      >
-        {BRANDS.map((brand) => (
-          <div
-            key={brand.id}
-            onClick={() => handleBrandClick(brand.name)}
-            className={`
-              text-xl font-black tracking-wider transition-all duration-300 transform hover:scale-110
-              ${brand.color} ${brand.hoverColor}
-              min-w-max
-            `}
-          >
-            {brand.name}
-          </div>
-        ))}
-      </div>
+
+      {loading ? (
+        // Loading skeleton
+        <div className="flex items-center justify-center px-6 gap-8 md:gap-12">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="animate-pulse bg-gray-200 rounded h-8 w-24"
+            />
+          ))}
+        </div>
+      ) : (
+        <div
+          ref={sliderRef}
+          className={`
+            flex items-center justify-between px-6 overflow-x-auto gap-8 md:justify-center md:gap-12
+            no-scrollbar cursor-grab active:cursor-grabbing select-none
+          `}
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+        >
+          {brands.map((brand) => (
+            <div
+              key={brand._id}
+              onClick={() => handleBrandClick(brand.slug)}
+              onMouseEnter={() => setHoveredBrand(brand._id)}
+              onMouseLeave={() => setHoveredBrand(null)}
+              className="min-w-max transition-all duration-300 transform hover:scale-110 flex items-center gap-2 cursor-pointer"
+              style={{
+                color: hoveredBrand === brand._id ? brand.hoverColor : brand.textColor,
+              }}
+            >
+              {/* Show logo if available */}
+              {brand.logo?.url && (
+                <div className="relative w-8 h-8 rounded overflow-hidden">
+                  <Image
+                    src={brand.logo.url}
+                    alt={brand.name}
+                    fill
+                    className="object-contain"
+                    sizes="32px"
+                  />
+                </div>
+              )}
+              <span className="text-xl font-black tracking-wider">
+                {brand.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

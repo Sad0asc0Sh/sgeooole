@@ -442,6 +442,7 @@ export const productService = {
     limit?: number;
     sort?: string;
     category?: string;
+    brand?: string;
     search?: string;
     minPrice?: number;
     maxPrice?: number;
@@ -454,6 +455,7 @@ export const productService = {
       if (params.limit) queryParams.set("limit", params.limit.toString());
       if (params.sort) queryParams.set("sort", params.sort);
       if (params.category) queryParams.set("category", params.category);
+      if (params.brand) queryParams.set("brand", params.brand);
       if (params.search) queryParams.set("search", params.search);
       if (params.minPrice) queryParams.set("minPrice", params.minPrice.toString());
       if (params.maxPrice) queryParams.set("maxPrice", params.maxPrice.toString());

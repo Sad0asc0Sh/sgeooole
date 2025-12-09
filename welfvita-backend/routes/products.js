@@ -291,6 +291,43 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
       }
     }
 
+    // Brand filter (by slug or ID)
+    if (req.query.brand) {
+      console.log('Processing brand filter:', req.query.brand)
+      let brandId = null
+
+      // Try to find by slug first
+      const brandDoc = await Brand.findOne({ slug: req.query.brand }).select('_id')
+      console.log('Brand lookup result:', brandDoc)
+
+      if (brandDoc) {
+        brandId = brandDoc._id
+      } else {
+        // If not found by slug, check if it's a valid ObjectId
+        const mongoose = require('mongoose')
+        if (mongoose.Types.ObjectId.isValid(req.query.brand)) {
+          brandId = req.query.brand
+        }
+      }
+
+      if (brandId) {
+        conditions.push({ brand: brandId })
+      } else {
+        // Brand not found (neither slug nor ID), return empty result
+        return res.json({
+          success: true,
+          data: [],
+          pagination: {
+            currentPage: page,
+            itemsPerPage: limit,
+            totalItems: 0,
+            totalPages: 0,
+          },
+          priceRange: { min: 0, max: 0 }
+        })
+      }
+    }
+
     // Text search on name or SKU (and variant SKU)
     if (req.query.search) {
       const regex = { $regex: req.query.search, $options: 'i' }
@@ -960,7 +997,9 @@ router.put(
       await syncOfferTimers(updates, product);
 
       // Use findByIdAndUpdate for simple updates to avoid full validation
-      console.log(`[UPDATE PRODUCT] ID: ${req.params.id}, Updates:`, updates)
+      console.log(`[UPDATE PRODUCT] ID: ${req.params.id}`)
+      console.log(`[UPDATE PRODUCT] Category in updates:`, updates.category)
+      console.log(`[UPDATE PRODUCT] Brand in updates:`, updates.brand)
 
       const updatedProduct = await Product.findByIdAndUpdate(
         req.params.id,
@@ -968,7 +1007,8 @@ router.put(
         { new: true, runValidators: false }
       )
 
-      console.log(`[UPDATE PRODUCT] Result isSpecialOffer:`, updatedProduct.isSpecialOffer)
+      console.log(`[UPDATE PRODUCT] Result category:`, updatedProduct.category)
+      console.log(`[UPDATE PRODUCT] Result brand:`, updatedProduct.brand)
 
       // Invalidate caches for this product and lists
       clearCacheByKey(`/api/products/${req.params.id}`)
