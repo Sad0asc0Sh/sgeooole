@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Form, Input, Tabs, Button, Space, message, InputNumber, Switch, Alert, Modal, Divider, Select, Slider, Statistic, Row, Col } from 'antd'
-import { BellOutlined, RobotOutlined, LinkOutlined } from '@ant-design/icons'
+import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined } from '@ant-design/icons'
 import api from '../../api'
 
 function SettingsPage() {
@@ -73,6 +73,12 @@ function SettingsPage() {
           apiKey: data.aiConfig?.apiKey || '',
           userDailyLimit: data.aiConfig?.userDailyLimit || 20,
           customSystemPrompt: data.aiConfig?.customSystemPrompt || '',
+        },
+        searchSettings: {
+          trendingEnabled: data.searchSettings?.trendingEnabled || false,
+          trendingLimit: data.searchSettings?.trendingLimit || 8,
+          trendingPeriodDays: data.searchSettings?.trendingPeriodDays || 30,
+          trackingEnabled: data.searchSettings?.trackingEnabled !== false,
         },
         paymentConfig: {
           activeGateway: data.paymentConfig?.activeGateway || 'zarinpal',
@@ -295,6 +301,10 @@ function SettingsPage() {
         const ai = { ...values.aiConfig }
         if (!ai.apiKey) delete ai.apiKey
         payload.aiConfig = ai
+      }
+
+      if (values.searchSettings) {
+        payload.searchSettings = { ...values.searchSettings }
       }
 
 
@@ -988,6 +998,201 @@ function SettingsPage() {
           >
             <Input.TextArea rows={10} placeholder="شما مشاور فروش..." />
           </Form.Item>
+        </>
+      )
+    },
+    {
+      key: 'search',
+      label: (
+        <span>
+          <SearchOutlined /> تنظیمات جستجو
+        </span>
+      ),
+      children: (
+        <>
+          <Alert
+            message="🔍 مدیریت جستجوهای محبوب"
+            description={
+              <div>
+                این بخش امکان نمایش محبوب‌ترین جستجوهای کاربران را در صفحه جستجو فعال می‌کند.
+                <br />
+                سیستم به صورت خودکار جستجوهای کاربران را ثبت و تحلیل می‌کند تا محبوب‌ترین‌ها را نمایش دهد.
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 24 }}
+          />
+
+          {/* آمار جستجوها */}
+          <Card
+            title="📊 آمار کلی جستجوها"
+            style={{ marginBottom: 24 }}
+          >
+            <Row gutter={16}>
+              <Col span={8}>
+                <Statistic
+                  title="کل جستجوهای ثبت شده"
+                  value={0}
+                  suffix="جستجو"
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="جستجوهای 7 روز اخیر"
+                  value={0}
+                  suffix="جستجو"
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="جستجوهای امروز"
+                  value={0}
+                  suffix="جستجو"
+                />
+              </Col>
+            </Row>
+            <Alert
+              message="💡 نکته"
+              description="برای نمایش آمار واقعی، لطفاً ابتدا قابلیت ردیابی جستجو را فعال کنید."
+              type="warning"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
+          </Card>
+
+          {/* تنظیمات اصلی */}
+          <Form.Item
+            name={['searchSettings', 'trackingEnabled']}
+            label="🎯 ردیابی جستجوهای کاربران"
+            valuePropName="checked"
+            extra="اگر فعال باشد، تمام جستجوهای کاربران برای آنالیز و نمایش محبوب‌ترین‌ها ثبت می‌شوند"
+            tooltip="این ویژگی هیچ تأثیری بر حریم خصوصی ندارد و فقط عبارات جستجو را ذخیره می‌کند"
+          >
+            <Switch />
+          </Form.Item>
+
+          <Divider />
+
+          <Form.Item
+            name={['searchSettings', 'trendingEnabled']}
+            label="⭐ نمایش محبوب‌ترین جستجوها"
+            valuePropName="checked"
+            extra="نمایش محبوب‌ترین جستجوها در صفحه جستجو (فقط زمانی فعال کنید که داده کافی دارید)"
+          >
+            <Switch />
+          </Form.Item>
+
+          <Form.Item
+            noStyle
+            shouldUpdate={(prev, curr) =>
+              prev.searchSettings?.trendingEnabled !== curr.searchSettings?.trendingEnabled ||
+              prev.searchSettings?.trackingEnabled !== curr.searchSettings?.trackingEnabled
+            }
+          >
+            {({ getFieldValue }) => {
+              const trendingEnabled = getFieldValue(['searchSettings', 'trendingEnabled'])
+              const trackingEnabled = getFieldValue(['searchSettings', 'trackingEnabled'])
+
+              if (!trackingEnabled) {
+                return (
+                  <Alert
+                    message="⚠️ ردیابی غیرفعال است"
+                    description="برای استفاده از قابلیت محبوب‌ترین جستجوها، ابتدا باید ردیابی جستجو را فعال کنید."
+                    type="error"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                )
+              }
+
+              if (!trendingEnabled) {
+                return (
+                  <Alert
+                    message="✅ آماده فعال‌سازی"
+                    description={
+                      <div>
+                        <div>سیستم در حال جمع‌آوری داده‌های جستجو است.</div>
+                        <div style={{ marginTop: 8 }}>
+                          <strong>توصیه:</strong> قبل از فعال‌سازی محبوب‌ترین‌ها:
+                        </div>
+                        <ul style={{ margin: '8px 0', paddingRight: 20 }}>
+                          <li>حداقل 100+ کاربر فعال داشته باشید</li>
+                          <li>حداقل 500+ جستجو ثبت شده باشد</li>
+                          <li>2-4 هفته داده جمع‌آوری کرده باشید</li>
+                        </ul>
+                      </div>
+                    }
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+                )
+              }
+
+              return (
+                <>
+                  <Alert
+                    message="🎉 محبوب‌ترین جستجوها فعال است"
+                    description="کاربران اکنون محبوب‌ترین جستجوها را در صفحه جستجو مشاهده می‌کنند."
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 24 }}
+                  />
+
+                  <Form.Item
+                    name={['searchSettings', 'trendingLimit']}
+                    label="تعداد جستجوهای محبوب نمایشی"
+                    extra="حداکثر تعداد جستجوهای محبوبی که به کاربران نمایش داده می‌شود"
+                    rules={[
+                      { required: true, message: 'این فیلد الزامی است' },
+                      { type: 'number', min: 3, max: 20, message: 'باید بین 3 تا 20 باشد' }
+                    ]}
+                  >
+                    <Slider min={3} max={20} marks={{ 3: '3', 8: '8 (پیشنهادی)', 15: '15', 20: '20' }} />
+                  </Form.Item>
+
+                  <Form.Item
+                    name={['searchSettings', 'trendingPeriodDays']}
+                    label="بازه زمانی محاسبه محبوبیت (روز)"
+                    extra="جستجوهای این تعداد روز اخیر برای محاسبه محبوب‌ترین‌ها در نظر گرفته می‌شوند"
+                    rules={[
+                      { required: true, message: 'این فیلد الزامی است' },
+                      { type: 'number', min: 1, max: 90, message: 'باید بین 1 تا 90 روز باشد' }
+                    ]}
+                  >
+                    <Slider
+                      min={1}
+                      max={90}
+                      marks={{
+                        7: '7 روز',
+                        14: '14 روز',
+                        30: '30 روز (پیشنهادی)',
+                        60: '60 روز',
+                        90: '90 روز'
+                      }}
+                    />
+                  </Form.Item>
+                </>
+              )
+            }}
+          </Form.Item>
+
+          <Divider />
+
+          <Alert
+            message="🛠️ نکات فنی"
+            description={
+              <ul style={{ margin: 0, paddingRight: 20 }}>
+                <li>جستجوها در MongoDB collection به نام <code>search_history</code> ذخیره می‌شوند</li>
+                <li>برای بهینه‌سازی سرعت، از Index استفاده کنید</li>
+                <li>محبوب‌ترین‌ها هر 30 دقیقه به صورت خودکار cache می‌شوند</li>
+                <li>می‌توانید جستجوهای قدیمی‌تر از 90 روز را پاک کنید</li>
+              </ul>
+            }
+            type="info"
+            showIcon
+          />
         </>
       )
     },

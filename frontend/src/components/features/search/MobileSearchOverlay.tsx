@@ -5,8 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { productService, Product } from '@/services/productService';
-
-const TRENDING_TAGS = ['آیفون ۱۳', 'سامسونگ S24', 'PS5', 'ایرپاد', 'شیائومی', 'لپ تاپ گیمینگ'];
+import { searchService } from '@/services/searchService';
 
 interface MobileSearchOverlayProps {
     isOpen: boolean;
@@ -17,10 +16,18 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
+    const [searchSettings, setSearchSettings] = useState({
+        trackingEnabled: false,
+        trendingEnabled: false,
+        trendingLimit: 8,
+        trendingPeriodDays: 30
+    });
     const inputRef = useRef<HTMLInputElement>(null);
 
     const debouncedQuery = useDebounce(query, 500);
     const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+
 
     // Focus input when opened
     useEffect(() => {
@@ -30,6 +37,35 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
             }, 100);
         }
     }, [isOpen]);
+
+    // Fetch Search Settings from API
+    useEffect(() => {
+        const fetchSearchSettings = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/settings/public`);
+                const data = await response.json();
+                if (data.success && data.settings?.searchSettings) {
+                    setSearchSettings(data.settings.searchSettings);
+                }
+            } catch (error) {
+                console.error('Failed to fetch search settings:', error);
+            }
+        };
+
+        fetchSearchSettings();
+    }, []);
+
+    // Fetch Trending Searches from API
+    useEffect(() => {
+        const fetchTrendingSearches = async () => {
+            if (!searchSettings.trendingEnabled) return;
+
+            const trending = await searchService.getTrendingSearches(searchSettings.trendingLimit);
+            setTrendingSearches(trending);
+        };
+
+        fetchTrendingSearches();
+    }, []);
 
     // Handle Search Logic
     useEffect(() => {
@@ -62,6 +98,10 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
         e?.preventDefault();
         if (query.trim()) {
             addToHistory(query.trim());
+            // Track search for trending analytics (if enabled)
+            if (searchSettings.trackingEnabled) {
+                searchService.trackSearch(query.trim());
+            }
             // Here you would typically navigate to a search results page
             // For now, we just close the overlay or keep it open with results
         }
@@ -70,6 +110,10 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
     const handleHistoryClick = (term: string) => {
         setQuery(term);
         addToHistory(term);
+        // Track search for trending analytics (if enabled)
+        if (searchSettings.trackingEnabled) {
+            searchService.trackSearch(term);
+        }
     };
 
     return (
@@ -161,24 +205,26 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                                     </section>
                                 )}
 
-                                {/* Trending */}
-                                <section>
-                                    <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                                        <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
-                                        محبوب‌ترین‌ها
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                        {TRENDING_TAGS.map((tag, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setQuery(tag)}
-                                                className="px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-[#D4AF37] hover:text-white transition-colors"
-                                            >
-                                                {tag}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </section>
+                                {/* Trending - Dynamic from API */}
+                                {searchSettings.trendingEnabled && trendingSearches.length > 0 && (
+                                    <section>
+                                        <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-[#D4AF37]" />
+                                            محبوب‌ترین‌ها
+                                        </h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {trendingSearches.map((tag: string, idx: number) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => setQuery(tag)}
+                                                    className="px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-[#D4AF37] hover:text-white transition-colors"
+                                                >
+                                                    {tag}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+                                )}
                             </motion.div>
                         )}
 

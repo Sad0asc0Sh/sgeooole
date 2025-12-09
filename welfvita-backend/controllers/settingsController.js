@@ -32,12 +32,18 @@ exports.getPublicSettings = async (req, res) => {
         cartTTLHours: settings.cartSettings?.cartTTLHours || 1,
         expiryWarningEnabled: settings.cartSettings?.expiryWarningEnabled || false,
         expiryWarningMinutes: settings.cartSettings?.expiryWarningMinutes || 30,
+      },
+      searchSettings: {
+        trackingEnabled: settings.searchSettings?.trackingEnabled !== false,
+        trendingEnabled: settings.searchSettings?.trendingEnabled || false,
+        trendingLimit: settings.searchSettings?.trendingLimit || 8,
+        trendingPeriodDays: settings.searchSettings?.trendingPeriodDays || 30,
       }
     }
 
     res.json({
       success: true,
-      data: publicData,
+      settings: publicData,
     })
   } catch (error) {
     console.error('Error fetching public settings:', error)
@@ -218,6 +224,11 @@ exports.updateSettings = async (req, res) => {
           settings.paymentConfig.sadad.isActive = sadad.isActive
         }
       }
+    }
+
+    // For nested objects (Search Settings)
+    if (updates.searchSettings) {
+      settings.searchSettings = { ...settings.searchSettings.toObject(), ...updates.searchSettings }
     }
 
     await settings.save()

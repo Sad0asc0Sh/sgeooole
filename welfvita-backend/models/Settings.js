@@ -224,6 +224,34 @@ const settingsSchema = new mongoose.Schema(
         totalMessages: { type: Number, default: 0 },
       },
     },
+
+    // Search & Trending Settings
+    searchSettings: {
+      // فعال/غیرفعال کردن ردیابی جستجوها
+      trackingEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      // فعال/غیرفعال کردن نمایش محبوب‌ترین‌ها
+      trendingEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      // تعداد جستجوهای محبوب که نمایش داده شوند
+      trendingLimit: {
+        type: Number,
+        default: 8,
+        min: 3,
+        max: 20,
+      },
+      // بازه زمانی محاسبه محبوبیت (روز)
+      trendingPeriodDays: {
+        type: Number,
+        default: 30,
+        min: 1,
+        max: 90,
+      },
+    },
   },
   { timestamps: true },
 )

@@ -96,6 +96,10 @@ app.use('/api/products', productsRoutes)
 // Admin panel create endpoint: /api/v1/admin/products -> same router
 app.use('/api/v1/admin/products', productsRoutes)
 
+// Search Routes (Trending, Tracking, Suggestions)
+const searchRoutes = require('./routes/search')
+app.use('/api/search', searchRoutes)
+
 // Orders Routes
 const ordersRoutes = require('./routes/orders')
 app.use('/api/orders', ordersRoutes)
