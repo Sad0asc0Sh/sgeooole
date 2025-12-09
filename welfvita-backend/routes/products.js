@@ -190,6 +190,23 @@ const syncOfferTimers = async (data, currentProduct = {}) => {
   }
 }
 
+// Validate that a product cannot be in both Flash Deal and Special Offer campaigns simultaneously
+const validateCampaignExclusivity = (data, currentProduct = {}) => {
+  const effectiveFlashDeal =
+    data.isFlashDeal !== undefined ? data.isFlashDeal : currentProduct.isFlashDeal
+  const effectiveSpecialOffer =
+    data.isSpecialOffer !== undefined ? data.isSpecialOffer : currentProduct.isSpecialOffer
+
+  if (effectiveFlashDeal === true && effectiveSpecialOffer === true) {
+    return {
+      valid: false,
+      message: 'یک محصول نمی‌تواند همزمان در کمپین پیشنهاد لحظه‌ای و شگفت‌انگیز باشد. لطفاً فقط یکی را انتخاب کنید.',
+    }
+  }
+
+  return { valid: true }
+}
+
 // ============================================
 // GET /api/products
 // Public products list with filters & pagination
@@ -769,6 +786,15 @@ router.post(
         productData.variants = variants || []
       }
 
+      // Validate campaign exclusivity (cannot be both Flash Deal and Special Offer)
+      const exclusivityCheck = validateCampaignExclusivity(productData)
+      if (!exclusivityCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: exclusivityCheck.message,
+        })
+      }
+
       // Apply Timer Synchronization
       await syncOfferTimers(productData)
 
@@ -919,6 +945,15 @@ router.put(
         } else if (typeof updates.category === 'string' && !mongoose.Types.ObjectId.isValid(updates.category)) {
           delete updates.category
         }
+      }
+
+      // Validate campaign exclusivity (cannot be both Flash Deal and Special Offer)
+      const exclusivityCheck = validateCampaignExclusivity(updates, product)
+      if (!exclusivityCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: exclusivityCheck.message,
+        })
       }
 
       // Apply Timer Synchronization

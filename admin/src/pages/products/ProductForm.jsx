@@ -690,20 +690,42 @@ function ProductForm() {
                             type="checkbox"
                             id="flashDeal"
                             checked={isFlashDeal}
-                            onChange={(e) => setIsFlashDeal(e.target.checked)}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            disabled={isSpecialOffer}
+                            onChange={(e) => {
+                              if (e.target.checked && isSpecialOffer) {
+                                message.warning('یک محصول نمی‌تواند همزمان در کمپین پیشنهاد لحظه‌ای و شگفت‌انگیز باشد.')
+                                return
+                              }
+                              setIsFlashDeal(e.target.checked)
+                            }}
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              cursor: isSpecialOffer ? 'not-allowed' : 'pointer',
+                              opacity: isSpecialOffer ? 0.5 : 1
+                            }}
                           />
                           <label
                             htmlFor="flashDeal"
                             style={{
                               fontSize: '14px',
                               fontWeight: '500',
-                              cursor: 'pointer',
-                              userSelect: 'none'
+                              cursor: isSpecialOffer ? 'not-allowed' : 'pointer',
+                              userSelect: 'none',
+                              opacity: isSpecialOffer ? 0.5 : 1
                             }}
                           >
                             فعال‌سازی پیشنهاد لحظه‌ای
                           </label>
+                          {isSpecialOffer && (
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#f5222d',
+                              fontWeight: 'normal'
+                            }}>
+                              (غیرفعال - شگفت‌انگیز فعال است)
+                            </span>
+                          )}
                         </div>
 
                         {isFlashDeal && (
@@ -770,20 +792,42 @@ function ProductForm() {
                             type="checkbox"
                             id="specialOffer"
                             checked={isSpecialOffer}
-                            onChange={(e) => setIsSpecialOffer(e.target.checked)}
-                            style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                            disabled={isFlashDeal}
+                            onChange={(e) => {
+                              if (e.target.checked && isFlashDeal) {
+                                message.warning('یک محصول نمی‌تواند همزمان در کمپین پیشنهاد لحظه‌ای و شگفت‌انگیز باشد.')
+                                return
+                              }
+                              setIsSpecialOffer(e.target.checked)
+                            }}
+                            style={{
+                              width: '18px',
+                              height: '18px',
+                              cursor: isFlashDeal ? 'not-allowed' : 'pointer',
+                              opacity: isFlashDeal ? 0.5 : 1
+                            }}
                           />
                           <label
                             htmlFor="specialOffer"
                             style={{
                               fontSize: '14px',
                               fontWeight: '500',
-                              cursor: 'pointer',
-                              userSelect: 'none'
+                              cursor: isFlashDeal ? 'not-allowed' : 'pointer',
+                              userSelect: 'none',
+                              opacity: isFlashDeal ? 0.5 : 1
                             }}
                           >
                             فعال‌سازی‌شگفت‌انگیز
                           </label>
+                          {isFlashDeal && (
+                            <span style={{
+                              fontSize: '12px',
+                              color: '#faad14',
+                              fontWeight: 'normal'
+                            }}>
+                              (غیرفعال - پیشنهاد لحظه‌ای فعال است)
+                            </span>
+                          )}
                         </div>
 
                         {isFromActiveSale && (
@@ -855,8 +899,8 @@ function ProductForm() {
                         <li style={{ marginBottom: '6px' }}>
                           <strong>شگفت‌انگیز:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
                         </li>
-                        <li style={{ marginBottom: '6px' }}>
-                          می‌توانید هر دو را همزمان فعال کنید
+                        <li style={{ marginBottom: '6px', color: '#f5222d', fontWeight: '500' }}>
+                          ⚠️ یک محصول <strong>فقط</strong> می‌تواند در یکی از کمپین‌ها باشد (پیشنهاد لحظه‌ای یا شگفت‌انگیز)
                         </li>
                         <li>
                           محصولات پس از اتمام زمان به صورت خودکار از لیست حذف می‌شوند
