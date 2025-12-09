@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import {
   Card,
   Form,
@@ -15,6 +15,8 @@ import {
   Table,
   Popconfirm,
   Tag,
+  Divider,
+  Alert,
 } from 'antd'
 import {
   InboxOutlined,
@@ -58,6 +60,12 @@ function ProductForm() {
   const [isFromActiveSale, setIsFromActiveSale] = useState(false)
   const [removedImages, setRemovedImages] = useState([])
 
+  // ============================================
+  // State برای مشخصات فنی پویا (Dynamic Specifications)
+  // ============================================
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null)
+  const [specs, setSpecs] = useState({}) // { propertyName: value }
+
   // Category store (Zustand)
   const { categoriesTree, loading: categoriesLoading } = useCategoryStore(
     (state) => ({
@@ -71,6 +79,28 @@ function ProductForm() {
     brands: state.brands,
     loading: state.loading,
   }))
+
+  // ============================================
+  // یافتن ویژگی‌های دسته‌بندی انتخاب‌شده (Category Properties)
+  // ============================================
+  const flattenCategories = (tree, result = []) => {
+    tree.forEach(cat => {
+      result.push(cat)
+      if (cat.children && cat.children.length > 0) {
+        flattenCategories(cat.children, result)
+      }
+    })
+    return result
+  }
+
+  const allCategories = useMemo(() => flattenCategories(categoriesTree), [categoriesTree])
+
+  const selectedCategoryData = useMemo(() => {
+    if (!selectedCategoryId) return null
+    return allCategories.find(c => c._id === selectedCategoryId || c.key === selectedCategoryId)
+  }, [selectedCategoryId, allCategories])
+
+  const categoryProperties = selectedCategoryData?.properties || []
 
   // Helper: map product.images from API to AntD Upload fileList
   const toFileList = (images) => {
@@ -127,6 +157,22 @@ function ProductForm() {
             setCampaignLabel(p.campaignLabel || '')
             setCampaignTheme(p.campaignTheme || '')
             setIsFromActiveSale(p.isFromActiveSale || false)
+
+            // Load specs from product.properties
+            if (p.properties && Array.isArray(p.properties)) {
+              const specsObj = {}
+              p.properties.forEach(prop => {
+                if (prop.label && prop.value !== undefined) {
+                  specsObj[prop.label] = prop.value
+                }
+              })
+              setSpecs(specsObj)
+            }
+
+            // Set selected category for dynamic properties
+            if (p.category) {
+              setSelectedCategoryId(typeof p.category === 'object' ? p.category._id : p.category)
+            }
           }
         } catch (err) {
           message.error(
@@ -378,6 +424,16 @@ function ProductForm() {
       payload.campaignLabel = campaignLabel
       payload.campaignTheme = campaignTheme
 
+      // اضافه کردن مشخصات فنی (مبتنی بر دسته‌بندی)
+      // Convert specs object to array format: [{ label, value }]
+      const propertiesArray = Object.entries(specs)
+        .filter(([, value]) => value !== '' && value !== null && value !== undefined)
+        .map(([label, value]) => ({ label, value: String(value) }))
+
+      if (propertiesArray.length > 0) {
+        payload.properties = propertiesArray
+      }
+
       if (!isEdit) {
         // ایجاد محصول
         const res = await api.post('/v1/admin/products', payload)
@@ -527,6 +583,11 @@ function ProductForm() {
                               .includes(input.toLowerCase())
                           }
                           disabled={categoriesTree.length === 0}
+                          onChange={(value) => {
+                            setSelectedCategoryId(value)
+                            // Reset specs when category changes
+                            setSpecs({})
+                          }}
                         />
                       )}
                     </Form.Item>
@@ -612,6 +673,74 @@ function ProductForm() {
                         placeholder="توضیحات کامل محصول را وارد کنید..."
                       />
                     </Form.Item>
+                  </>
+                ),
+              },
+              {
+                key: 'specifications',
+                label: 'مشخصات فنی',
+                children: (
+                  <>
+                    {!selectedCategoryId ? (
+                      <Alert
+                        message="ابتدا دسته‌بندی را انتخاب کنید"
+                        description="برای وارد کردن مشخصات فنی، ابتدا در تب «اطلاعات پایه» دسته‌بندی محصول را انتخاب کنید."
+                        type="info"
+                        showIcon
+                      />
+                    ) : categoryProperties.length === 0 ? (
+                      <Alert
+                        message="ویژگی فنی تعریف نشده"
+                        description={
+                          <>
+                            برای این دسته‌بندی هیچ ویژگی فنی تعریف نشده است.
+                            می‌توانید از صفحه «مدیریت دسته‌بندی‌ها» ویژگی‌های فنی را اضافه کنید.
+                          </>
+                        }
+                        type="warning"
+                        showIcon
+                      />
+                    ) : (
+                      <Space direction="vertical" style={{ width: '100%' }} size="large">
+                        <div style={{ marginBottom: 16, padding: 16, background: '#f5f5f5', borderRadius: 8 }}>
+                          <p style={{ margin: 0, color: '#666', fontSize: 13 }}>
+                            ویژگی‌های فنی محصول را وارد کنید. این اطلاعات در تب «مشخصات فنی» صفحه محصول و همچنین در فیلترهای صفحه لیست محصولات نمایش داده می‌شوند.
+                          </p>
+                        </div>
+
+                        {categoryProperties.map((prop, idx) => (
+                          <div key={idx} style={{ marginBottom: 16 }}>
+                            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: 8 }}>
+                              {prop.name}
+                              {prop.unit && <span style={{ fontWeight: 'normal', color: '#888' }}> ({prop.unit})</span>}
+                            </label>
+                            {prop.type === 'select' && prop.options && prop.options.length > 0 ? (
+                              <Select
+                                style={{ width: '100%' }}
+                                placeholder={`انتخاب ${prop.name}...`}
+                                value={specs[prop.name] || undefined}
+                                onChange={(value) => setSpecs({ ...specs, [prop.name]: value })}
+                                allowClear
+                                options={prop.options.map(opt => ({ value: opt, label: opt }))}
+                              />
+                            ) : prop.type === 'number' ? (
+                              <InputNumber
+                                style={{ width: '100%' }}
+                                placeholder={`مقدار ${prop.name} را وارد کنید`}
+                                value={specs[prop.name] !== undefined ? Number(specs[prop.name]) : undefined}
+                                onChange={(value) => setSpecs({ ...specs, [prop.name]: value })}
+                              />
+                            ) : (
+                              <Input
+                                placeholder={`${prop.name} را وارد کنید`}
+                                value={specs[prop.name] || ''}
+                                onChange={(e) => setSpecs({ ...specs, [prop.name]: e.target.value })}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </Space>
+                    )}
                   </>
                 ),
               },

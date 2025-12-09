@@ -119,6 +119,7 @@ export const useCategoryStore = create((set, get) => ({
           title: n.name,
           key: n._id,
           value: n._id,
+          _id: n._id, // Also include _id for compatibility
           parent: n.parent || null,
           description: n.description || '',
           isFeatured: !!n.isFeatured,
@@ -127,6 +128,7 @@ export const useCategoryStore = create((set, get) => ({
           image: n.image || null,
           iconUrl: getImageUrl(n.icon),
           imageUrl: getImageUrl(n.image),
+          properties: n.properties || [], // CRITICAL: Include properties for category specs
           children: n.children ? toAntTree(n.children) : [],
         }))
 

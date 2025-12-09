@@ -20,6 +20,9 @@ router.get('/featured', cacheMiddleware(600), categoryController.getFeaturedCate
 // Popular endpoint
 router.get('/popular', cacheMiddleware(600), categoryController.getPopularCategories)
 
+// Get category by slug (with properties for frontend filters)
+router.get('/slug/:slug', cacheMiddleware(600), categoryController.getCategoryBySlug)
+
 // لیست و ایجاد دسته‌بندی
 router
   .route('/')

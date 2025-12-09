@@ -293,6 +293,8 @@ ProductSchema.index({ price: -1 }) // For price sorting (high to low)
 ProductSchema.index({ category: 1, createdAt: -1 })
 ProductSchema.index({ category: 1, salesCount: -1 })
 ProductSchema.index({ isActive: 1, createdAt: -1 })
+// Index for Smart Filter Properties (category-based specs filtering)
+ProductSchema.index({ 'properties.label': 1, 'properties.value': 1 })
 
 // Simple slug generator from name if not provided
 ProductSchema.pre('save', function (next) {

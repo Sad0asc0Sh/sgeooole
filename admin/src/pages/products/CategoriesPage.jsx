@@ -7,12 +7,15 @@ import {
   Modal,
   Form,
   Input,
+  Select,
   Upload,
   Checkbox,
   message,
   Space,
   Spin,
   Popconfirm,
+  Divider,
+  Tag,
 } from 'antd'
 import {
   PlusOutlined,
@@ -20,6 +23,7 @@ import {
   DeleteOutlined,
   InboxOutlined,
   StarFilled,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { useCategoryStore } from '../../stores'
 import api from '../../api'
@@ -39,6 +43,14 @@ function CategoriesPage() {
   const [submitting, setSubmitting] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [form] = Form.useForm()
+
+  // Properties (Technical Specifications) State
+  const [properties, setProperties] = useState([])
+  const [newPropertyName, setNewPropertyName] = useState('')
+  const [newPropertyType, setNewPropertyType] = useState('select')
+  const [newPropertyOptions, setNewPropertyOptions] = useState('')
+  const [newPropertyUnit, setNewPropertyUnit] = useState('')
+  const [newPropertyFilterable, setNewPropertyFilterable] = useState(true)
 
   // Initial load
   useEffect(() => {
@@ -95,6 +107,9 @@ function CategoriesPage() {
         formData.append('removeImage', 'true')
       }
 
+      // Add properties as JSON string
+      formData.append('properties', JSON.stringify(properties))
+
       if (editingCategory && editingCategory._id) {
         await api.put(`/categories/${editingCategory._id}`, formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -110,6 +125,7 @@ function CategoriesPage() {
       await fetchCategoriesTree()
       setModalVisible(false)
       setEditingCategory(null)
+      setProperties([]) // Reset properties
       form.resetFields()
     } catch (error) {
       if (error?.errorFields) return
@@ -124,6 +140,7 @@ function CategoriesPage() {
   // Open Modal for Create
   const handleCreate = () => {
     setEditingCategory(null)
+    setProperties([]) // Reset properties
     form.resetFields()
     setModalVisible(true)
   }
@@ -162,6 +179,8 @@ function CategoriesPage() {
         ]
         : [],
     })
+    // Load properties for editing
+    setProperties(node.properties || [])
     setModalVisible(true)
   }
 
@@ -327,6 +346,7 @@ function CategoriesPage() {
         onCancel={() => {
           setModalVisible(false)
           setEditingCategory(null)
+          setProperties([])
           form.resetFields()
         }}
         onOk={() => form.submit()}
@@ -334,7 +354,7 @@ function CategoriesPage() {
         okText={editingCategory ? 'ذخیره تغییرات' : 'ایجاد'}
         cancelText="انصراف"
         confirmLoading={submitting}
-        width={700}
+        width={800}
       >
         <Form form={form} layout="vertical" onFinish={onFinish}>
           {/* 1. Name */}
@@ -430,6 +450,146 @@ function CategoriesPage() {
           <Form.Item name="isPopular" valuePropName="checked">
             <Checkbox>نمایش در محبوب‌ها (پایین - کارتی)</Checkbox>
           </Form.Item>
+
+          <Divider orientation="right">
+            <Space>
+              <SettingOutlined />
+              <span>ویژگی‌های فنی (مشخصات)</span>
+            </Space>
+          </Divider>
+
+          {/* 8. Properties (Technical Specifications) */}
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ color: '#666', fontSize: 12, marginBottom: 12 }}>
+              ویژگی‌های فنی برای محصولات این دسته‌بندی را تعریف کنید. این ویژگی‌ها در فرم ایجاد محصول و فیلترهای صفحه محصولات نمایش داده می‌شوند.
+            </p>
+
+            {/* List of existing properties */}
+            {properties.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                {properties.map((prop, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      background: '#fafafa',
+                      borderRadius: 8,
+                      marginBottom: 8,
+                      border: '1px solid #f0f0f0',
+                    }}
+                  >
+                    <div style={{ flex: 1 }}>
+                      <Space>
+                        <Tag color="blue">{prop.name}</Tag>
+                        <Tag color="green">{prop.type === 'select' ? 'انتخابی' : prop.type === 'number' ? 'عددی' : 'متنی'}</Tag>
+                        {prop.unit && <Tag color="orange">{prop.unit}</Tag>}
+                        {prop.isFilterable && <Tag color="purple">قابل فیلتر</Tag>}
+                      </Space>
+                      {prop.type === 'select' && prop.options && prop.options.length > 0 && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: '#888' }}>
+                          گزینه‌ها: {prop.options.join(' ، ')}
+                        </div>
+                      )}
+                    </div>
+                    <Popconfirm
+                      title="حذف این ویژگی؟"
+                      onConfirm={() => {
+                        const newProps = [...properties]
+                        newProps.splice(index, 1)
+                        setProperties(newProps)
+                        message.success('ویژگی حذف شد')
+                      }}
+                      okText="حذف"
+                      cancelText="انصراف"
+                    >
+                      <Button type="text" danger size="small" icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new property form */}
+            <Card size="small" title="افزودن ویژگی جدید" style={{ background: '#fafafa' }}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <Input
+                    placeholder="نام ویژگی (مثلاً: رزولوشن)"
+                    value={newPropertyName}
+                    onChange={(e) => setNewPropertyName(e.target.value)}
+                    style={{ flex: 1, minWidth: 150 }}
+                  />
+                  <Select
+                    value={newPropertyType}
+                    onChange={setNewPropertyType}
+                    style={{ width: 100 }}
+                    options={[
+                      { value: 'select', label: 'انتخابی' },
+                      { value: 'text', label: 'متنی' },
+                      { value: 'number', label: 'عددی' },
+                    ]}
+                  />
+                  <Input
+                    placeholder="واحد (اختیاری)"
+                    value={newPropertyUnit}
+                    onChange={(e) => setNewPropertyUnit(e.target.value)}
+                    style={{ width: 100 }}
+                  />
+                </div>
+
+                {newPropertyType === 'select' && (
+                  <Input
+                    placeholder="گزینه‌ها (با ویرگول جدا کنید: 2MP, 4MP, 8MP)"
+                    value={newPropertyOptions}
+                    onChange={(e) => setNewPropertyOptions(e.target.value)}
+                  />
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Checkbox
+                    checked={newPropertyFilterable}
+                    onChange={(e) => setNewPropertyFilterable(e.target.checked)}
+                  >
+                    نمایش در فیلترهای صفحه محصولات
+                  </Checkbox>
+                  <Button
+                    type="primary"
+                    size="small"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      if (!newPropertyName.trim()) {
+                        message.warning('نام ویژگی را وارد کنید')
+                        return
+                      }
+
+                      const newProp = {
+                        name: newPropertyName.trim(),
+                        type: newPropertyType,
+                        options: newPropertyType === 'select'
+                          ? newPropertyOptions.split(',').map(o => o.trim()).filter(Boolean)
+                          : [],
+                        unit: newPropertyUnit.trim(),
+                        isFilterable: newPropertyFilterable,
+                        order: properties.length,
+                      }
+
+                      setProperties([...properties, newProp])
+                      setNewPropertyName('')
+                      setNewPropertyOptions('')
+                      setNewPropertyUnit('')
+                      setNewPropertyFilterable(true)
+                      message.success('ویژگی اضافه شد')
+                    }}
+                  >
+                    افزودن
+                  </Button>
+                </div>
+              </Space>
+            </Card>
+          </div>
         </Form>
       </Modal>
     </div>

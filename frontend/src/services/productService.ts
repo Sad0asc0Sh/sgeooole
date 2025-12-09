@@ -21,6 +21,30 @@ export interface CategoryPathItem {
   slug: string;
 }
 
+// Category Property Interface (for dynamic filters)
+export interface CategoryProperty {
+  name: string;
+  type: 'text' | 'number' | 'select';
+  options?: string[];
+  isFilterable?: boolean;
+  unit?: string;
+  order?: number;
+}
+
+// Category Details Interface
+export interface CategoryDetails {
+  _id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  parent?: {
+    _id: string;
+    name: string;
+    slug: string;
+  };
+  properties: CategoryProperty[];
+}
+
 // Frontend Product Interface (matching our UI expectations)
 export interface Product {
   id: string;
@@ -87,6 +111,9 @@ interface BackendProduct {
   flashDealEndTime?: string; // Date from backend becomes ISO string
   isSpecialOffer?: boolean;
   specialOfferEndTime?: string;
+
+  // Dynamic properties (category-based specifications)
+  properties?: Array<{ label: string; value: string }>;
 }
 
 /**
@@ -226,8 +253,8 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     // Colors (optional)
     colors: backendProduct.colors,
 
-    // Specifications (optional)
-    specs: backendProduct.specs,
+    // Specifications (optional) - Use properties if specs not available
+    specs: backendProduct.specs || backendProduct.properties?.map(p => ({ label: p.label, value: p.value })),
 
     // Campaign label (time-limited discount)
     campaignLabel: backendProduct.campaignLabel,
@@ -484,4 +511,23 @@ export const productService = {
       return [];
     }
   },
+
+  /**
+   * Fetch category details by slug (with properties for filters)
+   * @param slug - Category slug or ID
+   */
+  getCategoryBySlug: async (slug: string): Promise<CategoryDetails | null> => {
+    try {
+      const response = await api.get(`/categories/slug/${slug}?_t=${Date.now()}`);
+      const data = response?.data;
+      if (data?.success && data?.data) {
+        return data.data as CategoryDetails;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error fetching category ${slug}:`, error);
+      return null;
+    }
+  },
 };
+

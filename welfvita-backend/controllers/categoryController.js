@@ -33,6 +33,7 @@ exports.getCategoryTree = async (req, res) => {
           slug: cat.slug,
           order: cat.order,
           isActive: cat.isActive,
+          properties: cat.properties || [], // Include category-specific attributes
           children: buildTree(categories, cat._id),
         }))
 
@@ -169,10 +170,57 @@ exports.getCategoryById = async (req, res) => {
   }
 }
 
-// POST /api/categories
+// GET /api/categories/slug/:slug
+// Used by frontend to get category details including properties for filters
+exports.getCategoryBySlug = async (req, res) => {
+  try {
+    const mongoose = require('mongoose')
+    const { slug } = req.params
+
+    // Try to find by slug first
+    let category = await Category.findOne({ slug }).populate('parent', 'name slug')
+
+    // If not found by slug, try as ObjectId
+    if (!category && mongoose.Types.ObjectId.isValid(slug)) {
+      category = await Category.findById(slug).populate('parent', 'name slug')
+    }
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: 'دسته‌بندی یافت نشد',
+      })
+    }
+
+    // Return only the filterable properties for frontend use
+    const filterableProperties = (category.properties || [])
+      .filter(prop => prop.isFilterable !== false)
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+
+    res.json({
+      success: true,
+      data: {
+        _id: category._id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+        parent: category.parent,
+        properties: filterableProperties,
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching category by slug:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت اطلاعات دسته‌بندی',
+      error: error.message,
+    })
+  }
+}
+
 exports.createCategory = async (req, res) => {
   try {
-    const { name, parent, description, isFeatured, isPopular } = req.body
+    const { name, parent, description, isFeatured, isPopular, properties } = req.body
 
     if (!name) {
       return res.status(400).json({
@@ -187,6 +235,17 @@ exports.createCategory = async (req, res) => {
       description,
       isFeatured: isFeatured === 'true' || isFeatured === true,
       isPopular: isPopular === 'true' || isPopular === true,
+    }
+
+    // Handle properties (category-specific attributes/specifications)
+    // Properties can come as JSON string (from FormData) or as array (from JSON body)
+    if (properties) {
+      try {
+        categoryData.properties = typeof properties === 'string' ? JSON.parse(properties) : properties
+      } catch (e) {
+        console.error('Error parsing properties:', e)
+        categoryData.properties = []
+      }
     }
 
     if (req.files) {
@@ -240,6 +299,7 @@ exports.updateCategory = async (req, res) => {
       isActive,
       removeIcon,
       removeImage,
+      properties,
     } = req.body
 
     // Icon update / delete logic
@@ -311,6 +371,15 @@ exports.updateCategory = async (req, res) => {
     }
     if (isActive !== undefined) {
       category.isActive = isActive === 'true' || isActive === true
+    }
+
+    // Handle properties (category-specific attributes/specifications)
+    if (properties !== undefined) {
+      try {
+        category.properties = typeof properties === 'string' ? JSON.parse(properties) : properties
+      } catch (e) {
+        console.error('Error parsing properties:', e)
+      }
     }
 
     const updatedCategory = await category.save()

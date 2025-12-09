@@ -59,14 +59,21 @@ const CategorySchema = new mongoose.Schema(
     },
 
     // ============================================
-    // Smart Filters Configuration
-    // Defines which filters should be shown for this category
+    // Smart Filters / Category Properties Configuration
+    // Defines technical specifications (attributes) for products in this category
+    // These attributes will be used for:
+    // 1. Dynamic input fields in product creation form
+    // 2. Sidebar filters on product listing page
+    // 3. Specifications display on product detail page
     // ============================================
-    filterOptions: [
+    properties: [
       {
-        label: { type: String, required: true }, // e.g., "Resolution"
+        name: { type: String, required: true }, // e.g., "رزولوشن" (Resolution)
         type: { type: String, enum: ['text', 'number', 'select'], default: 'select' },
-        options: [String], // Predefined options for 'select' type
+        options: [{ type: String }], // Predefined options for 'select' type, e.g., ["2MP", "4MP", "8MP"]
+        isFilterable: { type: Boolean, default: true }, // Should this appear in sidebar filters?
+        unit: { type: String, default: '' }, // Optional unit for display, e.g., "ساعت", "متر"
+        order: { type: Number, default: 0 }, // Display order
       }
     ],
   },
