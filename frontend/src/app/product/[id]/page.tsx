@@ -109,6 +109,30 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                     />
                 </div>
             )}
+
+            {/* Product Code Footer */}
+            <div className="bg-gray-50 py-6 px-4 pb-28 border-t border-gray-100">
+                <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="text-xs text-gray-400">کد محصول</span>
+                    <span className="text-lg font-mono font-bold bg-white text-gray-800 px-4 py-2 rounded-lg border border-gray-200 tracking-widest shadow-sm">
+                        {(() => {
+                            const skuDigits = product.sku ? product.sku.replace(/\D/g, '') : '';
+                            let code = '';
+                            if (skuDigits.length > 0) {
+                                code = skuDigits.slice(-7).padStart(7, '0');
+                            } else {
+                                let hash = 0;
+                                for (let i = 0; i < product.id.length; i++) {
+                                    hash = ((hash << 5) - hash) + product.id.charCodeAt(i);
+                                    hash |= 0;
+                                }
+                                code = Math.abs(hash).toString().slice(0, 7).padStart(7, '0');
+                            }
+                            return `KY-${code}`;
+                        })()}
+                    </span>
+                </div>
+            </div>
         </>
     );
 }

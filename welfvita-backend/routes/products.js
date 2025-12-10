@@ -998,6 +998,7 @@ router.put(
 
       // Use findByIdAndUpdate for simple updates to avoid full validation
       console.log(`[UPDATE PRODUCT] ID: ${req.params.id}`)
+      console.log(`[UPDATE PRODUCT] SKU in updates:`, updates.sku)
       console.log(`[UPDATE PRODUCT] Category in updates:`, updates.category)
       console.log(`[UPDATE PRODUCT] Brand in updates:`, updates.brand)
 

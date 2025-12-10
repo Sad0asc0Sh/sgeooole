@@ -546,14 +546,9 @@ function ProductForm() {
                     <Form.Item
                       name="sku"
                       label="کد محصول (SKU)"
-                      rules={[
-                        {
-                          required: true,
-                          message: 'وارد کردن SKU الزامی است',
-                        },
-                      ]}
+                      tooltip="این کد برای تولید شناسه KY-XXXXXXX استفاده می‌شود. ارقام آخر SKU نمایش داده می‌شوند."
                     >
-                      <Input placeholder="مثلاً: PROD-001" />
+                      <Input placeholder="مثلاً: WV-1234567 یا PROD-9876543" />
                     </Form.Item>
 
                     <Form.Item

@@ -51,6 +51,7 @@ export interface Product {
   name: string;
   title: string; // Display name (same as name for now)
   slug?: string;
+  sku?: string; // Product SKU
   enTitle?: string; // English title (optional)
   price: number;
   oldPrice?: number; // Original price before discount
@@ -85,6 +86,7 @@ export interface Product {
 interface BackendProduct {
   _id: string;
   name: string;
+  sku?: string;
   enTitle?: string;
   price: number;
   image?: string;
@@ -121,6 +123,11 @@ interface BackendProduct {
  * This prevents backend schema changes from breaking the UI
  */
 const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
+  // Debug: Log SKU from backend
+  if (backendProduct.sku) {
+    console.log(`[DEBUG] Product "${backendProduct.name}" has SKU: ${backendProduct.sku}`);
+  }
+
   const pricing = resolvePricing({
     price: backendProduct.price,
     discount: backendProduct.discount,
@@ -186,6 +193,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     name: backendProduct.name,
     title: backendProduct.name, // Use name as title
     slug: (backendProduct as any).slug, // Ensure slug is mapped if available
+    sku: backendProduct.sku,
     enTitle: backendProduct.enTitle,
 
     // Price calculations

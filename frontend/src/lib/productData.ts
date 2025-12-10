@@ -24,6 +24,7 @@ type BackendProduct = {
   name: string;
   title?: string;
   slug?: string;
+  sku?: string;
   enTitle?: string;
   price: number;
   image?: BackendImage;
@@ -156,6 +157,7 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     name: backend.name,
     title: backend.title || backend.name,
     slug: backend.slug,
+    sku: backend.sku,
     enTitle: backend.enTitle,
     price: pricing.finalPrice,
     oldPrice: pricing.oldPrice,

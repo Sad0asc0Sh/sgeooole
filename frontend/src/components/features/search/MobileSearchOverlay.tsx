@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, ArrowRight, X, Clock, TrendingUp, ChevronLeft, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, ArrowRight, X, Clock, TrendingUp, ChevronLeft, Loader2, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
@@ -13,8 +14,10 @@ interface MobileSearchOverlayProps {
 }
 
 const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClose }) => {
+    const router = useRouter();
     const [query, setQuery] = useState('');
     const [results, setResults] = useState<Product[]>([]);
+    const [totalResults, setTotalResults] = useState(0);
     const [isSearching, setIsSearching] = useState(false);
     const [trendingSearches, setTrendingSearches] = useState<string[]>([]);
     const [searchSettings, setSearchSettings] = useState({
@@ -72,20 +75,23 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
         const fetchProducts = async () => {
             if (!debouncedQuery.trim()) {
                 setResults([]);
+                setTotalResults(0);
                 setIsSearching(false);
                 return;
             }
 
             setIsSearching(true);
             try {
-                const { products } = await productService.getProducts({
+                const { products, total } = await productService.getProducts({
                     search: debouncedQuery,
-                    limit: 10
+                    limit: 6  // Show fewer items in quick search
                 });
                 setResults(products);
+                setTotalResults(total);
             } catch (error) {
                 console.error('Search failed:', error);
                 setResults([]);
+                setTotalResults(0);
             } finally {
                 setIsSearching(false);
             }
@@ -94,17 +100,21 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
         fetchProducts();
     }, [debouncedQuery]);
 
-    const handleSearchSubmit = (e?: React.FormEvent) => {
-        e?.preventDefault();
+    // Navigate to full search results page
+    const navigateToResults = () => {
         if (query.trim()) {
             addToHistory(query.trim());
-            // Track search for trending analytics (if enabled)
             if (searchSettings.trackingEnabled) {
                 searchService.trackSearch(query.trim());
             }
-            // Here you would typically navigate to a search results page
-            // For now, we just close the overlay or keep it open with results
+            router.push(`/products?search=${encodeURIComponent(query.trim())}`);
+            onClose();
         }
+    };
+
+    const handleSearchSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        navigateToResults();
     };
 
     const handleHistoryClick = (term: string) => {
@@ -116,6 +126,16 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
         }
     };
 
+    // Navigate to full results when clicking on trending
+    const handleTrendingClick = (tag: string) => {
+        addToHistory(tag);
+        if (searchSettings.trackingEnabled) {
+            searchService.trackSearch(tag);
+        }
+        router.push(`/products?search=${encodeURIComponent(tag)}`);
+        onClose();
+    };
+
     return (
         <AnimatePresence>
             {isOpen && (
@@ -124,7 +144,7 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: '100%' }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="fixed inset-0 z-50 bg-gray-50 flex flex-col h-[100dvh] w-full overflow-hidden"
+                    className="fixed inset-0 z-[9999] bg-gray-50 flex flex-col h-[100dvh] w-full overflow-hidden"
                     dir="rtl"
                 >
                     {/* --- Header / Input Area --- */}
@@ -216,7 +236,7 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                                             {trendingSearches.map((tag: string, idx: number) => (
                                                 <button
                                                     key={idx}
-                                                    onClick={() => setQuery(tag)}
+                                                    onClick={() => handleTrendingClick(tag)}
                                                     className="px-3 py-1.5 bg-gray-100 rounded-full text-xs text-gray-600 hover:bg-[#D4AF37] hover:text-white transition-colors"
                                                 >
                                                     {tag}
@@ -230,19 +250,44 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
 
                         {/* State B: Results (With Query) */}
                         {query && (
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 {isSearching ? (
                                     <div className="flex justify-center py-10">
                                         <Loader2 className="w-6 h-6 animate-spin text-[#D4AF37]" />
                                     </div>
                                 ) : results.length === 0 ? (
                                     <div className="text-center py-10 text-gray-400">
-                                        <p>موردی یافت نشد</p>
+                                        <Search className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                                        <p className="font-medium">موردی یافت نشد</p>
+                                        <p className="text-sm mt-1">عبارت دیگری را امتحان کنید</p>
                                     </div>
                                 ) : (
-                                    results.map((product) => (
-                                        <SearchResultItem key={product.id} product={product} />
-                                    ))
+                                    <>
+                                        {/* Quick Results Header */}
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs text-gray-500">
+                                                <span className="font-bold text-gray-700">{totalResults}</span> نتیجه
+                                            </span>
+                                        </div>
+
+                                        {/* Results List */}
+                                        {results.map((product) => (
+                                            <SearchResultItem key={product.id} product={product} onClose={onClose} />
+                                        ))}
+
+                                        {/* View All Results Button */}
+                                        {totalResults > results.length && (
+                                            <motion.button
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                onClick={navigateToResults}
+                                                className="w-full mt-4 py-4 bg-gradient-to-l from-[#D4AF37] to-[#C9A033] text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#D4AF37]/20 hover:shadow-xl hover:shadow-[#D4AF37]/30 transition-all active:scale-[0.98]"
+                                            >
+                                                <span>مشاهده همه {totalResults} نتیجه</span>
+                                                <ArrowUpRight className="w-4 h-4" />
+                                            </motion.button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         )}
@@ -255,47 +300,94 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
 
 // --- Sub-components ---
 
-const SearchResultItem = ({ product }: { product: Product }) => (
-    <Link href={`/product/${product.id}`} className="block">
-        <div className="flex items-center gap-3 p-3 border-b border-gray-100 bg-white hover:bg-gray-50 transition-colors rounded-lg mb-2 shadow-sm">
-            {/* Product Image */}
-            <div className="relative w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
-                {/* Using a placeholder if image fails or is generic */}
-                <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
-                    {product.image ? (
-                        <img
-                            src={product.image}
-                            alt={product.title}
-                            className="object-cover w-full h-full"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.innerText = 'IMG';
-                            }}
-                        />
-                    ) : (
-                        <span className="text-xs">IMG</span>
-                    )}
-                </div>
-            </div>
+const SearchResultItem = ({ product, onClose }: { product: Product; onClose: () => void }) => {
+    const router = useRouter();
 
-            {/* Text Content */}
-            <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium text-gray-700 truncate text-right">
-                    {product.title}
-                </h4>
-                <div className="flex items-center justify-between mt-1">
-                    {/* Category or Meta - Gray */}
-                    <span className="text-xs text-gray-400">{product.category || 'کالای دیجیتال'}</span>
-                    {/* Price - Rich Gold */}
+    // Use slug if available, otherwise fallback to id
+    const productUrl = `/product/${product.slug || product.id}`;
+
+    const handleClick = () => {
+        router.push(productUrl);
+        onClose();
+    };
+
+    return (
+        <button onClick={handleClick} className="block w-full text-right">
+            <div className="flex items-center gap-3 p-3 border border-gray-100 bg-white hover:bg-gray-50 hover:border-[#D4AF37]/30 transition-all rounded-xl shadow-sm">
+                {/* Product Image */}
+                <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 border border-gray-100">
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
+                        {product.image ? (
+                            <img
+                                src={product.image}
+                                alt={product.title}
+                                className="object-cover w-full h-full"
+                                onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                            />
+                        ) : (
+                            <Search className="w-5 h-5 text-gray-300" />
+                        )}
+                    </div>
+                </div>
+
+                {/* Text Content */}
+                <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-medium text-gray-800 truncate">
+                        {product.title}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1.5">
+                        {/* Product Code (KY-XXXXXXX) */}
+                        <span className="text-[10px] font-mono bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded tracking-wider">
+                            {(() => {
+                                // Extract digits from SKU
+                                const skuDigits = product.sku ? product.sku.replace(/\D/g, '') : '';
+
+                                let code = '';
+                                if (skuDigits.length > 0) {
+                                    // Take last 7 digits, pad with zeros if needed
+                                    code = skuDigits.slice(-7).padStart(7, '0');
+                                } else {
+                                    // Fallback: Generate deterministic 7-digit number from ID
+                                    let hash = 0;
+                                    for (let i = 0; i < product.id.length; i++) {
+                                        hash = ((hash << 5) - hash) + product.id.charCodeAt(i);
+                                        hash |= 0;
+                                    }
+                                    code = Math.abs(hash).toString().slice(0, 7).padStart(7, '0');
+                                }
+
+                                return `KY-${code}`;
+                            })()}
+                        </span>
+
+                        {/* Category - hide if it looks like ObjectId */}
+                        {product.category && !/^[0-9a-fA-F]{24}$/.test(product.category) && (
+                            <span className="text-[10px] text-gray-400 truncate">
+                                {product.category}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Price Section */}
+                <div className="flex flex-col items-end">
+                    {product.oldPrice && product.oldPrice > product.price && (
+                        <span className="text-[10px] text-gray-400 line-through">
+                            {product.oldPrice.toLocaleString('fa-IR')}
+                        </span>
+                    )}
                     <span className="text-sm font-bold text-[#D4AF37]">
-                        {product.price.toLocaleString('fa-IR')} تومان
+                        {product.price.toLocaleString('fa-IR')}
+                        <span className="text-[10px] font-normal mr-0.5">تومان</span>
                     </span>
                 </div>
-            </div>
 
-            <ChevronLeft className="w-4 h-4 text-gray-300" />
-        </div>
-    </Link>
-);
+                <ChevronLeft className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </div>
+        </button>
+    );
+};
 
 export default MobileSearchOverlay;

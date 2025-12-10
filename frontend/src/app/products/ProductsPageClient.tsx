@@ -127,7 +127,8 @@ function ProductListingContent() {
         if (data.priceRange) {
           setPriceRange(data.priceRange);
           if (!minPriceParam && !maxPriceParam) {
-            setSliderValue([data.priceRange.min, data.priceRange.max]);
+            // User requested range to start from 0
+            setSliderValue([0, data.priceRange.max]);
           } else {
             setSliderValue([
               minPriceParam ? Number(minPriceParam) : data.priceRange.min,
@@ -203,6 +204,49 @@ function ProductListingContent() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 pt-6">
       <div className="container mx-auto max-w-7xl px-4">
+        {/* Search Results Header */}
+        {searchQuery && !brandDetails && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-gradient-to-l from-white via-white to-[#faf8f0] rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden relative"
+          >
+            {/* Decorative Pattern */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#D4AF37]/5 to-transparent" />
+
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#C9A033] flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
+                <Search className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h1 className="text-lg font-bold text-gray-900">
+                  نتایج جستجو برای{" "}
+                  <span className="text-[#D4AF37]">«{searchQuery}»</span>
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  {loading ? (
+                    <span className="inline-flex items-center gap-1">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      در حال جستجو...
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-bold text-gray-700">{total}</span> محصول پیدا شد
+                    </>
+                  )}
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/products')}
+                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <X className="w-4 h-4" />
+                حذف جستجو
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Brand Header */}
         {brandDetails && (
           <div className="mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -290,7 +334,7 @@ function ProductListingContent() {
                   <div className="px-2 mb-6">
                     <Slider
                       range
-                      min={priceRange.min}
+                      min={0}
                       max={priceRange.max}
                       value={sliderValue}
                       onChange={(val) => setSliderValue(val as [number, number])}
