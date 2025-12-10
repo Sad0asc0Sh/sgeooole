@@ -5,7 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
-import { ChevronLeft, Percent } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Percent } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "@/services/productService";
@@ -97,6 +97,7 @@ function SpecialOfferRail() {
         >
           {products.map((product) => {
             const isOutOfStock = product.countInStock === 0;
+            const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
             const hasSpecialOfferCountdown = Boolean(
               product.isSpecialOffer &&
               product.specialOfferEndTime &&
@@ -121,11 +122,11 @@ function SpecialOfferRail() {
                       {/* Product Image */}
                       <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
                         <Image
-                          src={product.image || "/placeholder.png"}
-                          alt={product.name}
-                          fill
-                          className={`object-cover group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? 'grayscale opacity-60' : ''}`}
-                        />
+                        src={product.image || "/placeholder.png"}
+                        alt={product.name}
+                        fill
+                        className={`object-cover group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                      />
 
                         {/* Badges - Only show if no header */}
                         {product.campaignLabel && (
@@ -139,8 +140,16 @@ function SpecialOfferRail() {
                           </div>
                         )}
 
+                        {/* Low Stock Badge */}
+                        {isLowStock && (
+                          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                            <AlertTriangle size={12} />
+                            <span>تنها {product.countInStock} عدد</span>
+                          </div>
+                        )}
+
                         {/* Out of Stock Overlay */}
-                        {product.countInStock === 0 && (
+                        {isOutOfStock && (
                           <div className="absolute inset-0 bg-white/40 z-10 flex items-center justify-center">
                             <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
                               ناموجود
@@ -150,7 +159,7 @@ function SpecialOfferRail() {
                       </div>
 
                       {/* Product Name */}
-                      <h3 className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${product.countInStock === 0 ? 'text-gray-400' : 'text-gray-700'}`}>
+                      <h3 className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${isOutOfStock ? 'text-gray-400' : 'text-gray-700'}`}>
                         {product.name}
                       </h3>
 
@@ -176,11 +185,11 @@ function SpecialOfferRail() {
                           )}
                         </div>
 
-                        <div className={`flex items-center justify-end gap-1 ${product.countInStock === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
+                        <div className={`flex items-center justify-end gap-1 ${isOutOfStock ? 'text-gray-400' : 'text-gray-800'}`}>
                           <span className="text-[15px] font-black tracking-tight">
                             {displayPrice.toLocaleString("fa-IR")}
                           </span>
-                          <span className={`text-[10px] font-medium ${product.countInStock === 0 ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <span className={`text-[10px] font-medium ${isOutOfStock ? 'text-gray-400' : 'text-gray-600'}`}>
                             تومان
                           </span>
                         </div>

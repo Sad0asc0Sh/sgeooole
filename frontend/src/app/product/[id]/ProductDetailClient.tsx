@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Star, ShieldCheck, Store } from "lucide-react";
+import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Product, ProductColor } from "@/services/productService";
 import CountdownTimer from "@/components/ui/CountdownTimer";
@@ -170,12 +170,27 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                         <Store size={18} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
                         <span>
-                            {product.countInStock > 0
-                                ? `موجود در انبار (${product.countInStock} عدد)`
-                                : "ناموجود"}
+                            {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
                         </span>
                     </div>
                 </div>
+
+                {/* Low Stock Warning - Only show when stock is 1, 2, or 3 */}
+                {product.countInStock > 0 && product.countInStock <= 3 && (
+                    <div className="mb-6 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                            <AlertTriangle size={20} className="text-amber-600" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-bold text-amber-800">
+                                تنها {product.countInStock} عدد باقی مانده!
+                            </span>
+                            <span className="text-xs text-amber-600">
+                                قبل از اتمام موجودی اقدام کنید
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Product Tabs (Description, Specs, Reviews) */}
                 <ProductTabs product={product} />

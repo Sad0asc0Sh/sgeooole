@@ -10,7 +10,7 @@ import { Product } from "@/services/productService";
 import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { ChevronLeft, Flame } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Flame } from "lucide-react";
 import Link from "next/link";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 
@@ -123,6 +123,9 @@ function FlashOfferRail() {
               ? product.oldPrice
               : product.price;
 
+          const isOutOfStock = product.countInStock === 0;
+          const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
+
           return (
             <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
               <Link href={buildProductUrl(product)} className="block h-full">
@@ -156,7 +159,7 @@ function FlashOfferRail() {
                         src={product.image || "/placeholder.png"}
                         alt={product.name}
                         fill
-                        className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${product.countInStock === 0 ? "grayscale opacity-60" : ""}`}
+                        className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                         loading="lazy"
                         quality={75}
@@ -173,8 +176,16 @@ function FlashOfferRail() {
                         />
                       )}
 
+                      {/* Low Stock Badge */}
+                      {isLowStock && (
+                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                          <AlertTriangle size={12} />
+                          <span>تنها {product.countInStock} عدد</span>
+                        </div>
+                      )}
+
                       {/* OUT OF STOCK OVERLAY */}
-                      {product.countInStock === 0 && (
+                      {isOutOfStock && (
                         <div className="absolute inset-0 bg-gray-900/70 z-10 flex items-center justify-center backdrop-blur-[2px]">
                           <span className="bg-gray-800 text-gray-300 border border-gray-600 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
                             ناموجود
@@ -185,18 +196,18 @@ function FlashOfferRail() {
 
                     {/* Title */}
                     <h3
-                      className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${product.countInStock === 0 ? "text-gray-500" : "text-gray-200"
+                      className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${isOutOfStock ? "text-gray-500" : "text-gray-200"
                         } group-hover:text-amber-200 transition-colors text-center`}
                     >
                       {product.name}
                     </h3>
 
                     {/* Price Section */}
-                    <div className="flex flex-col gap-1 mt-auto">
-                      {/* Row 1: Old Price (if discount and in stock) */}
-                      <div className="flex items-center justify-center h-5">
-                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
-                          <>
+                      <div className="flex flex-col gap-1 mt-auto">
+                        {/* Row 1: Old Price (if discount and in stock) */}
+                        <div className="flex items-center justify-center h-5">
+                          {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
+                            <>
                             <div className="flex items-center gap-1">
                               <div className="text-amber-950 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
                                 {effectiveDiscount.toLocaleString("fa-IR")}٪
@@ -209,18 +220,18 @@ function FlashOfferRail() {
                         ) : (
                           <div className="h-5" />
                         )}
-                      </div>
+                        </div>
 
                       {/* Row 2: Current Price */}
                       <div
-                        className={`flex items-center justify-center gap-1 ${product.countInStock === 0 ? "text-gray-500" : "text-gray-100"
+                        className={`flex items-center justify-center gap-1 ${isOutOfStock ? "text-gray-500" : "text-gray-100"
                           }`}
                       >
                         <span className="text-[15px] font-black tracking-tight text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.3)]">
                           {displayPrice.toLocaleString("fa-IR")}
                         </span>
                         <span
-                          className={`text-[10px] font-medium ${product.countInStock === 0 ? "text-gray-600" : "text-gray-400"
+                          className={`text-[10px] font-medium ${isOutOfStock ? "text-gray-600" : "text-gray-400"
                             }`}
                         >
                           تومان

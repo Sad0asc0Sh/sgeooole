@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Heart from "lucide-react/dist/esm/icons/heart";
 import Star from "lucide-react/dist/esm/icons/star";
+import AlertTriangle from "lucide-react/dist/esm/icons/alert-triangle";
 import dynamic from "next/dynamic";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
@@ -203,6 +204,14 @@ export default function ProductCard({ product }: ProductCardProps) {
                         targetDate={headerConfig.endTime}
                         color={headerConfig.color}
                     />
+                )}
+
+                {/* Low Stock Badge (Bottom Left) */}
+                {product.countInStock > 0 && product.countInStock <= 3 && (
+                    <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                        <AlertTriangle size={12} />
+                        <span>تنها {product.countInStock} عدد</span>
+                    </div>
                 )}
 
                 <Link href={buildProductUrl(product)} className="block w-full h-full">

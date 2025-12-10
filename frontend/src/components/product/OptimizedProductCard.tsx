@@ -1,6 +1,7 @@
 "use client";
 
 import React, { memo, useMemo } from "react";
+import { AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Product } from "@/services/productService";
@@ -50,6 +51,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
             : product.price;
 
         const isOutOfStock = product.countInStock === 0;
+        const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
         return {
             isFlashActive,
@@ -57,10 +59,11 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
             effectiveDiscount,
             displayPrice,
             isOutOfStock,
+            isLowStock,
         };
     }, [product, now]);
 
-    const { effectiveDiscount, displayPrice, isOutOfStock, isFlashActive, isSpecialActive } = computedValues;
+    const { effectiveDiscount, displayPrice, isOutOfStock, isLowStock, isFlashActive, isSpecialActive } = computedValues;
 
     // Theme colors based on variant
     const themeClasses = useMemo(() => {
@@ -120,10 +123,10 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                         <div className="absolute top-2 left-2 z-20">
                             <span
                                 className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"
-                                        ? "bg-gradient-to-r from-yellow-400 to-red-600"
-                                        : product.campaignTheme === "red-purple"
-                                            ? "bg-gradient-to-r from-rose-500 to-purple-700"
-                                            : "bg-gradient-to-r from-lime-500 to-orange-400"
+                                    ? "bg-gradient-to-r from-yellow-400 to-red-600"
+                                    : product.campaignTheme === "red-purple"
+                                        ? "bg-gradient-to-r from-rose-500 to-purple-700"
+                                        : "bg-gradient-to-r from-lime-500 to-orange-400"
                                     }`}
                             >
                                 {product.campaignLabel}
@@ -137,6 +140,14 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                             <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
                                 ناموجود
                             </span>
+                        </div>
+                    )}
+
+                    {/* Low Stock Badge */}
+                    {isLowStock && (
+                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                            <AlertTriangle size={12} />
+                            <span>تنها {product.countInStock} عدد</span>
                         </div>
                     )}
                 </div>
