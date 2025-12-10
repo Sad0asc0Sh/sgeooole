@@ -3,9 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Heart from "lucide-react/dist/esm/icons/heart";
-import Star from "lucide-react/dist/esm/icons/star";
-import AlertTriangle from "lucide-react/dist/esm/icons/alert-triangle";
+import { Heart, Star, AlertTriangle } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Pagination } from "swiper/modules";
 import "swiper/css";
