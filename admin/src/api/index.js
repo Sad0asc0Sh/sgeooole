@@ -14,6 +14,7 @@ export const api = axios.create({
 })
 
 // Attach Authorization header from Zustand store for all requests except login endpoints
+// Also handle FormData properly by letting browser set Content-Type automatically
 api.interceptors.request.use((config) => {
   try {
     const url = (config.url || '').toString()
@@ -24,6 +25,12 @@ api.interceptors.request.use((config) => {
         config.headers = config.headers || {}
         config.headers.Authorization = `Bearer ${token}`
       }
+    }
+
+    // CRITICAL: When sending FormData, let the browser set Content-Type automatically
+    // This ensures the correct boundary is included for multipart/form-data
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
     }
   } catch (_) { }
   return config

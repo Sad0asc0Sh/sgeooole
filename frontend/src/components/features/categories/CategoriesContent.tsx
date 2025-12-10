@@ -18,6 +18,28 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
     const [activeId, setActiveId] = useState<string | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
+    // Normalize icon/image coming from API (object or plain string, relative or absolute)
+    const resolveCategoryImage = (cat?: Partial<Category> | null) => {
+        if (!cat) return null;
+        const raw =
+            (cat as any)?.icon?.url ||
+            (cat as any)?.image?.url ||
+            (cat as any)?.icon ||
+            (cat as any)?.image;
+
+        if (typeof raw !== "string" || raw.trim() === "") return null;
+        const url = raw.trim();
+
+        // If backend returns relative path, prepend API base (same logic as products)
+        if (url.startsWith("/")) {
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+            let base = API_URL.replace(/\/api\/?$/, "");
+            base = base.replace("localhost", "127.0.0.1");
+            return `${base}${url}`;
+        }
+        return url;
+    };
+
     // Load categories on mount
     useEffect(() => {
         loadCategories();
@@ -130,10 +152,10 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                         )}
 
                         {/* Category Icon */}
-                        {cat.icon?.url ? (
+                        {resolveCategoryImage(cat) ? (
                             <div className="relative w-6 h-6">
                                 <Image
-                                    src={cat.icon.url}
+                                    src={resolveCategoryImage(cat)!}
                                     alt={cat.name}
                                     fill
                                     className="object-contain"
@@ -200,17 +222,22 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                 }}
                                                 className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-vita-600 transition-colors"
                                             >
-                                                <span className="flex items-center gap-2">
-                                                    {subCategory.icon?.url && (
-                                                        <div className="relative w-4 h-4">
-                                                            <Image
-                                                                src={subCategory.icon.url}
-                                                                alt={subCategory.name}
-                                                                fill
-                                                                className="object-contain"
-                                                            />
-                                                        </div>
-                                                    )}
+                                                <span className="flex items-center gap-3">
+                                                    {/* Subcategory Image/Icon */}
+                                                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden flex-shrink-0">
+                                                        {resolveCategoryImage(subCategory) ? (
+                                                            <div className="relative w-6 h-6">
+                                                                <Image
+                                                                    src={resolveCategoryImage(subCategory)!}
+                                                                    alt={subCategory.name}
+                                                                    fill
+                                                                    className="object-contain"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <Package size={20} className="text-gray-300" />
+                                                        )}
+                                                    </div>
                                                     {subCategory.name}
                                                 </span>
                                                 {hasGrandChildren ? (
@@ -236,10 +263,10 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                 className="flex flex-col items-center gap-2 cursor-pointer group w-full"
                                                             >
                                                                 <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-vita-200 transition-colors overflow-hidden">
-                                                                    {item.image?.url ? (
+                                                                    {resolveCategoryImage(item) ? (
                                                                         <div className="relative w-full h-full">
                                                                             <Image
-                                                                                src={item.image.url}
+                                                                                src={resolveCategoryImage(item)!}
                                                                                 alt={item.name}
                                                                                 fill
                                                                                 className="object-cover rounded-full"

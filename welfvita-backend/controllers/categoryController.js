@@ -222,6 +222,13 @@ exports.createCategory = async (req, res) => {
   try {
     const { name, parent, description, isFeatured, isPopular, properties } = req.body
 
+    // DEBUG: Log received files
+    console.log('[CREATE_CATEGORY] Received files:', {
+      hasFiles: !!req.files,
+      iconFile: req.files?.icon?.[0] ? { path: req.files.icon[0].path, filename: req.files.icon[0].filename } : null,
+      imageFile: req.files?.image?.[0] ? { path: req.files.image[0].path, filename: req.files.image[0].filename } : null,
+    })
+
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -277,6 +284,15 @@ exports.createCategory = async (req, res) => {
 // PUT /api/categories/:id
 exports.updateCategory = async (req, res) => {
   try {
+    // DEBUG: Log received files for update
+    console.log('[UPDATE_CATEGORY] Received files:', {
+      categoryId: req.params.id,
+      hasFiles: !!req.files,
+      iconFile: req.files?.icon?.[0] ? { path: req.files.icon[0].path, filename: req.files.icon[0].filename } : null,
+      imageFile: req.files?.image?.[0] ? { path: req.files.image[0].path, filename: req.files.image[0].filename } : null,
+      bodyKeys: Object.keys(req.body),
+    })
+
     const category = await Category.findById(req.params.id)
 
     if (!category) {

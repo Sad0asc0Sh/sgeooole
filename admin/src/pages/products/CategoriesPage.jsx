@@ -111,14 +111,12 @@ function CategoriesPage() {
       formData.append('properties', JSON.stringify(properties))
 
       if (editingCategory && editingCategory._id) {
-        await api.put(`/categories/${editingCategory._id}`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        // Let axios handle Content-Type automatically for FormData (includes boundary)
+        await api.put(`/categories/${editingCategory._id}`, formData)
         message.success('دسته‌بندی با موفقیت ویرایش شد')
       } else {
-        await api.post('/categories', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        })
+        // Let axios handle Content-Type automatically for FormData (includes boundary)
+        await api.post('/categories', formData)
         message.success('دسته‌بندی با موفقیت ایجاد شد')
       }
 
