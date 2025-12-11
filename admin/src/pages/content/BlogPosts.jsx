@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import { Editor } from '@tinymce/tinymce-react'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -41,6 +40,10 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${day} ${month} ${year}`
 }
 
+// TinyMCE API Key - برای استفاده رایگان می‌توانید از کلید رایگان استفاده کنید
+// ثبت‌نام رایگان در: https://www.tiny.cloud/auth/signup/
+const TINYMCE_API_KEY = 'no-api-key'
+
 function BlogPosts() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(false)
@@ -58,12 +61,13 @@ function BlogPosts() {
   const [postForm] = Form.useForm()
   const [editingPost, setEditingPost] = useState(null)
   const [savingPost, setSavingPost] = useState(false)
+  const editorRef = useRef(null)
 
   const fetchCategories = async () => {
     try {
       const res = await api.get('/blog/categories')
       setCategories(res?.data?.data || [])
-    } catch (_) {}
+    } catch (_) { }
   }
 
   const fetchPosts = async (page = pagination.current, pageSize = pagination.pageSize) => {
@@ -91,13 +95,13 @@ function BlogPosts() {
   const columns = [
     { title: 'عنوان', dataIndex: 'title', key: 'title' },
     { title: 'دسته', key: 'category', render: (_, r) => r.category?.name || '-' },
-    { title: 'وضعیت', dataIndex: 'status', key: 'status', render: (s)=> <Tag color={s==='published'?'green':'orange'}>{s}</Tag> },
-    { title: 'ایجاد', dataIndex: 'createdAt', key: 'createdAt', render: (d)=> formatPersianDate(d, true) },
+    { title: 'وضعیت', dataIndex: 'status', key: 'status', render: (s) => <Tag color={s === 'published' ? 'green' : 'orange'}>{s}</Tag> },
+    { title: 'ایجاد', dataIndex: 'createdAt', key: 'createdAt', render: (d) => formatPersianDate(d, true) },
     {
       title: 'عملیات', key: 'actions', render: (_, r) => (
         <Space>
-          <Button size="small" onClick={()=>onEditPost(r)}>ویرایش</Button>
-          <Popconfirm title="حذف این پست؟" onConfirm={()=>onDeletePost(r._id)}>
+          <Button size="small" onClick={() => onEditPost(r)}>ویرایش</Button>
+          <Popconfirm title="حذف این پست؟" onConfirm={() => onDeletePost(r._id)}>
             <Button size="small" danger>حذف</Button>
           </Popconfirm>
         </Space>
@@ -113,7 +117,7 @@ function BlogPosts() {
   const onNewPost = () => {
     setEditingPost(null)
     postForm.resetFields()
-    postForm.setFieldsValue({ status: 'draft' })
+    postForm.setFieldsValue({ status: 'draft', content: '' })
     setPostOpen(true)
   }
 
@@ -146,15 +150,17 @@ function BlogPosts() {
   const savePost = async () => {
     try {
       const values = await postForm.validateFields()
+      // دریافت محتوا از ادیتور TinyMCE
+      const content = editorRef.current ? editorRef.current.getContent() : values.content
       setSavingPost(true)
       const payload = {
         title: values.title,
         slug: values.slug,
         category: values.category || undefined,
-        tags: values.tags ? String(values.tags).split(',').map(t=>t.trim()).filter(Boolean) : [],
+        tags: values.tags ? String(values.tags).split(',').map(t => t.trim()).filter(Boolean) : [],
         status: values.status,
         featuredImage: values.featuredImageUrl ? { url: values.featuredImageUrl } : undefined,
-        content: values.content,
+        content: content,
         meta: { title: values.metaTitle, description: values.metaDescription },
       }
       if (editingPost) {
@@ -213,7 +219,7 @@ function BlogPosts() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1>پست‌های بلاگ</h1>
         <Space>
-          <Input placeholder="جستجو" allowClear style={{ width: 200 }} onChange={(e)=>setSearch(e.target.value)} onPressEnter={()=>fetchPosts(1,pagination.pageSize)} onBlur={()=>fetchPosts(1,pagination.pageSize)} />
+          <Input placeholder="جستجو" allowClear style={{ width: 200 }} onChange={(e) => setSearch(e.target.value)} onPressEnter={() => fetchPosts(1, pagination.pageSize)} onBlur={() => fetchPosts(1, pagination.pageSize)} />
           <Select placeholder="وضعیت" allowClear style={{ width: 140 }} onChange={setStatus}>
             <Select.Option value="draft">draft</Select.Option>
             <Select.Option value="published">published</Select.Option>
@@ -221,7 +227,7 @@ function BlogPosts() {
           <Select placeholder="دسته‌بندی" allowClear style={{ width: 200 }} onChange={setCategory}>
             {categories.map(c => <Select.Option key={c._id} value={c._id}>{c.name}</Select.Option>)}
           </Select>
-          <Button onClick={()=>fetchPosts(1,pagination.pageSize)}>اعمال</Button>
+          <Button onClick={() => fetchPosts(1, pagination.pageSize)}>اعمال</Button>
           <Button type="primary" onClick={onNewPost}>پست جدید</Button>
           <Button onClick={onNewCategory}>مدیریت دسته‌بندی</Button>
         </Space>
@@ -238,7 +244,7 @@ function BlogPosts() {
       </Card>
 
       {/* Post Modal */}
-      <Modal open={postOpen} onCancel={()=>setPostOpen(false)} onOk={savePost} okText={editingPost?'ذخیره':'ایجاد'} confirmLoading={savingPost} title={editingPost?'ویرایش پست':'پست جدید'} width={900}>
+      <Modal open={postOpen} onCancel={() => setPostOpen(false)} onOk={savePost} okText={editingPost ? 'ذخیره' : 'ایجاد'} confirmLoading={savingPost} title={editingPost ? 'ویرایش پست' : 'پست جدید'} width={900}>
         <Form layout="vertical" form={postForm}>
           <Form.Item name="title" label="عنوان" rules={[{ required: true, message: 'عنوان را وارد کنید' }]}>
             <Input />
@@ -260,7 +266,30 @@ function BlogPosts() {
           </Form.Item>
           <Form.Item name="featuredImageUrl" label="آدرس تصویر شاخص"><Input placeholder="https://..." /></Form.Item>
           <Form.Item name="content" label="محتوا" rules={[{ required: true, message: 'محتوا را وارد کنید' }]}>
-            <ReactQuill theme="snow" style={{ height: 240 }} />
+            <Editor
+              apiKey={TINYMCE_API_KEY}
+              onInit={(evt, editor) => editorRef.current = editor}
+              initialValue={postForm.getFieldValue('content') || ''}
+              init={{
+                height: 350,
+                menubar: true,
+                directionality: 'rtl',
+                language: 'fa',
+                plugins: [
+                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                  'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                  'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                ],
+                toolbar: 'undo redo | blocks | ' +
+                  'bold italic forecolor | alignleft aligncenter ' +
+                  'alignright alignjustify | bullist numlist outdent indent | ' +
+                  'removeformat | link image | help',
+                content_style: 'body { font-family: Vazirmatn, Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }',
+              }}
+              onEditorChange={(content) => {
+                postForm.setFieldsValue({ content })
+              }}
+            />
           </Form.Item>
           <Form.Item name="metaTitle" label="Meta Title"><Input /></Form.Item>
           <Form.Item name="metaDescription" label="Meta Description"><Input.TextArea rows={2} /></Form.Item>
@@ -268,7 +297,7 @@ function BlogPosts() {
       </Modal>
 
       {/* Category Modal */}
-      <Modal open={catOpen} onCancel={()=>setCatOpen(false)} onOk={saveCategory} okText={editingCat?'ذخیره':'ایجاد'} title="مدیریت دسته‌بندی">
+      <Modal open={catOpen} onCancel={() => setCatOpen(false)} onOk={saveCategory} okText={editingCat ? 'ذخیره' : 'ایجاد'} title="مدیریت دسته‌بندی">
         <Form layout="vertical" form={catForm}>
           <Form.Item name="name" label="نام" rules={[{ required: true, message: 'نام را وارد کنید' }]}>
             <Input />
@@ -280,8 +309,8 @@ function BlogPosts() {
             <div key={c._id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f0f0f0' }}>
               <span>{c.name}</span>
               <Space>
-                <Button size="small" onClick={()=>onEditCategory(c)}>ویرایش</Button>
-                <Popconfirm title="حذف این دسته؟" onConfirm={()=>deleteCategory(c._id)}>
+                <Button size="small" onClick={() => onEditCategory(c)}>ویرایش</Button>
+                <Popconfirm title="حذف این دسته؟" onConfirm={() => deleteCategory(c._id)}>
                   <Button danger size="small">حذف</Button>
                 </Popconfirm>
               </Space>
@@ -294,4 +323,3 @@ function BlogPosts() {
 }
 
 export default BlogPosts
-
