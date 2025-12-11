@@ -463,6 +463,107 @@ router.put('/admin/reset-password/:token', async (req, res) => {
 })
 
 // ============================================
+// PUT /api/auth/admin/profile
+// به‌روزرسانی پروفایل ادمین (نام، ایمیل، رمز عبور)
+// ============================================
+router.put('/admin/profile', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'توکن ارسال نشده است.',
+      })
+    }
+
+    const token = authHeader.split(' ')[1]
+    const decoded = jwt.verify(token, JWT_SECRET)
+
+    // پیدا کردن ادمین با select password برای امکان به‌روزرسانی
+    const admin = await Admin.findById(decoded.id).select('+password')
+
+    if (!admin || !admin.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'کاربر ادمین یافت نشد یا غیرفعال است.',
+      })
+    }
+
+    // بررسی نقش ادمین
+    const adminRoles = ['admin', 'manager', 'superadmin']
+    if (!adminRoles.includes(admin.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'شما دسترسی لازم برای این عملیات را ندارید.',
+      })
+    }
+
+    const { name, email, password } = req.body
+
+    // به‌روزرسانی نام
+    if (name && name.trim()) {
+      admin.name = name.trim()
+    }
+
+    // به‌روزرسانی ایمیل (با بررسی یکتایی)
+    if (email && email.trim() && email !== admin.email) {
+      const existingAdmin = await Admin.findOne({ email: email.trim(), _id: { $ne: admin._id } })
+      if (existingAdmin) {
+        return res.status(409).json({
+          success: false,
+          message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.',
+        })
+      }
+      admin.email = email.trim()
+    }
+
+    // به‌روزرسانی رمز عبور (اگر ارسال شده باشد)
+    if (password && password.trim()) {
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
+        })
+      }
+      admin.password = password
+    }
+
+    await admin.save()
+
+    console.log('Admin profile updated:', admin.email)
+
+    res.status(200).json({
+      success: true,
+      message: 'پروفایل با موفقیت به‌روزرسانی شد.',
+      data: admin.toJSON(),
+    })
+  } catch (error) {
+    console.error('Error updating admin profile:', error)
+
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        success: false,
+        message: 'توکن نامعتبر است.',
+      })
+    }
+
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'توکن منقضی شده است - لطفاً مجدداً وارد شوید.',
+      })
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'خطا در به‌روزرسانی پروفایل.',
+      error: error.message,
+    })
+  }
+})
+
+// ============================================
 // PUT /api/auth/me/update
 // به‌روزرسانی اطلاعات پروفایل (نام، ایمیل، رمز عبور)
 // ============================================

@@ -58,7 +58,7 @@ const AuditLogs = lazy(() => import('./pages/reports/AuditLogs'))
 const AdminsPage = lazy(() => import('./pages/admins/AdminsPage'))
 
 // Profile
-const UserProfilePage = lazy(() => import('./pages/profile/UserProfilePage'))
+const AdminProfilePage = lazy(() => import('./pages/profile/AdminProfilePage'))
 
 // Auth Pages (Password Reset)
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
@@ -188,7 +188,7 @@ function App() {
                     />
 
                     {/* Profile */}
-                    <Route path="/profile" element={<UserProfilePage />} />
+                    <Route path="/profile" element={<AdminProfilePage />} />
 
                     {/* 404 */}
                     <Route path="*" element={<Navigate to="/" />} />

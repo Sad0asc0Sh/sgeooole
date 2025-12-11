@@ -283,7 +283,7 @@ function MainLayout({ children }) {
       {
         key: 'profile',
         icon: <UserOutlined />,
-        label: <Link to="/profile">اطلاعات حساب کاربری</Link>,
+        label: <Link to="/profile">پروفایل</Link>,
       },
       // Settings - Only for manager and superadmin
       ...(isManagerOrSuperAdmin

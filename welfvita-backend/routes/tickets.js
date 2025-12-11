@@ -4,12 +4,21 @@ const router = express.Router()
 const {
   createTicket,
   getMyTickets,
+  getMyTicketById,
+  postReplyAsUser,
   getAllTicketsAsAdmin,
   getTicketByIdAsAdmin,
   postReplyAsAdmin,
   updateTicketStatus,
 } = require('../controllers/ticketController')
 const { protect, authorize } = require('../middleware/auth')
+
+// --- روت‌های مشتری (برای فرانت‌اند سایت) ---
+// این روت‌ها باید قبل از /:id تعریف شوند
+router.get('/my-tickets', protect, getMyTickets)
+router.get('/my-tickets/:id', protect, getMyTicketById)
+router.post('/my-tickets/:id/reply', protect, postReplyAsUser)
+router.post('/', protect, createTicket)
 
 // --- روت‌های ادمین ---
 router.get(
@@ -48,9 +57,4 @@ router.put(
   updateTicketStatus,
 )
 
-// --- روت‌های مشتری (برای فرانت‌اند سایت) ---
-router.post('/', protect, createTicket)
-router.get('/my-tickets', protect, getMyTickets)
-
 module.exports = router
-

@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { Wrench } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useRouter } from "next/navigation";
 
 export default function ServicesWidget() {
     const [isExpanded, setIsExpanded] = useState(true);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const router = useRouter();
 
     // Auto-collapse on mount
     useEffect(() => {
@@ -27,6 +29,11 @@ export default function ServicesWidget() {
             setIsExpanded(true); // Keep expanded while sheet is open
         }
     }, [isSheetOpen]);
+
+    const handleNavigate = (path: string) => {
+        setIsSheetOpen(false);
+        router.push(path);
+    };
 
     return (
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
@@ -51,9 +58,24 @@ export default function ServicesWidget() {
                     <SheetTitle className="text-center font-bold font-sans">خدمات ویلف‌ویتا</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
-                    <div className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100">پیگیری سفارش</div>
-                    <div className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100">اسمبل هوشمند</div>
-                    <div className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100">پشتیبانی</div>
+                    <div
+                        onClick={() => handleNavigate("/profile/orders")}
+                        className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
+                    >
+                        پیگیری سفارش
+                    </div>
+                    <div
+                        onClick={() => handleNavigate("/smart-assembly")}
+                        className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
+                    >
+                        اسمبل هوشمند
+                    </div>
+                    <div
+                        onClick={() => handleNavigate("/profile/tickets")}
+                        className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
+                    >
+                        پشتیبانی
+                    </div>
                 </div>
             </SheetContent>
         </Sheet>

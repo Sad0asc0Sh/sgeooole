@@ -47,9 +47,9 @@ exports.getAllTicketsAsAdmin = async (req, res) => {
       const orderWithNumber =
         order && order._id
           ? {
-              ...order,
-              orderNumber: order._id.toString().slice(-8),
-            }
+            ...order,
+            orderNumber: order._id.toString().slice(-8),
+          }
           : order
 
       return {
@@ -288,6 +288,101 @@ exports.getMyTickets = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'خطا در دریافت تیکت‌های شما',
+      error: error.message,
+    })
+  }
+}
+
+// جزئیات یک تیکت برای کاربر (فقط تیکت‌های خودش)
+exports.getMyTicketById = async (req, res) => {
+  try {
+    const ticket = await Ticket.findOne({
+      _id: req.params.id,
+      user: req.user._id, // فقط تیکت‌های خود کاربر
+    })
+      .populate('messages.sender', 'name email')
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'تیکت یافت نشد',
+      })
+    }
+
+    const obj = ticket.toObject()
+
+    // اضافه کردن timestamp برای سازگاری با UI
+    obj.messages = (obj.messages || []).map((m) => ({
+      ...m,
+      timestamp: m.createdAt,
+    }))
+
+    res.json({
+      success: true,
+      data: obj,
+    })
+  } catch (error) {
+    console.error('Error fetching user ticket:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت تیکت',
+      error: error.message,
+    })
+  }
+}
+
+// پاسخ کاربر به تیکت خودش
+exports.postReplyAsUser = async (req, res) => {
+  try {
+    const { message } = req.body || {}
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'متن پاسخ نمی‌تواند خالی باشد',
+      })
+    }
+
+    const ticket = await Ticket.findOne({
+      _id: req.params.id,
+      user: req.user._id, // فقط تیکت‌های خود کاربر
+    })
+
+    if (!ticket) {
+      return res.status(404).json({
+        success: false,
+        message: 'تیکت یافت نشد',
+      })
+    }
+
+    // اگر تیکت بسته شده باشد، کاربر نمی‌تواند پاسخ دهد
+    if (ticket.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        message: 'تیکت بسته شده است و امکان ارسال پاسخ وجود ندارد',
+      })
+    }
+
+    ticket.messages.push({
+      sender: req.user._id,
+      message: message.trim(),
+      isAdminReply: false,
+    })
+
+    // پس از پاسخ کاربر، وضعیت را به open تغییر می‌دهیم
+    ticket.status = 'open'
+
+    const saved = await ticket.save()
+
+    res.json({
+      success: true,
+      message: 'پاسخ با موفقیت ثبت شد',
+      data: saved,
+    })
+  } catch (error) {
+    console.error('Error posting user reply:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در ثبت پاسخ',
       error: error.message,
     })
   }

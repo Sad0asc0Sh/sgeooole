@@ -1,10 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Loader2 from "lucide-react/dist/esm/icons/loader-2";
-import Minus from "lucide-react/dist/esm/icons/minus";
-import Plus from "lucide-react/dist/esm/icons/plus";
-import Trash2 from "lucide-react/dist/esm/icons/trash-2";
+import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Product, ProductColor } from "@/services/productService";
 import { useCart } from "@/hooks/useCart";
 

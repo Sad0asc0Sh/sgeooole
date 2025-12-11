@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     Edit2, Wallet, ChevronLeft, Box, CheckCircle2, XCircle, RefreshCcw,
-    UserCheck, Heart, MessageSquare, MapPin, Bell, Clock, LogOut, Camera, Lock, Mail, User as UserIcon
+    UserCheck, Heart, MessageSquare, MapPin, Bell, Clock, LogOut, Camera, Lock, Mail, User as UserIcon, Headphones
 } from "lucide-react";
 import { authService, User } from "@/services/authService";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -355,6 +355,7 @@ export default function ProfilePage() {
         },
         { icon: Heart, label: "علاقه‌مندی‌ها", href: "/profile/lists" },
         { icon: MessageSquare, label: "نقد و نظرات", href: "/profile/reviews" },
+        { icon: Headphones, label: "پشتیبانی", href: "/profile/tickets" },
         { icon: MapPin, label: "آدرس‌ها", href: "/profile/addresses" },
         { icon: Bell, label: "پیغام‌ها", badge: unreadCount > 0 ? unreadCount : undefined, href: "/profile/messages" },
         { icon: Clock, label: "بازدیدهای اخیر", href: "/profile/recent" },

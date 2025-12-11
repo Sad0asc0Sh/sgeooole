@@ -203,11 +203,11 @@ export default function OrderDetailPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                                    <p className="text-xs text-gray-500">تعداد: {item.qty}</p>
+                                    <p className="text-xs text-gray-500">تعداد: {item.quantity}</p>
                                 </div>
                                 <div className="text-left">
                                     <p className="text-sm font-bold text-gray-900">
-                                        {(item.price * item.qty).toLocaleString("fa-IR")}
+                                        {(item.price * item.quantity).toLocaleString("fa-IR")}
                                     </p>
                                     <p className="text-xs text-gray-500">تومان</p>
                                 </div>
