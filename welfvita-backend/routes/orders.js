@@ -12,6 +12,14 @@ const {
 } = require('../controllers/orderController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
+// Joi Validation
+const validate = require('../middleware/validate')
+const {
+  orderCreateSchema,
+  orderStatusUpdateSchema,
+  orderListQuerySchema,
+} = require('../validators/joiSchemas/orderSchemas')
+
 // ============================================
 // Customer-Facing Routes
 // ============================================
@@ -23,7 +31,7 @@ router.get('/my-stats', protect, getMyOrderStats)
 router.get('/my-orders', protect, getMyOrders)
 
 // POST /api/orders - ایجاد سفارش جدید
-router.post('/', protect, createOrder)
+router.post('/', protect, validate(orderCreateSchema), createOrder)
 
 // ============================================
 // Payment Routes
@@ -55,6 +63,7 @@ router.put(
   '/:id/status',
   protect,
   checkPermission(PERMISSIONS.ORDER_UPDATE_STATUS),
+  validate(orderStatusUpdateSchema),
   updateOrderStatus,
 )
 

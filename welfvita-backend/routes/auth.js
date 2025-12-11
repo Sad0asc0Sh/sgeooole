@@ -6,6 +6,19 @@ const Admin = require('../models/Admin')
 const { sendResetPasswordEmail } = require('../utils/notificationService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload } = require('../middleware/upload')
+
+// Joi Validation
+const validate = require('../middleware/validate')
+const {
+  loginSchema,
+  registerSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  updateProfileSchema,
+  sendOtpSchema,
+  verifyOtpSchema,
+} = require('../validators/joiSchemas/authSchemas')
+const { addressSchema, addressUpdateSchema } = require('../validators/joiSchemas/userSchemas')
 // const { updateMyProfile, updateMyAvatar } = require('../controllers/authController') // REMOVED: This was for Admin
 const {
   sendOtp,
@@ -75,11 +88,11 @@ router.use((req, res, next) => {
 
 // POST /api/auth/send-otp
 // Send OTP code to customer mobile number
-router.post('/send-otp', sendOtp)
+router.post('/send-otp', validate(sendOtpSchema), sendOtp)
 
 // POST /api/auth/verify-otp
 // Verify OTP and login customer
-router.post('/verify-otp', verifyOtp)
+router.post('/verify-otp', validate(verifyOtpSchema), verifyOtp)
 
 // POST /api/auth/google
 // Google Login - Verify Google ID token and login/register user
@@ -87,15 +100,15 @@ router.post('/google', googleLogin)
 
 // POST /api/auth/login-password
 // Login with username/mobile/email + password
-router.post('/login-password', loginWithPassword)
+router.post('/login-password', validate(loginSchema), loginWithPassword)
 
 // POST /api/auth/forgot-password
 // Send password reset email to customer
-router.post('/forgot-password', forgotPassword)
+router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword)
 
 // PUT /api/auth/reset-password/:token
 // Reset customer password using token from email
-router.put('/reset-password/:token', resetPassword)
+router.put('/reset-password/:token', validate(resetPasswordSchema), resetPassword)
 
 // PUT /api/auth/complete-profile
 // Complete profile by setting password and username (requires authentication)
@@ -111,7 +124,7 @@ router.get('/profile', protect, getCustomerProfile)
 
 // PUT /api/auth/me/update
 // Update customer profile (name, email, password)
-router.put('/me/update', protect, updateProfile)
+router.put('/me/update', protect, validate(updateProfileSchema), updateProfile)
 
 // POST /api/auth/bind-mobile/send-otp
 router.post('/bind-mobile/send-otp', protect, sendBindOtp)
@@ -131,11 +144,11 @@ router.put('/me/avatar', protect, upload.single('avatar'), updateAvatar)
 
 // POST /api/auth/addresses
 // Add new address
-router.post('/addresses', protect, addAddress)
+router.post('/addresses', protect, validate(addressSchema), addAddress)
 
 // PUT /api/auth/addresses/:addressId
 // Update address
-router.put('/addresses/:addressId', protect, updateAddress)
+router.put('/addresses/:addressId', protect, validate(addressUpdateSchema), updateAddress)
 
 // DELETE /api/auth/addresses/:addressId
 // Delete address

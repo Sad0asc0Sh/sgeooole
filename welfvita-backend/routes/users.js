@@ -8,6 +8,13 @@ const {
 } = require('../controllers/userController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
+// Joi Validation
+const validate = require('../middleware/validate')
+const {
+  userUpdateSchema,
+  userListQuerySchema,
+} = require('../validators/joiSchemas/userSchemas')
+
 // ============================================
 // GET /api/users/admin/all - دریافت لیست تمام کاربران
 // مجوز مورد نیاز: USER_READ_ALL
@@ -22,6 +29,7 @@ router.get(
   '/admin/all',
   protect,
   checkPermission(PERMISSIONS.USER_READ_ALL),
+  validate(userListQuerySchema, { source: 'query' }),
   getAllUsersAsAdmin,
 )
 
@@ -50,6 +58,7 @@ router.put(
   '/admin/:id',
   protect,
   checkPermission(PERMISSIONS.USER_UPDATE),
+  validate(userUpdateSchema),
   updateUserAsAdmin,
 )
 

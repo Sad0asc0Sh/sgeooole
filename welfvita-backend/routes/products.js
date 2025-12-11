@@ -14,6 +14,14 @@ const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, cloudinary } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix } = require('../middleware/cache')
 
+// Joi Validation
+const validate = require('../middleware/validate')
+const {
+  productCreateSchema,
+  productUpdateSchema,
+  productListQuerySchema,
+} = require('../validators/joiSchemas/productSchemas')
+
 // Multer configuration for CSV upload (local storage)
 const csvStorage = multer.diskStorage({
   destination: (req, file, cb) => {
