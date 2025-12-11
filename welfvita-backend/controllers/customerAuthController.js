@@ -5,7 +5,6 @@ const { OAuth2Client } = require('google-auth-library')
 const User = require('../models/User')
 const OTP = require('../models/OTP')
 const Order = require('../models/Order')
-const RMA = require('../models/RMA')
 const { sendVerificationEmail, sendOtpSMS } = require('../utils/notificationService')
 
 // JWT configuration
@@ -168,10 +167,15 @@ exports.getProfile = async (req, res) => {
     if (!user.isActive) {
       return res.status(403).json({ success: false, message: 'حساب کاربری غیرفعال است.' })
     }
-    const [processingCount, deliveredCount, cancelledCount, returnedCount] = await Promise.all([
+
+    const [pendingCount, processingCount, deliveredCount, cancelledCount] = await Promise.all([
       Order.countDocuments({
         user: user._id,
-        orderStatus: { $in: ['Pending', 'Processing', 'Shipped'] },
+        orderStatus: 'Pending',
+      }),
+      Order.countDocuments({
+        user: user._id,
+        orderStatus: { $in: ['Processing', 'Shipped'] },
       }),
       Order.countDocuments({
         user: user._id,
@@ -181,12 +185,9 @@ exports.getProfile = async (req, res) => {
         user: user._id,
         orderStatus: 'Cancelled',
       }),
-      RMA.countDocuments({
-        user: user._id,
-      }),
     ])
 
-    // ✅ FIX: Return complete user profile including personal and legal info
+    // Return complete user profile including personal and legal info
     res.json({
       success: true,
       data: {
@@ -221,9 +222,9 @@ exports.getProfile = async (req, res) => {
         companyProvince: user.companyProvince,
         companyCity: user.companyCity,
         orderStats: {
+          pending: pendingCount,
           processing: processingCount,
           delivered: deliveredCount,
-          returned: returnedCount,
           cancelled: cancelledCount,
         },
       },

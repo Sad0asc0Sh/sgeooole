@@ -5,13 +5,24 @@ const {
     markAsRead,
     sendNotification,
 } = require('../controllers/notificationController')
-const { protect, admin } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-// User routes
+// ============================================
+// User Routes (برای کاربران لاگین شده)
+// ============================================
+
+// GET /api/notifications - دریافت نوتیفیکیشن‌های کاربر
 router.get('/', protect, getUserNotifications)
+
+// PUT /api/notifications/:id/read - علامت‌گذاری به عنوان خوانده شده
 router.put('/:id/read', protect, markAsRead)
 
-// Admin routes
-router.post('/send', protect, admin, sendNotification)
+// ============================================
+// Admin Routes (نیاز به مجوز)
+// ============================================
+
+// POST /api/notifications/send - ارسال نوتیفیکیشن (فقط ادمین)
+router.post('/send', protect, checkPermission(PERMISSIONS.ANNOUNCEMENT_CREATE), sendNotification)
 
 module.exports = router
+

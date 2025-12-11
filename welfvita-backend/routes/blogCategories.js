@@ -7,15 +7,27 @@ const {
   updateCategory,
   deleteCategory,
 } = require('../controllers/blogCategoryController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-// GET همه دسته‌بندی‌ها (عمومی)
+// ============================================
+// روت عمومی
+// ============================================
 router.get('/', getCategories)
 
-// CRUD ادمین
-router.post('/', protect, authorize('admin', 'manager', 'superadmin'), createCategory)
-router.put('/:id', protect, authorize('admin', 'manager', 'superadmin'), updateCategory)
-router.delete('/:id', protect, authorize('admin', 'manager', 'superadmin'), deleteCategory)
+// ============================================
+// روت‌های ادمین - مدیریت دسته‌بندی مقالات
+// مجوزهای مورد نیاز: BLOG_CREATE, BLOG_UPDATE, BLOG_DELETE
+// ============================================
+
+// POST /api/blog-categories - ایجاد دسته‌بندی جدید
+router.post('/', protect, checkPermission(PERMISSIONS.BLOG_CREATE), createCategory)
+
+// PUT /api/blog-categories/:id - ویرایش دسته‌بندی
+router.put('/:id', protect, checkPermission(PERMISSIONS.BLOG_UPDATE), updateCategory)
+
+// DELETE /api/blog-categories/:id - حذف دسته‌بندی
+router.delete('/:id', protect, checkPermission(PERMISSIONS.BLOG_DELETE), deleteCategory)
 
 module.exports = router
+
 

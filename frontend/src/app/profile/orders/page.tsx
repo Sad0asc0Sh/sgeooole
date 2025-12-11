@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, Search, RefreshCcw, Filter } from "lucide-react";
+import { ChevronRight, Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, Search, CreditCard, Filter } from "lucide-react";
 import { authService } from "@/services/authService";
 
 interface Order {
@@ -14,7 +14,7 @@ interface Order {
     shippingAddress: any;
 }
 
-type TabType = 'current' | 'delivered' | 'returned' | 'cancelled';
+type TabType = 'pending' | 'current' | 'delivered' | 'cancelled';
 
 export default function OrdersPage() {
     const router = useRouter();
@@ -28,7 +28,7 @@ export default function OrdersPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
-        if (statusParam && ['current', 'delivered', 'returned', 'cancelled'].includes(statusParam)) {
+        if (statusParam && ['pending', 'current', 'delivered', 'cancelled'].includes(statusParam)) {
             setActiveTab(statusParam as TabType);
         }
     }, [statusParam]);
@@ -55,7 +55,7 @@ export default function OrdersPage() {
     const getStatusInfo = (status: string) => {
         switch (status) {
             case 'Pending':
-                return { label: 'ثبت سفارش', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock };
+                return { label: 'در انتظار پرداخت', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock };
             case 'Processing':
                 return { label: 'درحال پردازش', color: 'text-blue-600', bg: 'bg-blue-50', icon: Box };
             case 'Shipped':
@@ -64,8 +64,6 @@ export default function OrdersPage() {
                 return { label: 'تحویل شده', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle2 };
             case 'Cancelled':
                 return { label: 'لغو شده', color: 'text-red-600', bg: 'bg-red-50', icon: XCircle };
-            case 'Returned':
-                return { label: 'مرجوع شده', color: 'text-orange-600', bg: 'bg-orange-50', icon: RefreshCcw };
             default:
                 return { label: status, color: 'text-gray-600', bg: 'bg-gray-50', icon: AlertCircle };
         }
@@ -76,12 +74,12 @@ export default function OrdersPage() {
         let filtered = orders;
 
         // 1. Filter by Tab
-        if (activeTab === 'current') {
-            filtered = filtered.filter(o => ['Pending', 'Processing', 'Shipped'].includes(o.orderStatus));
+        if (activeTab === 'pending') {
+            filtered = filtered.filter(o => o.orderStatus === 'Pending');
+        } else if (activeTab === 'current') {
+            filtered = filtered.filter(o => ['Processing', 'Shipped'].includes(o.orderStatus));
         } else if (activeTab === 'delivered') {
             filtered = filtered.filter(o => o.orderStatus === 'Delivered');
-        } else if (activeTab === 'returned') {
-            filtered = filtered.filter(o => o.orderStatus === 'Returned');
         } else if (activeTab === 'cancelled') {
             filtered = filtered.filter(o => o.orderStatus === 'Cancelled');
         }
@@ -101,17 +99,17 @@ export default function OrdersPage() {
     // Counts for Tabs
     const counts = useMemo(() => {
         return {
-            current: orders.filter(o => ['Pending', 'Processing', 'Shipped'].includes(o.orderStatus)).length,
+            pending: orders.filter(o => o.orderStatus === 'Pending').length,
+            current: orders.filter(o => ['Processing', 'Shipped'].includes(o.orderStatus)).length,
             delivered: orders.filter(o => o.orderStatus === 'Delivered').length,
-            returned: orders.filter(o => o.orderStatus === 'Returned').length,
             cancelled: orders.filter(o => o.orderStatus === 'Cancelled').length,
         };
     }, [orders]);
 
     const tabs = [
+        { id: 'pending', label: 'در انتظار پرداخت', count: counts.pending },
         { id: 'current', label: 'جاری', count: counts.current },
         { id: 'delivered', label: 'تحویل شده', count: counts.delivered },
-        { id: 'returned', label: 'مرجوعی', count: counts.returned },
         { id: 'cancelled', label: 'لغو شده', count: counts.cancelled },
     ];
 

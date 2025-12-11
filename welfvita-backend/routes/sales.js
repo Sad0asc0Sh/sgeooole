@@ -7,15 +7,29 @@ const {
   updateSale,
   deleteSale,
 } = require('../controllers/saleController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+
+// ============================================
+// روت‌های ادمین - مدیریت کمپین‌های فروش
+// مجوزهای مورد نیاز: SALE_READ, SALE_CREATE, SALE_UPDATE, SALE_DELETE
+// ============================================
 
 // (در آینده روت GET /active برای فرانت‌اند سایت خواهیم داشت)
 
-// --- روت‌های ادمین ---
-router.get('/admin', protect, authorize('admin', 'manager', 'superadmin'), getAllSales)
-router.post('/admin', protect, authorize('admin', 'manager', 'superadmin'), createSale)
-router.get('/admin/:id', protect, authorize('admin', 'manager', 'superadmin'), getSaleById)
-router.put('/admin/:id', protect, authorize('admin', 'manager', 'superadmin'), updateSale)
-router.delete('/admin/:id', protect, authorize('admin', 'manager', 'superadmin'), deleteSale)
+// GET /api/sales/admin - دریافت لیست کمپین‌ها
+router.get('/admin', protect, checkPermission(PERMISSIONS.SALE_READ), getAllSales)
+
+// POST /api/sales/admin - ایجاد کمپین جدید
+router.post('/admin', protect, checkPermission(PERMISSIONS.SALE_CREATE), createSale)
+
+// GET /api/sales/admin/:id - دریافت جزئیات کمپین
+router.get('/admin/:id', protect, checkPermission(PERMISSIONS.SALE_READ), getSaleById)
+
+// PUT /api/sales/admin/:id - ویرایش کمپین
+router.put('/admin/:id', protect, checkPermission(PERMISSIONS.SALE_UPDATE), updateSale)
+
+// DELETE /api/sales/admin/:id - حذف کمپین
+router.delete('/admin/:id', protect, checkPermission(PERMISSIONS.SALE_DELETE), deleteSale)
 
 module.exports = router
+

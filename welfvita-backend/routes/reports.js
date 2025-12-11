@@ -6,31 +6,37 @@ const {
   getProductReports,
   getCustomerReports,
 } = require('../controllers/reportController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-// گزارش فروش
+// ============================================
+// روت‌های گزارش‌گیری
+// مجوزهای مورد نیاز: REPORT_READ_SALES, REPORT_READ_PRODUCTS, REPORT_READ_CUSTOMERS
+// ============================================
+
+// GET /api/reports/sales - گزارش فروش
 router.get(
   '/sales',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.REPORT_READ_SALES),
   getSalesReports,
 )
 
-// گزارش محصولات
+// GET /api/reports/products - گزارش محصولات
 router.get(
   '/products',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.REPORT_READ_PRODUCTS),
   getProductReports,
 )
 
-// گزارش مشتریان
+// GET /api/reports/customers - گزارش مشتریان
 router.get(
   '/customers',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.REPORT_READ_CUSTOMERS),
   getCustomerReports,
 )
 
 module.exports = router
+
 

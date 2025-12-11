@@ -7,14 +7,25 @@ const {
   updateAdminUser,
   deleteAdminUser,
 } = require('../controllers/adminManagementController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-const superAdminOnly = authorize('superadmin')
+// ============================================
+// Admin Management Routes
+// مجوزهای مورد نیاز: ADMIN_READ, ADMIN_CREATE, ADMIN_UPDATE, ADMIN_DELETE
+// ============================================
 
-router.get('/', protect, superAdminOnly, getAllAdmins)
-router.post('/', protect, superAdminOnly, createAdminUser)
-router.put('/:id', protect, superAdminOnly, updateAdminUser)
-router.delete('/:id', protect, superAdminOnly, deleteAdminUser)
+// GET /api/admin-management - دریافت لیست ادمین‌ها
+router.get('/', protect, checkPermission(PERMISSIONS.ADMIN_READ), getAllAdmins)
+
+// POST /api/admin-management - ایجاد ادمین جدید
+router.post('/', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), createAdminUser)
+
+// PUT /api/admin-management/:id - ویرایش ادمین
+router.put('/:id', protect, checkPermission(PERMISSIONS.ADMIN_UPDATE), updateAdminUser)
+
+// DELETE /api/admin-management/:id - حذف ادمین
+router.delete('/:id', protect, checkPermission(PERMISSIONS.ADMIN_DELETE), deleteAdminUser)
 
 module.exports = router
+
 

@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload } = require('../middleware/upload')
 const categoryController = require('../controllers/categoryController')
 const { cacheMiddleware, clearCacheByPrefix } = require('../middleware/cache')
@@ -10,6 +10,10 @@ const categoryUpload = upload.fields([
   { name: 'icon', maxCount: 1 },
   { name: 'image', maxCount: 1 },
 ])
+
+// ============================================
+// روت‌های عمومی (بدون نیاز به احراز هویت)
+// ============================================
 
 // Tree endpoint - reduced TTL for admin panel real-time updates
 router.get('/tree', cacheMiddleware(30), categoryController.getCategoryTree)
@@ -23,13 +27,15 @@ router.get('/popular', cacheMiddleware(600), categoryController.getPopularCatego
 // Get category by slug (with properties for frontend filters)
 router.get('/slug/:slug', cacheMiddleware(600), categoryController.getCategoryBySlug)
 
+// ============================================
 // لیست و ایجاد دسته‌بندی
+// ============================================
 router
   .route('/')
   .get(cacheMiddleware(600), categoryController.getAllCategories)
   .post(
     protect,
-    authorize('admin', 'manager', 'superadmin'),
+    checkPermission(PERMISSIONS.CATEGORY_CREATE),
     categoryUpload,
     async (req, res, next) => {
       try {
@@ -43,13 +49,15 @@ router
     },
   )
 
+// ============================================
 // دریافت، ویرایش و حذف دسته‌بندی
+// ============================================
 router
   .route('/:id')
   .get(cacheMiddleware(600), categoryController.getCategoryById)
   .put(
     protect,
-    authorize('admin', 'manager', 'superadmin'),
+    checkPermission(PERMISSIONS.CATEGORY_UPDATE),
     categoryUpload,
     async (req, res, next) => {
       try {
@@ -64,7 +72,7 @@ router
   )
   .delete(
     protect,
-    authorize('admin', 'manager', 'superadmin'),
+    checkPermission(PERMISSIONS.CATEGORY_DELETE),
     async (req, res, next) => {
       try {
         await categoryController.deleteCategory(req, res, next)
@@ -78,3 +86,4 @@ router
   )
 
 module.exports = router
+

@@ -1,13 +1,16 @@
 const express = require('express')
 const router = express.Router()
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { clearAllCache, clearCacheByKey, clearCacheByPrefix } = require('../middleware/cache')
 
-// POST /api/cache/clear
+// ============================================
+// POST /api/cache/clear - پاک کردن کش
+// مجوز مورد نیاز: CACHE_CLEAR
+// ============================================
 router.post(
   '/clear',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CACHE_CLEAR),
   async (req, res) => {
     const { key, prefix } = req.body || {}
 
@@ -29,3 +32,4 @@ router.post(
 )
 
 module.exports = router
+

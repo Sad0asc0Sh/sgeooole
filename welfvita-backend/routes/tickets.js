@@ -11,50 +11,61 @@ const {
   postReplyAsAdmin,
   updateTicketStatus,
 } = require('../controllers/ticketController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-// --- روت‌های مشتری (برای فرانت‌اند سایت) ---
+// ============================================
+// روت‌های مشتری (برای فرانت‌اند سایت)
 // این روت‌ها باید قبل از /:id تعریف شوند
+// ============================================
 router.get('/my-tickets', protect, getMyTickets)
 router.get('/my-tickets/:id', protect, getMyTicketById)
 router.post('/my-tickets/:id/reply', protect, postReplyAsUser)
 router.post('/', protect, createTicket)
 
-// --- روت‌های ادمین ---
+// ============================================
+// روت‌های ادمین
+// مجوزهای مورد نیاز: TICKET_READ_ALL, TICKET_REPLY, TICKET_UPDATE_STATUS
+// ============================================
+
+// GET /api/tickets/admin/all - دریافت لیست تمام تیکت‌ها
 router.get(
   '/admin/all',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.TICKET_READ_ALL),
   getAllTicketsAsAdmin,
 )
 
-// امکان استفاده از /api/tickets/admin نیز
+// GET /api/tickets/admin - امکان استفاده از این مسیر نیز
 router.get(
   '/admin',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.TICKET_READ_ALL),
   getAllTicketsAsAdmin,
 )
 
+// GET /api/tickets/:id - دریافت جزئیات تیکت
 router.get(
   '/:id',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.TICKET_READ_ALL),
   getTicketByIdAsAdmin,
 )
 
+// POST /api/tickets/:id/reply - پاسخ ادمین به تیکت
 router.post(
   '/:id/reply',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.TICKET_REPLY),
   postReplyAsAdmin,
 )
 
+// PUT /api/tickets/:id/status - تغییر وضعیت تیکت
 router.put(
   '/:id/status',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.TICKET_UPDATE_STATUS),
   updateTicketStatus,
 )
 
 module.exports = router
+

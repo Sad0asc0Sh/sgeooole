@@ -83,10 +83,6 @@ function MainLayout({ children }) {
           label: <Link to="/orders">لیست سفارشات</Link>,
         },
         {
-          key: '/rma',
-          label: <Link to="/rma">مرجوعی‌ها (RMA)</Link>,
-        },
-        {
           key: '/abandoned-carts',
           label: <Link to="/abandoned-carts">سبدهای رها شده</Link>,
         },

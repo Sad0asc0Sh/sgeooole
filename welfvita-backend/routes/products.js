@@ -10,7 +10,7 @@ const Product = require('../models/Product')
 const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, cloudinary } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix } = require('../middleware/cache')
 
@@ -564,7 +564,7 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
 router.put(
   '/special-offers/timer',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
   async (req, res) => {
     try {
       const { endTime, disable } = req.body
@@ -753,7 +753,7 @@ router.get('/:id', cacheMiddleware(3600), async (req, res) => {
 router.post(
   '/',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_CREATE),
   async (req, res) => {
     try {
       const {
@@ -864,7 +864,7 @@ router.post(
 router.put(
   '/:id',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
   async (req, res) => {
     try {
       const body = req.body || {}
@@ -1038,7 +1038,7 @@ router.put(
 router.post(
   '/:id/images',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
   upload.array('images', 10),
   async (req, res) => {
     try {
@@ -1084,7 +1084,7 @@ router.post(
 router.delete(
   '/:id/images/:publicId',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
   async (req, res) => {
     try {
       const { id } = req.params
@@ -1173,7 +1173,7 @@ router.delete(
 router.delete(
   '/:id',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
   async (req, res) => {
     try {
       const product = await Product.findById(req.params.id)
@@ -1226,7 +1226,7 @@ router.delete(
 router.put(
   '/:id/stock',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_STOCK),
   async (req, res) => {
     try {
       const { stock } = req.body
@@ -1303,7 +1303,7 @@ router.put(
 router.get(
   '/export/excel',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_EXPORT),
   async (req, res) => {
     try {
       // Fetch all products with valid category references (for Excel export)
@@ -1388,7 +1388,7 @@ router.get(
 router.post(
   '/import/csv',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.PRODUCT_IMPORT),
   csvUpload.single('file'),
   async (req, res) => {
     try {

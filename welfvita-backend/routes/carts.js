@@ -14,82 +14,66 @@ const {
   cleanupExpiredCarts,
   sendExpiryWarnings,
 } = require('../controllers/cartController')
-const { protect, authorize} = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
-// GET /api/carts/admin/abandoned - دریافت سبدهای رها شده
-// فقط برای ادمین
+// Admin Cart Management Routes
+// مجوزهای مورد نیاز: CART_READ, CART_MANAGE
 // ============================================
+
+// GET /api/carts/admin/abandoned - دریافت سبدهای رها شده
 router.get(
   '/admin/abandoned',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_READ),
   getAbandonedCarts,
 )
 
-// ============================================
 // GET /api/carts/admin/stats - آمار سبدها
-// فقط برای ادمین
-// ============================================
 router.get(
   '/admin/stats',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_READ),
   getCartStats,
 )
 
-// ============================================
 // POST /api/carts/admin/remind/email/:cartId - ارسال یادآوری ایمیل
-// فقط برای ادمین
-// ============================================
 router.post(
   '/admin/remind/email/:cartId',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_MANAGE),
   sendEmailReminder,
 )
 
-// ============================================
 // POST /api/carts/admin/remind/sms/:cartId - ارسال یادآوری پیامک
-// فقط برای ادمین
-// ============================================
 router.post(
   '/admin/remind/sms/:cartId',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_MANAGE),
   sendSmsReminder,
 )
 
-// ============================================
 // DELETE /api/carts/admin/:cartId - حذف دستی سبد خرید
-// فقط برای ادمین
-// ============================================
 router.delete(
   '/admin/:cartId',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_MANAGE),
   deleteCartByAdmin,
 )
 
-// ============================================
 // POST /api/carts/admin/cleanup - پاکسازی سبدهای منقضی شده
-// فقط برای ادمین
-// ============================================
 router.post(
   '/admin/cleanup',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_MANAGE),
   cleanupExpiredCarts,
 )
 
-// ============================================
 // POST /api/carts/admin/send-warnings - ارسال هشدارهای انقضا
-// فقط برای ادمین
-// ============================================
 router.post(
   '/admin/send-warnings',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.CART_MANAGE),
   sendExpiryWarnings,
 )
 
@@ -97,36 +81,27 @@ router.post(
 // Customer-Facing Cart Routes
 // ============================================
 
-// ============================================
 // GET /api/cart - دریافت سبد خرید کاربر
 // نیاز به احراز هویت (مشتری لاگین شده)
-// ============================================
 router.get('/cart', protect, getMyCart)
 
-// ============================================
 // POST /api/cart/sync - همگام‌سازی سبد خرید localStorage با سرور
 // نیاز به احراز هویت (مشتری لاگین شده)
 // Body: { items: [{ product, quantity, variantOptions? }] }
-// ============================================
 router.post('/cart/sync', protect, syncCart)
 
-// ============================================
 // POST /api/cart/item - افزودن یا به‌روزرسانی آیتم در سبد
 // نیاز به احراز هویت (مشتری لاگین شده)
 // Body: { product, quantity, variantOptions? }
-// ============================================
 router.post('/cart/item', protect, addOrUpdateItem)
 
-// ============================================
 // DELETE /api/cart/item/:productId - حذف آیتم از سبد
 // نیاز به احراز هویت (مشتری لاگین شده)
-// ============================================
 router.delete('/cart/item/:productId', protect, removeItem)
 
-// ============================================
 // DELETE /api/cart - پاک کردن سبد خرید
 // نیاز به احراز هویت (مشتری لاگین شده)
-// ============================================
 router.delete('/cart', protect, clearCart)
 
 module.exports = router
+

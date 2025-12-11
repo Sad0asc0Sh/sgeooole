@@ -54,12 +54,11 @@ export default function AdminOrderDetailsPage() {
 
     const getStatusInfo = (s: string) => {
         switch (s) {
-            case 'Pending': return { label: 'ثبت سفارش', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock };
+            case 'Pending': return { label: 'در انتظار پرداخت', color: 'text-yellow-600', bg: 'bg-yellow-50', icon: Clock };
             case 'Processing': return { label: 'درحال پردازش', color: 'text-blue-600', bg: 'bg-blue-50', icon: Box };
             case 'Shipped': return { label: 'تحویل به پست', color: 'text-purple-600', bg: 'bg-purple-50', icon: Truck };
             case 'Delivered': return { label: 'تحویل شده', color: 'text-green-600', bg: 'bg-green-50', icon: CheckCircle2 };
             case 'Cancelled': return { label: 'لغو شده', color: 'text-red-600', bg: 'bg-red-50', icon: XCircle };
-            case 'Returned': return { label: 'مرجوعی', color: 'text-orange-600', bg: 'bg-orange-50', icon: AlertCircle };
             default: return { label: s, color: 'text-gray-600', bg: 'bg-gray-50', icon: AlertCircle };
         }
     };
@@ -187,12 +186,11 @@ export default function AdminOrderDetailsPage() {
                                 onChange={(e) => setStatus(e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none"
                             >
-                                <option value="Pending">ثبت سفارش</option>
+                                <option value="Pending">در انتظار پرداخت</option>
                                 <option value="Processing">درحال پردازش</option>
                                 <option value="Shipped">تحویل به پست</option>
                                 <option value="Delivered">تحویل شده</option>
                                 <option value="Cancelled">لغو شده</option>
-                                <option value="Returned">مرجوع شده</option>
                             </select>
                         </div>
 

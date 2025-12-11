@@ -10,7 +10,7 @@ const {
   payOrder,
   verifyPayment,
 } = require('../controllers/orderController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
 // Customer-Facing Routes
@@ -40,20 +40,23 @@ router.get('/:id', protect, getOrderById)
 
 // ============================================
 // Admin Routes
+// مجوزهای مورد نیاز: ORDER_READ_ALL, ORDER_UPDATE_STATUS
 // ============================================
 
 // GET /api/orders - دریافت لیست تمام سفارشات
-router.get('/', protect, authorize('admin', 'manager', 'superadmin'), getAllOrders)
+// مجوز مورد نیاز: ORDER_READ_ALL
+router.get('/', protect, checkPermission(PERMISSIONS.ORDER_READ_ALL), getAllOrders)
 
 // ============================================
 // PUT /api/orders/:id/status - به‌روزرسانی وضعیت سفارش
-// فقط برای ادمین
+// مجوز مورد نیاز: ORDER_UPDATE_STATUS
 // ============================================
 router.put(
   '/:id/status',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.ORDER_UPDATE_STATUS),
   updateOrderStatus,
 )
 
 module.exports = router
+

@@ -113,7 +113,7 @@ const protect = async (req, res, next) => {
   }
 }
 
-// مجوز نقش‌ها
+// مجوز نقش‌ها (Legacy - kept for backward compatibility)
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -134,8 +134,158 @@ const authorize = (...roles) => {
   }
 }
 
-// میانبر برای مجوز ادمین (admin, manager, superadmin)
+// ============================================
+// Permission-Based Access Control (RBAC)
+// New system for granular permission checking
+// ============================================
+const { ROLES, PERMISSIONS } = require('../config/rbac')
+const { logAccessDenied } = require('../utils/auditLogger')
+
+/**
+ * Check if user has a specific permission
+ * @param {string} requiredPermission - The permission required for this action (e.g., 'product:create')
+ * @returns {Function} Express middleware function
+ */
+const checkPermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    // Check if user exists (should be populated by protect middleware)
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'احراز هویت انجام نشده است',
+      })
+    }
+
+    const userRole = req.user.role || 'guest'
+
+    // Superadmin Bypass: Superadmin has access to everything
+    if (userRole === 'superadmin') {
+      return next()
+    }
+
+    // Get permissions for the user's role (fail-safe: empty array if role not found)
+    const userPermissions = ROLES[userRole] || []
+
+    // Check if user has the required permission
+    if (userPermissions.includes(requiredPermission)) {
+      return next()
+    }
+
+    // Access Denied: Log the security event to console
+    console.warn(
+      `[SECURITY] ⛔ Access Denied: User ID ${req.user._id} (role: ${userRole}) attempted access to "${requiredPermission}" without permission.`
+    )
+
+    // Log to audit database (async, non-blocking)
+    logAccessDenied(req, req.user._id, requiredPermission).catch(() => { })
+
+    return res.status(403).json({
+      success: false,
+      message: 'مجوز دسترسی ندارید',
+      error: 'Access Denied: Missing Permission',
+      requiredPermission,
+    })
+  }
+}
+
+/**
+ * Check if user has ANY of the specified permissions
+ * @param {...string} permissions - Multiple permissions to check (user needs at least one)
+ * @returns {Function} Express middleware function
+ */
+const checkAnyPermission = (...permissions) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'احراز هویت انجام نشده است',
+      })
+    }
+
+    const userRole = req.user.role || 'guest'
+
+    // Superadmin Bypass
+    if (userRole === 'superadmin') {
+      return next()
+    }
+
+    const userPermissions = ROLES[userRole] || []
+
+    // Check if user has any of the required permissions
+    const hasAny = permissions.some((perm) => userPermissions.includes(perm))
+    if (hasAny) {
+      return next()
+    }
+
+    console.warn(
+      `[SECURITY] ⛔ Access Denied: User ID ${req.user._id} (role: ${userRole}) attempted access requiring one of [${permissions.join(', ')}] without permission.`
+    )
+
+    return res.status(403).json({
+      success: false,
+      message: 'مجوز دسترسی ندارید',
+      error: 'Access Denied: Missing Permission',
+      requiredPermissions: permissions,
+    })
+  }
+}
+
+/**
+ * Check if user has ALL of the specified permissions
+ * @param {...string} permissions - Multiple permissions to check (user needs all)
+ * @returns {Function} Express middleware function
+ */
+const checkAllPermissions = (...permissions) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: 'احراز هویت انجام نشده است',
+      })
+    }
+
+    const userRole = req.user.role || 'guest'
+
+    // Superadmin Bypass
+    if (userRole === 'superadmin') {
+      return next()
+    }
+
+    const userPermissions = ROLES[userRole] || []
+
+    // Check if user has all required permissions
+    const hasAll = permissions.every((perm) => userPermissions.includes(perm))
+    if (hasAll) {
+      return next()
+    }
+
+    const missingPermissions = permissions.filter(
+      (perm) => !userPermissions.includes(perm)
+    )
+
+    console.warn(
+      `[SECURITY] ⛔ Access Denied: User ID ${req.user._id} (role: ${userRole}) missing permissions: [${missingPermissions.join(', ')}]`
+    )
+
+    return res.status(403).json({
+      success: false,
+      message: 'مجوز دسترسی ندارید',
+      error: 'Access Denied: Missing Permissions',
+      missingPermissions,
+    })
+  }
+}
+
+// میانبر برای مجوز ادمین (admin, manager, superadmin) - Legacy
 const admin = authorize('admin', 'manager', 'superadmin')
 
-module.exports = { protect, authorize, admin }
+module.exports = {
+  protect,
+  authorize,
+  admin,
+  checkPermission,
+  checkAnyPermission,
+  checkAllPermissions,
+  PERMISSIONS, // Re-export for convenience
+}
 

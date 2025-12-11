@@ -75,7 +75,7 @@ reviewSchema.post('save', function () {
 })
 
 // فراخوانی تابع محاسبه پس از حذف
-reviewSchema.post('remove', function () {
+reviewSchema.post('deleteOne', { document: true, query: false }, function () {
   this.constructor.calculateAverageRating(this.product)
 })
 

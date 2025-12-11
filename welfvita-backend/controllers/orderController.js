@@ -354,21 +354,21 @@ exports.getMyOrderStats = async (req, res) => {
 
     // Transform to expected format
     const result = {
+      pending: 0,
       processing: 0,
       delivered: 0,
-      returned: 0,
       cancelled: 0,
       total: 0
     }
 
     stats.forEach(stat => {
       result.total += stat.count
-      if (['Pending', 'Processing'].includes(stat._id)) {
+      if (stat._id === 'Pending') {
+        result.pending = stat.count
+      } else if (['Processing', 'Shipped'].includes(stat._id)) {
         result.processing += stat.count
       } else if (stat._id === 'Delivered') {
         result.delivered = stat.count
-      } else if (stat._id === 'Returned') {
-        result.returned = stat.count
       } else if (stat._id === 'Cancelled') {
         result.cancelled = stat.count
       }

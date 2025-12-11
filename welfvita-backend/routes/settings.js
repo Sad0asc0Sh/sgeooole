@@ -1,15 +1,18 @@
 const express = require('express')
 const router = express.Router()
 const { getSettings, updateSettings, getPublicSettings } = require('../controllers/settingsController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // Get public settings (no auth required)
 router.get('/public', getPublicSettings)
 
 // Get current settings
-router.get('/', protect, authorize('manager', 'superadmin'), getSettings)
+// مجوز مورد نیاز: SETTINGS_READ
+router.get('/', protect, checkPermission(PERMISSIONS.SETTINGS_READ), getSettings)
 
 // Update settings
-router.put('/', protect, authorize('manager', 'superadmin'), updateSettings)
+// مجوز مورد نیاز: SETTINGS_UPDATE
+router.put('/', protect, checkPermission(PERMISSIONS.SETTINGS_UPDATE), updateSettings)
 
 module.exports = router
+

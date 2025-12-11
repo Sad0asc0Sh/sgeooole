@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const Admin = require('../models/Admin')
 const { sendResetPasswordEmail } = require('../utils/notificationService')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload } = require('../middleware/upload')
 // const { updateMyProfile, updateMyAvatar } = require('../controllers/authController') // REMOVED: This was for Admin
 const {
@@ -297,7 +297,7 @@ router.get('/me', async (req, res) => {
 // POST /api/auth/register
 // ============================================
 
-router.post('/register', protect, authorize('superadmin'), async (req, res) => {
+router.post('/register', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), async (req, res) => {
   try {
     const { name, email, password, role } = req.body
 

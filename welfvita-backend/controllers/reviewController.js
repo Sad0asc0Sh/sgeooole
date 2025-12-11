@@ -241,7 +241,7 @@ exports.deleteReview = async (req, res) => {
     const productId = review.product
 
     // حذف نظر
-    await review.remove()
+    await review.deleteOne()
 
     // به‌روزرسانی امتیاز میانگین محصول
     await Review.calculateAverageRating(productId)

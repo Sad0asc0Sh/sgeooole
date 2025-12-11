@@ -26,23 +26,53 @@ app.use(helmet({
 // ============================================
 // 2. Rate Limiting
 // ============================================
+
+// General API limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // limit each IP to 200 requests per window
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'تعداد درخواست‌های شما بیش از حد مجاز است، لطفاً ۱۵ دقیقه دیگر تلاش کنید.',
+  message: { success: false, message: 'تعداد درخواست‌های شما بیش از حد مجاز است، لطفاً ۱۵ دقیقه دیگر تلاش کنید.' },
 })
 app.use('/api', limiter)
 
+// Strict limiter for login endpoints (5 requests per hour)
 const loginLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'تلاش‌های ورود بیش از حد مجاز است.',
+  message: { success: false, message: 'تلاش‌های ورود بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
 })
 app.use('/api/auth/login', loginLimiter)
+app.use('/api/auth/admin/login', loginLimiter)
+app.use('/api/auth/login-password', loginLimiter)
+
+// Very strict limiter for OTP endpoints (10 requests per hour)
+const otpLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'تعداد درخواست‌های OTP بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
+})
+app.use('/api/auth/send-otp', otpLimiter)
+app.use('/api/auth/verify-otp', otpLimiter)
+app.use('/api/auth/bind-mobile/send-otp', otpLimiter)
+app.use('/api/auth/change-email/send-otp', otpLimiter)
+
+// Password reset limiter (3 requests per hour)
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'تعداد درخواست‌های بازنشانی رمز عبور بیش از حد مجاز است.' },
+})
+app.use('/api/auth/forgot-password', passwordResetLimiter)
+app.use('/api/auth/admin/forgot-password', passwordResetLimiter)
+
 
 // ============================================
 // 3. Performance Middleware

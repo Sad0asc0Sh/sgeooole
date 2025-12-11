@@ -8,18 +8,28 @@ const {
   updatePost,
   deletePost,
 } = require('../controllers/postController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
-// لیست پست‌ها برای پنل ادمین
-router.get('/', protect, authorize('admin', 'manager', 'superadmin'), getAdminPosts)
+// ============================================
+// روت‌های مدیریت بلاگ
+// مجوزهای مورد نیاز: BLOG_READ, BLOG_CREATE, BLOG_UPDATE, BLOG_DELETE
+// ============================================
 
-// ایجاد پست
-router.post('/', protect, authorize('admin', 'manager', 'superadmin'), createPost)
+// GET /api/blog - لیست پست‌ها برای پنل ادمین
+router.get('/', protect, checkPermission(PERMISSIONS.BLOG_READ), getAdminPosts)
 
-// جزئیات، ویرایش و حذف
-router.get('/:id', protect, authorize('admin', 'manager', 'superadmin'), getPostById)
-router.put('/:id', protect, authorize('admin', 'manager', 'superadmin'), updatePost)
-router.delete('/:id', protect, authorize('admin', 'manager', 'superadmin'), deletePost)
+// POST /api/blog - ایجاد پست جدید
+router.post('/', protect, checkPermission(PERMISSIONS.BLOG_CREATE), createPost)
+
+// GET /api/blog/:id - جزئیات پست
+router.get('/:id', protect, checkPermission(PERMISSIONS.BLOG_READ), getPostById)
+
+// PUT /api/blog/:id - ویرایش پست
+router.put('/:id', protect, checkPermission(PERMISSIONS.BLOG_UPDATE), updatePost)
+
+// DELETE /api/blog/:id - حذف پست
+router.delete('/:id', protect, checkPermission(PERMISSIONS.BLOG_DELETE), deletePost)
 
 module.exports = router
+
 

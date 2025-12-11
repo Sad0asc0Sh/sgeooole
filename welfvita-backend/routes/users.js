@@ -6,11 +6,11 @@ const {
   updateUserAsAdmin,
   deleteUserAsAdmin,
 } = require('../controllers/userController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
 // GET /api/users/admin/all - دریافت لیست تمام کاربران
-// فقط برای ادمین، مدیر و سوپرادمین
+// مجوز مورد نیاز: USER_READ_ALL
 // پارامترهای Query:
 //   - page: شماره صفحه (پیش‌فرض: 1)
 //   - limit: تعداد آیتم در هر صفحه (پیش‌فرض: 20)
@@ -21,24 +21,24 @@ const { protect, authorize } = require('../middleware/auth')
 router.get(
   '/admin/all',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.USER_READ_ALL),
   getAllUsersAsAdmin,
 )
 
 // ============================================
 // GET /api/users/admin/:id - دریافت جزئیات یک کاربر
-// فقط برای ادمین
+// مجوز مورد نیاز: USER_READ
 // ============================================
 router.get(
   '/admin/:id',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.USER_READ),
   getUserByIdAsAdmin,
 )
 
 // ============================================
 // PUT /api/users/admin/:id - به‌روزرسانی اطلاعات کاربر
-// فقط برای ادمین
+// مجوز مورد نیاز: USER_UPDATE
 // Body:
 //   - name: نام کاربر
 //   - email: ایمیل کاربر
@@ -49,19 +49,20 @@ router.get(
 router.put(
   '/admin/:id',
   protect,
-  authorize('admin', 'manager', 'superadmin'),
+  checkPermission(PERMISSIONS.USER_UPDATE),
   updateUserAsAdmin,
 )
 
 // ============================================
 // DELETE /api/users/admin/:id - حذف کاربر
-// فقط برای سوپرادمین
+// مجوز مورد نیاز: USER_DELETE
 // ============================================
 router.delete(
   '/admin/:id',
   protect,
-  authorize('superadmin'),
+  checkPermission(PERMISSIONS.USER_DELETE),
   deleteUserAsAdmin,
 )
 
 module.exports = router
+

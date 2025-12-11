@@ -7,14 +7,21 @@ const {
   updateBanner,
   deleteBanner,
 } = require('../controllers/bannerController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { cacheMiddleware, clearCacheByPrefix } = require('../middleware/cache')
 
-// GET banners
+// ============================================
+// روت عمومی
+// ============================================
 router.get('/', cacheMiddleware(300), getBanners)
 
-// Create / update / delete banners (admin)
-router.post('/', protect, authorize('admin', 'manager', 'superadmin'), async (req, res, next) => {
+// ============================================
+// روت‌های ادمین
+// مجوزهای مورد نیاز: BANNER_CREATE, BANNER_UPDATE, BANNER_DELETE
+// ============================================
+
+// POST /api/banners - ایجاد بنر جدید
+router.post('/', protect, checkPermission(PERMISSIONS.BANNER_CREATE), async (req, res, next) => {
   try {
     await createBanner(req, res, next)
     clearCacheByPrefix('/api/banners')
@@ -22,7 +29,9 @@ router.post('/', protect, authorize('admin', 'manager', 'superadmin'), async (re
     next(error)
   }
 })
-router.put('/:id', protect, authorize('admin', 'manager', 'superadmin'), async (req, res, next) => {
+
+// PUT /api/banners/:id - ویرایش بنر
+router.put('/:id', protect, checkPermission(PERMISSIONS.BANNER_UPDATE), async (req, res, next) => {
   try {
     await updateBanner(req, res, next)
     clearCacheByPrefix('/api/banners')
@@ -30,7 +39,9 @@ router.put('/:id', protect, authorize('admin', 'manager', 'superadmin'), async (
     next(error)
   }
 })
-router.delete('/:id', protect, authorize('admin', 'manager', 'superadmin'), async (req, res, next) => {
+
+// DELETE /api/banners/:id - حذف بنر
+router.delete('/:id', protect, checkPermission(PERMISSIONS.BANNER_DELETE), async (req, res, next) => {
   try {
     await deleteBanner(req, res, next)
     clearCacheByPrefix('/api/banners')
@@ -40,3 +51,4 @@ router.delete('/:id', protect, authorize('admin', 'manager', 'superadmin'), asyn
 })
 
 module.exports = router
+

@@ -8,7 +8,7 @@ const {
   deleteCoupon,
   validateCoupon,
 } = require('../controllers/couponController')
-const { protect, authorize } = require('../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
 // GET /api/coupons/validate/:code - اعتبارسنجی کد تخفیف
@@ -19,7 +19,7 @@ router.get('/validate/:code', validateCoupon)
 
 // ============================================
 // POST /api/coupons - ایجاد کوپن جدید
-// فقط برای ادمین، مدیر و سوپرادمین
+// مجوز مورد نیاز: COUPON_CREATE
 // Body:
 //   - code: کد تخفیف (الزامی)
 //   - discountType: نوع تخفیف - percent یا fixed (الزامی)
@@ -29,11 +29,11 @@ router.get('/validate/:code', validateCoupon)
 //   - isActive: وضعیت فعال/غیرفعال (اختیاری)
 //   - usageLimit: محدودیت تعداد استفاده (اختیاری)
 // ============================================
-router.post('/', protect, authorize('admin', 'manager', 'superadmin'), createCoupon)
+router.post('/', protect, checkPermission(PERMISSIONS.COUPON_CREATE), createCoupon)
 
 // ============================================
 // GET /api/coupons - دریافت لیست کوپن‌ها
-// فقط برای ادمین
+// مجوز مورد نیاز: COUPON_READ
 // پارامترهای Query:
 //   - page: شماره صفحه (پیش‌فرض: 1)
 //   - limit: تعداد آیتم در هر صفحه (پیش‌فرض: 20)
@@ -41,25 +41,26 @@ router.post('/', protect, authorize('admin', 'manager', 'superadmin'), createCou
 //   - discountType: فیلتر بر اساس نوع تخفیف (percent/fixed)
 //   - search: جستجو در کد تخفیف
 // ============================================
-router.get('/', protect, authorize('admin', 'manager', 'superadmin'), getAllCoupons)
+router.get('/', protect, checkPermission(PERMISSIONS.COUPON_READ), getAllCoupons)
 
 // ============================================
 // GET /api/coupons/:id - دریافت جزئیات یک کوپن
-// فقط برای ادمین
+// مجوز مورد نیاز: COUPON_READ
 // ============================================
-router.get('/:id', protect, authorize('admin', 'manager', 'superadmin'), getCouponById)
+router.get('/:id', protect, checkPermission(PERMISSIONS.COUPON_READ), getCouponById)
 
 // ============================================
 // PUT /api/coupons/:id - به‌روزرسانی کوپن
-// فقط برای ادمین
+// مجوز مورد نیاز: COUPON_UPDATE
 // Body: مشابه POST
 // ============================================
-router.put('/:id', protect, authorize('admin', 'manager', 'superadmin'), updateCoupon)
+router.put('/:id', protect, checkPermission(PERMISSIONS.COUPON_UPDATE), updateCoupon)
 
 // ============================================
 // DELETE /api/coupons/:id - حذف کوپن
-// فقط برای سوپرادمین
+// مجوز مورد نیاز: COUPON_DELETE
 // ============================================
-router.delete('/:id', protect, authorize('superadmin'), deleteCoupon)
+router.delete('/:id', protect, checkPermission(PERMISSIONS.COUPON_DELETE), deleteCoupon)
 
 module.exports = router
+

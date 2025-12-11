@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-    Edit2, Wallet, ChevronLeft, Box, CheckCircle2, XCircle, RefreshCcw,
+    Edit2, Wallet, ChevronLeft, Box, CheckCircle2, XCircle, CreditCard,
     UserCheck, Heart, MessageSquare, MapPin, Bell, Clock, LogOut, Camera, Lock, Mail, User as UserIcon, Headphones
 } from "lucide-react";
 import { authService, User } from "@/services/authService";
@@ -95,9 +95,9 @@ export default function ProfilePage() {
     const [emailLoading, setEmailLoading] = useState(false);
 
     const [orderStats, setOrderStats] = useState({
+        pending: 0,
         processing: 0,
         delivered: 0,
-        returned: 0,
         cancelled: 0,
     });
 
@@ -471,9 +471,9 @@ export default function ProfilePage() {
                     </Link>
                 </div>
                 <div className="grid grid-cols-4 gap-2">
+                    <OrderStatusItem icon={CreditCard} label="در انتظار پرداخت" count={orderStats.pending} active={orderStats.pending > 0} href="/profile/orders?status=pending" />
                     <OrderStatusItem icon={Box} label="جاری" count={orderStats.processing} active={orderStats.processing > 0} href="/profile/orders?status=current" />
                     <OrderStatusItem icon={CheckCircle2} label="تحویل شده" count={orderStats.delivered} href="/profile/orders?status=delivered" />
-                    <OrderStatusItem icon={RefreshCcw} label="مرجوعی" count={orderStats.returned} href="/profile/orders?status=returned" />
                     <OrderStatusItem icon={XCircle} label="لغو شده" count={orderStats.cancelled} href="/profile/orders?status=cancelled" />
                 </div>
             </div>

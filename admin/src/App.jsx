@@ -23,7 +23,6 @@ const ReviewsPage = lazy(() => import('./pages/products/ReviewsPage'))
 // Orders
 const OrdersList = lazy(() => import('./pages/orders/OrdersList'))
 const OrderDetail = lazy(() => import('./pages/orders/OrderDetail'))
-const RMAPage = lazy(() => import('./pages/orders/RMAPage'))
 const AbandonedCartsPage = lazy(() => import('./pages/orders/AbandonedCartsPage'))
 
 // Customers
@@ -141,7 +140,6 @@ function App() {
                     {/* Orders */}
                     <Route path="/orders" element={<OrdersList />} />
                     <Route path="/orders/:id" element={<OrderDetail />} />
-                    <Route path="/rma" element={<RMAPage />} />
                     <Route path="/abandoned-carts" element={<AbandonedCartsPage />} />
 
                     {/* Customers */}
