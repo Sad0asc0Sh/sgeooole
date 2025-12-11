@@ -99,6 +99,7 @@ export default function ProfilePage() {
         processing: 0,
         delivered: 0,
         cancelled: 0,
+        total: 0,
     });
 
     const [unreadCount, setUnreadCount] = useState(0);
@@ -121,7 +122,7 @@ export default function ProfilePage() {
                 // This uses aggregation on backend instead of fetching all orders
                 const [profileData, orderStatsRes, notificationsRes] = await Promise.all([
                     authService.getProfile(),
-                    authService.getMyOrderStats().catch(() => ({ success: false, data: { processing: 0, delivered: 0, returned: 0, cancelled: 0, total: 0 } })),
+                    authService.getMyOrderStats().catch(() => ({ success: false, data: { pending: 0, processing: 0, delivered: 0, cancelled: 0, total: 0 } })),
                     import("@/lib/api").then(m => m.default.get('/notifications')).catch(() => ({ data: { success: false, data: [] } }))
                 ]);
 
@@ -136,7 +137,14 @@ export default function ProfilePage() {
                 if (orderStatsRes.success && orderStatsRes.data) {
                     setOrderStats(orderStatsRes.data);
                 } else if (profileData.orderStats) {
-                    setOrderStats(profileData.orderStats);
+                    const stats = profileData.orderStats as any;
+                    setOrderStats({
+                        pending: stats.pending || 0,
+                        processing: stats.processing || 0,
+                        delivered: stats.delivered || 0,
+                        cancelled: stats.cancelled || 0,
+                        total: stats.total || 0,
+                    });
                 }
 
                 // Process notifications
@@ -796,7 +804,7 @@ function OrderStatusItem({ icon: Icon, label, count, active = false, href }: any
                     </span>
                 )}
             </div>
-            <span className={`text-[10px] font-bold transition-colors ${active ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-700'}`}>{label}</span>
+            <span className={`text-[10px] font-bold transition-colors text-center max-w-[55px] leading-tight ${active ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-700'}`}>{label}</span>
         </div>
     );
 

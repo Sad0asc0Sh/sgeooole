@@ -131,21 +131,15 @@ function AdminsPage() {
   }
 
   const renderRoleTag = (role) => {
-    let color = 'blue'
-    let label = role
-
-    if (role === 'superadmin') {
-      color = 'magenta'
-      label = 'superadmin'
-    } else if (role === 'admin') {
-      color = 'geekblue'
-      label = 'Admin'
-    } else if (role === 'manager') {
-      color = 'green'
-      label = 'Manager'
+    const config = {
+      superadmin: { color: 'red', label: 'سوپرادمین' },
+      manager: { color: 'purple', label: 'مدیر ارشد' },
+      admin: { color: 'blue', label: 'ادمین' },
+      editor: { color: 'geekblue', label: 'ویرایشگر محتوا' },
+      support: { color: 'cyan', label: 'پشتیبان' },
     }
-
-    return <Tag color={color}>{label}</Tag>
+    const c = config[role] || { color: 'default', label: role }
+    return <Tag color={c.color}>{c.label}</Tag>
   }
 
   const columns = [
@@ -282,9 +276,11 @@ function AdminsPage() {
             label="نقش"
             rules={[{ required: true, message: 'لطفاً نقش را انتخاب کنید.' }]}
           >
-            <Select>
-              <Option value="admin">Admin</Option>
-              <Option value="manager">Manager</Option>
+            <Select placeholder="انتخاب نقش">
+              <Option value="support">پشتیبان - دسترسی به تیکت‌ها و سفارشات</Option>
+              <Option value="editor">ویرایشگر محتوا - دسترسی به محصولات و بلاگ</Option>
+              <Option value="admin">ادمین - دسترسی عملیاتی کامل</Option>
+              <Option value="manager">مدیر ارشد - دسترسی به تنظیمات و گزارشات</Option>
             </Select>
           </Form.Item>
 

@@ -38,12 +38,23 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${year}/${month}/${day}`
 }
 
-const ROLE_ORDER = ['user', 'manager', 'admin', 'superadmin']
+// نقش‌های سیستم RBAC - به ترتیب سطح دسترسی
+const ROLE_ORDER = ['user', 'support', 'editor', 'admin', 'manager', 'superadmin']
 const ROLE_LABELS = {
-  user: 'کاربر',
-  manager: 'مدیر',
+  user: 'کاربر عادی',
+  support: 'پشتیبان',
+  editor: 'ویرایشگر محتوا',
   admin: 'ادمین',
+  manager: 'مدیر ارشد',
   superadmin: 'سوپر ادمین',
+}
+const ROLE_COLORS = {
+  user: 'default',
+  support: 'cyan',
+  editor: 'geekblue',
+  admin: 'blue',
+  manager: 'purple',
+  superadmin: 'red',
 }
 
 function CustomerProfile() {
@@ -58,8 +69,23 @@ function CustomerProfile() {
   const [notificationForm] = Form.useForm()
 
   const currentRole = useAuthStore((state) => state.user?.role || 'user')
-  const selectableRoles =
-    currentRole === 'superadmin' ? ROLE_ORDER : ['user']
+
+  // سوپرادمین می‌تواند همه نقش‌ها را تغییر دهد
+  // مدیر ارشد می‌تواند نقش‌های پایین‌تر از خودش را تغییر دهد
+  // سایرین فقط می‌توانند کاربر عادی را ببینند
+  const getSelectableRoles = () => {
+    if (currentRole === 'superadmin') {
+      return ROLE_ORDER
+    }
+    if (currentRole === 'manager') {
+      return ['user', 'support', 'editor', 'admin']
+    }
+    if (currentRole === 'admin') {
+      return ['user', 'support', 'editor']
+    }
+    return ['user']
+  }
+  const selectableRoles = getSelectableRoles()
 
   const fetchUser = async () => {
     setLoading(true)

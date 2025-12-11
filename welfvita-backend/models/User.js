@@ -69,10 +69,10 @@ const userSchema = new mongoose.Schema(
       min: [0, 'موجودی کیف پول نمی‌تواند منفی باشد'],
     },
 
-    // Role
+    // Role - RBAC system roles
     role: {
       type: String,
-      enum: ['user', 'admin', 'manager', 'superadmin'],
+      enum: ['user', 'support', 'editor', 'admin', 'manager', 'superadmin'],
       default: 'user',
     },
 

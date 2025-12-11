@@ -130,11 +130,21 @@ function CustomersList() {
       render: (role) => {
         const colors = {
           user: 'default',
+          support: 'cyan',
+          editor: 'geekblue',
           admin: 'blue',
           manager: 'purple',
           superadmin: 'red',
         }
-        return <Tag color={colors[role] || 'default'}>{role}</Tag>
+        const labels = {
+          user: 'کاربر عادی',
+          support: 'پشتیبان',
+          editor: 'ویرایشگر',
+          admin: 'ادمین',
+          manager: 'مدیر ارشد',
+          superadmin: 'سوپرادمین',
+        }
+        return <Tag color={colors[role] || 'default'}>{labels[role] || role}</Tag>
       },
     },
     {
@@ -202,9 +212,11 @@ function CustomersList() {
           value={roleFilter}
           onChange={setRoleFilter}
         >
-          <Select.Option value="user">کاربر</Select.Option>
+          <Select.Option value="user">کاربر عادی</Select.Option>
+          <Select.Option value="support">پشتیبان</Select.Option>
+          <Select.Option value="editor">ویرایشگر</Select.Option>
           <Select.Option value="admin">ادمین</Select.Option>
-          <Select.Option value="manager">مدیر</Select.Option>
+          <Select.Option value="manager">مدیر ارشد</Select.Option>
           <Select.Option value="superadmin">سوپرادمین</Select.Option>
         </Select>
         <Select

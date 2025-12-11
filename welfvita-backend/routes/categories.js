@@ -3,7 +3,7 @@ const router = express.Router()
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload } = require('../middleware/upload')
 const categoryController = require('../controllers/categoryController')
-const { cacheMiddleware, clearCacheByPrefix } = require('../middleware/cache')
+const { cacheMiddleware, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
 // تعریف فیلدهای آپلود (Cloudinary)
 const categoryUpload = upload.fields([
@@ -15,24 +15,24 @@ const categoryUpload = upload.fields([
 // روت‌های عمومی (بدون نیاز به احراز هویت)
 // ============================================
 
-// Tree endpoint - reduced TTL for admin panel real-time updates
-router.get('/tree', cacheMiddleware(30), categoryController.getCategoryTree)
+// Tree endpoint - short cache for admin panel
+router.get('/tree', cacheMiddleware(CACHE_TTL.SHORT), categoryController.getCategoryTree)
 
-// Featured endpoint
-router.get('/featured', cacheMiddleware(600), categoryController.getFeaturedCategories)
+// Featured endpoint - long cache (rarely changes)
+router.get('/featured', cacheMiddleware(CACHE_TTL.LONG), categoryController.getFeaturedCategories)
 
-// Popular endpoint
-router.get('/popular', cacheMiddleware(600), categoryController.getPopularCategories)
+// Popular endpoint - long cache
+router.get('/popular', cacheMiddleware(CACHE_TTL.LONG), categoryController.getPopularCategories)
 
 // Get category by slug (with properties for frontend filters)
-router.get('/slug/:slug', cacheMiddleware(600), categoryController.getCategoryBySlug)
+router.get('/slug/:slug', cacheMiddleware(CACHE_TTL.LONG), categoryController.getCategoryBySlug)
 
 // ============================================
 // لیست و ایجاد دسته‌بندی
 // ============================================
 router
   .route('/')
-  .get(cacheMiddleware(600), categoryController.getAllCategories)
+  .get(cacheMiddleware(CACHE_TTL.LONG), categoryController.getAllCategories)
   .post(
     protect,
     checkPermission(PERMISSIONS.CATEGORY_CREATE),

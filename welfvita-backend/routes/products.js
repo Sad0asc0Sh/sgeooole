@@ -12,7 +12,7 @@ const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, cloudinary } = require('../middleware/upload')
-const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix } = require('../middleware/cache')
+const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
 // Joi Validation
 const validate = require('../middleware/validate')

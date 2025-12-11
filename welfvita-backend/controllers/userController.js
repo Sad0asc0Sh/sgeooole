@@ -1,13 +1,19 @@
 // ✅ FIX: Use correct User model (Customer model, not Admin model)
 const User = require('../models/User')
 
-// Role hierarchy used for safety checks
+// Role hierarchy used for safety checks - RBAC System
+// Higher number = higher privilege
 const ROLE_LEVELS = {
   user: 1,
-  manager: 2,
-  admin: 3,
-  superadmin: 4,
+  support: 2,
+  editor: 3,
+  admin: 4,
+  manager: 5,
+  superadmin: 6,
 }
+
+// All valid roles in the system
+const ALL_ROLES = ['user', 'support', 'editor', 'admin', 'manager', 'superadmin']
 
 // ============================================
 // GET /api/users/admin/all
@@ -29,13 +35,11 @@ exports.getAllUsersAsAdmin = async (req, res) => {
       ]
     }
 
-    // By default, this endpoint is used for customers (role = user)
-    const allowedRoles = ['user', 'admin', 'manager', 'superadmin']
-    if (req.query.role && allowedRoles.includes(req.query.role)) {
+    // Filter by role - supports all RBAC roles
+    if (req.query.role && ALL_ROLES.includes(req.query.role)) {
       filter.role = req.query.role
-    } else {
-      filter.role = 'user'
     }
+    // If no role filter, show all roles (not just 'user')
 
     if (req.query.isActive !== undefined) {
       filter.isActive = req.query.isActive === 'true'
@@ -122,50 +126,36 @@ exports.updateUserAsAdmin = async (req, res) => {
 
     const targetCurrentLevel = ROLE_LEVELS[user.role] || 0
 
-    // For non-superadmin, this endpoint is only for regular customers (role = user)
-    if (!isSuperAdmin && user.role !== 'user') {
+    // Cannot edit someone with higher or equal role level (except yourself for basic info)
+    if (targetCurrentLevel >= currentLevel && user._id.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
-        message:
-          'فقط superadmin می‌تواند اطلاعات ادمین‌ها و مدیران را ویرایش کند.',
-      })
-    }
-
-    // Never allow editing someone with higher role level
-    if (targetCurrentLevel > currentLevel) {
-      return res.status(403).json({
-        success: false,
-        message: 'اجازه ویرایش کاربری با سطح دسترسی بالاتر را ندارید.',
+        message: 'اجازه ویرایش کاربری با سطح دسترسی برابر یا بالاتر را ندارید.',
       })
     }
 
     // Role change rules
-    if (role !== undefined) {
-      const newRoleLevel = ROLE_LEVELS[role]
-
-      if (!newRoleLevel) {
+    if (role !== undefined && role !== user.role) {
+      // Validate role
+      if (!ALL_ROLES.includes(role)) {
         return res.status(400).json({
           success: false,
           message: 'نقش ارسال‌شده معتبر نیست.',
         })
       }
 
-      // Non-superadmin cannot change role at all (even از user به admin/manager)
-      if (!isSuperAdmin && role !== user.role) {
+      const newRoleLevel = ROLE_LEVELS[role]
+
+      // Cannot assign role higher than or equal to your own level
+      if (newRoleLevel >= currentLevel) {
         return res.status(403).json({
           success: false,
-          message:
-            'فقط superadmin می‌تواند نقش کاربران را به admin/manager/superadmin تغییر دهد.',
+          message: 'نمی‌توانید نقشی هم‌سطح یا بالاتر از خودتان اختصاص دهید.',
         })
       }
 
-      // Superadmin cannot promote someone above their own level (theoretically)
-      if (isSuperAdmin && newRoleLevel > currentLevel) {
-        return res.status(403).json({
-          success: false,
-          message: 'امکان ارتقای نقش به سطحی بالاتر از superadmin وجود ندارد.',
-        })
-      }
+      // Log the role change for audit
+      console.log(`[ROLE CHANGE] User ${user._id}: ${user.role} -> ${role} by ${req.user._id} (${currentRole})`)
 
       user.role = role
     }

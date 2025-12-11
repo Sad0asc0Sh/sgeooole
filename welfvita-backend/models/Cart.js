@@ -62,7 +62,7 @@ const cartSchema = new mongoose.Schema(
     // وضعیت سبد
     status: {
       type: String,
-      enum: ['active', 'converted', 'abandoned'],
+      enum: ['active', 'converted', 'abandoned', 'expired'],
       default: 'active',
       index: true,
     },

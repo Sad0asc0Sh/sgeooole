@@ -77,18 +77,28 @@ app.use('/api/auth/admin/forgot-password', passwordResetLimiter)
 // ============================================
 // 3. Performance Middleware
 // ============================================
+
+// Response optimizer - adds timing headers
+const { responseOptimizer } = require('./middleware/cache')
+app.use(responseOptimizer)
+
+// Compression for all responses
 app.use(compression({
-  level: 6,
-  threshold: 1024,
+  level: 6, // Good balance between speed and compression
+  threshold: 512, // Compress anything above 512 bytes
   filter: (req, res) => {
+    // Don't compress if client doesn't want it
     if (req.headers['x-no-compression']) return false
+    // Always compress API responses
+    if (req.path.startsWith('/api')) return true
     return compression.filter(req, res)
   }
 }))
 
-// Cache static assets
+// Cache static assets with aggressive caching
 app.use('/uploads', (req, res, next) => {
-  res.setHeader('Cache-Control', 'public, max-age=2592000, immutable')
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable') // 1 year
+  res.setHeader('Vary', 'Accept-Encoding')
   next()
 })
 
@@ -142,13 +152,30 @@ if (process.env.NODE_ENV === 'development') {
 // Routes
 // ============================================
 
-// Health Check
+// Health Check with Performance Stats
+const { getCacheStats } = require('./middleware/cache')
 app.get('/api/health', (req, res) => {
+  const cacheStats = getCacheStats()
+  const memUsage = process.memoryUsage()
+
   res.json({
     success: true,
     message: 'Backend is running',
     timestamp: new Date().toISOString(),
-    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    uptime: Math.floor(process.uptime()) + ' seconds',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    cache: {
+      hits: cacheStats.hits,
+      misses: cacheStats.misses,
+      keys: cacheStats.keys,
+      hitRate: cacheStats.hits > 0
+        ? ((cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100).toFixed(1) + '%'
+        : '0%',
+    },
+    memory: {
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024) + ' MB',
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024) + ' MB',
+    },
   })
 })
 
@@ -255,6 +282,11 @@ app.use('/api/notifications', notificationRoutes)
 // Admin Management Routes
 const adminManagementRoutes = require('./routes/adminManagement')
 app.use('/api/admin/management', adminManagementRoutes)
+
+// Admin Setup Routes (One-Time Setup)
+const adminSetupRoutes = require('./routes/adminSetup')
+app.use('/api/admin/setup', adminSetupRoutes)
+
 // Settings Routes
 const settingsRoutes = require('./routes/settings')
 app.use('/api/settings', settingsRoutes)
@@ -300,38 +332,56 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000
 
 const connectDB = async () => {
-  try {
-    console.log('Connecting to MongoDB...')
-    const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/welfvita', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-    })
+  const maxRetries = 3
+  let retries = 0
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`)
-    console.log('Database:', mongoose.connection.name)
+  while (retries < maxRetries) {
+    try {
+      console.log(`Connecting to MongoDB... (attempt ${retries + 1}/${maxRetries})`)
 
-    // Start Server only after DB connection
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`)
-      console.log(`API: http://localhost:${PORT}/api`)
-      console.log(`Uploads: http://localhost:${PORT}/uploads`)
-      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
-    })
+      const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/welfvita', {
+        serverSelectionTimeoutMS: 30000, // 30 seconds for Atlas
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+        retryWrites: true,
+        w: 'majority',
+      })
 
-    // Start Jobs
-    const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')
-    startOrderAutoCompleter()
+      console.log(`✅ MongoDB Connected: ${conn.connection.host}`)
+      console.log('Database:', mongoose.connection.name)
 
-    const startCartExpiryWarningJob = require('./jobs/cartExpiryWarningJob')
-    startCartExpiryWarningJob()
+      // Start Server only after DB connection
+      app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`)
+        console.log(`API: http://localhost:${PORT}/api`)
+        console.log(`Uploads: http://localhost:${PORT}/uploads`)
+        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+      })
 
-    const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
-    startCartCleanupJob()
+      // Start Jobs
+      const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')
+      startOrderAutoCompleter()
 
-  } catch (err) {
-    console.error('Error connecting to MongoDB:', err.message)
-    process.exit(1)
+      const startCartExpiryWarningJob = require('./jobs/cartExpiryWarningJob')
+      startCartExpiryWarningJob()
+
+      const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
+      startCartCleanupJob()
+
+      return // Success - exit function
+
+    } catch (err) {
+      retries++
+      console.error(`❌ MongoDB connection attempt ${retries} failed:`, err.message)
+
+      if (retries < maxRetries) {
+        console.log(`⏳ Retrying in 5 seconds...`)
+        await new Promise(resolve => setTimeout(resolve, 5000))
+      } else {
+        console.error('❌ All MongoDB connection attempts failed. Exiting...')
+        process.exit(1)
+      }
+    }
   }
 }
 

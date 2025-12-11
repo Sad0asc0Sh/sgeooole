@@ -9,6 +9,31 @@ const settingsSchema = new mongoose.Schema(
       unique: true,
     },
 
+    // System Setup Status (برای کنترل endpoint /admin/setup)
+    systemSetup: {
+      // آیا Setup اولیه انجام شده؟
+      isCompleted: {
+        type: Boolean,
+        default: false,
+      },
+      // تاریخ انجام Setup
+      completedAt: {
+        type: Date,
+        default: null,
+      },
+      // IP که Setup را انجام داده
+      completedByIP: {
+        type: String,
+        default: null,
+      },
+      // شناسه ادمین ایجاد شده
+      adminId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Admin',
+        default: null,
+      },
+    },
+
     // General settings
     storeName: {
       type: String,
