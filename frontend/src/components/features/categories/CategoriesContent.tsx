@@ -224,9 +224,9 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                 className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-vita-600 transition-colors"
                                             >
                                                 <span className="flex items-center gap-3">
-                                                    {/* Subcategory Image/Icon */}
-                                                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden flex-shrink-0">
-                                                        {resolveCategoryImage(subCategory) ? (
+                                                    {/* Subcategory Image/Icon - Only show if there's an actual image */}
+                                                    {resolveCategoryImage(subCategory) && (
+                                                        <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden flex-shrink-0">
                                                             <div className="relative w-6 h-6">
                                                                 <Image
                                                                     src={resolveCategoryImage(subCategory)!}
@@ -235,10 +235,8 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                     className="object-contain"
                                                                 />
                                                             </div>
-                                                        ) : (
-                                                            <Package size={20} className="text-gray-300" />
-                                                        )}
-                                                    </div>
+                                                        </div>
+                                                    )}
                                                     {subCategory.name}
                                                 </span>
                                                 {hasGrandChildren ? (

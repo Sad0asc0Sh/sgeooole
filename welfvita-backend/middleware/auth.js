@@ -1,15 +1,15 @@
 const jwt = require('jsonwebtoken')
 const Admin = require('../models/Admin')
 const User = require('../models/User')
+const { getClient } = require('../utils/redis')
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET must be set for authentication middleware')
+  console.error('FATAL ERROR: JWT_SECRET is not defined.')
+  process.exit(1)
 }
 const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
-
-  process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
 
 // احراز هویت بر اساس توکن JWT
 // Supports both Admin (email/password) and Customer User (OTP) authentication
@@ -28,6 +28,16 @@ const protect = async (req, res, next) => {
       return res.status(401).json({
         success: false,
         message: 'توکن ارسال نشده است - لطفاً مجدداً وارد شوید',
+      })
+    }
+
+    // Check Redis blacklist (logout / password change tokens)
+    const redisClient = getClient()
+    const isBlacklisted = await redisClient.get(`blacklist:${token}`)
+    if (isBlacklisted) {
+      return res.status(401).json({
+        success: false,
+        message: 'توکن نامعتبر است (خروج انجام شده).',
       })
     }
 

@@ -149,9 +149,23 @@ export default function ProfilePage() {
             } catch (err: any) {
                 console.error("Profile load error:", err);
                 if (isMounted) {
-                    setError(err.message || "خطا در دریافت اطلاعات کاربر");
+                    // Check if it's a network error vs auth error
+                    const isNetworkError = err.message?.includes('Network') ||
+                        err.message?.includes('ECONNREFUSED') ||
+                        err.code === 'ERR_NETWORK';
+                    const isAuthError = err.response?.status === 401;
+
+                    if (isAuthError) {
+                        // Token is invalid/expired - redirect to login
+                        authService.logout();
+                        return;
+                    }
+
+                    // For network errors, show error with retry option
+                    setError(isNetworkError
+                        ? "اتصال به سرور برقرار نیست. لطفاً اتصال اینترنت خود را بررسی کنید."
+                        : (err.message || "خطا در دریافت اطلاعات کاربر"));
                     setLoading(false);
-                    if (!authService.isAuthenticated()) router.push("/login");
                 }
             }
         };

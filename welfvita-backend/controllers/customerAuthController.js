@@ -16,6 +16,7 @@ if (!JWT_SECRET) {
 const JWT_EXPIRE = process.env.JWT_EXPIRE_CUSTOMER || '30d'
 const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
+const COOKIE_MAX_AGE_MS = Number(process.env.JWT_COOKIE_MAX_AGE || 24 * 60 * 60 * 1000)
 
 // Google OAuth Client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -23,6 +24,15 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 // Helpers
 const generateToken = (userId) =>
   jwt.sign({ id: userId, type: 'customer' }, JWT_SECRET, { expiresIn: JWT_EXPIRE, issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
+
+const setAuthCookie = (res, token) => {
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE_MS,
+  })
+}
 
 // ======================
 // OTP: Send code
@@ -114,6 +124,8 @@ exports.verifyOtp = async (req, res) => {
     const isProfileComplete = !!user.password
 
     console.log(`[AUTH] User logged in: ${mobile}, Profile Complete: ${isProfileComplete}`)
+
+    setAuthCookie(res, token)
 
     res.json({
       success: true,
@@ -332,6 +344,8 @@ exports.googleLogin = async (req, res) => {
 
     console.log(`[GOOGLE AUTH] User logged in: ${email}, Profile Complete: ${isProfileComplete}`)
 
+    setAuthCookie(res, appToken)
+
     res.json({
       success: true,
       message: 'ورود با گوگل موفق بود.',
@@ -464,6 +478,8 @@ exports.loginWithPassword = async (req, res) => {
     const token = generateToken(user._id)
 
     console.log(`[AUTH] User logged in with password: ${identifier}`)
+
+    setAuthCookie(res, token)
 
     res.json({
       success: true,

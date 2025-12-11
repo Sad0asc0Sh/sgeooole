@@ -37,6 +37,7 @@ if (!JWT_SECRET) {
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '5h'
 const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
+const COOKIE_MAX_AGE_MS = Number(process.env.JWT_COOKIE_MAX_AGE || 24 * 60 * 60 * 1000)
 
 // ============================================
 // Helper: generate JWT token
@@ -51,6 +52,15 @@ const generateToken = (userId, role = 'admin') => {
       audience: JWT_AUDIENCE,
     },
   )
+}
+
+const setAuthCookie = (res, token) => {
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: COOKIE_MAX_AGE_MS,
+  })
 }
 
 // ============================================
@@ -192,6 +202,8 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
     const adminData = admin.toJSON()
 
     console.log('Admin login successful:', admin.email)
+
+    setAuthCookie(res, token)
 
     return res.json({
       success: true,

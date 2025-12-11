@@ -1,26 +1,55 @@
 const Admin = require('../models/Admin')
 const { cloudinary } = require('../middleware/upload')
+const Joi = require('joi')
+
+const updateProfileSchema = Joi.object({
+  name: Joi.string().trim().min(3).max(50),
+  email: Joi.string().trim().email(),
+  password: Joi.string().min(8).max(128),
+  nationalCode: Joi.string().trim().max(20),
+  birthDate: Joi.string().isoDate(),
+  landline: Joi.string().trim().max(30),
+  shebaNumber: Joi.string().trim().max(40),
+  province: Joi.string().trim().max(100),
+  city: Joi.string().trim().max(100),
+  isLegal: Joi.boolean(),
+  companyName: Joi.string().trim().max(150),
+  companyNationalId: Joi.string().trim().max(50),
+  companyRegistrationId: Joi.string().trim().max(50),
+  companyLandline: Joi.string().trim().max(30),
+  companyProvince: Joi.string().trim().max(100),
+  companyCity: Joi.string().trim().max(100),
+}).unknown(false)
 
 /**
- * @desc    به‌روزرسانی اطلاعات پروفایل کاربر (نام، ایمیل، رمز عبور)
+ * @desc    O"UØƒ?OOñU^OýOñO3OU+UO OOúU,OO1OO¦ U_OñU^U?OUOU, UcOOñO"Oñ (U+OU.OO OUOU.UOU,OO OñU.Oý O1O"U^Oñ)
  * @route   PUT /api/auth/me/update
  * @access  Private
  */
 exports.updateMyProfile = async (req, res) => {
   try {
+    const { error, value } = updateProfileSchema.validate(req.body, { abortEarly: false })
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message,
+      })
+    }
+    req.body = value
+
     const { name, email, password } = req.body
 
-    // پیدا کردن کاربر فعلی
+    // U_UOO_O UcOñO_U+ UcOOñO"Oñ U?O1U,UO
     const user = await Admin.findById(req.user.id).select('+password')
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'کاربر یافت نشد',
+        message: 'UcOOñO"Oñ UOOU?O¦ U+O\'O_',
       })
     }
 
-    // به‌روزرسانی فیلدها
+    // O"UØƒ?OOñU^OýOñO3OU+UO U?UOU,O_UØO
     if (name) user.name = name
     if (email) user.email = email
 
@@ -36,7 +65,7 @@ exports.updateMyProfile = async (req, res) => {
         if (!finalBirthDate) {
           return res.status(400).json({
             success: false,
-            message: 'برای ثبت و تایید کد ملی، وارد کردن تاریخ تولد الزامی است',
+            message: 'O"OñOUO O®O"O¦ U^ O¦OUOUOO_ UcO_ U.U,UOOO U^OOñO_ UcOñO_U+ O¦OOñUOOr O¦U^U,O_ OU,OýOU.UO OO3O¦',
           })
         }
 
@@ -47,7 +76,7 @@ exports.updateMyProfile = async (req, res) => {
         if (!inquiry.isValid) {
           return res.status(400).json({
             success: false,
-            message: `خطای احراز هویت: ${inquiry.message}`,
+            message: `OrOúOUO OO-OñOOý UØU^UOO¦: ${inquiry.message}`,
           })
         }
       }
@@ -61,7 +90,7 @@ exports.updateMyProfile = async (req, res) => {
       if (req.body.shebaNumber && !isValidSheba(req.body.shebaNumber)) {
         return res.status(400).json({
           success: false,
-          message: 'شماره شبا نامعتبر است',
+          message: 'O\'U.OOñUØ O\'O"O U+OU.O1O¦O"Oñ OO3O¦',
         })
       }
       user.shebaNumber = req.body.shebaNumber
@@ -78,12 +107,12 @@ exports.updateMyProfile = async (req, res) => {
     if (req.body.companyProvince !== undefined) user.companyProvince = req.body.companyProvince
     if (req.body.companyCity !== undefined) user.companyCity = req.body.companyCity
 
-    // اگر رمز عبور جدید ارسال شده، آن را هش کن
+    // OU_Oñ OñU.Oý O1O"U^Oñ OªO_UOO_ OOñO3OU, O'O_UØOO O›U+ OñO UØO' UcU+
     if (password && password.trim() !== '') {
       if (password.length < 6) {
         return res.status(400).json({
           success: false,
-          message: 'رمز عبور باید حداقل ۶ کاراکتر باشد',
+          message: 'OñU.Oý O1O"U^Oñ O"OUOO_ O-O_OU,U, U UcOOñOUcO¦Oñ O"OO\'O_',
         })
       }
       user.password = password
@@ -91,61 +120,61 @@ exports.updateMyProfile = async (req, res) => {
 
     await user.save()
 
-    // حذف password از خروجی
+    // O-OøU? password OOý OrOñU^OªUO
     const userResponse = user.toJSON()
 
     res.status(200).json({
       success: true,
-      message: 'پروفایل با موفقیت به‌روزرسانی شد',
+      message: 'U_OñU^U?OUOU, O"O U.U^U?U,UOO¦ O"UØƒ?OOñU^OýOñO3OU+UO O\'O_',
       data: userResponse,
     })
   } catch (error) {
     console.error('Error updating profile:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در به‌روزرسانی پروفایل',
+      message: 'OrOúO O_Oñ O"UØƒ?OOñU^OýOñO3OU+UO U_OñU^U?OUOU,',
       error: error.message,
     })
   }
 }
 
 /**
- * @desc    به‌روزرسانی آواتار کاربر
+ * @desc    O"UØƒ?OOñU^OýOñO3OU+UO O›U^OO¦OOñ UcOOñO"Oñ
  * @route   PUT /api/auth/me/avatar
  * @access  Private
  */
 exports.updateMyAvatar = async (req, res) => {
   try {
-    // بررسی وجود فایل آپلود شده
+    // O"OñOñO3UO U^OªU^O_ U?OUOU, O›U_U,U^O_ O\'O_UØ
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: 'لطفاً یک تصویر آواتار آپلود کنید',
+        message: 'U,OúU?OU< UOUc O¦OæU^UOOñ O›U^OO¦OOñ O›U_U,U^O_ UcU+UOO_',
       })
     }
 
-    // پیدا کردن کاربر فعلی
+    // U_UOO_O UcOñO_U+ UcOOñO"Oñ U?O1U,UO
     const user = await Admin.findById(req.user.id)
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'کاربر یافت نشد',
+        message: 'UcOOñO"Oñ UOOU?O¦ U+O\'O_',
       })
     }
 
-    // حذف آواتار قدیمی از Cloudinary (اگر وجود داشته باشد)
+    // O-OøU? O›U^OO¦OOñ U,O_UOU.UO OOý Cloudinary (OU_Oñ U^OªU^O_ O_OO\'O¦UØ O"OO\'O_)
     if (user.avatar && user.avatar.public_id) {
       try {
         await cloudinary.uploader.destroy(user.avatar.public_id)
         console.log('Old avatar deleted from Cloudinary:', user.avatar.public_id)
       } catch (error) {
         console.error('Error deleting old avatar from Cloudinary:', error)
-        // ادامه می‌دهیم حتی اگر حذف تصویر قدیمی ناموفق باشد
+        // OO_OU.UØ U.UOƒ?OO_UØUOU. O-O¦UO OU_Oñ O-OøU? O¦OæU^UOOñ U,O_UOU.UO U+OU.U^U?U, O"OO\'O_
       }
     }
 
-    // ذخیره آواتار جدید
+    // OøOrUOOñUØ O›U^OO¦OOñ OªO_UOO_
     user.avatar = {
       url: req.file.path,
       public_id: req.file.filename,
@@ -155,14 +184,14 @@ exports.updateMyAvatar = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'آواتار با موفقیت به‌روزرسانی شد',
+      message: 'O›U^OO¦OOñ O"O U.U^U?U,UOO¦ O"UØƒ?OOñU^OýOñO3OU+UO O\'O_',
       data: user.toJSON(),
     })
   } catch (error) {
     console.error('Error updating avatar:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در به‌روزرسانی آواتار',
+      message: 'OrOúO O_Oñ O"UØƒ?OOñU^OýOñO3OU+UO O›U^OO¦OOñ',
       error: error.message,
     })
   }

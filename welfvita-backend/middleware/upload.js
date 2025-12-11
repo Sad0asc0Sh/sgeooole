@@ -32,7 +32,17 @@ const storage = new CloudinaryStorage({
   },
 })
 
-const upload = multer({ storage })
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit to reduce abuse/DoS
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('فقط فایل‌های تصویری مجاز هستند!'), false)
+    }
+  },
+})
 
 module.exports = {
   upload,
