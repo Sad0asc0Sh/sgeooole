@@ -1,5 +1,6 @@
 const Groq = require('groq-sdk');
 const Settings = require('../models/Settings');
+const dnsAgent = require('./dnsAgent');
 
 exports.generateExpertResponse = async (userMessage, productContext, chatHistory = []) => {
     try {
@@ -12,7 +13,10 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
         const apiKey = config.apiKey || process.env.GROQ_API_KEY;
         if (!apiKey) return "سیستم هوشمند فعلاً غیرفعال است (کلید تنظیم نشده).";
 
-        const groq = new Groq({ apiKey });
+        const groq = new Groq({
+            apiKey,
+            httpAgent: dnsAgent
+        });
 
         // 2. Load Admin-Defined Persona or use Default
         // User wants FULL control via Admin Panel, so we use customSystemPrompt if available.
