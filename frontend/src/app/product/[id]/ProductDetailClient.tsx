@@ -49,30 +49,57 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
             {/* Info Section - Seamless connection with gallery */}
             <div className="px-4 py-4 relative bg-white z-10">
 
+                {/* === Digikala-style Category Navigation === */}
+
+                {/* Row 1: Full Category Path (Welfvita > Main Category > Subcategory) */}
+                <div className="space-y-2 mb-3">
+                    {product.categoryPath && product.categoryPath.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
+                            {/* Site Name as first breadcrumb item */}
+                            <Link
+                                href="/"
+                                className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
+                            >
+                                ویلف ویتا
+                            </Link>
+                            {product.categoryPath.map((cat, index) => (
+                                <span key={cat.id} className="flex items-center">
+                                    <span className="mx-1 text-gray-400">&lt;</span>
+                                    <Link
+                                        href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
+                                        className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
+                                            ? 'text-red-500 hover:text-red-600'
+                                            : 'text-gray-600 hover:text-vita-700'
+                                            }`}
+                                    >
+                                        {cat.name}
+                                    </Link>
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Row 2: Brand + Product's Last Category */}
+                    {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
+                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                            <Link
+                                href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
+                            >
+                                {product.brand}
+                            </Link>
+                            <span className="mx-1 text-gray-400">&lt;</span>
+                            <span className="text-gray-700 font-semibold">
+                                {/* Product type in this category */}
+                                {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
+                            </span>
+                        </div>
+                    )}
+                </div>
+
                 {/* Title & Rating */}
                 <div className="flex justify-between items-start mb-2">
                     <div className="flex flex-col">
-                        {product.categoryPath && product.categoryPath.length > 0 ? (
-                            <div className="flex items-center gap-1 text-xs font-medium text-vita-600 mb-1">
-                                {product.categoryPath.map((cat, index) => (
-                                    <span key={cat.id} className="flex items-center">
-                                        {index > 0 && <span className="mx-1 text-gray-400">/</span>}
-                                        <Link
-                                            href={`/products?category=${cat.slug}${index === 0 && product.categoryPath!.length > 1 ? '&includeChildren=true' : ''}`}
-                                            className="hover:underline hover:text-vita-700 transition-colors"
-                                        >
-                                            {cat.name}
-                                        </Link>
-                                    </span>
-                                ))}
-                            </div>
-                        ) : (
-                            product.category && (
-                                <span className="text-xs font-medium text-vita-600 mb-1 block">
-                                    {product.category}
-                                </span>
-                            )
-                        )}
                         <h1 className="text-lg font-bold text-gray-900 leading-snug">{product.title}</h1>
                         {product.enTitle && (
                             <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>

@@ -61,6 +61,7 @@ export interface Product {
   category: string;
   categoryPath?: CategoryPathItem[]; // Structured category hierarchy
   brand?: string;
+  brandSlug?: string; // Brand slug for navigation links
   description?: string;
   rating: number;
   reviewCount: number;
@@ -247,6 +248,10 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     brand: typeof backendProduct.brand === 'object' && backendProduct.brand !== null
       ? (backendProduct.brand as any).name
       : backendProduct.brand,
+
+    brandSlug: typeof backendProduct.brand === 'object' && backendProduct.brand !== null
+      ? (backendProduct.brand as any).slug
+      : undefined,
 
     // Description
     description: backendProduct.description,

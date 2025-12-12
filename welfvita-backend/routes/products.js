@@ -625,6 +625,36 @@ router.put(
 )
 
 // ============================================
+// Helper: Build full category path from leaf to root
+// Returns array of categories ordered from root to leaf
+// ============================================
+const buildCategoryPath = async (categoryId) => {
+  if (!categoryId) return [];
+
+  const path = [];
+  let currentId = categoryId;
+  const maxDepth = 10; // Prevent infinite loops
+  let depth = 0;
+
+  while (currentId && depth < maxDepth) {
+    const cat = await Category.findById(currentId).select('_id name slug parent').lean();
+    if (!cat) break;
+
+    path.unshift({
+      _id: cat._id,
+      id: cat._id.toString(),
+      name: cat.name,
+      slug: cat.slug || cat._id.toString(),
+    });
+
+    currentId = cat.parent;
+    depth++;
+  }
+
+  return path;
+};
+
+// ============================================
 // GET /api/products/:id
 // Query params:
 // - skipDiscount=true: Returns raw product data without discount calculation (for admin editing)
@@ -639,28 +669,20 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     // 1. Try finding by ID if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(id)) {
       product = await Product.findById(id)
-        .populate('brand', 'name logo')
+        .populate('brand', 'name logo slug')
         .populate({
           path: 'category',
           select: 'name slug parent',
-          populate: {
-            path: 'parent',
-            select: 'name slug',
-          },
         });
     }
 
     // 2. If not found by ID, try finding by slug
     if (!product) {
       product = await Product.findOne({ slug: id })
-        .populate('brand', 'name logo')
+        .populate('brand', 'name logo slug')
         .populate({
           path: 'category',
           select: 'name slug parent',
-          populate: {
-            path: 'parent',
-            select: 'name slug',
-          },
         });
     }
 
@@ -672,6 +694,11 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     }
 
     const productObj = product.toObject()
+
+    // Build full category path from root to leaf
+    if (product.category && product.category._id) {
+      productObj.categoryPath = await buildCategoryPath(product.category._id);
+    }
 
     // If skipDiscount is true, return raw product data without discount calculation
     // This is used for admin editing to preserve original prices

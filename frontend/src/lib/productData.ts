@@ -16,7 +16,7 @@ type BackendCategory = {
   parent?: BackendCategory;
 };
 
-type BackendBrand = { name?: string } | string | null;
+type BackendBrand = { name?: string; slug?: string } | string | null;
 
 type BackendProduct = {
   _id?: string;
@@ -152,6 +152,11 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
       ? (backend.brand as any).name
       : backend.brand || undefined;
 
+  const brandSlug =
+    typeof backend.brand === "object" && backend.brand !== null
+      ? (backend.brand as any).slug
+      : undefined;
+
   return {
     id: backend._id || backend.id || "",
     name: backend.name,
@@ -168,6 +173,7 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     category,
     categoryPath,
     brand,
+    brandSlug,
     description: backend.description,
     rating: backend.rating ?? 0,
     reviewCount: backend.numReviews ?? backend.reviewCount ?? 0,
