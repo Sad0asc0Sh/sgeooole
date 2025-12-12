@@ -38,6 +38,12 @@ exports.getPublicSettings = async (req, res) => {
         trendingEnabled: settings.searchSettings?.trendingEnabled || false,
         trendingLimit: settings.searchSettings?.trendingLimit || 8,
         trendingPeriodDays: settings.searchSettings?.trendingPeriodDays || 30,
+      },
+      popularCategoriesSettings: {
+        trackingEnabled: settings.popularCategoriesSettings?.trackingEnabled !== false,
+        displayEnabled: settings.popularCategoriesSettings?.displayEnabled || false,
+        displayLimit: settings.popularCategoriesSettings?.displayLimit || 8,
+        useFallback: settings.popularCategoriesSettings?.useFallback !== false,
       }
     }
 
@@ -229,6 +235,14 @@ exports.updateSettings = async (req, res) => {
     // For nested objects (Search Settings)
     if (updates.searchSettings) {
       settings.searchSettings = { ...settings.searchSettings.toObject(), ...updates.searchSettings }
+    }
+
+    // For nested objects (Popular Categories Settings)
+    if (updates.popularCategoriesSettings) {
+      settings.popularCategoriesSettings = {
+        ...settings.popularCategoriesSettings?.toObject?.() || {},
+        ...updates.popularCategoriesSettings
+      }
     }
 
     await settings.save()

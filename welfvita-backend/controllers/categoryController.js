@@ -123,13 +123,75 @@ exports.getFeaturedCategories = async (req, res) => {
 // GET /api/categories/popular
 exports.getPopularCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true, isPopular: true })
-      .sort({ order: 1, name: 1 })
+    // Import models
+    const Settings = require('../models/Settings')
+    const CategoryView = require('../models/CategoryView')
 
-    res.json({
+    // Get settings
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+    const config = settings?.popularCategoriesSettings || {}
+
+    const displayEnabled = config.displayEnabled === true
+    const useFallback = config.useFallback !== false
+    const displayLimit = config.displayLimit || 8
+    const periodDays = config.periodDays || 30
+    const minViews = config.minViews || 5
+    const minTotalViewsForActivation = config.minTotalViewsForActivation || 100
+
+    // Check if we have enough data for analytics
+    let hasEnoughData = false
+    let stats = null
+
+    if (displayEnabled) {
+      try {
+        stats = await CategoryView.getStats(periodDays)
+        hasEnoughData = stats.totalViews >= minTotalViewsForActivation
+      } catch (err) {
+        console.warn('Could not get category view stats:', err.message)
+      }
+    }
+
+    // Use analytics if enabled and has enough data
+    if (displayEnabled && hasEnoughData) {
+      try {
+        const popularCategories = await CategoryView.getPopularCategories({
+          limit: displayLimit,
+          periodDays,
+          minViews
+        })
+
+        return res.json({
+          success: true,
+          data: popularCategories,
+          source: 'analytics',
+          count: popularCategories.length,
+        })
+      } catch (err) {
+        console.warn('Could not get popular categories from analytics, falling back:', err.message)
+      }
+    }
+
+    // Fallback to manual isPopular categories
+    if (useFallback) {
+      const categories = await Category.find({ isActive: true, isPopular: true })
+        .sort({ order: 1, name: 1 })
+        .limit(displayLimit)
+        .select('name slug image icon description order')
+
+      return res.json({
+        success: true,
+        data: categories,
+        source: 'manual',
+        count: categories.length,
+      })
+    }
+
+    // No data available
+    return res.json({
       success: true,
-      data: categories,
-      count: categories.length,
+      data: [],
+      source: 'none',
+      count: 0,
     })
   } catch (error) {
     console.error('Error fetching popular categories:', error)

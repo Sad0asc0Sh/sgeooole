@@ -277,6 +277,53 @@ const settingsSchema = new mongoose.Schema(
         max: 90,
       },
     },
+
+    // Popular Categories Settings (تنظیمات دسته‌بندی‌های محبوب)
+    popularCategoriesSettings: {
+      // فعال/غیرفعال کردن ردیابی بازدید دسته‌بندی‌ها
+      trackingEnabled: {
+        type: Boolean,
+        default: true,
+      },
+      // فعال/غیرفعال کردن نمایش دسته‌بندی‌های محبوب (بر اساس آمار واقعی)
+      displayEnabled: {
+        type: Boolean,
+        default: false, // پیش‌فرض: غیرفعال (تا زمانی که داده کافی جمع‌آوری شود)
+      },
+      // تعداد دسته‌بندی‌های محبوب که نمایش داده شوند
+      displayLimit: {
+        type: Number,
+        default: 8,
+        min: 3,
+        max: 20,
+      },
+      // بازه زمانی محاسبه محبوبیت (روز)
+      periodDays: {
+        type: Number,
+        default: 30,
+        min: 1,
+        max: 90,
+      },
+      // حداقل تعداد بازدید برای محتسب شدن به عنوان محبوب
+      minViews: {
+        type: Number,
+        default: 5,
+        min: 1,
+        max: 100,
+      },
+      // حداقل تعداد کل بازدید برای فعال‌سازی نمایش آمار واقعی
+      minTotalViewsForActivation: {
+        type: Number,
+        default: 100,
+        min: 10,
+        max: 10000,
+      },
+      // استفاده از fallback (دسته‌بندی‌های دستی isPopular) وقتی داده کافی نیست
+      useFallback: {
+        type: Boolean,
+        default: true,
+      },
+    },
   },
   { timestamps: true },
 )

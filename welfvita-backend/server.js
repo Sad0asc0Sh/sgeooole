@@ -201,6 +201,10 @@ app.use('/api/v1/admin/products', productsRoutes)
 const searchRoutes = require('./routes/search')
 app.use('/api/search', searchRoutes)
 
+// Category Views Routes (Popular Categories Analytics)
+const categoryViewsRoutes = require('./routes/categoryViews')
+app.use('/api/category-views', categoryViewsRoutes)
+
 // Orders Routes
 const ordersRoutes = require('./routes/orders')
 app.use('/api/orders', ordersRoutes)
