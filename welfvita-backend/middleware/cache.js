@@ -39,8 +39,12 @@ const buildCacheKey = (req) => {
 // Set Optimal Cache Headers
 // ============================================
 const setCacheHeaders = (res, ttl, etag, isPrivate = false) => {
-  const cacheType = isPrivate ? 'private' : 'public'
-  res.setHeader('Cache-Control', `${cacheType}, max-age=${ttl}, stale-while-revalidate=${ttl * 2}`)
+  // IMPORTANT: Don't send max-age to browser for dynamic APIs
+  // This ensures changes are visible immediately after server cache is cleared
+  // Server-side caching still works, but browser always requests fresh data
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   if (etag) {
     res.setHeader('ETag', `"${etag}"`)
   }
@@ -133,6 +137,9 @@ const clearCacheByPrefix = (prefix) => {
       cleared++
     }
   })
+  if (cleared > 0) {
+    console.log(`[CACHE] Cleared ${cleared} cache entries matching prefix: ${prefix}`)
+  }
   return cleared
 }
 

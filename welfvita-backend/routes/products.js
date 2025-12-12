@@ -629,7 +629,7 @@ router.put(
 // Query params:
 // - skipDiscount=true: Returns raw product data without discount calculation (for admin editing)
 // ============================================
-router.get('/:id', cacheMiddleware(3600), async (req, res) => {
+router.get('/:id', cacheMiddleware(300), async (req, res) => {
   try {
     let product;
     const mongoose = require('mongoose');
@@ -1019,8 +1019,8 @@ router.put(
       console.log(`[UPDATE PRODUCT] Result category:`, updatedProduct.category)
       console.log(`[UPDATE PRODUCT] Result brand:`, updatedProduct.brand)
 
-      // Invalidate caches for this product and lists
-      clearCacheByKey(`/api/products/${req.params.id}`)
+      // Invalidate ALL product-related caches
+      // This clears: /api/products, /api/products?..., /api/products/:id, /api/products/:slug
       clearCacheByPrefix('/api/products')
       clearCacheByPrefix('/api/v1/admin/products')
 

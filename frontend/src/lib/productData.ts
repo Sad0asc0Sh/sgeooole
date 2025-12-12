@@ -188,8 +188,8 @@ const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/ap
 
 export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
   const response = await fetch(`${apiBaseUrl}/products/${id}`, {
-    next: { revalidate: PRODUCT_REVALIDATE },
-    cache: 'force-cache',
+    next: { revalidate: 0 },
+    cache: 'no-store',
   });
 
   if (!response.ok) {
@@ -210,8 +210,8 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   try {
     // Try a slug endpoint first
     const resSlug = await fetch(`${apiBaseUrl}/products/slug/${slug}`, {
-      next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'force-cache',
+      next: { revalidate: 0 },
+      cache: 'no-store',
     });
     if (resSlug.ok) {
       const payload = await resSlug.json();
@@ -225,8 +225,8 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   // Fallback: try list query
   try {
     const res = await fetch(`${apiBaseUrl}/products?slug=${slug}`, {
-      next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'force-cache',
+      next: { revalidate: 0 },
+      cache: 'no-store',
     });
     if (res.ok) {
       const payload = await res.json();
@@ -244,8 +244,8 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
 export const fetchProductsForStatic = async (limit: number = 100): Promise<(Product & { isActive?: boolean })[]> => {
   try {
     const response = await fetch(`${apiBaseUrl}/products?limit=${limit}`, {
-      next: { revalidate: PRODUCT_REVALIDATE },
-      cache: 'force-cache',
+      next: { revalidate: 0 },
+      cache: 'no-store',
     });
     if (!response.ok) return [];
     const payload = await response.json();

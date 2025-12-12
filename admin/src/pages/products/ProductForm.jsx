@@ -35,6 +35,7 @@ function ProductForm() {
   const isEdit = Boolean(id)
   const [loading, setLoading] = useState(false)
   const [files, setFiles] = useState([])
+  const [uploadingCount, setUploadingCount] = useState(0) // Track uploading images
 
   // ============================================
   // State جدید برای محصولات متغیر
@@ -379,6 +380,105 @@ function ProductForm() {
     },
   ]
 
+  // ============================================
+  // آپلود فوری تصاویر (Immediate Upload)
+  // ============================================
+  const handleImmediateUpload = async (file) => {
+    // Generate a unique ID for tracking
+    const uid = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+
+    // Add file to list with uploading status
+    const newFile = {
+      uid,
+      name: file.name,
+      status: 'uploading',
+      originFileObj: file,
+      percent: 0,
+    }
+
+    setFiles(prev => [...prev, newFile])
+    setUploadingCount(prev => prev + 1)
+
+    try {
+      const formData = new FormData()
+      formData.append('image', file)
+
+      const response = await api.post('/uploads/image', formData, {
+        timeout: 180000, // 3 minutes for slow connections to Cloudinary
+        onUploadProgress: (progressEvent) => {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setFiles(prev => prev.map(f =>
+            f.uid === uid ? { ...f, percent } : f
+          ))
+        }
+      })
+
+      if (response.data.success) {
+        const { url, public_id } = response.data.data
+        // Update file with uploaded info
+        setFiles(prev => prev.map(f =>
+          f.uid === uid ? {
+            ...f,
+            status: 'done',
+            url,
+            public_id,
+            thumbUrl: url,
+            percent: 100,
+          } : f
+        ))
+        message.success(`تصویر ${file.name} آپلود شد`)
+      } else {
+        throw new Error(response.data.message || 'خطا در آپلود')
+      }
+    } catch (error) {
+      console.error('Upload error:', error)
+      // Mark as error
+      setFiles(prev => prev.map(f =>
+        f.uid === uid ? { ...f, status: 'error', percent: 0 } : f
+      ))
+      message.error(`خطا در آپلود ${file.name}: ${error.response?.data?.message || error.message}`)
+    } finally {
+      setUploadingCount(prev => prev - 1)
+    }
+
+    // Prevent default upload behavior
+    return false
+  }
+
+  // حذف تصویر آپلود شده از Cloudinary
+  const handleRemoveUploadedImage = async (file) => {
+    // فوراً وضعیت را به "در حال حذف" تغییر بده
+    setFiles(prev => prev.map(f =>
+      f.uid === file.uid ? { ...f, status: 'removing' } : f
+    ))
+
+    // حذف فوری از UI برای تجربه کاربری بهتر
+    setTimeout(() => {
+      setFiles(prev => prev.filter(f => f.uid !== file.uid))
+    }, 300) // کمی تأخیر برای نمایش انیمیشن
+
+    // Track removed images for existing products (edit mode)
+    if (file.url || file.public_id) {
+      setRemovedImages(prev => [...prev, { url: file.url, public_id: file.public_id }])
+    }
+
+    // حذف از Cloudinary در پس‌زمینه (async - بدون انتظار)
+    if (file.public_id) {
+      api.delete(`/uploads/image/${file.public_id}`)
+        .then(() => {
+          console.log('Image deleted from Cloudinary:', file.public_id)
+        })
+        .catch((error) => {
+          console.error('Error deleting image from Cloudinary:', error)
+          // Don't show error to user - file is already removed from UI
+        })
+    }
+
+    // Return false to prevent antd's default remove behavior
+    return false
+  }
+
+
   const handleFinish = async (values) => {
     setLoading(true)
     try {
@@ -439,45 +539,48 @@ function ProductForm() {
         payload.properties = propertiesArray
       }
 
-      // Count new images to upload
-      const newImagesToUpload = files.filter(f => f.originFileObj)
+      // Check if there are images still uploading
+      if (uploadingCount > 0) {
+        message.warning('لطفاً صبر کنید تا آپلود تصاویر تکمیل شود')
+        setLoading(false)
+        return
+      }
+
+      // Get already uploaded images (with url and public_id)
+      const uploadedImages = files
+        .filter(f => f.status === 'done' && f.url && f.public_id)
+        .map(f => ({ url: f.url, public_id: f.public_id }))
 
       if (!isEdit) {
-        // ایجاد محصول
+        // ایجاد محصول با تصاویر آپلود شده
         message.loading({ content: 'در حال ایجاد محصول...', key: 'save' })
+
+        // Include uploaded images directly in payload
+        payload.images = uploadedImages
+
         const res = await api.post('/v1/admin/products', payload)
         const newId = res?.data?.data?._id
-
-        // آپلود تصاویر (اگر انتخاب شده باشند)
-        if (newId && newImagesToUpload.length > 0) {
-          message.loading({ content: `در حال آپلود ${newImagesToUpload.length} تصویر...`, key: 'save' })
-          const fd = new FormData()
-          newImagesToUpload.forEach((f) => {
-            fd.append('images', f.originFileObj)
-          })
-          await api.post(`/products/${newId}/images`, fd)
-        }
 
         message.success({ content: 'محصول با موفقیت ایجاد شد', key: 'save' })
         navigate(newId ? `/products/edit/${newId}` : '/products')
       } else {
         // ویرایش محصول
         message.loading({ content: 'در حال ذخیره تغییرات...', key: 'save' })
+
+        // Collect existing images (from edit mode) and new uploaded images
+        const existingImages = files
+          .filter(f => f.status === 'done' && f.url && !f.originFileObj)
+          .map(f => ({ url: f.url, public_id: f.public_id }))
+
+        const newUploadedImages = files
+          .filter(f => f.status === 'done' && f.url && f.originFileObj)
+          .map(f => ({ url: f.url, public_id: f.public_id }))
+
         await api.put(`/products/${id}`, {
           ...payload,
-          removeAllImages: files.length === 0,
+          images: [...existingImages, ...newUploadedImages],
           imagesToRemove: removedImages,
         })
-
-        // آپلود تصاویر جدید (اگر انتخاب شده باشند)
-        if (newImagesToUpload.length > 0) {
-          message.loading({ content: `در حال آپلود ${newImagesToUpload.length} تصویر...`, key: 'save' })
-          const fd = new FormData()
-          newImagesToUpload.forEach((f) => {
-            fd.append('images', f.originFileObj)
-          })
-          await api.post(`/products/${id}/images`, fd)
-        }
 
         message.success({ content: 'محصول با موفقیت به‌روزرسانی شد', key: 'save' })
       }
@@ -770,22 +873,23 @@ function ProductForm() {
 
                     <Upload.Dragger
                       multiple
-                      beforeUpload={() => false}
-                      fileList={files}
-                      onChange={({ fileList }) => setFiles(fileList)}
-                      onRemove={(file) => {
-                        if (file && (file.url || file.public_id)) {
-                          setRemovedImages((prev) => [
-                            ...prev,
-                            {
-                              url: file.url,
-                              public_id: file.public_id,
-                            },
-                          ])
-                        }
-                        return true
-                      }}
+                      beforeUpload={handleImmediateUpload}
+                      fileList={files.filter(f => f.status !== 'removing')}
+                      onRemove={handleRemoveUploadedImage}
                       listType="picture"
+                      showUploadList={{
+                        showPreviewIcon: true,
+                        showRemoveIcon: true,
+                        showDownloadIcon: false,
+                      }}
+                      progress={{
+                        strokeColor: {
+                          '0%': '#108ee9',
+                          '100%': '#87d068',
+                        },
+                        strokeWidth: 3,
+                        format: (percent) => percent && `${parseFloat(percent.toFixed(0))}%`,
+                      }}
                     >
                       <p className="ant-upload-drag-icon">
                         <InboxOutlined />
@@ -794,8 +898,10 @@ function ProductForm() {
                         تصاویر را بکشید و رها کنید یا برای انتخاب کلیک کنید.
                       </p>
                       <p className="ant-upload-hint">
-                        تصاویر انتخاب‌شده بعد از ذخیره‌سازی، روی Cloudinary
-                        آپلود شده و در لیست محصولات نمایش داده می‌شوند.
+                        {uploadingCount > 0
+                          ? `⏳ در حال آپلود ${uploadingCount} تصویر...`
+                          : '✅ تصاویر بلافاصله آپلود می‌شوند'
+                        }
                       </p>
                     </Upload.Dragger>
                   </>

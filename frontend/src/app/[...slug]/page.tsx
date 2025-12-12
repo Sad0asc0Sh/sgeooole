@@ -1,10 +1,12 @@
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import ProductDetailClient from "../product/[id]/ProductDetailClient";
-import { fetchProductBySlug, fetchProductsForStatic, PRODUCT_REVALIDATE } from "@/lib/productData";
+import { fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 
-export const revalidate = PRODUCT_REVALIDATE;
+// Force dynamic rendering - no caching, always fetch fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const dynamicParams = true;
 
 export async function generateStaticParams() {

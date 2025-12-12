@@ -299,6 +299,10 @@ app.use('/api/settings', settingsRoutes)
 const auditLogRoutes = require('./routes/auditLogs')
 app.use('/api/audit-logs', auditLogRoutes)
 
+// Uploads Routes (Immediate Image Upload)
+const uploadRoutes = require('./routes/uploads')
+app.use('/api/uploads', uploadRoutes)
+
 // Root
 app.get('/', (req, res) => {
   res.json({

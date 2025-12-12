@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
-import { fetchProductById, fetchProductsForStatic, PRODUCT_REVALIDATE } from "@/lib/productData";
+import { fetchProductById, fetchProductsForStatic } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 import ProductRail from "@/components/home/ProductRail";
 
-export const revalidate = PRODUCT_REVALIDATE;
+// Force dynamic rendering - no caching, always fetch fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 export const dynamicParams = true;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
