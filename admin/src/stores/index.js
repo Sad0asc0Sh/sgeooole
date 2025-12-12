@@ -103,8 +103,8 @@ export const useCategoryStore = create((set, get) => ({
     set({ loading: true, error: null })
     try {
       const api = (await import('../api')).default
-      // Cache busting: add timestamp to bypass browser cache
-      const response = await api.get(`/categories/tree?_t=${Date.now()}`)
+      // Fetch categories tree (browser cache enabled for performance)
+      const response = await api.get('/categories/tree')
       const rawData = response?.data?.data || []
 
       const getImageUrl = (img) => {
@@ -151,12 +151,7 @@ export const useCategoryStore = create((set, get) => ({
         categoriesFlat: flatten(treeData),
         loading: false,
       })
-      // eslint-disable-next-line no-console
-      console.log(
-        'Categories tree loaded successfully:',
-        treeData.length,
-        'root nodes',
-      )
+
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to fetch categories:', error)
@@ -195,8 +190,6 @@ export const useBrandStore = create((set, get) => ({
         brands: rawData,
         loading: false,
       })
-      // eslint-disable-next-line no-console
-      console.log('Brands loaded successfully:', rawData.length, 'brands')
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to fetch brands:', error)

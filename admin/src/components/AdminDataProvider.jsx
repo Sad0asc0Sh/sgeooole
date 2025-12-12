@@ -22,7 +22,6 @@ export default function AdminDataProvider({ children }) {
           fetchCategoriesTree(),
           fetchBrands(),
         ])
-        console.log('[AdminDataProvider] Global data loaded successfully')
       } catch (error) {
         console.error('[AdminDataProvider] Error loading global data:', error)
       }

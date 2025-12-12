@@ -11,6 +11,7 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 60000, // 60 seconds timeout for large file uploads
 })
 
 // Attach Authorization header from Zustand store for all requests except login endpoints

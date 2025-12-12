@@ -46,7 +46,7 @@ function MainLayout({ children }) {
       label: <Link to="/">داشبورد</Link>,
     },
     {
-      key: '/products',
+      key: 'products-menu',
       icon: <ShoppingOutlined />,
       label: 'محصولات',
       children: [
@@ -74,7 +74,7 @@ function MainLayout({ children }) {
       ],
     },
     {
-      key: '/orders',
+      key: 'orders-menu',
       icon: <ShoppingCartOutlined />,
       label: 'سفارشات',
       children: [

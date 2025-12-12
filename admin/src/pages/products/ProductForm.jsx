@@ -439,30 +439,30 @@ function ProductForm() {
         payload.properties = propertiesArray
       }
 
+      // Count new images to upload
+      const newImagesToUpload = files.filter(f => f.originFileObj)
+
       if (!isEdit) {
         // ایجاد محصول
+        message.loading({ content: 'در حال ایجاد محصول...', key: 'save' })
         const res = await api.post('/v1/admin/products', payload)
-        message.success('محصول با موفقیت ایجاد شد')
         const newId = res?.data?.data?._id
 
         // آپلود تصاویر (اگر انتخاب شده باشند)
-        if (newId && files.length > 0) {
+        if (newId && newImagesToUpload.length > 0) {
+          message.loading({ content: `در حال آپلود ${newImagesToUpload.length} تصویر...`, key: 'save' })
           const fd = new FormData()
-          files.forEach((f) => {
-            if (f.originFileObj) {
-              fd.append('images', f.originFileObj)
-            }
+          newImagesToUpload.forEach((f) => {
+            fd.append('images', f.originFileObj)
           })
-          if ([...fd.keys()].length > 0) {
-            await api.post(`/products/${newId}/images`, fd, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            })
-          }
+          await api.post(`/products/${newId}/images`, fd)
         }
 
+        message.success({ content: 'محصول با موفقیت ایجاد شد', key: 'save' })
         navigate(newId ? `/products/edit/${newId}` : '/products')
       } else {
         // ویرایش محصول
+        message.loading({ content: 'در حال ذخیره تغییرات...', key: 'save' })
         await api.put(`/products/${id}`, {
           ...payload,
           removeAllImages: files.length === 0,
@@ -470,24 +470,19 @@ function ProductForm() {
         })
 
         // آپلود تصاویر جدید (اگر انتخاب شده باشند)
-        if (files.length > 0) {
+        if (newImagesToUpload.length > 0) {
+          message.loading({ content: `در حال آپلود ${newImagesToUpload.length} تصویر...`, key: 'save' })
           const fd = new FormData()
-          files.forEach((f) => {
-            if (f.originFileObj) {
-              fd.append('images', f.originFileObj)
-            }
+          newImagesToUpload.forEach((f) => {
+            fd.append('images', f.originFileObj)
           })
-          if ([...fd.keys()].length > 0) {
-            await api.post(`/products/${id}/images`, fd, {
-              headers: { 'Content-Type': 'multipart/form-data' },
-            })
-          }
+          await api.post(`/products/${id}/images`, fd)
         }
 
-        message.success('محصول با موفقیت به‌روزرسانی شد')
+        message.success({ content: 'محصول با موفقیت به‌روزرسانی شد', key: 'save' })
       }
     } catch (err) {
-      message.error(err?.message || 'خطا در ذخیره‌سازی اطلاعات محصول')
+      message.error({ content: err?.response?.data?.message || err?.message || 'خطا در ذخیره‌سازی', key: 'save' })
     } finally {
       setLoading(false)
     }
@@ -749,6 +744,30 @@ function ProductForm() {
                 label: 'تصاویر محصول',
                 children: (
                   <>
+                    {/* راهنمای ابعاد تصویر */}
+                    <Alert
+                      message="راهنمای ابعاد تصاویر"
+                      description={
+                        <div style={{ lineHeight: 1.8 }}>
+                          <p style={{ margin: 0 }}>
+                            <strong>📐 ابعاد توصیه‌شده:</strong> تصاویر <strong>افقی (نسبت 3:2)</strong> بهترین نمایش را خواهند داشت.
+                          </p>
+                          <p style={{ margin: '8px 0 0 0' }}>
+                            <strong>🖼️ اندازه ایده‌آل:</strong> <Tag color="blue">900×600</Tag> یا <Tag color="green">1200×800</Tag> پیکسل
+                          </p>
+                          <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: 12 }}>
+                            💡 تصاویر مربعی (1:1) یا عمودی باعث نمایش فضای خالی اضافی در گالری محصول می‌شوند.
+                          </p>
+                          <p style={{ margin: '8px 0 0 0', color: '#666', fontSize: 12 }}>
+                            ⚡ حداکثر حجم مجاز: <strong>5MB</strong> برای هر تصویر
+                          </p>
+                        </div>
+                      }
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16, borderRadius: 8 }}
+                    />
+
                     <Upload.Dragger
                       multiple
                       beforeUpload={() => false}

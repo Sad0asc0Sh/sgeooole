@@ -2,21 +2,21 @@
 
 /* Force Swiper and SwiperSlide to have proper dimensions */
 .product-gallery-swiper {
-  height: 380px !important;
+  height: 260px !important;
   width: 100% !important;
-  min-height: 380px !important;
+  min-height: 260px !important;
 }
 
 .product-gallery-swiper .swiper-wrapper {
-  height: 380px !important;
+  height: 260px !important;
   width: 100% !important;
-  min-height: 380px !important;
+  min-height: 260px !important;
 }
 
 .product-gallery-swiper .swiper-slide {
-  height: 380px !important;
+  height: 260px !important;
   width: 100% !important;
-  min-height: 380px !important;
+  min-height: 260px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -27,7 +27,7 @@
   position: relative !important;
   width: 100% !important;
   height: 100% !important;
-  min-height: 380px !important;
+  min-height: 260px !important;
 }
 
 /* Fix for Next.js Image with fill */

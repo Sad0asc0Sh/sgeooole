@@ -41,8 +41,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     }, []);
 
     if (!mounted) return (
-        <div className="h-[380px] w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center">
-            <div className="w-32 h-32 rounded-2xl bg-gray-200 animate-pulse" />
+        <div className="h-[260px] w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-2xl bg-gray-200 animate-pulse" />
         </div>
     );
 
@@ -60,15 +60,15 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     return (
         <>
             {/* Gallery Slider */}
-            <div className="relative bg-gray-50 w-full pb-10">
-                <div className="h-[380px] w-full">
+            <div className="relative bg-gradient-to-b from-gray-50 to-white w-full pb-2">
+                <div className="h-[260px] w-full">
                     <Swiper
                         key={product.id}
                         modules={[Pagination]}
                         pagination={{ clickable: true }}
                         slidesPerView={1}
                         className="h-full w-full"
-                        style={{ height: '380px' }}
+                        style={{ height: '260px' }}
                         onSwiper={setSwiperInstance}
                         onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                     >
@@ -103,7 +103,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                         alt={`${product.title} - ${index + 1}`}
                                         fill
                                         unoptimized
-                                        className={`object-contain p-8 transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
+                                        className={`object-contain p-4 transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
                                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                         loading={index === 0 ? undefined : "lazy"}
                                         quality={75}
@@ -111,7 +111,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                         priority={index === 0}
                                     />
                                     {showCampaignBadge && (
-                                        <div className="absolute top-20 left-4 z-20">
+                                        <div className="absolute top-4 left-4 z-20">
                                             <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
                                                 product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
                                                     product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
@@ -127,15 +127,15 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                     </Swiper>
                 </div>
 
-                {/* Thumbnails */}
-                <div className="flex gap-3 px-4 overflow-x-auto no-scrollbar mt-2 pb-4">
+                {/* Thumbnails - Compact horizontal strip */}
+                <div className="flex gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 justify-center">
                     {product.images.map((img, index) => (
                         <button
                             key={index}
                             onClick={() => swiperInstance?.slideTo(index)}
-                            className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all bg-gray-100 ${activeIndex === index
-                                ? "border-vita-500 shadow-md scale-105"
-                                : "border-transparent opacity-60 hover:opacity-100"
+                            className={`relative w-12 h-12 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all duration-200 bg-white shadow-sm ${activeIndex === index
+                                ? "border-vita-500 shadow-md scale-110 ring-2 ring-vita-200"
+                                : "border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-300"
                                 }`}
                         >
                             <Image
@@ -144,7 +144,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 fill
                                 unoptimized
                                 className="object-cover"
-                                sizes="64px"
+                                sizes="48px"
                                 loading="lazy"
                                 quality={50}
                             />

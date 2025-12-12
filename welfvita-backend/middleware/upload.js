@@ -11,6 +11,7 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+  timeout: 60000, // 60 seconds timeout for uploads
 })
 
 // ============================================
@@ -65,6 +66,9 @@ const storage = new CloudinaryStorage({
       resource_type: 'image',
       public_id: safePublicId,
       allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+      // NOTE: No eager transformations here for faster upload
+      // Cloudinary CDN applies transformations on-demand when images are accessed
+      // This significantly speeds up the upload process
     }
   },
 })
@@ -119,7 +123,7 @@ const secureFileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: 2 * 1024 * 1024, // 2MB max per file
+    fileSize: 5 * 1024 * 1024, // 5MB max per file (increased for high-quality product images)
     files: 10, // Max 10 files per request
   },
   fileFilter: secureFileFilter,

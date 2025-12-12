@@ -36,18 +36,18 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     }, [product]);
 
     return (
-        <div className="min-h-screen bg-white pb-24 pt-16">
+        <div className="min-h-screen bg-white pb-24 pt-14">
             {/* Track product view */}
             <ProductHistoryTracker product={product} />
 
             {/* Header (Transparent/Floating) */}
             <ProductHeader product={product} />
 
-            {/* Gallery Slider */}
+            {/* Gallery Slider - Compact */}
             <ProductGallery product={product} />
 
-            {/* Info Section */}
-            <div className="px-4 py-6 -mt-6 relative bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-10">
+            {/* Info Section - Seamless connection with gallery */}
+            <div className="px-4 py-4 relative bg-white z-10">
 
                 {/* Title & Rating */}
                 <div className="flex justify-between items-start mb-2">
