@@ -115,7 +115,21 @@ exports.getAllOrders = async (req, res) => {
     }
 
     if (req.query.search) {
-      filter._id = { $regex: req.query.search, $options: 'i' }
+      const searchRegex = { $regex: req.query.search, $options: 'i' }
+      const orConditions = [
+        { orderCode: searchRegex },
+        { trackingCode: searchRegex },
+      ]
+
+      // Only search by _id if the search term is a valid ObjectId (exact match)
+      // or if we really want regex on ObjectId, we can't do it easily in find() without aggregation.
+      // Assuming exact match for ID is sufficient for admin.
+      const mongoose = require('mongoose')
+      if (mongoose.Types.ObjectId.isValid(req.query.search)) {
+        orConditions.push({ _id: req.query.search })
+      }
+
+      filter.$or = orConditions
     }
 
     // فیلتر بر اساس کاربر (برای نمایش سفارشات یک مشتری خاص)
@@ -316,7 +330,7 @@ exports.getMyOrders = async (req, res) => {
     // 🚀 OPTIMIZATION: Only select fields needed for display
     // This reduces data transfer and speeds up the query
     const orders = await Order.find({ user: req.user._id })
-      .select('_id orderStatus totalPrice createdAt isPaid itemsPrice shippingPrice orderItems')
+      .select('_id orderCode orderStatus totalPrice createdAt isPaid itemsPrice shippingPrice orderItems')
       .sort({ createdAt: -1 })
       .limit(50) // Limit to last 50 orders for performance
       .lean()

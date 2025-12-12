@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
                         </div>
                         <div>
                             <h2 className="font-bold text-lg">سفارش با موفقیت ثبت شد!</h2>
-                            <p className="text-sm text-white/90">کد سفارش: {order._id.slice(-8)}</p>
+                            <p className="text-sm text-white/90">کد سفارش: {order.orderCode || order._id.slice(-8)}</p>
                         </div>
                     </div>
                     <p className="text-sm text-white/90">

@@ -123,12 +123,12 @@ function OrdersList() {
   const columns = [
     {
       title: 'شماره سفارش',
-      dataIndex: '_id',
+      dataIndex: 'orderCode', // Use orderCode primarily
       key: 'orderId',
       width: 150,
-      render: (id) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
-          #{id.slice(-8)}
+      render: (code, record) => (
+        <span style={{ fontFamily: 'monospace', fontSize: '0.85em', fontWeight: 'bold' }}>
+          {code || `#${record._id.slice(-8)}`}
         </span>
       ),
     },
@@ -250,7 +250,7 @@ function OrdersList() {
         }}
       >
         <Input
-          placeholder="جستجو بر اساس شماره سفارش..."
+          placeholder="جستجو (کد سفارش، نام مشتری...)"
           prefix={<SearchOutlined />}
           style={{ width: 300 }}
           allowClear

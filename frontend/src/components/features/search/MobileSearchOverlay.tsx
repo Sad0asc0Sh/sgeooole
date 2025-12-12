@@ -45,8 +45,9 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
     useEffect(() => {
         const fetchSearchSettings = async () => {
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/settings/public`);
-                const data = await response.json();
+                const { default: api } = await import('@/lib/api');
+                const response = await api.get('/settings/public');
+                const data = response.data;
                 if (data.success && data.settings?.searchSettings) {
                     setSearchSettings(data.settings.searchSettings);
                 }

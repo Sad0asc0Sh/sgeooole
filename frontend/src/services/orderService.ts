@@ -50,6 +50,7 @@ export interface CreateOrderRequest {
 export interface Order {
   _id: string;
   user: string;
+  orderCode?: string; // Human-readable order code (e.g., WV-123456)
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
   paymentMethod: string;
@@ -70,6 +71,7 @@ export interface Order {
   orderStatus: string;
   shippedAt?: string;
   deliveredAt?: string;
+  trackingCode?: string; // Postal tracking code
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;

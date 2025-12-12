@@ -10,7 +10,6 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { Product } from "@/services/productService";
-import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
@@ -26,6 +25,11 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [activeIndex, setActiveIndex] = useState(0);
     const [now, setNow] = useState(() => Date.now());
     const [mounted, setMounted] = useState(false);
+    const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
+
+    const handleImageLoad = (index: number) => {
+        setLoadedImages(prev => ({ ...prev, [index]: true }));
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -36,7 +40,11 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
         return () => clearInterval(id);
     }, []);
 
-    if (!mounted) return <div className="h-[380px] w-full bg-gray-50" />;
+    if (!mounted) return (
+        <div className="h-[380px] w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center">
+            <div className="w-32 h-32 rounded-2xl bg-gray-200 animate-pulse" />
+        </div>
+    );
 
     const isFlashDealActive = Boolean(
         product.isFlashDeal &&
@@ -67,23 +75,39 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                         {product.images.map((img, index) => (
                             <SwiperSlide key={index} className="flex items-center justify-center w-full h-full">
                                 <div
-                                    className="w-full h-full flex items-center justify-center text-gray-300 relative cursor-zoom-in"
+                                    className="w-full h-full flex items-center justify-center text-gray-300 relative cursor-zoom-in bg-gradient-to-b from-gray-100 to-white"
                                     onClick={() => {
                                         setInitialSlide(index);
                                         setIsGalleryOpen(true);
                                     }}
                                 >
+                                    {/* Skeleton Loading Placeholder */}
+                                    {!loadedImages[index] && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-100 to-gray-50 z-10">
+                                            <div className="relative w-48 h-48">
+                                                {/* Shimmer effect box */}
+                                                <div className="absolute inset-0 bg-gray-200 rounded-2xl overflow-hidden">
+                                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                                                </div>
+                                                {/* Image icon placeholder */}
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                     <Image
                                         src={img}
                                         alt={`${product.title} - ${index + 1}`}
                                         fill
                                         unoptimized
-                                        className="object-contain p-8"
+                                        className={`object-contain p-8 transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
                                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                         loading={index === 0 ? undefined : "lazy"}
                                         quality={75}
-                                        placeholder="blur"
-                                        blurDataURL={getBlurDataURL()}
+                                        onLoad={() => handleImageLoad(index)}
                                         priority={index === 0}
                                     />
                                     {showCampaignBadge && (
@@ -109,7 +133,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                         <button
                             key={index}
                             onClick={() => swiperInstance?.slideTo(index)}
-                            className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all ${activeIndex === index
+                            className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 flex-shrink-0 transition-all bg-gray-100 ${activeIndex === index
                                 ? "border-vita-500 shadow-md scale-105"
                                 : "border-transparent opacity-60 hover:opacity-100"
                                 }`}
@@ -122,9 +146,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 className="object-cover"
                                 sizes="64px"
                                 loading="lazy"
-                                quality={75}
-                                placeholder="blur"
-                                blurDataURL={getBlurDataURL()}
+                                quality={50}
                             />
                         </button>
                     ))}
@@ -188,8 +210,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                                     priority={index === initialSlide}
                                                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                                     quality={75}
-                                                    placeholder="blur"
-                                                    blurDataURL={getBlurDataURL()}
                                                 />
                                             </div>
                                         </div>

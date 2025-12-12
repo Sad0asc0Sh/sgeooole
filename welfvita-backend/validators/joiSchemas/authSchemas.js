@@ -79,15 +79,12 @@ const registerSchema = Joi.object({
  * Login schema
  */
 const loginSchema = Joi.object({
-    email: Joi.string()
+    identifier: Joi.string()
         .trim()
-        .lowercase()
-        .email({ tlds: { allow: false } })
-        .max(254)
         .required()
         .messages({
-            'string.email': 'فرمت ایمیل نامعتبر است',
-            'any.required': 'ایمیل الزامی است',
+            'any.required': 'نام کاربری، ایمیل یا شماره موبایل الزامی است',
+            'string.empty': 'نام کاربری، ایمیل یا شماره موبایل نمی‌تواند خالی باشد',
         }),
 
     password: Joi.string()
@@ -95,6 +92,7 @@ const loginSchema = Joi.object({
         .required()
         .messages({
             'any.required': 'رمز عبور الزامی است',
+            'string.empty': 'رمز عبور نمی‌تواند خالی باشد',
         }),
 });
 

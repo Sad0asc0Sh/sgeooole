@@ -266,7 +266,7 @@ function OrderDetail() {
             بازگشت
           </Button>
           <h1 style={{ margin: 0 }}>
-            جزئیات سفارش #{order?._id?.slice(-8) || '...'}
+            جزئیات سفارش {order?.orderCode || `#${order?._id?.slice(-8)}` || '...'}
           </h1>
         </Space>
         <Button icon={<ReloadOutlined />} onClick={fetchOrder} loading={loading}>
@@ -281,7 +281,9 @@ function OrderDetail() {
               <>
                 <Descriptions bordered size="small" column={2}>
                   <Descriptions.Item label="شماره سفارش" span={2}>
-                    <span style={{ fontFamily: 'monospace' }}>#{order._id}</span>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.2em' }}>
+                      {order.orderCode || `#${order._id}`}
+                    </span>
                   </Descriptions.Item>
                   <Descriptions.Item label="وضعیت سفارش">
                     <Tag color={getStatusColor(order.orderStatus)}>

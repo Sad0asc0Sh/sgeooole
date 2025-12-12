@@ -444,12 +444,14 @@ exports.loginWithPassword = async (req, res) => {
       return res.status(400).json({ success: false, message: 'نام کاربری/موبایل و رمز عبور الزامی است.' })
     }
 
+    const identifierString = String(identifier).trim();
+
     // Find user by username, mobile, or email
     const user = await User.findOne({
       $or: [
-        { username: identifier.toLowerCase() },
-        { mobile: identifier },
-        { email: identifier.toLowerCase() },
+        { username: identifierString.toLowerCase() },
+        { mobile: identifierString },
+        { email: identifierString.toLowerCase() },
       ],
     }).select('+password')
 
@@ -505,7 +507,7 @@ exports.loginWithPassword = async (req, res) => {
     })
   } catch (error) {
     console.error('Error in password login:', error)
-    res.status(500).json({ success: false, message: 'خطا در ورود', error: error.message })
+    res.status(500).json({ success: false, message: 'خطا در ورود به سیستم. لطفا مجددا تلاش کنید.' })
   }
 }
 

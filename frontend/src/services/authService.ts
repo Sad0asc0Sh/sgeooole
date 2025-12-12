@@ -194,12 +194,31 @@ export const authService = {
     } catch (error: any) {
       console.error("Error fetching profile:", error);
 
-      // If unauthorized, clear auth data
-      if (error.response?.status === 401) {
+      const status = error.response?.status;
+      const serverMessage = error.response?.data?.message;
+
+      // Handle specific error cases
+      if (status === 401) {
+        // Token expired or invalid - clear auth data
+        console.warn("[AUTH] Token expired or invalid, logging out");
         authService.logout();
+        throw new Error(serverMessage || "نشست شما منقضی شده است. لطفاً مجدداً وارد شوید.");
       }
 
-      throw new Error(error.response?.data?.message || "خطا در دریافت اطلاعات کاربر");
+      if (status === 403) {
+        throw new Error(serverMessage || "حساب کاربری غیرفعال است.");
+      }
+
+      if (status === 404) {
+        throw new Error(serverMessage || "کاربر یافت نشد.");
+      }
+
+      // Network error
+      if (!error.response) {
+        throw new Error("خطا در اتصال به سرور. اینترنت خود را بررسی کنید.");
+      }
+
+      throw new Error(serverMessage || "خطا در دریافت اطلاعات کاربر");
     }
   },
 

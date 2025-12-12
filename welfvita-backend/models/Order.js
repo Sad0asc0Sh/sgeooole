@@ -206,6 +206,17 @@ const orderSchema = new mongoose.Schema(
       type: Date,
     },
 
+    // کد سفارش (خوانا برای کاربر و ادمین)
+    orderCode: {
+      type: String,
+      unique: true,
+      required: true,
+      default: function () {
+        // تولید کد تصادفی: WV- به علاوه ۶ رقم تصادفی
+        return 'WV-' + Math.floor(100000 + Math.random() * 900000).toString()
+      },
+    },
+
     // یادداشت ادمین (اختیاری)
     adminNotes: {
       type: String,
@@ -228,5 +239,6 @@ orderSchema.index({ user: 1 })
 orderSchema.index({ orderStatus: 1 })
 orderSchema.index({ isPaid: 1 })
 orderSchema.index({ createdAt: -1 })
+orderSchema.index({ orderCode: 1 }) // Index for fast lookup by orderCode
 
 module.exports = mongoose.model('Order', orderSchema)

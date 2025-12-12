@@ -7,6 +7,7 @@ import { authService } from "@/services/authService";
 
 interface Order {
     _id: string;
+    orderCode?: string; // Human-readable order code (e.g., WV-123456)
     orderStatus: string;
     totalPrice: number;
     createdAt: string;
@@ -84,11 +85,12 @@ export default function OrdersPage() {
             filtered = filtered.filter(o => o.orderStatus === 'Cancelled');
         }
 
-        // 2. Filter by Search
+        // 2. Filter by Search - now includes orderCode
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(o =>
                 o._id.toLowerCase().includes(query) ||
+                (o.orderCode && o.orderCode.toLowerCase().includes(query)) ||
                 o.orderItems.some(item => item.name.toLowerCase().includes(query))
             );
         }
@@ -200,7 +202,7 @@ export default function OrdersPage() {
                                         <span className="block text-sm font-black text-gray-800">
                                             {order.totalPrice.toLocaleString('fa-IR')} <span className="text-[10px] font-normal text-gray-400">تومان</span>
                                         </span>
-                                        <span className="text-[10px] text-gray-400 font-mono mt-1 block">{order._id.slice(-6).toUpperCase()}#</span>
+                                        <span className="text-[10px] text-gray-400 font-mono mt-1 block">{order.orderCode || `#${order._id.slice(-6).toUpperCase()}`}</span>
                                     </div>
                                 </div>
 
