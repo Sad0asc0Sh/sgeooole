@@ -1,10 +1,99 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Send, Instagram, Video } from "lucide-react"; // Using Video as generic for Aparat
+import { Send, Instagram, Video, Phone, MapPin, Clock } from "lucide-react";
+import { settingsService } from "@/services/settingsService";
+
+interface StoreInfo {
+    storeName?: string;
+    storePhone?: string;
+    storeAddress?: string;
+}
 
 export default function Footer() {
+    const [storeInfo, setStoreInfo] = useState<StoreInfo>({});
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const response = await settingsService.getPublicSettings();
+                console.log("[Footer] Settings response:", response);
+
+                // API returns { success: true, settings: {...} }
+                // settingsService returns response.data, so we get { success, settings }
+                const settings = (response as any).settings || (response as any).data?.settings;
+
+                if (settings) {
+                    console.log("[Footer] Store info found:", settings.storePhone, settings.storeAddress);
+                    setStoreInfo({
+                        storeName: settings.storeName,
+                        storePhone: settings.storePhone,
+                        storeAddress: settings.storeAddress,
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching store info:", error);
+            }
+        };
+        fetchSettings();
+    }, []);
+
     return (
         <footer className="w-full !h-auto !min-h-0 !overflow-visible bg-[#142755] pt-10 pb-24 border-t border-transparent rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.2)] mt-4 touch-auto">
             <div className="mobile-container grid gap-8 !h-auto !overflow-visible">
+
+                {/* Store Contact Info - Premium Section */}
+                <div className="bg-gradient-to-l from-white/10 to-white/5 rounded-2xl p-5 border border-white/10 backdrop-blur-sm">
+                    <div className="flex flex-col gap-4">
+                        {/* Phone Number */}
+                        {storeInfo.storePhone && (
+                            <a
+                                href={`tel:${storeInfo.storePhone.replace(/\s/g, '')}`}
+                                className="flex items-center gap-3 group"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-vita-400 to-vita-600 flex items-center justify-center shadow-lg shadow-vita-500/30 group-hover:scale-110 transition-transform">
+                                    <Phone size={18} className="text-white" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-gray-400 font-medium">تماس با ما</span>
+                                    <span className="text-white font-bold text-lg tracking-wide ltr" dir="ltr">
+                                        {storeInfo.storePhone}
+                                    </span>
+                                </div>
+                            </a>
+                        )}
+
+                        {/* Store Address */}
+                        {storeInfo.storeAddress && (
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30 flex-shrink-0">
+                                    <MapPin size={18} className="text-white" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-gray-400 font-medium">آدرس فروشگاه</span>
+                                    <p className="text-gray-200 text-sm leading-relaxed">
+                                        {storeInfo.storeAddress}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Working Hours - Optional Static */}
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                                <Clock size={18} className="text-white" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] text-gray-400 font-medium">ساعت پاسخگویی</span>
+                                <span className="text-gray-200 text-sm">
+                                    شنبه تا چهارشنبه ۹ صبح تا ۲۱
+                                    پنجشنبه ها از ۹ صبح تا ۱۴
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 {/* Quick Access */}
                 <div className="space-y-4">
