@@ -4,11 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Heart, Star, AlertTriangle } from "lucide-react";
-import dynamic from "next/dynamic";
-import { Pagination } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/pagination";
-import "swiper/css/navigation";
+
 import { Product } from "@/services/productService";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
@@ -17,8 +13,7 @@ import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
-const Swiper = dynamic(() => import("swiper/react").then((mod) => mod.Swiper), { ssr: false });
-const SwiperSlide = dynamic(() => import("swiper/react").then((mod) => mod.SwiperSlide), { ssr: false });
+
 
 interface ProductCardProps {
     product: Product;
@@ -213,61 +208,33 @@ export default function ProductCard({ product }: ProductCardProps) {
                 )}
 
                 <Link href={buildProductUrl(product)} className="block w-full h-full">
-                    {/* If hovered and has multiple images, show slider */}
-                    {isHovered && product.images && product.images.length > 1 ? (
-                        <Swiper
-                            modules={[Pagination]}
-                            pagination={{ clickable: true, dynamicBullets: true }}
-                            className="w-full h-full"
-                            loop={true}
-                            spaceBetween={0}
-                            slidesPerView={1}
-                        >
-                            {product.images.slice(0, 5).map((img, idx) => (
-                                <SwiperSlide key={idx}>
-                                    <div className="relative w-full h-full">
-                                        <Image
-                                            src={img}
-                                            alt={`${product.title} - ${idx + 1}`}
-                                            fill
-                                            className="object-contain p-4"
-                                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                            loading="lazy"
-                                            quality={75}
-                                            placeholder="blur"
-                                            blurDataURL={getBlurDataURL()}
-                                        />
-                                    </div>
-                                </SwiperSlide>
-                            ))}
-                        </Swiper>
-                    ) : (
-                        /* Static Image */
-                        <div className="relative w-full h-full">
-                            <Image
-                                src={product.image || "/placeholder.svg"}
-                                alt={product.title}
-                                fill
-                                className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                loading="lazy"
-                                quality={75}
-                                placeholder="blur"
-                                blurDataURL={getBlurDataURL()}
-                            />
-                        </div>
-                    )}
+                    {/* Static Image */}
+                    <div className="relative w-full h-full">
+                        <Image
+                            src={product.image || "/placeholder.svg"}
+                            alt={product.title}
+                            fill
+                            className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            loading="lazy"
+                            quality={75}
+                            placeholder="blur"
+                            blurDataURL={getBlurDataURL()}
+                        />
+                    </div>
                 </Link>
             </div>
 
             {/* Content */}
             <div className="p-4 flex flex-col flex-1 gap-2">
-                {/* Category */}
-                {product.category && (
-                    <span className="text-[10px] text-gray-400 font-medium truncate">
-                        {product.category}
-                    </span>
-                )}
+                {/* Category - only show if it's a valid category name */}
+                {product.category &&
+                    product.category !== "عمومی" &&
+                    !/^[a-fA-F0-9]{24}$/.test(product.category) && (
+                        <span className="text-[10px] text-gray-400 font-medium truncate">
+                            {product.category}
+                        </span>
+                    )}
 
                 {/* Title */}
                 <Link href={buildProductUrl(product)} className="block">

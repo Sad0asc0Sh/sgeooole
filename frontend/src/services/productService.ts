@@ -214,11 +214,15 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
         const cat = backendProduct.category as any;
         if (cat.parent && cat.parent.name) {
           display = `${cat.parent.name} > ${cat.name}`;
-        } else {
+        } else if (cat.name) {
           display = cat.name;
         }
       } else if (backendProduct.category) {
-        display = backendProduct.category;
+        // Check if it's a MongoDB ObjectId (24 hex characters) - don't display it
+        const isObjectId = /^[a-fA-F0-9]{24}$/.test(backendProduct.category);
+        if (!isObjectId) {
+          display = backendProduct.category;
+        }
       }
       return display;
     })(),
