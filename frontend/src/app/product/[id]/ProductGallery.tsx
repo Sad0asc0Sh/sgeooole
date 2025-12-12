@@ -60,75 +60,77 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     return (
         <>
             {/* Gallery Slider */}
-            <div className="relative bg-gradient-to-b from-gray-50 to-white w-full pb-2">
-                <div className="h-[260px] w-full">
-                    <Swiper
-                        key={product.id}
-                        modules={[Pagination]}
-                        pagination={{ clickable: true }}
-                        slidesPerView={1}
-                        className="h-full w-full"
-                        style={{ height: '260px' }}
-                        onSwiper={setSwiperInstance}
-                        onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
-                    >
-                        {product.images.map((img, index) => (
-                            <SwiperSlide key={index} className="flex items-center justify-center w-full h-full">
-                                <div
-                                    className="w-full h-full flex items-center justify-center text-gray-300 relative cursor-zoom-in bg-gradient-to-b from-gray-100 to-white"
-                                    onClick={() => {
-                                        setInitialSlide(index);
-                                        setIsGalleryOpen(true);
-                                    }}
-                                >
-                                    {/* Skeleton Loading Placeholder */}
-                                    {!loadedImages[index] && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-100 to-gray-50 z-10">
-                                            <div className="relative w-48 h-48">
-                                                {/* Shimmer effect box */}
-                                                <div className="absolute inset-0 bg-gray-200 rounded-2xl overflow-hidden">
-                                                    <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-                                                </div>
-                                                {/* Image icon placeholder */}
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <svg className="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                                    </svg>
+            <div className="relative w-full bg-white">
+                {/* Main Image Container - Centered and compact */}
+                <div className="flex justify-center py-4">
+                    <div className="w-[70%] max-w-xs aspect-[4/3]">
+                        <Swiper
+                            key={product.id}
+                            modules={[]}
+                            pagination={false}
+                            slidesPerView={1}
+                            className="h-full w-full"
+                            onSwiper={setSwiperInstance}
+                            onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
+                        >
+                            {product.images.map((img, index) => (
+                                <SwiperSlide key={index} className="w-full h-full">
+                                    <div
+                                        className="w-full h-full relative cursor-zoom-in bg-white"
+                                        onClick={() => {
+                                            setInitialSlide(index);
+                                            setIsGalleryOpen(true);
+                                        }}
+                                    >
+                                        {/* Skeleton Loading Placeholder */}
+                                        {!loadedImages[index] && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                                                <div className="relative w-24 h-24">
+                                                    {/* Shimmer effect box */}
+                                                    <div className="absolute inset-0 bg-gray-100 rounded-2xl overflow-hidden">
+                                                        <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                                                    </div>
+                                                    {/* Image icon placeholder */}
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
-                                    <Image
-                                        src={img}
-                                        alt={`${product.title} - ${index + 1}`}
-                                        fill
-                                        unoptimized
-                                        className={`object-contain p-4 transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                        loading={index === 0 ? undefined : "lazy"}
-                                        quality={75}
-                                        onLoad={() => handleImageLoad(index)}
-                                        priority={index === 0}
-                                    />
-                                    {showCampaignBadge && (
-                                        <div className="absolute top-4 left-4 z-20">
-                                            <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
-                                                product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                                                    product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
-                                                        'bg-gradient-to-r from-blue-400 to-indigo-500' // Default to Blue
-                                                }`}>
-                                                {product.campaignLabel}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </SwiperSlide>
-                        ))}
-                    </Swiper>
+                                        )}
+                                        <Image
+                                            src={img}
+                                            alt={`${product.title} - ${index + 1}`}
+                                            fill
+                                            unoptimized
+                                            className={`object-contain transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
+                                            sizes="(max-width: 640px) 85vw, 384px"
+                                            loading={index === 0 ? undefined : "lazy"}
+                                            quality={85}
+                                            onLoad={() => handleImageLoad(index)}
+                                            priority={index === 0}
+                                        />
+                                        {showCampaignBadge && (
+                                            <div className="absolute top-2 left-2 z-20">
+                                                <span className={`text-white text-xs font-bold px-2 py-1 rounded-lg shadow-sm ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
+                                                    product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
+                                                        product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
+                                                            'bg-gradient-to-r from-blue-400 to-indigo-500' // Default to Blue
+                                                    }`}>
+                                                    {product.campaignLabel}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </SwiperSlide>
+                            ))}
+                        </Swiper>
+                    </div>
                 </div>
 
-                {/* Thumbnails - Compact horizontal strip */}
-                <div className="flex gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 justify-center">
+                {/* Thumbnails - Full width, centered */}
+                <div className="flex gap-2 px-4 overflow-x-auto no-scrollbar pt-4 pb-4 justify-center mt-2">
                     {product.images.map((img, index) => (
                         <button
                             key={index}
