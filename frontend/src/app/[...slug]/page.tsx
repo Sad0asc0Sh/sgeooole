@@ -43,7 +43,7 @@ export default async function CatchAllPage({ params }: { params: CatchAllParams 
       { label: "صفحه اصلی", href: "/" },
       ...(product.categoryPath || []).map((c) => ({
         label: c.name,
-        href: `/products?category=${c.slug || c.id}`,
+        href: `/products?category=${c.slug || c.id}&includeChildren=true`,
       })),
       { label: product.title },
     ];

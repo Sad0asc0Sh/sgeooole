@@ -164,7 +164,7 @@ function ProductListingContent() {
     if (brandSlug) {
       router.push(`/products?brand=${brandSlug}`);
     } else if (categorySlug) {
-      router.push(`/products?category=${categorySlug}`);
+      router.push(`/products?category=${categorySlug}&includeChildren=true`);
     } else {
       router.push("/products");
     }
@@ -331,13 +331,14 @@ function ProductListingContent() {
                 {/* Price Range */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                   <h3 className="font-bold text-sm text-gray-800 mb-4">بازه قیمت (تومان)</h3>
-                  <div className="px-2 mb-6">
+                  <div className="px-2 mb-6" dir="ltr">
                     <Slider
                       range
                       min={0}
                       max={priceRange.max}
                       value={sliderValue}
                       onChange={(val) => setSliderValue(val as [number, number])}
+                      reverse={true}
                       trackStyle={[{ backgroundColor: "#f97316" }]}
                       handleStyle={[
                         { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },

@@ -474,8 +474,13 @@ export const productService = {
       if (params.category) queryParams.set("category", params.category);
       if (params.brand) queryParams.set("brand", params.brand);
       if (params.search) queryParams.set("search", params.search);
-      if (params.minPrice) queryParams.set("minPrice", params.minPrice.toString());
-      if (params.maxPrice) queryParams.set("maxPrice", params.maxPrice.toString());
+      // Use !== undefined to allow 0 values to be sent
+      if (params.minPrice !== undefined && params.minPrice !== null) {
+        queryParams.set("minPrice", params.minPrice.toString());
+      }
+      if (params.maxPrice !== undefined && params.maxPrice !== null) {
+        queryParams.set("maxPrice", params.maxPrice.toString());
+      }
       if (params.includeChildren) queryParams.set("includeChildren", "true");
 
       if (params.properties) {

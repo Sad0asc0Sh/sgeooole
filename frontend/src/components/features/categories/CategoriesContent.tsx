@@ -218,7 +218,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                     if (hasGrandChildren) {
                                                         toggleGroup(subCategory._id);
                                                     } else {
-                                                        handleNavigation(`/products?category=${subCategory.slug}`);
+                                                        handleNavigation(`/products?category=${subCategory.slug}&includeChildren=true`);
                                                     }
                                                 }}
                                                 className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-vita-600 transition-colors"
@@ -258,7 +258,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                         {subCategory.children!.map((item) => (
                                                             <button
                                                                 key={item._id}
-                                                                onClick={() => handleNavigation(`/products?category=${item.slug}`)}
+                                                                onClick={() => handleNavigation(`/products?category=${item.slug}&includeChildren=true`)}
                                                                 className="flex flex-col items-center gap-2 cursor-pointer group w-full"
                                                             >
                                                                 <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-vita-200 transition-colors overflow-hidden">

@@ -110,6 +110,31 @@ const buildProductFilter = (query) => {
     filter.isSpecialOffer = query.isSpecialOffer === 'true' || query.isSpecialOffer === true
   }
 
+  // ===== PRICE RANGE FILTER =====
+  // Handle minPrice and maxPrice parameters
+  if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+    filter.price = {}
+    if (query.minPrice !== undefined) {
+      const minPrice = Number(query.minPrice)
+      // Allow 0 as a valid minPrice (means no minimum filter)
+      // Only add filter if minPrice > 0
+      if (!isNaN(minPrice) && minPrice > 0) {
+        filter.price.$gte = minPrice
+      }
+    }
+    if (query.maxPrice !== undefined) {
+      const maxPrice = Number(query.maxPrice)
+      // Always apply maxPrice filter if it's a valid number > 0
+      if (!isNaN(maxPrice) && maxPrice > 0) {
+        filter.price.$lte = maxPrice
+      }
+    }
+    // Clean up empty price filter
+    if (Object.keys(filter.price).length === 0) {
+      delete filter.price
+    }
+  }
+
   // Advanced filters like isActive[eq]=true, flashDealEndTime[gt]=2025-11-24T...
   Object.keys(query).forEach((key) => {
     const match = key.match(/^(.+)\[(.+)\]$/)
@@ -233,6 +258,12 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
 
     const baseFilter = buildProductFilter(req.query)
     const conditions = []
+
+    // Debug: Log price filter
+    if (req.query.minPrice || req.query.maxPrice) {
+      console.log('[PRODUCTS] Price filter params:', { minPrice: req.query.minPrice, maxPrice: req.query.maxPrice })
+      console.log('[PRODUCTS] Built price filter:', baseFilter.price)
+    }
 
     if (Object.keys(baseFilter).length > 0) {
       conditions.push(baseFilter)

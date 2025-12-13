@@ -151,7 +151,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                         }}
                     >
                         <Link
-                            href={`/products?category=${category.slug || category._id}`}
+                            href={`/products?category=${category.slug || category._id}&includeChildren=true`}
                             onClick={() => handleCategoryClick(category._id)}
                         >
                             {/* --- VARIANT: CIRCLE (FEATURED) --- */}
@@ -163,7 +163,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                                 <img
                                                     src={category.image?.url || category.icon?.url}
                                                     alt={category.name}
-                                                    className="w-full h-full object-cover rounded-full"
+                                                    className="w-full h-full object-contain"
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gray-100 rounded-full" />
@@ -184,7 +184,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                             <img
                                                 src={category.image?.url || category.icon?.url}
                                                 alt={category.name}
-                                                className="w-full h-full object-cover rounded-lg shadow-sm"
+                                                className="w-full h-full object-contain rounded-lg"
                                             />
                                         ) : (
                                             <div className="w-full h-full bg-white rounded-lg shadow-sm" />
