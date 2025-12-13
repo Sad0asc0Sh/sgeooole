@@ -623,3 +623,81 @@ exports.verifyPayment = async (req, res) => {
     })
   }
 }
+
+// ============================================
+// GET /api/orders/track/:orderCode - پیگیری سفارش (بدون نیاز به لاگین)
+// ============================================
+exports.trackOrder = async (req, res) => {
+  try {
+    const { orderCode } = req.params
+    const { phone } = req.query
+
+    if (!orderCode) {
+      return res.status(400).json({
+        success: false,
+        message: 'کد سفارش الزامی است',
+      })
+    }
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'شماره موبایل الزامی است',
+      })
+    }
+
+    // Normalize phone number (remove spaces, dashes, etc.)
+    const normalizedPhone = phone.replace(/[\s\-\.]/g, '')
+
+    // Find order by orderCode
+    const order = await Order.findOne({ orderCode: orderCode.toUpperCase() })
+      .populate('user', 'mobile')
+      .select('_id orderCode orderStatus createdAt totalPrice trackingCode shippingAddress')
+      .lean()
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'سفارشی با این کد یافت نشد',
+      })
+    }
+
+    // Verify phone number matches either user's mobile or shipping address phone
+    const userMobile = order.user?.mobile?.replace(/[\s\-\.]/g, '') || ''
+    const shippingPhone = order.shippingAddress?.phone?.replace(/[\s\-\.]/g, '') || ''
+
+    const phoneMatches =
+      normalizedPhone === userMobile ||
+      normalizedPhone === shippingPhone ||
+      normalizedPhone.endsWith(userMobile.slice(-10)) || // Match last 10 digits
+      normalizedPhone.endsWith(shippingPhone.slice(-10))
+
+    if (!phoneMatches) {
+      return res.status(403).json({
+        success: false,
+        message: 'شماره موبایل با اطلاعات سفارش مطابقت ندارد',
+      })
+    }
+
+    // Return limited order information for guest tracking
+    res.json({
+      success: true,
+      data: {
+        _id: order._id,
+        orderCode: order.orderCode,
+        orderStatus: order.orderStatus,
+        createdAt: order.createdAt,
+        totalPrice: order.totalPrice,
+        trackingCode: order.trackingCode || null,
+      },
+    })
+  } catch (error) {
+    console.error('Error tracking order:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در پیگیری سفارش',
+      error: error.message,
+    })
+  }
+}
+

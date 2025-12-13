@@ -9,6 +9,7 @@ const {
   getMyOrderStats,
   payOrder,
   verifyPayment,
+  trackOrder,
 } = require('../controllers/orderController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
@@ -39,6 +40,13 @@ router.post('/', protect, validate(orderCreateSchema), createOrder)
 
 // POST /api/orders/verify-payment - تایید پرداخت (باید قبل از /:id باشد)
 router.post('/verify-payment', verifyPayment)
+
+// ============================================
+// Guest Order Tracking (No Auth Required)
+// ============================================
+
+// GET /api/orders/track/:orderCode - پیگیری سفارش بدون نیاز به لاگین
+router.get('/track/:orderCode', trackOrder)
 
 // POST /api/orders/:id/pay - شروع فرآیند پرداخت
 router.post('/:id/pay', protect, payOrder)

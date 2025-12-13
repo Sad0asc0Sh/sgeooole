@@ -7,9 +7,10 @@ import CategoriesSheet from "@/components/features/categories/CategoriesSheet";
 
 interface BottomNavProps {
     onNavClick: () => void;
+    isServicesOpen: boolean;
 }
 
-export default function BottomNav({ onNavClick }: BottomNavProps) {
+export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps) {
     const pathname = usePathname();
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
 
@@ -26,7 +27,7 @@ export default function BottomNav({ onNavClick }: BottomNavProps) {
 
     return (
         <>
-            <nav className="fixed bottom-0 w-full bg-white border-t border-welf-200 pb-safe-area z-[10002]">
+            <nav className={`fixed bottom-0 w-full bg-white border-t border-welf-200 pb-safe-area z-[10002] transition-transform duration-300 ease-in-out ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
                 <div className="flex justify-between items-center px-4 h-16">
                     {navItems.map((item) => {
                         const isCat = item.href === "/categories";

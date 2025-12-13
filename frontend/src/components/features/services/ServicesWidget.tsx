@@ -4,23 +4,29 @@ import { useState, useEffect } from "react";
 import { Wrench } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
-export default function ServicesWidget() {
+interface ServicesWidgetProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetProps) {
     const [isExpanded, setIsExpanded] = useState(true);
-    const [isSheetOpen, setIsSheetOpen] = useState(false);
     const router = useRouter();
+    const { isAuthenticated } = useAuth();
 
     // Auto-collapse on mount
     useEffect(() => {
         const timer = setTimeout(() => {
-            if (!isSheetOpen) setIsExpanded(false);
+            if (!isOpen) setIsExpanded(false);
         }, 3000);
         return () => clearTimeout(timer);
     }, []);
 
     // Auto-collapse after sheet closes
     useEffect(() => {
-        if (!isSheetOpen) {
+        if (!isOpen) {
             const timer = setTimeout(() => {
                 setIsExpanded(false);
             }, 3000);
@@ -28,15 +34,15 @@ export default function ServicesWidget() {
         } else {
             setIsExpanded(true); // Keep expanded while sheet is open
         }
-    }, [isSheetOpen]);
+    }, [isOpen]);
 
     const handleNavigate = (path: string) => {
-        setIsSheetOpen(false);
+        onOpenChange(false);
         router.push(path);
     };
 
     return (
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <Sheet open={isOpen} onOpenChange={onOpenChange}>
             <SheetTrigger asChild>
                 <div
                     className={`fixed bottom-44 left-0 z-40 transition-all duration-700 ease-in-out cursor-pointer shadow-lg hover:shadow-xl
@@ -59,7 +65,7 @@ export default function ServicesWidget() {
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
                     <div
-                        onClick={() => handleNavigate("/profile/orders")}
+                        onClick={() => handleNavigate(isAuthenticated ? "/profile/orders" : "/tracking")}
                         className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
                     >
                         پیگیری سفارش

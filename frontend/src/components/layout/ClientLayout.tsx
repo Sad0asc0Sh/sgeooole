@@ -17,17 +17,21 @@ export default function ClientLayout({
     // Hide layout on /login, /product/*, and /profile sub-pages (but SHOW on main /profile)
     const shouldHideLayout = (pathname?.startsWith("/profile/") && pathname !== "/profile") || pathname?.startsWith("/login") || pathname?.startsWith("/product/");
     const [isAIOpen, setIsAIOpen] = useState(false);
+    const [isServicesOpen, setIsServicesOpen] = useState(false);
 
     return (
         <main className="min-h-screen flex flex-col">
             {!shouldHideLayout && <Header isAIOpen={isAIOpen} setIsAIOpen={setIsAIOpen} />}
             <div className={`flex-grow ${!shouldHideLayout ? "pb-32" : ""}`}>{children}</div>
-            {!shouldHideLayout && <ServicesWidget />}
+            {!shouldHideLayout && <ServicesWidget isOpen={isServicesOpen} onOpenChange={setIsServicesOpen} />}
             {!shouldHideLayout && <Footer />}
-            {!shouldHideLayout && <BottomNav onNavClick={() => {
-                // Delay closing to allow navigation to happen behind the sheet
-                setTimeout(() => setIsAIOpen(false), 500);
-            }} />}
+            {!shouldHideLayout && <BottomNav
+                isServicesOpen={isServicesOpen}
+                onNavClick={() => {
+                    // Delay closing to allow navigation to happen behind the sheet
+                    setTimeout(() => setIsAIOpen(false), 500);
+                }}
+            />}
         </main>
     );
 }

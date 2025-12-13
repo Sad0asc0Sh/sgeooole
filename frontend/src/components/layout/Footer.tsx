@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Send, Instagram, Video, Phone, MapPin, Clock, Mail, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { settingsService } from "@/services/settingsService";
 import api from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StoreInfo {
     storeName?: string;
@@ -19,6 +20,7 @@ interface StoreInfo {
 
 export default function Footer() {
     const [storeInfo, setStoreInfo] = useState<StoreInfo>({});
+    const { isAuthenticated } = useAuth();
 
     // Newsletter state
     const [email, setEmail] = useState("");
@@ -123,7 +125,7 @@ export default function Footer() {
                 <div className="space-y-4">
                     <h3 className="font-bold text-white">خدمات مشتریان</h3>
                     <ul className="space-y-2 text-sm text-gray-300">
-                        <li><Link href="/tracking">پیگیری سفارش</Link></li>
+                        <li><Link href={isAuthenticated ? "/profile/orders" : "/tracking"}>پیگیری سفارش</Link></li>
                         <li><Link href="/terms">قوانین و مقررات</Link></li>
                         <li><Link href="/faq">سوالات متداول</Link></li>
                         <li><Link href="/returns">رویه بازگرداندن کالا</Link></li>
@@ -187,8 +189,8 @@ export default function Footer() {
                                         }}
                                         placeholder="ایمیل خود را وارد کنید"
                                         className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none transition-all ${newsletterStatus === "error"
-                                                ? "border-red-500 focus:border-red-400"
-                                                : "border-white/10 focus:border-vita-500"
+                                            ? "border-red-500 focus:border-red-400"
+                                            : "border-white/10 focus:border-vita-500"
                                             }`}
                                         dir="ltr"
                                         disabled={isSubmitting}
