@@ -523,19 +523,19 @@ function ProductListingContent() {
       <AnimatePresence>
         {showSortSheet && (
           <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 z-[10003]"
+                onClick={() => setShowSortSheet(false)}
+              />
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-[199]"
-              onClick={() => setShowSortSheet(false)}
-            />
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[200] p-6 pb-8 shadow-2xl"
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] p-6 pb-8 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-lg">مرتب‌سازی</h3>

@@ -1,11 +1,18 @@
 const express = require('express')
 const router = express.Router()
 
-const { getAdminPages, createPage, updatePage, deletePage } = require('../controllers/pageController')
+const { getPageBySlug, getAdminPages, createPage, updatePage, deletePage } = require('../controllers/pageController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
-// روت‌های مدیریت صفحات
+// روت‌های عمومی صفحات (برای فرانت‌اند)
+// ============================================
+
+// GET /api/pages/slug/:slug - دریافت صفحه با slug (عمومی)
+router.get('/slug/:slug', getPageBySlug)
+
+// ============================================
+// روت‌های مدیریت صفحات (ادمین)
 // مجوزهای مورد نیاز: PAGE_READ, PAGE_CREATE, PAGE_UPDATE, PAGE_DELETE
 // ============================================
 

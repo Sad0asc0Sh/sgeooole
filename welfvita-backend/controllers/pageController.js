@@ -1,5 +1,33 @@
 const Page = require('../models/Page')
 
+// دریافت صفحه با slug (عمومی - برای فرانت‌اند)
+exports.getPageBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params
+
+    const page = await Page.findOne({ slug, status: 'published' }).lean()
+
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        message: 'صفحه یافت نشد',
+      })
+    }
+
+    res.json({
+      success: true,
+      data: page,
+    })
+  } catch (error) {
+    console.error('Error fetching page by slug:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت صفحه',
+      error: error.message,
+    })
+  }
+}
+
 // لیست صفحات برای ادمین (با فیلتر و صفحه‌بندی)
 exports.getAdminPages = async (req, res) => {
   try {

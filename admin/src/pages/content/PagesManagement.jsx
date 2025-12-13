@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import { Editor } from '@tinymce/tinymce-react'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -40,9 +41,25 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${day} ${month} ${year}`
 }
 
-// TinyMCE API Key - برای استفاده رایگان می‌توانید از کلید رایگان استفاده کنید
-// ثبت‌نام رایگان در: https://www.tiny.cloud/auth/signup/
-const TINYMCE_API_KEY = 'no-api-key'
+// تنظیمات Quill برای RTL و فارسی
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'align': [] }, { 'direction': 'rtl' }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ 'indent': '-1' }, { 'indent': '+1' }],
+    ['link', 'image'],
+    ['clean']
+  ],
+}
+
+const quillFormats = [
+  'header', 'bold', 'italic', 'underline', 'strike',
+  'color', 'background', 'align', 'direction',
+  'list', 'bullet', 'indent', 'link', 'image'
+]
 
 function PagesManagement() {
   const [pages, setPages] = useState([])
@@ -55,7 +72,7 @@ function PagesManagement() {
   const [form] = Form.useForm()
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
-  const editorRef = useRef(null)
+  const [editorContent, setEditorContent] = useState('')
 
   const fetchPages = async (page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true)
@@ -103,32 +120,72 @@ function PagesManagement() {
   const onNew = () => {
     setEditing(null)
     form.resetFields()
-    form.setFieldsValue({ status: 'published', content: '' })
+    form.setFieldsValue({ status: 'published' })
+    setEditorContent('')
     setOpen(true)
   }
 
   const onEdit = (p) => {
     setEditing(p)
-    form.setFieldsValue({ title: p.title, slug: p.slug, status: p.status, content: p.content, metaTitle: p.meta?.title, metaDescription: p.meta?.description })
+    form.setFieldsValue({
+      title: p.title,
+      slug: p.slug,
+      status: p.status,
+      metaTitle: p.meta?.title,
+      metaDescription: p.meta?.description
+    })
+    setEditorContent(p.content || '')
     setOpen(true)
   }
 
   const onDelete = async (id) => {
-    try { await api.delete(`/pages/${id}`); message.success('حذف شد'); fetchPages() } catch (err) { message.error(err?.message || 'حذف انجام نشد') }
+    try {
+      await api.delete(`/pages/${id}`)
+      message.success('حذف شد')
+      fetchPages()
+    } catch (err) {
+      message.error(err?.message || 'حذف انجام نشد')
+    }
   }
 
   const save = async () => {
     try {
       const values = await form.validateFields()
-      // دریافت محتوا از ادیتور TinyMCE
-      const content = editorRef.current ? editorRef.current.getContent() : values.content
+
+      if (!editorContent || editorContent.trim() === '' || editorContent === '<p><br></p>') {
+        message.error('محتوا را وارد کنید')
+        return
+      }
+
       setSaving(true)
-      const payload = { title: values.title, slug: values.slug, status: values.status, content: content, meta: { title: values.metaTitle, description: values.metaDescription } }
-      if (editing) { await api.put(`/pages/${editing._id}`, payload); message.success('ویرایش شد') } else { await api.post('/pages', payload); message.success('ایجاد شد') }
+      const payload = {
+        title: values.title,
+        slug: values.slug,
+        status: values.status,
+        content: editorContent,
+        meta: {
+          title: values.metaTitle,
+          description: values.metaDescription
+        }
+      }
+
+      if (editing) {
+        await api.put(`/pages/${editing._id}`, payload)
+        message.success('ویرایش شد')
+      } else {
+        await api.post('/pages', payload)
+        message.success('ایجاد شد')
+      }
+
       setOpen(false)
       setEditing(null)
+      setEditorContent('')
       fetchPages()
-    } catch (err) { if (!err?.errorFields) message.error(err?.message || 'ذخیره انجام نشد') } finally { setSaving(false) }
+    } catch (err) {
+      if (!err?.errorFields) message.error(err?.message || 'ذخیره انجام نشد')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -136,7 +193,14 @@ function PagesManagement() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1>مدیریت صفحات</h1>
         <Space>
-          <Input placeholder="جستجو" allowClear style={{ width: 200 }} onChange={(e) => setSearch(e.target.value)} onPressEnter={() => fetchPages(1, pagination.pageSize)} onBlur={() => fetchPages(1, pagination.pageSize)} />
+          <Input
+            placeholder="جستجو"
+            allowClear
+            style={{ width: 200 }}
+            onChange={(e) => setSearch(e.target.value)}
+            onPressEnter={() => fetchPages(1, pagination.pageSize)}
+            onBlur={() => fetchPages(1, pagination.pageSize)}
+          />
           <Select placeholder="وضعیت" allowClear style={{ width: 140 }} onChange={setStatus}>
             <Select.Option value="published">published</Select.Option>
             <Select.Option value="hidden">hidden</Select.Option>
@@ -146,42 +210,70 @@ function PagesManagement() {
         </Space>
       </div>
       <Card>
-        <Table columns={columns} dataSource={pages} loading={loading} rowKey="_id" pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, showSizeChanger: true }} onChange={onTableChange} />
+        <Table
+          columns={columns}
+          dataSource={pages}
+          loading={loading}
+          rowKey="_id"
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true
+          }}
+          onChange={onTableChange}
+        />
       </Card>
 
-      <Modal open={open} onCancel={() => setOpen(false)} onOk={save} okText={editing ? 'ذخیره' : 'ایجاد'} confirmLoading={saving} title={editing ? 'ویرایش صفحه' : 'صفحه جدید'} width={900}>
+      <Modal
+        open={open}
+        onCancel={() => setOpen(false)}
+        onOk={save}
+        okText={editing ? 'ذخیره' : 'ایجاد'}
+        confirmLoading={saving}
+        title={editing ? 'ویرایش صفحه' : 'صفحه جدید'}
+        width={900}
+        destroyOnClose
+      >
         <Form layout="vertical" form={form}>
-          <Form.Item name="title" label="عنوان" rules={[{ required: true, message: 'عنوان را وارد کنید' }]}><Input /></Form.Item>
-          <Form.Item name="slug" label="اسلاگ (اختیاری)"><Input /></Form.Item>
-          <Form.Item name="status" label="وضعیت" initialValue="published"><Select><Select.Option value="published">published</Select.Option><Select.Option value="hidden">hidden</Select.Option></Select></Form.Item>
-          <Form.Item name="content" label="محتوا" rules={[{ required: true, message: 'محتوا را وارد کنید' }]}>
-            <Editor
-              apiKey={TINYMCE_API_KEY}
-              onInit={(evt, editor) => editorRef.current = editor}
-              initialValue={form.getFieldValue('content') || ''}
-              init={{
-                height: 350,
-                menubar: true,
-                directionality: 'rtl',
-                language: 'fa',
-                plugins: [
-                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                  'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                  'insertdatetime', 'media', 'table', 'help', 'wordcount'
-                ],
-                toolbar: 'undo redo | blocks | ' +
-                  'bold italic forecolor | alignleft aligncenter ' +
-                  'alignright alignjustify | bullist numlist outdent indent | ' +
-                  'removeformat | link image | help',
-                content_style: 'body { font-family: Vazirmatn, Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }',
-              }}
-              onEditorChange={(content) => {
-                form.setFieldsValue({ content })
-              }}
-            />
+          <Form.Item name="title" label="عنوان" rules={[{ required: true, message: 'عنوان را وارد کنید' }]}>
+            <Input />
           </Form.Item>
-          <Form.Item name="metaTitle" label="Meta Title"><Input /></Form.Item>
-          <Form.Item name="metaDescription" label="Meta Description"><Input.TextArea rows={2} /></Form.Item>
+          <Form.Item name="slug" label="اسلاگ (اختیاری)">
+            <Input placeholder="مثال: terms, faq, about" />
+          </Form.Item>
+          <Form.Item name="status" label="وضعیت" initialValue="published">
+            <Select>
+              <Select.Option value="published">published</Select.Option>
+              <Select.Option value="hidden">hidden</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item label="محتوا *" required>
+            <div style={{ direction: 'rtl' }}>
+              <ReactQuill
+                theme="snow"
+                value={editorContent}
+                onChange={setEditorContent}
+                modules={quillModules}
+                formats={quillFormats}
+                style={{
+                  height: 300,
+                  marginBottom: 50,
+                  direction: 'rtl',
+                  textAlign: 'right'
+                }}
+                placeholder="محتوای صفحه را اینجا بنویسید..."
+              />
+            </div>
+          </Form.Item>
+
+          <Form.Item name="metaTitle" label="Meta Title">
+            <Input />
+          </Form.Item>
+          <Form.Item name="metaDescription" label="Meta Description">
+            <Input.TextArea rows={2} />
+          </Form.Item>
         </Form>
       </Modal>
     </div>

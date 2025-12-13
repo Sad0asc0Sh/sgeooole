@@ -100,7 +100,7 @@ export default function ContactPage() {
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            گروه مهندسی کیان
+                            welfvita
                         </h1>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             فروش و پخش انواع سیستم‌های حفاظتی امنیتی
@@ -201,7 +201,7 @@ export default function ContactPage() {
                             </div>
                             <div className="bg-gray-50 rounded-xl p-4 text-center">
                                 <p className="text-sm text-gray-500 mb-1">پنج‌شنبه</p>
-                                <p className="font-bold text-gray-800">۹ صبح - ۶ عصر</p>
+                                <p className="font-bold text-gray-800">۹ صبح - ۲ عصر</p>
                             </div>
                         </div>
                     </div>

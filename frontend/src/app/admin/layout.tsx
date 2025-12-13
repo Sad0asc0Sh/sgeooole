@@ -12,7 +12,8 @@ import {
     X,
     Bell,
     Search,
-    MessageSquare
+    MessageSquare,
+    FileText
 } from "lucide-react";
 import { authService } from "@/services/authService";
 
@@ -57,6 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { icon: LayoutDashboard, label: "داشبورد", href: "/admin" },
         { icon: ShoppingBag, label: "سفارشات", href: "/admin/orders" },
         { icon: MessageSquare, label: "نظرات", href: "/admin/reviews" },
+        { icon: FileText, label: "صفحات", href: "/admin/pages" },
         { icon: Users, label: "کاربران", href: "/admin/users" },
         { icon: Settings, label: "تنظیمات", href: "/admin/settings" },
     ];

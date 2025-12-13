@@ -1,6 +1,7 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import { Editor } from '@tinymce/tinymce-react'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -40,9 +41,25 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${day} ${month} ${year}`
 }
 
-// TinyMCE API Key - برای استفاده رایگان می‌توانید از کلید رایگان استفاده کنید
-// ثبت‌نام رایگان در: https://www.tiny.cloud/auth/signup/
-const TINYMCE_API_KEY = 'no-api-key'
+// تنظیمات Quill برای RTL و فارسی
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'align': [] }, { 'direction': 'rtl' }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ 'indent': '-1' }, { 'indent': '+1' }],
+    ['link', 'image'],
+    ['clean']
+  ],
+}
+
+const quillFormats = [
+  'header', 'bold', 'italic', 'underline', 'strike',
+  'color', 'background', 'align', 'direction',
+  'list', 'bullet', 'indent', 'link', 'image'
+]
 
 function BlogPosts() {
   const [posts, setPosts] = useState([])
@@ -61,7 +78,7 @@ function BlogPosts() {
   const [postForm] = Form.useForm()
   const [editingPost, setEditingPost] = useState(null)
   const [savingPost, setSavingPost] = useState(false)
-  const editorRef = useRef(null)
+  const [editorContent, setEditorContent] = useState('')
 
   const fetchCategories = async () => {
     try {
@@ -117,7 +134,8 @@ function BlogPosts() {
   const onNewPost = () => {
     setEditingPost(null)
     postForm.resetFields()
-    postForm.setFieldsValue({ status: 'draft', content: '' })
+    postForm.setFieldsValue({ status: 'draft' })
+    setEditorContent('')
     setPostOpen(true)
   }
 
@@ -130,10 +148,10 @@ function BlogPosts() {
       tags: (post.tags || []).join(','),
       status: post.status,
       featuredImageUrl: post.featuredImage?.url || '',
-      content: post.content,
       metaTitle: post.meta?.title || '',
       metaDescription: post.meta?.description || '',
     })
+    setEditorContent(post.content || '')
     setPostOpen(true)
   }
 
@@ -150,8 +168,12 @@ function BlogPosts() {
   const savePost = async () => {
     try {
       const values = await postForm.validateFields()
-      // دریافت محتوا از ادیتور TinyMCE
-      const content = editorRef.current ? editorRef.current.getContent() : values.content
+
+      if (!editorContent || editorContent.trim() === '' || editorContent === '<p><br></p>') {
+        message.error('محتوا را وارد کنید')
+        return
+      }
+
       setSavingPost(true)
       const payload = {
         title: values.title,
@@ -160,9 +182,10 @@ function BlogPosts() {
         tags: values.tags ? String(values.tags).split(',').map(t => t.trim()).filter(Boolean) : [],
         status: values.status,
         featuredImage: values.featuredImageUrl ? { url: values.featuredImageUrl } : undefined,
-        content: content,
+        content: editorContent,
         meta: { title: values.metaTitle, description: values.metaDescription },
       }
+
       if (editingPost) {
         await api.put(`/blog/${editingPost._id}`, payload)
         message.success('ویرایش شد')
@@ -170,8 +193,10 @@ function BlogPosts() {
         await api.post('/blog', payload)
         message.success('ایجاد شد')
       }
+
       setPostOpen(false)
       setEditingPost(null)
+      setEditorContent('')
       fetchPosts()
     } catch (err) {
       if (!err?.errorFields) message.error(err?.message || 'ذخیره انجام نشد')
@@ -211,7 +236,13 @@ function BlogPosts() {
   }
 
   const deleteCategory = async (id) => {
-    try { await api.delete(`/blog/categories/${id}`); message.success('حذف شد'); fetchCategories() } catch (err) { message.error(err?.message || 'حذف انجام نشد') }
+    try {
+      await api.delete(`/blog/categories/${id}`)
+      message.success('حذف شد')
+      fetchCategories()
+    } catch (err) {
+      message.error(err?.message || 'حذف انجام نشد')
+    }
   }
 
   return (
@@ -219,7 +250,14 @@ function BlogPosts() {
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
         <h1>پست‌های بلاگ</h1>
         <Space>
-          <Input placeholder="جستجو" allowClear style={{ width: 200 }} onChange={(e) => setSearch(e.target.value)} onPressEnter={() => fetchPosts(1, pagination.pageSize)} onBlur={() => fetchPosts(1, pagination.pageSize)} />
+          <Input
+            placeholder="جستجو"
+            allowClear
+            style={{ width: 200 }}
+            onChange={(e) => setSearch(e.target.value)}
+            onPressEnter={() => fetchPosts(1, pagination.pageSize)}
+            onBlur={() => fetchPosts(1, pagination.pageSize)}
+          />
           <Select placeholder="وضعیت" allowClear style={{ width: 140 }} onChange={setStatus}>
             <Select.Option value="draft">draft</Select.Option>
             <Select.Option value="published">published</Select.Option>
@@ -238,13 +276,27 @@ function BlogPosts() {
           dataSource={posts}
           loading={loading}
           rowKey="_id"
-          pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, showSizeChanger: true }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true
+          }}
           onChange={onTableChange}
         />
       </Card>
 
       {/* Post Modal */}
-      <Modal open={postOpen} onCancel={() => setPostOpen(false)} onOk={savePost} okText={editingPost ? 'ذخیره' : 'ایجاد'} confirmLoading={savingPost} title={editingPost ? 'ویرایش پست' : 'پست جدید'} width={900}>
+      <Modal
+        open={postOpen}
+        onCancel={() => setPostOpen(false)}
+        onOk={savePost}
+        okText={editingPost ? 'ذخیره' : 'ایجاد'}
+        confirmLoading={savingPost}
+        title={editingPost ? 'ویرایش پست' : 'پست جدید'}
+        width={900}
+        destroyOnClose
+      >
         <Form layout="vertical" form={postForm}>
           <Form.Item name="title" label="عنوان" rules={[{ required: true, message: 'عنوان را وارد کنید' }]}>
             <Input />
@@ -257,52 +309,62 @@ function BlogPosts() {
               {categories.map(c => <Select.Option key={c._id} value={c._id}>{c.name}</Select.Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="tags" label="تگ‌ها (جدا با کاما)"><Input /></Form.Item>
+          <Form.Item name="tags" label="تگ‌ها (جدا با کاما)">
+            <Input />
+          </Form.Item>
           <Form.Item name="status" label="وضعیت" initialValue="draft">
             <Select>
               <Select.Option value="draft">draft</Select.Option>
               <Select.Option value="published">published</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="featuredImageUrl" label="آدرس تصویر شاخص"><Input placeholder="https://..." /></Form.Item>
-          <Form.Item name="content" label="محتوا" rules={[{ required: true, message: 'محتوا را وارد کنید' }]}>
-            <Editor
-              apiKey={TINYMCE_API_KEY}
-              onInit={(evt, editor) => editorRef.current = editor}
-              initialValue={postForm.getFieldValue('content') || ''}
-              init={{
-                height: 350,
-                menubar: true,
-                directionality: 'rtl',
-                language: 'fa',
-                plugins: [
-                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                  'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                  'insertdatetime', 'media', 'table', 'help', 'wordcount'
-                ],
-                toolbar: 'undo redo | blocks | ' +
-                  'bold italic forecolor | alignleft aligncenter ' +
-                  'alignright alignjustify | bullist numlist outdent indent | ' +
-                  'removeformat | link image | help',
-                content_style: 'body { font-family: Vazirmatn, Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }',
-              }}
-              onEditorChange={(content) => {
-                postForm.setFieldsValue({ content })
-              }}
-            />
+          <Form.Item name="featuredImageUrl" label="آدرس تصویر شاخص">
+            <Input placeholder="https://..." />
           </Form.Item>
-          <Form.Item name="metaTitle" label="Meta Title"><Input /></Form.Item>
-          <Form.Item name="metaDescription" label="Meta Description"><Input.TextArea rows={2} /></Form.Item>
+
+          <Form.Item label="محتوا *" required>
+            <div style={{ direction: 'rtl' }}>
+              <ReactQuill
+                theme="snow"
+                value={editorContent}
+                onChange={setEditorContent}
+                modules={quillModules}
+                formats={quillFormats}
+                style={{
+                  height: 300,
+                  marginBottom: 50,
+                  direction: 'rtl',
+                  textAlign: 'right'
+                }}
+                placeholder="محتوای پست را اینجا بنویسید..."
+              />
+            </div>
+          </Form.Item>
+
+          <Form.Item name="metaTitle" label="Meta Title">
+            <Input />
+          </Form.Item>
+          <Form.Item name="metaDescription" label="Meta Description">
+            <Input.TextArea rows={2} />
+          </Form.Item>
         </Form>
       </Modal>
 
       {/* Category Modal */}
-      <Modal open={catOpen} onCancel={() => setCatOpen(false)} onOk={saveCategory} okText={editingCat ? 'ذخیره' : 'ایجاد'} title="مدیریت دسته‌بندی">
+      <Modal
+        open={catOpen}
+        onCancel={() => setCatOpen(false)}
+        onOk={saveCategory}
+        okText={editingCat ? 'ذخیره' : 'ایجاد'}
+        title="مدیریت دسته‌بندی"
+      >
         <Form layout="vertical" form={catForm}>
           <Form.Item name="name" label="نام" rules={[{ required: true, message: 'نام را وارد کنید' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="slug" label="اسلاگ (اختیاری)"><Input /></Form.Item>
+          <Form.Item name="slug" label="اسلاگ (اختیاری)">
+            <Input />
+          </Form.Item>
         </Form>
         <div style={{ marginTop: 16 }}>
           {categories.map(c => (
