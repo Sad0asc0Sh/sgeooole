@@ -1,10 +1,6 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode, Autoplay } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/free-mode";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
@@ -16,10 +12,19 @@ interface CategoryRailProps {
 }
 
 export default function CategoryRail({ title, data, variant }: CategoryRailProps) {
-    // Track views when component mounts (for analytics)
+    const containerRef = useRef<HTMLDivElement>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const isPausedRef = useRef(false);
+    const isEndedRef = useRef(false);
+
+    // Pause duration (6 seconds)
+    const PAUSE_DURATION = 6000;
+    // Item width + gap
+    const ITEM_WIDTH = variant === 'circle' ? 96 : 126; // 80px/110px + 16px gap
+
+    // Track views when component mounts
     useEffect(() => {
         if (data && data.length > 0) {
-            // Track view for first 3 visible categories
             data.slice(0, 3).forEach((category) => {
                 if (category._id) {
                     trackCategoryView(category._id, "homepage", "view");
@@ -27,6 +32,90 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
             });
         }
     }, [data]);
+
+    // Auto-scroll logic
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container || !data || data.length === 0) return;
+
+        const scrollOneItem = () => {
+            if (isPausedRef.current || isEndedRef.current || !containerRef.current) return;
+
+            const el = containerRef.current;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            const currentScroll = el.scrollLeft;
+
+            // Check if we've reached the end (with small tolerance)
+            if (currentScroll >= maxScroll - 10) {
+                isEndedRef.current = true;
+                return;
+            }
+
+            // Scroll one item to the left (increase scrollLeft in RTL means moving left visually)
+            el.scrollBy({
+                left: ITEM_WIDTH,
+                behavior: 'smooth'
+            });
+
+            // Schedule next scroll
+            scheduleNextScroll();
+        };
+
+        const scheduleNextScroll = () => {
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+
+            if (isPausedRef.current || isEndedRef.current) return;
+
+            timerRef.current = setTimeout(scrollOneItem, PAUSE_DURATION);
+        };
+
+        // Start auto-scroll after initial delay
+        const initialTimer = setTimeout(() => {
+            scheduleNextScroll();
+        }, PAUSE_DURATION);
+
+        return () => {
+            clearTimeout(initialTimer);
+            if (timerRef.current) {
+                clearTimeout(timerRef.current);
+            }
+        };
+    }, [data, ITEM_WIDTH, PAUSE_DURATION]);
+
+    // Mouse handlers
+    const handleMouseEnter = () => {
+        isPausedRef.current = true;
+        if (timerRef.current) {
+            clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    };
+
+    const handleMouseLeave = () => {
+        isPausedRef.current = false;
+        if (!isEndedRef.current && containerRef.current) {
+            // Resume scrolling
+            if (timerRef.current) clearTimeout(timerRef.current);
+
+            const el = containerRef.current;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+
+            if (el.scrollLeft < maxScroll - 10) {
+                timerRef.current = setTimeout(() => {
+                    if (!isPausedRef.current && !isEndedRef.current && containerRef.current) {
+                        containerRef.current.scrollBy({
+                            left: ITEM_WIDTH,
+                            behavior: 'smooth'
+                        });
+                        // Continue the cycle
+                        handleMouseLeave();
+                    }
+                }, PAUSE_DURATION);
+            }
+        }
+    };
 
     if (!data || data.length === 0) {
         return null;
@@ -37,25 +126,30 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
     };
 
     return (
-        <div className="py-4 bg-white border-b border-gray-100">
+        <div
+            className="py-4 bg-white border-b border-gray-100"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+        >
             <SectionTitle>{title}</SectionTitle>
-            <Swiper
-                modules={[FreeMode, Autoplay]}
-                freeMode={true}
-                loop={data.length > 5} // Only loop if enough items
-                autoplay={{
-                    delay: 0,
-                    disableOnInteraction: false,
-                    pauseOnMouseEnter: true
+            <div
+                ref={containerRef}
+                className="flex gap-4 overflow-x-auto px-4 scroll-smooth scrollbar-hide"
+                style={{
+                    scrollBehavior: 'smooth',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollSnapType: 'x mandatory'
                 }}
-                speed={4000}
-                spaceBetween={16}
-                slidesPerView={"auto"}
-                className="w-full !px-4 free-mode-slider"
-                grabCursor={true}
             >
                 {data.map((category) => (
-                    <SwiperSlide key={category._id} style={{ width: variant === 'circle' ? '80px' : '110px' }}>
+                    <div
+                        key={category._id}
+                        className="flex-shrink-0"
+                        style={{
+                            width: variant === 'circle' ? '80px' : '110px',
+                            scrollSnapAlign: 'start'
+                        }}
+                    >
                         <Link
                             href={`/products?category=${category.slug || category._id}`}
                             onClick={() => handleCategoryClick(category._id)}
@@ -63,7 +157,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                             {/* --- VARIANT: CIRCLE (FEATURED) --- */}
                             {variant === 'circle' && (
                                 <div className="flex flex-col items-center gap-2 cursor-pointer group select-none">
-                                    <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-vita-400 to-welf-300">
+                                    <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-vita-400 to-welf-300 transition-transform duration-300 group-hover:scale-105">
                                         <div className="w-full h-full bg-white rounded-full p-2 flex items-center justify-center overflow-hidden relative">
                                             {category.image?.url || category.icon?.url ? (
                                                 <img
@@ -76,7 +170,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                             )}
                                         </div>
                                     </div>
-                                    <span className="text-[11px] text-gray-700 font-medium text-center truncate w-full">
+                                    <span className="text-[11px] text-gray-700 font-medium text-center truncate w-full group-hover:text-vita-600 transition-colors duration-200">
                                         {category.name}
                                     </span>
                                 </div>
@@ -84,8 +178,8 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
 
                             {/* --- VARIANT: CARD (POPULAR) --- */}
                             {variant === 'card' && (
-                                <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 transition-colors">
-                                    <div className="w-16 h-16 mb-2 relative flex items-center justify-center">
+                                <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 hover:border-vita-200 hover:shadow-md transition-all duration-300">
+                                    <div className="w-16 h-16 mb-2 relative flex items-center justify-center transition-transform duration-300 hover:scale-105">
                                         {category.image?.url || category.icon?.url ? (
                                             <img
                                                 src={category.image?.url || category.icon?.url}
@@ -102,9 +196,9 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                 </div>
                             )}
                         </Link>
-                    </SwiperSlide>
+                    </div>
                 ))}
-            </Swiper>
+            </div>
         </div>
     );
 }

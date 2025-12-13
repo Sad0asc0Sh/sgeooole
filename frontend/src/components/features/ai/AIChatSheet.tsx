@@ -122,6 +122,23 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
+    // Clear chat history from both UI and server
+    const handleClearChat = async () => {
+        // Clear UI messages immediately
+        setMessages([]);
+
+        // Clear server-side history if user is logged in
+        const currentUser = authService.getUser();
+        if (currentUser?.id) {
+            try {
+                await api.delete(`/chat/history/${currentUser.id}`);
+            } catch (error) {
+                console.error('[AI Chat] Error clearing history:', error);
+                // Don't show error to user - UI is already cleared
+            }
+        }
+    };
+
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
@@ -148,7 +165,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                 </span>
                             )}
                         </div>
-                        <button onClick={() => setMessages([])} className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors">
+                        <button onClick={handleClearChat} className="p-2 -mr-2 rounded-full hover:bg-gray-100 transition-colors" title="شروع گفتگوی جدید">
                             <RefreshCw className="text-gray-600" size={20} />
                         </button>
                     </div>

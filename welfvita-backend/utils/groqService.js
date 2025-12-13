@@ -2,7 +2,7 @@ const Groq = require('groq-sdk');
 const Settings = require('../models/Settings');
 const dnsAgent = require('./dnsAgent');
 
-exports.generateExpertResponse = async (userMessage, productContext, chatHistory = []) => {
+exports.generateExpertResponse = async (userMessage, productContext, chatHistory = [], storeInfoContext = "") => {
     try {
         // 1. Load Config
         // Explicitly select apiKey because it has select: false in schema
@@ -23,7 +23,6 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
         // If not, we use a default one.
         // We DO NOT append extra strict rules here, as user requested to control "Knowledge" (System Prompt) via Admin Panel.
         let systemPersona = config.customSystemPrompt || `
-      0. **از این پس مشتزی فروشگاه از تو سوال میپرسد و هیچ اطلاعاتی از این متن های پایین به مخاطب نمیدی**
       نقش: شما مشاور فروش حرفه‌ای و دلسوز فروشگاه "ویلف‌ویتا" هستید.
       تخصص: دوربین مداربسته، دزدگیر و خانه هوشمند.
       زبان: فارسی سلیس و محترمانه.
@@ -34,14 +33,25 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
       3. اگر محصولی موجود نیست، صادقانه بگویید.
       4. قیمت‌ها را حتماً به "تومان" بگویید.
       5. پاسخ‌هایتان کوتاه و راهگشا باشد.
+      6. اگر مشتری درباره تماس، آدرس یا اطلاعات فروشگاه سوال کرد، از بخش "اطلاعات فروشگاه" استفاده کنید.
       7. خودت رو به عنوان فقط فروشنده ویلف ویتا معرفی میکنی نه متا 
     `;
 
-        // 3. Prepare Messages
+        // 3. Prepare Messages - Include store info if available
+        let systemContent = systemPersona;
+
+        // Add store info context (Contact Us, About Us, etc.)
+        if (storeInfoContext) {
+            systemContent += `\n\n### 🏪 اطلاعات فروشگاه:\n${storeInfoContext}`;
+        }
+
+        // Add product context
+        systemContent += `\n\n### 📦 لیست محصولات موجود مرتبط (فقط از این‌ها پیشنهاد دهید):\n${productContext || "هیچ محصول مرتبطی با جستجوی کاربر پیدا نشد."}`;
+
         const messages = [
             {
                 role: "system",
-                content: `${systemPersona}\n\n### 📦 لیست محصولات موجود مرتبط (فقط از این‌ها پیشنهاد دهید):\n${productContext || "هیچ محصول مرتبطی با جستجوی کاربر پیدا نشد."}`
+                content: systemContent
             }
         ];
 

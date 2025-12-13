@@ -76,8 +76,61 @@ exports.handleMessage = async (req, res) => {
       }
     }
 
-    // 3. Generate Answer (Pass history)
-    const reply = await generateExpertResponse(message, productContext, history);
+    // 2.5 Load store info context - Static data from frontend pages
+    let storeInfoContext = "";
+    try {
+      // Also fetch store settings for additional contact info
+      const storeSettings = await Settings.findOne({ singletonKey: 'main_settings' })
+        .select('storeName storeEmail storePhone storeAddress socialLinks').lean();
+
+      // Build store info context
+      const storeInfoParts = [];
+
+      // ===== ABOUT US PAGE CONTENT (Static from frontend) =====
+      storeInfoParts.push(`📄 درباره ما:
+شرکت Welfvita (گروه مهندسی کیان سابق) از سال ۱۳۹۶ در شهر مشهد فعالیت خود را در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی آغاز نموده است.
+تخصص ما: دوربین مداربسته، دزدگیر و خانه هوشمند
+این مجموعه دارای سه شعبه فعال در سراسر کلان‌شهر مشهد می‌باشد.
+نمایندگی‌های رسمی: Dahua (با گارانتی ماد طلایی)، Sailgis، Suzuki، Vekra & Mover (جک‌های پارکینگی)، HSB (ریموت‌های کنترل تردد)
+خدمات: فروش، نصب، و تعمیرات تخصصی انواع سیستم‌های حفاظتی و امنیتی`);
+
+      // ===== CONTACT US PAGE CONTENT (Static from frontend) =====
+      storeInfoParts.push(`\n📞 اطلاعات تماس و شعب:
+
+🏢 شعبه ۱:
+   آدرس: بلوار پیروزی نبش پیروزی ۷۸ (کنار املاک) پلاک 78
+   تلفن: 05135021720
+
+🏢 شعبه ۲:
+   آدرس: میدان صاحب الزمان پاساژ سبحان طبقه +۱ واحد ۱۶
+   تلفن: 05137136355 و 05137136356
+
+🏢 شعبه ۳:
+   آدرس: خین عرب طرح چی6 - پ63
+   تلفن: 09154191788
+
+⏰ ساعات کاری:
+   شنبه تا چهارشنبه: ۹ صبح - ۹ شب
+   پنج‌شنبه: ۹ صبح - ۲ عصر
+
+📱 واتساپ: 09154191788`);
+
+      // Add additional settings if available
+      if (storeSettings) {
+        if (storeSettings.storeEmail) storeInfoParts.push(`\n📧 ایمیل: ${storeSettings.storeEmail}`);
+        if (storeSettings.socialLinks) {
+          if (storeSettings.socialLinks.telegram) storeInfoParts.push(`📨 تلگرام: ${storeSettings.socialLinks.telegram}`);
+          if (storeSettings.socialLinks.instagram) storeInfoParts.push(`📸 اینستاگرام: ${storeSettings.socialLinks.instagram}`);
+        }
+      }
+
+      storeInfoContext = storeInfoParts.join('\n');
+    } catch (pageError) {
+      console.warn('[Chat] Could not load store info:', pageError.message);
+    }
+
+    // 3. Generate Answer (Pass history and store info)
+    const reply = await generateExpertResponse(message, productContext, history, storeInfoContext);
 
     // 4. Save History (if userId exists)
     if (chatSession) {
@@ -183,6 +236,31 @@ exports.getSuggestions = async (req, res) => {
 exports.clearHistory = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'شناسه کاربر الزامی است'
+      });
+    }
+
+    // Security check: User can only clear their own history
+    if (req.user && req.user._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'شما مجاز به پاک کردن تاریخچه این کاربر نیستید'
+      });
+    }
+
+    // Find and clear only the messages array, keep the usage stats
+    const chatSession = await ChatHistory.findOne({ userId });
+
+    if (chatSession) {
+      chatSession.messages = [];
+      chatSession.lastUpdated = new Date();
+      await chatSession.save();
+    }
+
     res.json({
       success: true,
       message: 'تاریخچه گفتگو پاک شد'
