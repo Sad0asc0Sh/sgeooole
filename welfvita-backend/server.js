@@ -27,12 +27,36 @@ app.use(helmet({
 // 2. Rate Limiting
 // ============================================
 
+// Generous limiter for product browsing (public read-only endpoints)
+// These endpoints are hit frequently during normal browsing
+const productLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 200, // 200 requests per minute per IP for products
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for server-side requests (Next.js SSR)
+    const userAgent = req.headers['user-agent'] || '';
+    return userAgent.includes('node-fetch') || userAgent.includes('undici');
+  },
+  message: { success: false, message: 'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید.' },
+})
+// Apply to product endpoints before general limiter
+app.use('/api/products', productLimiter)
+
 // General API limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 requests per window
+  max: 5000, // increased limit to handle more requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Skip for product endpoints (already handled by productLimiter)
+    if (req.path.startsWith('/products')) return true;
+    // Skip rate limiting for server-side requests (Next.js SSR)
+    const userAgent = req.headers['user-agent'] || '';
+    return userAgent.includes('node-fetch') || userAgent.includes('undici');
+  },
   message: { success: false, message: 'تعداد درخواست‌های شما بیش از حد مجاز است، لطفاً ۱۵ دقیقه دیگر تلاش کنید.' },
 })
 app.use('/api', limiter)

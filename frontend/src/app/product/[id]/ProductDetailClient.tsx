@@ -48,12 +48,12 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
             <ProductGallery product={product} />
 
             {/* Info Section - Seamless connection with gallery */}
-            <div className="px-4 py-4 relative bg-white z-10">
+            <div className="px-4 py-2 relative bg-white z-10">
 
                 {/* === Digikala-style Category Navigation === */}
 
                 {/* Row 1: Full Category Path (Welfvita > Main Category > Subcategory) */}
-                <div className="space-y-2 mb-3">
+                <div className="space-y-1.5 mb-2">
                     {product.categoryPath && product.categoryPath.length > 0 && (
                         <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
                             {/* Site Name as first breadcrumb item */}
@@ -99,9 +99,9 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 </div>
 
                 {/* Title & Rating */}
-                <div className="flex justify-between items-start mb-2">
+                <div className="flex justify-between items-start mb-1">
                     <div className="flex flex-col">
-                        <h1 className="text-lg font-bold text-gray-900 leading-snug">{product.title}</h1>
+                        <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
                         {product.enTitle && (
                             <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>
                         )}
@@ -166,7 +166,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
                 {/* Rating Section */}
                 {product.rating > 0 && (
-                    <div className="flex items-center gap-1 mb-6">
+                    <div className="flex items-center gap-1 mb-4">
                         <Star size={14} className="text-yellow-400 fill-yellow-400" />
                         <span className="text-sm font-bold text-gray-800">{product.rating}</span>
                         <span className="text-xs text-gray-400">

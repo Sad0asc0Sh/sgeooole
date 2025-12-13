@@ -3,6 +3,66 @@ import type { Product, ProductColor } from "@/services/productService";
 import { buildProductUrl } from "./paths";
 import { resolvePricing } from "@/lib/pricing";
 
+// Enhanced fetch with retry logic and exponential backoff
+const fetchWithRetry = async (
+  url: string,
+  options: RequestInit,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<Response> => {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+
+      // Success - return response
+      if (response.ok) {
+        return response;
+      }
+
+      // 404 - don't retry, return immediately
+      if (response.status === 404) {
+        return response;
+      }
+
+      // 429 (Rate Limited) or 5xx (Server Error) - retry with backoff
+      if (response.status === 429 || response.status >= 500) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delay = retryAfter
+          ? parseInt(retryAfter, 10) * 1000
+          : initialDelay * Math.pow(2, attempt);
+
+        // If this is the last attempt, return the error response
+        if (attempt === maxRetries - 1) {
+          return response;
+        }
+
+        console.warn(`[productData] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms for: ${url}`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      // Other errors - return response without retry
+      return response;
+
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Network error - retry with backoff
+      if (attempt < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, attempt);
+        console.warn(`[productData] Network error, retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+    }
+  }
+
+  // All retries exhausted - throw the last error
+  throw lastError || new Error('Fetch failed after all retries');
+};
+
 // Reduced from 3600 (1 hour) to 30 seconds for real-time discount updates from admin panel
 export const PRODUCT_REVALIDATE = 30;
 
@@ -192,55 +252,93 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
-export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
-  const response = await fetch(`${apiBaseUrl}/products/${id}`, {
-    next: { revalidate: 0 },
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      return null;
-    }
-    throw new Error(`Failed to fetch product ${id} (${response.status})`);
+// Custom error class for rate limiting
+export class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RateLimitError';
   }
+}
 
-  const payload = await response.json();
-  const data = (payload as any)?.data ?? payload;
-  if (!data) return null;
+export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
+  try {
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products/${id}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      3, // max retries
+      1000 // initial delay
+    );
 
-  return mapBackendProduct(data as BackendProduct, apiBaseUrl);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      if (response.status === 429) {
+        // For 429, throw a specific error that can be handled by error boundary
+        throw new RateLimitError(`سرور موقتاً درخواست‌ها را محدود کرده است. لطفاً چند ثانیه صبر کنید. (429)`);
+      }
+      throw new Error(`Failed to fetch product ${id} (${response.status})`);
+    }
+
+    const payload = await response.json();
+    const data = (payload as any)?.data ?? payload;
+    if (!data) return null;
+
+    return mapBackendProduct(data as BackendProduct, apiBaseUrl);
+  } catch (error) {
+    // Re-throw RateLimitError for error boundary to catch
+    if (error instanceof RateLimitError) {
+      throw error;
+    }
+    // Log other errors and return null to prevent page crash
+    console.error(`[productData] Error fetching product ${id}:`, error);
+    throw error;
+  }
 });
 
 export const fetchProductBySlug = cache(async (slug: string): Promise<(Product & { isActive?: boolean }) | null> => {
   try {
-    // Try a slug endpoint first
-    const resSlug = await fetch(`${apiBaseUrl}/products/slug/${slug}`, {
-      next: { revalidate: 0 },
-      cache: 'no-store',
-    });
+    // Try a slug endpoint first with retry
+    const resSlug = await fetchWithRetry(
+      `${apiBaseUrl}/products/slug/${slug}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      3,
+      1000
+    );
     if (resSlug.ok) {
       const payload = await resSlug.json();
       const data = (payload as any)?.data ?? payload;
       if (data) return mapBackendProduct(data as BackendProduct, apiBaseUrl);
     }
   } catch (e) {
-    // fall back
+    // fall back to other methods
+    console.warn('[productData] Slug endpoint failed, trying fallback:', e);
   }
 
-  // Fallback: try list query
+  // Fallback: try list query with retry
   try {
-    const res = await fetch(`${apiBaseUrl}/products?slug=${slug}`, {
-      next: { revalidate: 0 },
-      cache: 'no-store',
-    });
+    const res = await fetchWithRetry(
+      `${apiBaseUrl}/products?slug=${slug}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      2,
+      1000
+    );
     if (res.ok) {
       const payload = await res.json();
       const item = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
       if (item) return mapBackendProduct(item as BackendProduct, apiBaseUrl);
     }
   } catch (e) {
-    // ignore
+    // ignore and try final fallback
   }
 
   // Final fallback: maybe slug is actually ID
@@ -249,10 +347,15 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
 
 export const fetchProductsForStatic = async (limit: number = 100): Promise<(Product & { isActive?: boolean })[]> => {
   try {
-    const response = await fetch(`${apiBaseUrl}/products?limit=${limit}`, {
-      next: { revalidate: 0 },
-      cache: 'no-store',
-    });
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?limit=${limit}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      3,
+      1000
+    );
     if (!response.ok) return [];
     const payload = await response.json();
     const items = Array.isArray(payload?.data) ? payload.data : [];

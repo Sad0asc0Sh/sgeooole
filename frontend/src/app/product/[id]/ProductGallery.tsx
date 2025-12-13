@@ -130,7 +130,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                 </div>
 
                 {/* Thumbnails - Full width, centered */}
-                <div className="flex gap-2 px-4 overflow-x-auto no-scrollbar pt-4 pb-4 justify-center mt-2">
+                <div className="flex gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 justify-center">
                     {product.images.map((img, index) => (
                         <button
                             key={index}

@@ -38,9 +38,9 @@ export default function ProductHeader({ product }: ProductHeaderProps) {
                     {/* AI Icon */}
                     <button
                         onClick={() => setIsAiOpen(true)}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-amber-500 hover:bg-amber-50 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-welf-50 text-vita-500 hover:bg-vita-50 transition-colors"
                     >
-                        <Sparkles size={22} />
+                        <Sparkles className="h-5 w-5" />
                     </button>
 
                     {/* Cart */}
