@@ -458,11 +458,14 @@ function ProductListingContent() {
                   <ArrowUpDown size={16} />
                   <span className="hidden sm:inline">مرتب‌سازی بر اساس:</span>
                   <span className="text-vita-600">
-                    {sortParam === "newest" && "جدیدترین"}
-                    {sortParam === "priceAsc" && "ارزان‌ترین"}
-                    {sortParam === "priceDesc" && "گران‌ترین"}
-                    {sortParam === "popularity" && "محبوب‌ترین"}
-                    {sortParam === "bestSelling" && "پرفروش‌ترین"}
+                    {{
+                      newest: "جدیدترین",
+                      priceAsc: "ارزان‌ترین",
+                      priceDesc: "گران‌ترین",
+                      popularity: "محبوب‌ترین",
+                      bestSelling: "پرفروش‌ترین",
+                      discount: "بیشترین تخفیف",
+                    }[sortParam] || "جدیدترین"}
                   </span>
                 </button>
 
@@ -524,7 +527,7 @@ function ProductListingContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-[100]"
+              className="fixed inset-0 bg-black/50 z-[199]"
               onClick={() => setShowSortSheet(false)}
             />
             <motion.div
@@ -532,7 +535,7 @@ function ProductListingContent() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[101] p-6"
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[200] p-6 pb-8 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-lg">مرتب‌سازی</h3>
@@ -540,13 +543,14 @@ function ProductListingContent() {
                   <X size={24} />
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
                 {[
                   { value: "newest", label: "جدیدترین" },
                   { value: "priceAsc", label: "ارزان‌ترین" },
                   { value: "priceDesc", label: "گران‌ترین" },
                   { value: "popularity", label: "محبوب‌ترین" },
                   { value: "bestSelling", label: "پرفروش‌ترین" },
+                  { value: "discount", label: "بیشترین تخفیف" },
                 ].map((option) => (
                   <button
                     key={option.value}

@@ -398,16 +398,44 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
           ? conditions[0]
           : { $and: conditions }
 
-    // Handle "popularity" sort
-    // Fix: sort variable is const, so we create a new variable
+    // Handle sorting options
+    // Convert frontend sort values to MongoDB sort format
     let finalSort = sort
-    if (sort === 'popularity') {
-      finalSort = '-views'
-    } else if (sort === 'bestSelling') {
-      finalSort = '-salesCount'
-    } else if (sort === 'mostVisited') {
-      finalSort = '-views'
+    switch (sort) {
+      case 'newest':
+        finalSort = '-createdAt'
+        break
+      case 'oldest':
+        finalSort = 'createdAt'
+        break
+      case 'priceAsc':
+        finalSort = 'price'
+        break
+      case 'priceDesc':
+        finalSort = '-price'
+        break
+      case 'popularity':
+      case 'mostVisited':
+        finalSort = '-views'
+        break
+      case 'bestSelling':
+        finalSort = '-salesCount'
+        break
+      case 'discount':
+        finalSort = '-discount'
+        break
+      case 'rating':
+        finalSort = '-rating'
+        break
+      default:
+        // If sort starts with - or is a valid field, use as-is
+        // Otherwise default to newest
+        if (!sort.startsWith('-') && !['price', 'createdAt', 'views', 'salesCount', 'rating', 'discount', 'name'].includes(sort)) {
+          finalSort = '-createdAt'
+        }
     }
+
+    console.log('[PRODUCTS] Sort param:', sort, '-> MongoDB sort:', finalSort)
 
     const query = Product.find(mongoFilter).sort(finalSort).skip(skip).limit(limit)
 
