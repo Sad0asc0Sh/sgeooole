@@ -303,6 +303,10 @@ app.use('/api/audit-logs', auditLogRoutes)
 const uploadRoutes = require('./routes/uploads')
 app.use('/api/uploads', uploadRoutes)
 
+// Newsletter Routes
+const newsletterRoutes = require('./routes/newsletter')
+app.use('/api/newsletter', newsletterRoutes)
+
 // Root
 app.get('/', (req, res) => {
   res.json({

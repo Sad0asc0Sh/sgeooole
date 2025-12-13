@@ -10,6 +10,7 @@ import ProductGallery from "./ProductGallery";
 import ColorSelector from "./ColorSelector";
 import ProductActions from "./ProductActions";
 import ProductHistoryTracker from "./ProductHistoryTracker";
+import ProductSocialActions from "./ProductSocialActions";
 
 type ProductDetailClientProps = {
     product: Product;
@@ -173,6 +174,9 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         </span>
                     </div>
                 )}
+
+                {/* Wishlist & Share Actions */}
+                <ProductSocialActions product={product} />
 
                 <hr className="border-gray-100 mb-6" />
 

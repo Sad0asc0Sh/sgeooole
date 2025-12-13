@@ -6,7 +6,7 @@ const https = require('https');
  * Uses specific DNS servers: 178.22.122.100, 185.51.200.2
  */
 const resolver = new dns.Resolver();
-resolver.setServers(['178.22.122.100', '185.51.200.2']);
+resolver.setServers(['178.22.122.101', '8.8.8.8']);
 
 /**
  * Custom lookup function for https.Agent

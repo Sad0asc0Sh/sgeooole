@@ -44,6 +44,11 @@ exports.getPublicSettings = async (req, res) => {
         displayEnabled: settings.popularCategoriesSettings?.displayEnabled || false,
         displayLimit: settings.popularCategoriesSettings?.displayLimit || 8,
         useFallback: settings.popularCategoriesSettings?.useFallback !== false,
+      },
+      socialLinks: {
+        telegram: settings.socialLinks?.telegram || '',
+        instagram: settings.socialLinks?.instagram || '',
+        aparat: settings.socialLinks?.aparat || '',
       }
     }
 
@@ -126,6 +131,14 @@ exports.updateSettings = async (req, res) => {
     if (updates.storeEmail) settings.storeEmail = updates.storeEmail
     if (updates.storePhone) settings.storePhone = updates.storePhone
     if (updates.storeAddress) settings.storeAddress = updates.storeAddress
+
+    // For nested objects (Social Links)
+    if (updates.socialLinks) {
+      if (!settings.socialLinks) settings.socialLinks = {}
+      if (updates.socialLinks.telegram !== undefined) settings.socialLinks.telegram = updates.socialLinks.telegram
+      if (updates.socialLinks.instagram !== undefined) settings.socialLinks.instagram = updates.socialLinks.instagram
+      if (updates.socialLinks.aparat !== undefined) settings.socialLinks.aparat = updates.socialLinks.aparat
+    }
 
     // For nested objects (Cart Settings)
     if (updates.cartSettings) {

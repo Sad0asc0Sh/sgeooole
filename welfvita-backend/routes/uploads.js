@@ -23,10 +23,21 @@ router.post(
             }
 
             // Extract image info from Cloudinary response
+            console.log('[UPLOAD] File received:', {
+                path: req.file.path,
+                secure_url: req.file.secure_url,
+                url: req.file.url,
+                filename: req.file.filename,
+                public_id: req.file.public_id,
+                originalname: req.file.originalname,
+            })
+
             const imageInfo = {
                 url: req.file.path || req.file.secure_url || req.file.url,
                 public_id: req.file.filename || req.file.public_id,
             }
+
+            console.log('[UPLOAD] Returning:', imageInfo)
 
             res.json({
                 success: true,

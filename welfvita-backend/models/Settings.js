@@ -52,6 +52,22 @@ const settingsSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Social Media Links
+    socialLinks: {
+      telegram: {
+        type: String,
+        default: '',
+      },
+      instagram: {
+        type: String,
+        default: '',
+      },
+      aparat: {
+        type: String,
+        default: '',
+      },
+    },
+
     // Payment settings (sensitive)
     paymentGatewayKeys: {
       apiKey: { type: String, select: false },

@@ -2,17 +2,29 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Send, Instagram, Video, Phone, MapPin, Clock } from "lucide-react";
+import { Send, Instagram, Video, Phone, MapPin, Clock, Mail, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { settingsService } from "@/services/settingsService";
+import api from "@/lib/api";
 
 interface StoreInfo {
     storeName?: string;
     storePhone?: string;
     storeAddress?: string;
+    socialLinks?: {
+        telegram?: string;
+        instagram?: string;
+        aparat?: string;
+    };
 }
 
 export default function Footer() {
     const [storeInfo, setStoreInfo] = useState<StoreInfo>({});
+
+    // Newsletter state
+    const [email, setEmail] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [newsletterStatus, setNewsletterStatus] = useState<"idle" | "success" | "error">("idle");
+    const [newsletterMessage, setNewsletterMessage] = useState("");
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -30,6 +42,7 @@ export default function Footer() {
                         storeName: settings.storeName,
                         storePhone: settings.storePhone,
                         storeAddress: settings.storeAddress,
+                        socialLinks: settings.socialLinks,
                     });
                 }
             } catch (error) {
@@ -119,31 +132,144 @@ export default function Footer() {
 
                 {/* Newsletter */}
                 <div className="space-y-4">
-                    <h3 className="font-bold text-white">خبرنامه</h3>
-                    <div className="flex gap-2">
-                        <input
-                            type="email"
-                            placeholder="ایمیل خود را وارد کنید"
-                            className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-gray-400 focus:border-vita-500 focus:outline-none"
-                        />
-                        <button className="rounded-lg bg-vita-500 px-4 py-2 text-white hover:bg-vita-600">
-                            عضویت
-                        </button>
+                    <div className="flex items-center gap-2">
+                        <Mail size={20} className="text-vita-400" />
+                        <h3 className="font-bold text-white">عضویت در خبرنامه</h3>
                     </div>
+                    <p className="text-sm text-gray-400">
+                        از آخرین تخفیف‌ها و محصولات جدید باخبر شوید
+                    </p>
+
+                    {newsletterStatus === "success" ? (
+                        <div className="flex items-center gap-2 p-3 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400">
+                            <CheckCircle size={20} />
+                            <span className="text-sm">{newsletterMessage}</span>
+                        </div>
+                    ) : (
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!email.trim()) return;
+
+                                // Simple email validation
+                                const emailRegex = /^\S+@\S+\.\S+$/;
+                                if (!emailRegex.test(email)) {
+                                    setNewsletterStatus("error");
+                                    setNewsletterMessage("فرمت ایمیل نامعتبر است");
+                                    return;
+                                }
+
+                                setIsSubmitting(true);
+                                setNewsletterStatus("idle");
+
+                                try {
+                                    const response = await api.post("/newsletter/subscribe", { email, source: "footer" });
+                                    setNewsletterStatus("success");
+                                    setNewsletterMessage(response.data?.message || "عضویت با موفقیت انجام شد");
+                                    setEmail("");
+                                } catch (error: any) {
+                                    setNewsletterStatus("error");
+                                    setNewsletterMessage(error.response?.data?.message || "خطا در عضویت");
+                                } finally {
+                                    setIsSubmitting(false);
+                                }
+                            }}
+                            className="space-y-2"
+                        >
+                            <div className="flex gap-2">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => {
+                                            setEmail(e.target.value);
+                                            if (newsletterStatus === "error") setNewsletterStatus("idle");
+                                        }}
+                                        placeholder="ایمیل خود را وارد کنید"
+                                        className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none transition-all ${newsletterStatus === "error"
+                                                ? "border-red-500 focus:border-red-400"
+                                                : "border-white/10 focus:border-vita-500"
+                                            }`}
+                                        dir="ltr"
+                                        disabled={isSubmitting}
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || !email.trim()}
+                                    className="rounded-xl bg-gradient-to-r from-vita-500 to-vita-600 px-6 py-3 text-white font-medium hover:from-vita-600 hover:to-vita-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-lg shadow-vita-500/25"
+                                >
+                                    {isSubmitting ? (
+                                        <Loader2 size={18} className="animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Mail size={18} />
+                                            <span>عضویت</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {newsletterStatus === "error" && (
+                                <div className="flex items-center gap-2 text-red-400 text-sm">
+                                    <AlertCircle size={16} />
+                                    <span>{newsletterMessage}</span>
+                                </div>
+                            )}
+                        </form>
+                    )}
                 </div>
 
                 {/* Socials & Trust Badge */}
                 <div className="flex flex-col gap-6">
                     <div className="flex gap-4">
-                        <a href="#" className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-vita-500">
-                            <Send size={20} />
-                        </a>
-                        <a href="#" className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-vita-500">
-                            <Instagram size={20} />
-                        </a>
-                        <a href="#" className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-vita-500">
-                            <Video size={20} />
-                        </a>
+                        {storeInfo.socialLinks?.telegram && (
+                            <a
+                                href={storeInfo.socialLinks.telegram}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-[#0088cc]"
+                                title="تلگرام"
+                            >
+                                <Send size={20} />
+                            </a>
+                        )}
+                        {storeInfo.socialLinks?.instagram && (
+                            <a
+                                href={storeInfo.socialLinks.instagram}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-[#E4405F]"
+                                title="اینستاگرام"
+                            >
+                                <Instagram size={20} />
+                            </a>
+                        )}
+                        {storeInfo.socialLinks?.aparat && (
+                            <a
+                                href={storeInfo.socialLinks.aparat}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="rounded-full bg-white p-2 text-[#142755] shadow-sm transition-transform hover:scale-110 hover:text-[#ED145B]"
+                                title="آپارات"
+                            >
+                                <Video size={20} />
+                            </a>
+                        )}
+                        {/* Show placeholder icons if no social links are set */}
+                        {!storeInfo.socialLinks?.telegram && !storeInfo.socialLinks?.instagram && !storeInfo.socialLinks?.aparat && (
+                            <>
+                                <span className="rounded-full bg-white/50 p-2 text-gray-400">
+                                    <Send size={20} />
+                                </span>
+                                <span className="rounded-full bg-white/50 p-2 text-gray-400">
+                                    <Instagram size={20} />
+                                </span>
+                                <span className="rounded-full bg-white/50 p-2 text-gray-400">
+                                    <Video size={20} />
+                                </span>
+                            </>
+                        )}
                     </div>
 
                     {/* Trust Badge Placeholder */}

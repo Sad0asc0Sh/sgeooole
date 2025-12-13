@@ -39,6 +39,7 @@ const PagesManagement = lazy(() => import('./pages/content/PagesManagement'))
 const BlogPosts = lazy(() => import('./pages/content/BlogPosts'))
 const BannersPage = lazy(() => import('./pages/content/BannersPage'))
 const AnnouncementsPage = lazy(() => import('./pages/content/AnnouncementsPage'))
+const NewsletterPage = lazy(() => import('./pages/content/NewsletterPage'))
 
 // Tickets
 const TicketsList = lazy(() => import('./pages/tickets/TicketsList'))
@@ -156,6 +157,7 @@ function App() {
                     <Route path="/blog/posts" element={<BlogPosts />} />
                     <Route path="/banners" element={<BannersPage />} />
                     <Route path="/announcements" element={<AnnouncementsPage />} />
+                    <Route path="/newsletter" element={<NewsletterPage />} />
 
                     {/* Tickets */}
                     <Route path="/tickets" element={<TicketsList />} />

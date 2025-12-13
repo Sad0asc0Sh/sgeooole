@@ -139,6 +139,10 @@ function MainLayout({ children }) {
           key: '/announcements',
           label: <Link to="/announcements">اعلانات سایت</Link>,
         },
+        {
+          key: '/newsletter',
+          label: <Link to="/newsletter">خبرنامه</Link>,
+        },
       ],
     },
     {

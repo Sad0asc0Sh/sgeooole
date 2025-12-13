@@ -104,6 +104,11 @@ function SettingsPage() {
             isActive: data.paymentConfig?.sadad?.isActive || false,
           },
         },
+        socialLinks: {
+          telegram: data.socialLinks?.telegram || '',
+          instagram: data.socialLinks?.instagram || '',
+          aparat: data.socialLinks?.aparat || '',
+        },
 
       })
     } catch (err) {
@@ -320,6 +325,13 @@ function SettingsPage() {
         payload.popularCategoriesSettings = { ...values.popularCategoriesSettings }
       }
 
+      if (values.socialLinks) {
+        payload.socialLinks = {
+          telegram: values.socialLinks.telegram || '',
+          instagram: values.socialLinks.instagram || '',
+          aparat: values.socialLinks.aparat || '',
+        }
+      }
 
       setSaving(true)
       await api.put('/settings', payload)
@@ -378,6 +390,32 @@ function SettingsPage() {
 
           <Form.Item name="storeAddress" label="آدرس فروشگاه">
             <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Divider>🌐 لینک شبکه‌های اجتماعی</Divider>
+
+          <Form.Item
+            name={['socialLinks', 'telegram']}
+            label="📱 تلگرام"
+            extra="لینک کانال یا گروه تلگرام (مثلاً: https://t.me/yourstore)"
+          >
+            <Input placeholder="https://t.me/..." dir="ltr" />
+          </Form.Item>
+
+          <Form.Item
+            name={['socialLinks', 'instagram']}
+            label="📸 اینستاگرام"
+            extra="لینک صفحه اینستاگرام (مثلاً: https://instagram.com/yourstore)"
+          >
+            <Input placeholder="https://instagram.com/..." dir="ltr" />
+          </Form.Item>
+
+          <Form.Item
+            name={['socialLinks', 'aparat']}
+            label="🎬 آپارات"
+            extra="لینک کانال آپارات (مثلاً: https://aparat.com/yourstore)"
+          >
+            <Input placeholder="https://aparat.com/..." dir="ltr" />
           </Form.Item>
         </>
       ),
