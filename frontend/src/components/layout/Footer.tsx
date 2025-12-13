@@ -128,7 +128,6 @@ export default function Footer() {
                         <li><Link href={isAuthenticated ? "/profile/orders" : "/tracking"}>پیگیری سفارش</Link></li>
                         <li><Link href="/terms">قوانین و مقررات</Link></li>
                         <li><Link href="/faq">سوالات متداول</Link></li>
-                        <li><Link href="/returns">رویه بازگرداندن کالا</Link></li>
                     </ul>
                 </div>
 

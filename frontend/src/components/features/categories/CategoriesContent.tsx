@@ -268,7 +268,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                                 src={resolveCategoryImage(item)!}
                                                                                 alt={item.name}
                                                                                 fill
-                                                                                className="object-cover rounded-full"
+                                                                                className="object-contain rounded-full"
                                                                             />
                                                                         </div>
                                                                     ) : (
