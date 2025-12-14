@@ -172,7 +172,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                             )}
                                         </div>
                                     </div>
-                                    <span className="text-[11px] text-gray-700 font-medium text-center truncate w-full group-hover:text-vita-600 transition-colors duration-200">
+                                    <span className="text-[11px] text-gray-700 font-medium text-center line-clamp-2 w-full group-hover:text-vita-600 transition-colors duration-200 leading-tight">
                                         {category.name}
                                     </span>
                                 </div>
