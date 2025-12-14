@@ -109,7 +109,7 @@ export const authService = {
    */
   verifyOtp: async (mobile: string, code: string): Promise<AuthResponse> => {
     try {
-      console.log(`[AUTH] Verifying OTP for ${mobile}: ${code}`);
+      console.log(`[AUTH] Verifying OTP for ${mobile}`);
 
       const response = await api.post("/auth/verify-otp", { mobile, code });
 

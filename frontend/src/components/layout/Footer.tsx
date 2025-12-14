@@ -387,7 +387,7 @@ export default function Footer() {
                         <div className="border-t border-white/10 pt-6 mt-6">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <p className="text-sm text-gray-400 text-center md:text-right">
-                                    تمامی حقوق این وب‌سایت متعلق به <span className="text-vita-400 font-bold">{storeInfo.storeName || "ویلف‌ویتا"}</span> می‌باشد © ۱۴۰۴
+                                    تمامی حقوق این وب‌سایت مطعلق به فروشگاه ویلف‌ویتا می‌باشد
                                 </p>
                                 <div className="flex items-center gap-4 text-xs text-gray-500">
                                     <span>طراحی و توسعه توسط sadraSh</span>

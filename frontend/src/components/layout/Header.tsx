@@ -9,6 +9,7 @@ import MobileSearchOverlay from "@/components/features/search/MobileSearchOverla
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import DesktopMegaMenu from "./DesktopMegaMenu";
+import DesktopSearch from "@/components/features/search/DesktopSearch";
 
 interface HeaderProps {
     isAIOpen: boolean;
@@ -78,18 +79,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
                         {/* Center: Expanded Search Bar */}
                         <div className="flex-1 max-w-2xl mx-8">
-                            <div
-                                onClick={() => setIsSearchOpen(true)}
-                                className="relative cursor-pointer"
-                            >
-                                <input
-                                    type="text"
-                                    readOnly
-                                    placeholder="جستجو در بین هزاران محصول..."
-                                    className="h-12 w-full rounded-xl bg-welf-50 px-12 text-sm text-welf-900 placeholder:text-welf-500 focus:outline-none cursor-pointer pointer-events-none hover:bg-welf-100 transition-colors"
-                                />
-                                <Search className="absolute right-4 top-4 h-4 w-4 text-welf-500" />
-                            </div>
+                            <DesktopSearch />
                         </div>
 
                         {/* Left: Actions (AI, Profile, Cart) */}

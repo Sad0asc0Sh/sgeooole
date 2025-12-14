@@ -62,15 +62,31 @@ export default function LoginPage() {
     }, [step, timer]);
 
     const handlePhoneSubmit = async (isRecoveryFlow = false) => {
-        if (phone.length < 10) return;
+        // Normalize phone number to match backend pattern 09xxxxxxxxx
+        const digitsOnly = phone.replace(/\D/g, "");
+        let normalized = digitsOnly;
+
+        // Handle common Iranian formats: 9891..., 9xxxxxxxxx
+        if (normalized.startsWith("98") && normalized.length === 12) {
+            normalized = "0" + normalized.slice(2);
+        } else if (normalized.length === 10 && normalized.startsWith("9")) {
+            normalized = "0" + normalized;
+        }
+
+        if (!/^09\d{9}$/.test(normalized)) {
+            setError("شماره موبایل نامعتبر است. فرمت صحیح: 09xxxxxxxxx");
+            return;
+        }
 
         try {
             setLoading(true);
             setError(null);
 
-            const response = await authService.sendOtp(phone);
+            const response = await authService.sendOtp(normalized);
 
             if (response.success) {
+                // Keep normalized value for OTP step and backend consistency
+                setPhone(normalized);
                 setStep(isRecoveryFlow ? "recovery-otp" : "otp");
                 setTimer(response.expiresIn || 120);
             } else {
@@ -132,7 +148,10 @@ export default function LoginPage() {
     };
 
     const handleOtpSubmit = async () => {
-        if (otp.length < 4) return;
+        if (!/^\d{4}$/.test(otp)) {
+            setError("کد تأیید باید ۴ رقم عددی باشد.");
+            return;
+        }
 
         try {
             setLoading(true);

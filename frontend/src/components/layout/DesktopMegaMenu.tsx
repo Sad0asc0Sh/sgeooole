@@ -2,9 +2,80 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft, Menu, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { ChevronLeft, Menu, Loader2, Grid3X3 } from "lucide-react";
 import { categoryService, Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
+
+// Helper to extract icon URL from category
+const getIconUrl = (category: Category): string | null => {
+    if (!category.icon) return null;
+    if (typeof category.icon === 'string') return category.icon;
+    if (typeof category.icon === 'object' && 'url' in category.icon) {
+        return (category.icon as { url: string }).url;
+    }
+    return null;
+};
+
+// Category Icon Component with fallback
+const CategoryIcon = ({
+    category,
+    size = 24,
+    className = ""
+}: {
+    category: Category;
+    size?: number;
+    className?: string;
+}) => {
+    const iconUrl = getIconUrl(category);
+    const [hasError, setHasError] = useState(false);
+
+    if (!iconUrl || hasError) {
+        // Fallback: Beautiful gradient icon with first letter
+        const colors = [
+            'from-vita-500 to-vita-600',
+            'from-emerald-500 to-emerald-600',
+            'from-amber-500 to-amber-600',
+            'from-purple-500 to-purple-600',
+            'from-rose-500 to-rose-600',
+            'from-cyan-500 to-cyan-600',
+            'from-indigo-500 to-indigo-600',
+            'from-orange-500 to-orange-600',
+        ];
+        // Use category name hash to pick color
+        const colorIndex = category.name.charCodeAt(0) % colors.length;
+        const firstLetter = category.name.charAt(0);
+
+        return (
+            <div
+                className={cn(
+                    `flex items-center justify-center rounded-lg bg-gradient-to-br text-white font-bold shadow-sm`,
+                    colors[colorIndex],
+                    className
+                )}
+                style={{ width: size, height: size, fontSize: size * 0.5 }}
+            >
+                {firstLetter}
+            </div>
+        );
+    }
+
+    return (
+        <div
+            className={cn("relative overflow-hidden rounded-lg bg-slate-100 flex-shrink-0", className)}
+            style={{ width: size, height: size }}
+        >
+            <Image
+                src={iconUrl}
+                alt={category.name}
+                fill
+                className="object-contain p-0.5"
+                sizes={`${size}px`}
+                onError={() => setHasError(true)}
+            />
+        </div>
+    );
+};
 
 export default function DesktopMegaMenu() {
     const [categories, setCategories] = useState<Category[]>([]);
@@ -60,7 +131,7 @@ export default function DesktopMegaMenu() {
 
             {/* Mega Menu Overlay */}
             {isOpen && (
-                <div className="absolute top-full right-0 w-[90vw] max-w-[1200px] bg-white/80 backdrop-blur-md shadow-xl rounded-br-lg rounded-bl-lg border border-slate-100 z-50 flex h-[500px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full right-0 w-[90vw] max-w-[1200px] bg-white/95 backdrop-blur-lg shadow-2xl rounded-br-xl rounded-bl-xl border border-slate-200/50 z-50 flex h-[520px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {isLoading ? (
                         <div className="w-full h-full flex items-center justify-center">
@@ -68,69 +139,152 @@ export default function DesktopMegaMenu() {
                         </div>
                     ) : (
                         <>
-                            {/* Right Sidebar: Parent Categories */}
-                            <div className="w-64 flex-shrink-0 border-l border-slate-100 overflow-y-auto bg-slate-50/50 custom-scrollbar">
-                                {categories.map((category) => (
-                                    <div
-                                        key={category._id}
-                                        onMouseEnter={() => handleCategoryHover(category)}
-                                        className={cn(
-                                            "flex items-center justify-between px-4 py-3.5 cursor-pointer transition-all duration-200 text-sm font-medium",
-                                            activeCategory?._id === category._id
-                                                ? "bg-white/60 text-vita-600 border-r-4 border-vita-600 shadow-sm"
-                                                : "text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 border-r-4 border-transparent"
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {/* Icon Placeholder - In a real app, use category.icon.url */}
-                                            {/* <div className="w-5 h-5 bg-slate-200 rounded-full" /> */}
-                                            <span>{category.name}</span>
+                            {/* Right Sidebar: Parent Categories with Icons */}
+                            <div className="w-72 flex-shrink-0 border-l border-slate-100 overflow-y-auto bg-gradient-to-b from-slate-50/80 to-white custom-scrollbar">
+                                <div className="p-3">
+                                    {categories.map((category) => (
+                                        <div
+                                            key={category._id}
+                                            onMouseEnter={() => handleCategoryHover(category)}
+                                            className={cn(
+                                                "flex items-center gap-3 px-3 py-3 cursor-pointer transition-all duration-200 rounded-xl mb-1 group",
+                                                activeCategory?._id === category._id
+                                                    ? "bg-vita-50 text-vita-700 shadow-sm border border-vita-100"
+                                                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 border border-transparent"
+                                            )}
+                                        >
+                                            {/* Category Icon */}
+                                            <CategoryIcon
+                                                category={category}
+                                                size={36}
+                                                className={cn(
+                                                    "transition-transform duration-200",
+                                                    activeCategory?._id === category._id && "scale-110"
+                                                )}
+                                            />
+
+                                            {/* Category Name */}
+                                            <span className="font-medium text-sm flex-1 leading-tight">
+                                                {category.name}
+                                            </span>
+
+                                            {/* Arrow indicator */}
+                                            <ChevronLeft
+                                                className={cn(
+                                                    "w-4 h-4 transition-all duration-200",
+                                                    activeCategory?._id === category._id
+                                                        ? "text-vita-500 translate-x-1"
+                                                        : "text-slate-300 group-hover:text-slate-500"
+                                                )}
+                                            />
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Left Content: Subcategories */}
-                            <div className="flex-1 overflow-y-auto p-6 bg-transparent custom-scrollbar">
+                            {/* Left Content: Subcategories with Icons */}
+                            <div className="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar">
                                 {activeCategory && (
                                     <div className="animate-in fade-in duration-300">
-                                        <div className="flex items-center gap-2 mb-6 text-slate-800">
-                                            <Link
-                                                href={`/search/category-${activeCategory.slug}`}
-                                                className="text-sm font-bold hover:text-vita-600 flex items-center gap-1"
-                                            >
-                                                همه محصولات {activeCategory.name}
-                                                <ChevronLeft className="w-4 h-4" />
-                                            </Link>
+                                        {/* Header with Icon */}
+                                        <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                                            <CategoryIcon category={activeCategory} size={40} />
+                                            <div className="flex-1">
+                                                <Link
+                                                    href={`/products?category=${activeCategory.slug}&includeChildren=true`}
+                                                    className="text-base font-bold text-slate-800 hover:text-vita-600 transition-colors flex items-center gap-1"
+                                                >
+                                                    {activeCategory.name}
+                                                    <ChevronLeft className="w-4 h-4" />
+                                                </Link>
+                                                <p className="text-xs text-slate-400 mt-0.5">
+                                                    مشاهده همه محصولات این دسته‌بندی
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
+                                        {/* Subcategories Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {activeCategory.children?.map((subCategory) => (
-                                                <div key={subCategory._id} className="break-inside-avoid">
+                                                <div
+                                                    key={subCategory._id}
+                                                    className="group/sub bg-slate-50/50 rounded-xl p-4 hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
+                                                >
+                                                    {/* Subcategory Header with Icon or Gold Line */}
                                                     <Link
-                                                        href={`/search/category-${subCategory.slug}`}
-                                                        className="block text-sm font-bold text-slate-800 mb-3 border-r-2 border-vita-500 pr-2 hover:text-vita-600 transition-colors"
+                                                        href={`/products?category=${subCategory.slug}&includeChildren=true`}
+                                                        className="flex items-center gap-2.5 mb-3 group/link"
                                                     >
-                                                        {subCategory.name}
+                                                        {getIconUrl(subCategory) ? (
+                                                            <CategoryIcon
+                                                                category={subCategory}
+                                                                size={28}
+                                                                className="transition-transform group-hover/link:scale-110"
+                                                            />
+                                                        ) : (
+                                                            /* Golden vertical line fallback */
+                                                            <span className="w-1 h-6 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 shadow-sm flex-shrink-0" />
+                                                        )}
+                                                        <span className="font-bold text-sm text-slate-800 group-hover/link:text-vita-600 transition-colors">
+                                                            {subCategory.name}
+                                                        </span>
                                                     </Link>
 
+                                                    {/* Child categories */}
                                                     {subCategory.children && subCategory.children.length > 0 && (
-                                                        <ul className="space-y-2 pr-2">
-                                                            {subCategory.children.map((child) => (
+                                                        <ul className="space-y-1.5 pr-2 border-r-2 border-slate-200">
+                                                            {subCategory.children.slice(0, 6).map((child) => (
                                                                 <li key={child._id}>
                                                                     <Link
-                                                                        href={`/search/category-${child.slug}`}
-                                                                        className="text-xs text-slate-500 hover:text-vita-500 transition-colors block py-0.5"
+                                                                        href={`/products?category=${child.slug}&includeChildren=true`}
+                                                                        className="flex items-center gap-2 text-xs text-slate-500 hover:text-vita-500 transition-colors py-1 group/child"
                                                                     >
-                                                                        {child.name}
+                                                                        {getIconUrl(child) ? (
+                                                                            <CategoryIcon
+                                                                                category={child}
+                                                                                size={18}
+                                                                                className="transition-transform group-hover/child:scale-110"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover/child:bg-vita-400 transition-colors" />
+                                                                        )}
+                                                                        <span>{child.name}</span>
                                                                     </Link>
                                                                 </li>
                                                             ))}
+                                                            {subCategory.children.length > 6 && (
+                                                                <li>
+                                                                    <Link
+                                                                        href={`/products?category=${subCategory.slug}&includeChildren=true`}
+                                                                        className="flex items-center gap-2 text-xs text-vita-500 hover:text-vita-600 transition-colors py-1 font-medium"
+                                                                    >
+                                                                        <Grid3X3 className="w-3 h-3" />
+                                                                        <span>+{subCategory.children.length - 6} دسته دیگر</span>
+                                                                    </Link>
+                                                                </li>
+                                                            )}
                                                         </ul>
                                                     )}
                                                 </div>
                                             ))}
                                         </div>
+
+                                        {/* Empty State */}
+                                        {(!activeCategory.children || activeCategory.children.length === 0) && (
+                                            <div className="text-center py-12">
+                                                <Grid3X3 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                                                <p className="text-slate-400 text-sm">
+                                                    زیردسته‌ای برای این دسته‌بندی تعریف نشده است
+                                                </p>
+                                                <Link
+                                                    href={`/products?category=${activeCategory.slug}&includeChildren=true`}
+                                                    className="inline-flex items-center gap-1 mt-3 text-vita-500 text-sm font-medium hover:text-vita-600 transition-colors"
+                                                >
+                                                    مشاهده محصولات
+                                                    <ChevronLeft className="w-4 h-4" />
+                                                </Link>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

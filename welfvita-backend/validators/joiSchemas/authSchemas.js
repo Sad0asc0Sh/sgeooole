@@ -219,9 +219,9 @@ const verifyOtpSchema = Joi.object({
             'any.required': 'شماره موبایل الزامی است',
         }),
 
-    otp: Joi.string()
-        .length(6)
-        .pattern(/^\d{6}$/)
+    code: Joi.string()
+        .length(4)
+        .pattern(/^\d{4}$/)
         .required()
         .messages({
             'string.length': 'کد تأیید باید ۶ رقم باشد',
