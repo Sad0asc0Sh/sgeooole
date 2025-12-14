@@ -97,7 +97,7 @@ function FlashOfferRail() {
             prevEl: '.swiper-button-prev-flash',
           }}
           spaceBetween={12}
-          slidesPerView={"auto"}
+          slidesPerView={2.3}
           breakpoints={{
             640: {
               slidesPerView: 2.5,

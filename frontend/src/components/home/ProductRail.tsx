@@ -50,7 +50,7 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             prevEl: '.swiper-button-prev-custom',
           }}
           spaceBetween={12}
-          slidesPerView={"auto"}
+          slidesPerView={2.3}
           breakpoints={{
             640: {
               slidesPerView: 2.5,

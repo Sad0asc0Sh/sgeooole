@@ -151,8 +151,9 @@ app.use(cors({
 }))
 
 // Body Parser with Limits
-app.use(express.json({ limit: '10kb' }))
-app.use(express.urlencoded({ extended: true, limit: '10kb' }))
+// Increased limits to support JSON payloads containing base64 images (e.g. admin banner uploads)
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // ============================================
 // 5. Data Sanitization

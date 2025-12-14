@@ -97,7 +97,7 @@ function SpecialOfferRail() {
               prevEl: '.swiper-button-prev-special',
             }}
             spaceBetween={8}
-            slidesPerView="auto"
+            slidesPerView={2.3}
             breakpoints={{
               640: {
                 slidesPerView: 2.5,
