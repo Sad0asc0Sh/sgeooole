@@ -102,12 +102,15 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* Profile */}
                             <Link
                                 href="/profile"
-                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors"
+                                className={`flex items-center gap-2 h-10 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors ${user ? 'w-10 justify-center' : 'px-4'
+                                    }`}
                             >
                                 <User className="h-5 w-5" />
-                                <span className="text-sm font-medium">
-                                    {user ? user.name : "ورود/ثبت نام"}
-                                </span>
+                                {!user && (
+                                    <span className="text-sm font-medium">
+                                        ورود/ثبت نام
+                                    </span>
+                                )}
                             </Link>
 
                             {/* Cart */}
