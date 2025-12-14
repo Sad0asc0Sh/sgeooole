@@ -87,93 +87,94 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
     return (
         <section className="flex flex-col gap-2 p-4">
-            {/* Main Slider - standard autoplay with 3s pause */}
-            {mainBanners.length > 0 && (
-                <div className="w-full rounded-2xl overflow-hidden shadow-sm">
-                    <Swiper
-                        modules={[Autoplay, Pagination]}
-                        spaceBetween={10}
-                        slidesPerView={1}
-                        loop={true}
-                        speed={800}
-                        pagination={{ clickable: true }}
-                        autoplay={{
-                            delay: 5000,
-                            disableOnInteraction: false,
-                            pauseOnMouseEnter: true,
-                            reverseDirection: true,
-                        }}
-                        className="w-full aspect-[2/1]"
-                        dir="ltr"
-                    >
-                        {mainBanners.map((banner) => {
+            <div className="container mx-auto">
+                {/* Main Slider - standard autoplay with 3s pause */}
+                {mainBanners.length > 0 && (
+                    <div className="w-full rounded-2xl overflow-hidden shadow-sm md:h-[400px] lg:h-[450px]">
+                        <Swiper
+                            modules={[Autoplay, Pagination]}
+                            spaceBetween={10}
+                            slidesPerView={1}
+                            loop={true}
+                            speed={800}
+                            pagination={{ clickable: true }}
+                            autoplay={{
+                                delay: 5000,
+                                disableOnInteraction: false,
+                                pauseOnMouseEnter: true,
+                                reverseDirection: true,
+                            }}
+                            className="w-full aspect-[2/1] md:h-full"
+                            dir="ltr"
+                        >
+                            {mainBanners.map((banner) => {
+                                const imageUrl = resolveImageUrl(
+                                    (banner as any).image,
+                                    "/placeholder-banner.png",
+                                );
+
+                                return (
+                                    <SwiperSlide
+                                        key={banner._id}
+                                        className="relative w-full h-full bg-gray-200"
+                                    >
+                                        <div
+                                            className={`w-full h-full relative ${banner.link ? "cursor-pointer" : ""}`}
+                                            onMouseDown={(e) => handlePointerDown(e.clientX)}
+                                            onMouseMove={(e) => handlePointerMove(e.clientX)}
+                                            onMouseUp={() => handlePointerUp(banner.link)}
+                                            onMouseLeave={() => (dragRef.current = null)}
+                                            onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
+                                            onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
+                                            onTouchEnd={() => handlePointerUp(banner.link)}
+                                            role={banner.link ? "button" : undefined}
+                                            aria-label={banner.title || "banner"}
+                                        >
+                                            <Image
+                                                src={imageUrl}
+                                                alt={banner.title}
+                                                fill
+                                                className="object-cover"
+                                                priority
+                                            />
+                                        </div>
+                                    </SwiperSlide>
+                                );
+                            })}
+                        </Swiper>
+                    </div>
+                )}
+
+                {/* Static Banners (Middle Banners) */}
+                {middleBanners.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-2 mt-2">
+                        {middleBanners.map((banner) => {
                             const imageUrl = resolveImageUrl(
                                 (banner as any).image,
                                 "/placeholder-banner.png",
                             );
 
                             return (
-                                <SwiperSlide
+                                <Link
                                     key={banner._id}
-                                    className="relative w-full h-full bg-gray-200"
+                                    href={banner.link || "#"}
+                                    className={`w-full md:w-[calc(50%-4px)] lg:w-[calc(33.333%-6px)] aspect-[4/1] md:aspect-[3/1] rounded-xl overflow-hidden bg-gray-100 relative block ${!banner.link ? "pointer-events-none" : ""
+                                        }`}
                                 >
-                                    <div
-                                        className={`w-full h-full relative ${banner.link ? "cursor-pointer" : ""}`}
-                                        onMouseDown={(e) => handlePointerDown(e.clientX)}
-                                        onMouseMove={(e) => handlePointerMove(e.clientX)}
-                                        onMouseUp={() => handlePointerUp(banner.link)}
-                                        onMouseLeave={() => (dragRef.current = null)}
-                                        onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
-                                        onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
-                                        onTouchEnd={() => handlePointerUp(banner.link)}
-                                        role={banner.link ? "button" : undefined}
-                                        aria-label={banner.title || "banner"}
-                                    >
+                                    <div className="w-full h-full relative">
                                         <Image
                                             src={imageUrl}
                                             alt={banner.title}
                                             fill
                                             className="object-cover"
-                                            priority
                                         />
                                     </div>
-                                </SwiperSlide>
+                                </Link>
                             );
                         })}
-                    </Swiper>
-                </div>
-            )}
-
-            {/* Static Banners (Middle Banners) */}
-            {middleBanners.length > 0 && (
-                <div className="grid grid-cols-1 gap-2">
-                    {middleBanners.map((banner) => {
-                        const imageUrl = resolveImageUrl(
-                            (banner as any).image,
-                            "/placeholder-banner.png",
-                        );
-
-                        return (
-                            <Link
-                                key={banner._id}
-                                href={banner.link || "#"}
-                                className={`w-full aspect-[4/1] rounded-xl overflow-hidden bg-gray-100 relative block ${
-                                    !banner.link ? "pointer-events-none" : ""
-                                }`}
-                            >
-                                <div className="w-full h-full relative">
-                                    <Image
-                                        src={imageUrl}
-                                        alt={banner.title}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                            </Link>
-                        );
-                    })}
-                </div>
-            )}
+                    </div>
+                )}
+            </div>
         </section>
     );
 }

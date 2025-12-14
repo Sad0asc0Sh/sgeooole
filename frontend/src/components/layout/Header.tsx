@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Sparkles } from "lucide-react";
+import { Search, Sparkles, ShoppingCart, User, Heart } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useState } from "react";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
+import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 
 interface HeaderProps {
     isAIOpen: boolean;
@@ -14,10 +16,22 @@ interface HeaderProps {
 
 export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const { user } = useAuth();
+    const { itemCount } = useCart();
+
+    const desktopNavLinks = [
+        { href: "/", label: "خانه" },
+        { href: "/categories", label: "دسته‌بندی‌ها" },
+        { href: "/products", label: "محصولات" },
+        { href: "/blog", label: "بلاگ" },
+        { href: "/about", label: "درباره ما" },
+        { href: "/contact", label: "تماس با ما" },
+    ];
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-welf-200 bg-white/80 backdrop-blur-md">
-            <div className="mobile-container flex h-16 items-center justify-between">
+            {/* MOBILE HEADER */}
+            <div className="md:hidden mobile-container flex h-16 items-center justify-between">
                 {/* Right: Brand Logo */}
                 <Link href="/">
                     <Logo />
@@ -49,6 +63,92 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     <AIChatSheet open={isAIOpen} onOpenChange={setIsAIOpen} />
                     <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
                 </div>
+            </div>
+
+            {/* DESKTOP HEADER */}
+            <div className="hidden md:block">
+                <div className="container mx-auto">
+                    {/* Top Row: Logo - Search - Actions */}
+                    <div className="flex items-center justify-between h-20 px-4">
+                        {/* Right: Logo */}
+                        <Link href="/" className="flex-shrink-0">
+                            <Logo />
+                        </Link>
+
+                        {/* Center: Expanded Search Bar */}
+                        <div className="flex-1 max-w-2xl mx-8">
+                            <div
+                                onClick={() => setIsSearchOpen(true)}
+                                className="relative cursor-pointer"
+                            >
+                                <input
+                                    type="text"
+                                    readOnly
+                                    placeholder="جستجو در بین هزاران محصول..."
+                                    className="h-12 w-full rounded-xl bg-welf-50 px-12 text-sm text-welf-900 placeholder:text-welf-500 focus:outline-none cursor-pointer pointer-events-none hover:bg-welf-100 transition-colors"
+                                />
+                                <Search className="absolute right-4 top-4 h-4 w-4 text-welf-500" />
+                            </div>
+                        </div>
+
+                        {/* Left: Actions (AI, Profile, Cart) */}
+                        <div className="flex items-center gap-4">
+                            {/* AI Assistant */}
+                            <button
+                                onClick={() => setIsAIOpen(true)}
+                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-to-r from-vita-500 to-vita-600 text-white hover:from-vita-600 hover:to-vita-700 transition-all shadow-md hover:shadow-lg"
+                            >
+                                <Sparkles className="h-5 w-5" />
+                                <span className="text-sm font-medium">دستیار هوشمند</span>
+                            </button>
+
+                            {/* Profile */}
+                            <Link
+                                href="/profile"
+                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors"
+                            >
+                                <User className="h-5 w-5" />
+                                <span className="text-sm font-medium">
+                                    {user ? user.name : "حساب کاربری"}
+                                </span>
+                            </Link>
+
+                            {/* Cart */}
+                            <Link
+                                href="/cart"
+                                className="relative flex items-center gap-2 h-10 px-4 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors"
+                            >
+                                <ShoppingCart className="h-5 w-5" />
+                                <span className="text-sm font-medium">سبد خرید</span>
+                                {itemCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                        {itemCount}
+                                    </span>
+                                )}
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* Bottom Row: Navigation Links */}
+                    <div className="border-t border-welf-100">
+                        <nav className="flex items-center gap-8 h-14 px-4">
+                            {desktopNavLinks.map((link) => (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className="text-sm font-medium text-welf-700 hover:text-vita-600 transition-colors relative group"
+                                >
+                                    {link.label}
+                                    <span className="absolute bottom-0 right-0 w-0 h-0.5 bg-vita-600 group-hover:w-full transition-all duration-300"></span>
+                                </Link>
+                            ))}
+                        </nav>
+                    </div>
+                </div>
+
+                {/* Shared Components */}
+                <AIChatSheet open={isAIOpen} onOpenChange={setIsAIOpen} />
+                <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
             </div>
         </header>
     );

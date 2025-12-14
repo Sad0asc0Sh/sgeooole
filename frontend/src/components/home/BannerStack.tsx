@@ -33,23 +33,25 @@ export default function BannerStack() {
     }
 
     return (
-        <div className="grid grid-cols-1 gap-2 p-4">
-            {banners.map((banner) => (
-                <Link
-                    key={banner._id}
-                    href={banner.link || '#'}
-                    className={`w-full aspect-[4/1] rounded-xl overflow-hidden bg-gray-100 relative block ${!banner.link ? 'pointer-events-none' : ''}`}
-                >
-                    <div className="w-full h-full relative">
-                        <Image
-                            src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
-                            alt={banner.title}
-                            fill
-                            className="object-cover"
-                        />
-                    </div>
-                </Link>
-            ))}
+        <div className="container mx-auto">
+            <div className="flex flex-wrap justify-center gap-2 p-4">
+                {banners.map((banner) => (
+                    <Link
+                        key={banner._id}
+                        href={banner.link || '#'}
+                        className={`w-full md:w-[calc(50%-4px)] lg:w-[calc(33.333%-6px)] aspect-[4/1] md:aspect-[3/1] rounded-xl overflow-hidden bg-gray-100 relative block ${!banner.link ? 'pointer-events-none' : ''}`}
+                    >
+                        <div className="w-full h-full relative">
+                            <Image
+                                src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
+                                alt={banner.title}
+                                fill
+                                className="object-cover"
+                            />
+                        </div>
+                    </Link>
+                ))}
+            </div>
         </div>
     );
 }

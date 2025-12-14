@@ -132,9 +132,11 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
             onMouseLeave={handleMouseLeave}
         >
             <SectionTitle>{title}</SectionTitle>
+
+            {/* Mobile: Horizontal Scroll, Desktop: Grid */}
             <div
                 ref={containerRef}
-                className="flex gap-4 overflow-x-auto px-4 scroll-smooth scrollbar-hide"
+                className="flex md:grid gap-4 overflow-x-auto md:overflow-visible px-4 scroll-smooth scrollbar-hide md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-10"
                 style={{
                     scrollBehavior: 'smooth',
                     WebkitOverflowScrolling: 'touch',
@@ -144,7 +146,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                 {data.map((category) => (
                     <div
                         key={category._id}
-                        className="flex-shrink-0"
+                        className="flex-shrink-0 md:flex-shrink"
                         style={{
                             width: variant === 'circle' ? '80px' : '110px',
                             scrollSnapAlign: 'start'

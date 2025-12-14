@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
+import { FreeMode, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/free-mode";
+import "swiper/css/navigation";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -40,228 +41,256 @@ export default function ProductRail({ title, products }: ProductRailProps) {
         </button>
       </div>
 
-      <Swiper
-        modules={[FreeMode]}
-        freeMode
-        spaceBetween={12}
-        slidesPerView={"auto"}
-        className="w-full !px-4 !pb-4"
-        grabCursor
-      >
-        {products.map((product) => {
-          // Check if flash deal countdown is still active
-          const isFlashDealActive = Boolean(
-            product.isFlashDeal &&
-            product.flashDealEndTime &&
-            new Date(product.flashDealEndTime).getTime() > now
-          );
+      <div className="relative">
+        <Swiper
+          modules={[FreeMode, Navigation]}
+          freeMode
+          navigation={{
+            nextEl: '.swiper-button-next-custom',
+            prevEl: '.swiper-button-prev-custom',
+          }}
+          spaceBetween={12}
+          slidesPerView={"auto"}
+          breakpoints={{
+            640: {
+              slidesPerView: 2.5,
+            },
+            768: {
+              slidesPerView: 3.5,
+            },
+            1024: {
+              slidesPerView: 5,
+            },
+            1280: {
+              slidesPerView: 6,
+            },
+          }}
+          className="w-full !px-4 !pb-4"
+          grabCursor
+        >
+          {products.map((product) => {
+            // Check if flash deal countdown is still active
+            const isFlashDealActive = Boolean(
+              product.isFlashDeal &&
+              product.flashDealEndTime &&
+              new Date(product.flashDealEndTime).getTime() > now
+            );
 
-          const isSpecialOfferCountdownActive = Boolean(
-            product.isSpecialOffer &&
-            product.specialOfferEndTime &&
-            new Date(product.specialOfferEndTime).getTime() > now
-          );
-          const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
-          const shouldShowCampaignHeader =
-            (product.campaignLabel || product.campaignTheme) &&
-            (!hasFlashLabel || isFlashDealActive);
+            const isSpecialOfferCountdownActive = Boolean(
+              product.isSpecialOffer &&
+              product.specialOfferEndTime &&
+              new Date(product.specialOfferEndTime).getTime() > now
+            );
+            const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
+            const shouldShowCampaignHeader =
+              (product.campaignLabel || product.campaignTheme) &&
+              (!hasFlashLabel || isFlashDealActive);
 
-          // Determine Header Type - Only show flash header if countdown is active
-          let headerConfig = null;
+            // Determine Header Type - Only show flash header if countdown is active
+            let headerConfig = null;
 
-          if (isFlashDealActive) {
-            headerConfig = {
-              type: 'flash',
-              title: 'پیشنهاد لحظه‌ای',
-              color: 'text-amber-500',
-              borderColor: 'bg-amber-500',
-              endTime: product.flashDealEndTime,
-            };
-          } else if (shouldShowCampaignHeader) {
-            // Map campaign themes to colors
-            let themeColor = 'text-blue-600';
-            let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
+            if (isFlashDealActive) {
+              headerConfig = {
+                type: 'flash',
+                title: 'پیشنهاد لحظه‌ای',
+                color: 'text-amber-500',
+                borderColor: 'bg-amber-500',
+                endTime: product.flashDealEndTime,
+              };
+            } else if (shouldShowCampaignHeader) {
+              // Map campaign themes to colors
+              let themeColor = 'text-blue-600';
+              let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
 
-            // Check for specific themes
-            if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-              themeColor = 'text-amber-600';
-              themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
-            } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-              themeColor = 'text-rose-600';
-              themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
-            } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-              themeColor = 'text-lime-600';
-              themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
+              // Check for specific themes
+              if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
+                themeColor = 'text-amber-600';
+                themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
+              } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
+                themeColor = 'text-rose-600';
+                themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
+              } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
+                themeColor = 'text-lime-600';
+                themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
+              }
+
+              headerConfig = {
+                type: 'campaign',
+                title: product.campaignLabel || 'فروش ویژه',
+                color: themeColor,
+                borderColor: themeBorder,
+                endTime: product.flashDealEndTime || product.specialOfferEndTime,
+                iconColor: themeColor
+              };
+            } else if (
+              (product.isSpecialOffer && isSpecialOfferCountdownActive) ||
+              (!product.isFlashDeal && !product.isSpecialOffer && product.discount && product.discount > 0)
+            ) {
+              headerConfig = {
+                type: 'amazing',
+                title: 'شگفت‌انگیز',
+                color: 'text-red-500',
+                borderColor: 'bg-red-500',
+                endTime: product.specialOfferEndTime,
+              };
             }
 
-            headerConfig = {
-              type: 'campaign',
-              title: product.campaignLabel || 'فروش ویژه',
-              color: themeColor,
-              borderColor: themeBorder,
-              endTime: product.flashDealEndTime || product.specialOfferEndTime,
-              iconColor: themeColor
-            };
-          } else if (
-            (product.isSpecialOffer && isSpecialOfferCountdownActive) ||
-            (!product.isFlashDeal && !product.isSpecialOffer && product.discount && product.discount > 0)
-          ) {
-            headerConfig = {
-              type: 'amazing',
-              title: 'شگفت‌انگیز',
-              color: 'text-red-500',
-              borderColor: 'bg-red-500',
-              endTime: product.specialOfferEndTime,
-            };
-          }
+            const showSpecialOfferChrome =
+              !(headerConfig?.type === 'amazing') ||
+              isSpecialOfferCountdownActive ||
+              !product.isSpecialOffer;
 
-          const showSpecialOfferChrome =
-            !(headerConfig?.type === 'amazing') ||
-            isSpecialOfferCountdownActive ||
-            !product.isSpecialOffer;
+            // Effective discount: only apply if flash deal is active OR special offer is active
+            const effectiveDiscount =
+              product.discount > 0 &&
+                (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
+                ? product.discount
+                : 0;
 
-          // Effective discount: only apply if flash deal is active OR special offer is active
-          const effectiveDiscount =
-            product.discount > 0 &&
-              (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
-              ? product.discount
-              : 0;
+            const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 
-          const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
-
-          // Price reversion: when flash deal or special offer expires, revert to original price
-          const displayPrice =
-            (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
-              ? product.oldPrice
-              : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+            // Price reversion: when flash deal or special offer expires, revert to original price
+            const displayPrice =
+              (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
                 ? product.oldPrice
-                : product.price;
+                : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+                  ? product.oldPrice
+                  : product.price;
 
-          const isOutOfStock = product.countInStock === 0;
-          const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
+            const isOutOfStock = product.countInStock === 0;
+            const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
-          return (
-            <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
-              <Link href={`/product/${product.id}`} className="block h-full">
-                <div className={`bg-white rounded-lg border border-gray-200 h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group ${headerConfig ? 'pt-0' : 'p-3'}`}>
+            return (
+              <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
+                <Link href={`/product/${product.id}`} className="block h-full">
+                  <div className={`bg-white rounded-lg border border-gray-200 h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group ${headerConfig ? 'pt-0' : 'p-3'}`}>
 
-                  {/* Special Header Line */}
-                  {headerConfig && showSpecialOfferChrome && (
-                    <div className="w-full mb-2">
-                      <div className={`h-1 w-full ${headerConfig.borderColor}`} />
-                      <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
+                    {/* Special Header Line */}
+                    {headerConfig && showSpecialOfferChrome && (
+                      <div className="w-full mb-2">
+                        <div className={`h-1 w-full ${headerConfig.borderColor}`} />
+                        <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
 
-                        <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
-                          {headerConfig.title}
+                          <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
+                            {headerConfig.title}
+                          </div>
                         </div>
+                        <div className="h-px w-full bg-gray-100" />
                       </div>
-                      <div className="h-px w-full bg-gray-100" />
-                    </div>
-                  )}
+                    )}
 
-                  <div className={headerConfig ? "px-3 pb-3" : ""}>
-                    {/* Image */}
-                    <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
-                      <Image
-                        src={product.image || "/placeholder.png"}
-                        alt={product.name}
-                        fill
-                        className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
-                      />
-
-                      {/* Timer Overlay (Top Right) */}
-                      {(headerConfig?.endTime) && (
-                        <ProductTimerBadge
-                          targetDate={headerConfig.endTime}
-                          color={headerConfig.color}
+                    <div className={headerConfig ? "px-3 pb-3" : ""}>
+                      {/* Image */}
+                      <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                        <Image
+                          src={product.image || "/placeholder.png"}
+                          alt={product.name}
+                          fill
+                          className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                         />
-                      )}
 
-                      {/* Low Stock Badge */}
-                      {isLowStock && (
-                        <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
-                          <AlertTriangle size={12} />
-                          <span>تنها {product.countInStock} عدد</span>
-                        </div>
-                      )}
+                        {/* Timer Overlay (Top Right) */}
+                        {(headerConfig?.endTime) && (
+                          <ProductTimerBadge
+                            targetDate={headerConfig.endTime}
+                            color={headerConfig.color}
+                          />
+                        )}
 
-                      {/* Badges - Only show if no header, or adjust position */}
+                        {/* Low Stock Badge */}
+                        {isLowStock && (
+                          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
+                            <AlertTriangle size={12} />
+                            <span>تنها {product.countInStock} عدد</span>
+                          </div>
+                        )}
+
+                        {/* Badges - Only show if no header, or adjust position */}
 
 
-                      {/* OUT OF STOCK OVERLAY */}
-                      {isOutOfStock && (
-                        <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
-                          <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
-                            ناموجود
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Title */}
-                    <h3
-                      className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${isOutOfStock ? "text-gray-400" : "text-gray-700"
-                        }`}
-                    >
-                      {product.name}
-                    </h3>
-
-                    {/* Price Section */}
-                    <div className="flex flex-col gap-1 mt-auto">
-                      {/* Row 1: Old Price (if discount and in stock) */}
-                      <div className="flex items-center justify-between h-5">
-                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
-                          <>
-                            <div className="flex items-center gap-1">
-                              <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
-                                product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
-                                  'bg-[#ef394e]'
-                                }`}>
-                                {effectiveDiscount.toLocaleString("fa-IR")}٪
-                              </div>
-                              <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
-                                {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="h-5" />
+                        {/* OUT OF STOCK OVERLAY */}
+                        {isOutOfStock && (
+                          <div className="absolute inset-0 bg-white/50 z-10 flex items-center justify-center">
+                            <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+                              ناموجود
+                            </span>
+                          </div>
                         )}
                       </div>
 
-                      {/* Row 2: Current Price */}
-                      <div
-                        className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : "text-gray-800"
+                      {/* Title */}
+                      <h3
+                        className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${isOutOfStock ? "text-gray-400" : "text-gray-700"
                           }`}
                       >
-                        <span className="text-[15px] font-black tracking-tight">
-                          {displayPrice.toLocaleString("fa-IR")}
-                        </span>
-                        <span
-                          className={`text-[10px] font-medium ${isOutOfStock ? "text-gray-400" : "text-gray-600"
+                        {product.name}
+                      </h3>
+
+                      {/* Price Section */}
+                      <div className="flex flex-col gap-1 mt-auto">
+                        {/* Row 1: Old Price (if discount and in stock) */}
+                        <div className="flex items-center justify-between h-5">
+                          {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <div className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md ${product.campaignTheme === 'gold-red' ? 'bg-[#ef394e]' :
+                                  product.campaignTheme === 'red-purple' ? 'bg-rose-600' :
+                                    'bg-[#ef394e]'
+                                  }`}>
+                                  {effectiveDiscount.toLocaleString("fa-IR")}٪
+                                </div>
+                                <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
+                                  {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="h-5" />
+                          )}
+                        </div>
+
+                        {/* Row 2: Current Price */}
+                        <div
+                          className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : "text-gray-800"
                             }`}
                         >
-                          تومان
-                        </span>
+                          <span className="text-[15px] font-black tracking-tight">
+                            {displayPrice.toLocaleString("fa-IR")}
+                          </span>
+                          <span
+                            className={`text-[10px] font-medium ${isOutOfStock ? "text-gray-400" : "text-gray-600"
+                              }`}
+                          >
+                            تومان
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </SwiperSlide>
-          );
-        })}
+                </Link>
+              </SwiperSlide>
+            );
+          })}
 
-        {/* "See All" Card (Last Slide) */}
-        <SwiperSlide style={{ width: "148px", height: "auto" }}>
-          <div className="bg-white h-full rounded-lg border border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-gray-300 transition-colors">
-            <div className="w-10 h-10 border border-gray-200 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-50 transition-colors">
-              <ChevronLeft size={20} />
+          {/* "See All" Card (Last Slide) */}
+          <SwiperSlide style={{ width: "148px", height: "auto" }}>
+            <div className="bg-white h-full rounded-lg border border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-gray-300 transition-colors">
+              <div className="w-10 h-10 border border-gray-200 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-50 transition-colors">
+                <ChevronLeft size={20} />
+              </div>
+              <span className="text-sm font-bold text-gray-700">مشاهده همه</span>
             </div>
-            <span className="text-sm font-bold text-gray-700">مشاهده همه</span>
-          </div>
-        </SwiperSlide>
-      </Swiper>
+          </SwiperSlide>
+        </Swiper>
+
+        {/* Navigation Arrows - Desktop Only */}
+        <button className="swiper-button-prev-custom hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all">
+          <ChevronLeft className="rotate-180" size={20} />
+        </button>
+        <button className="swiper-button-next-custom hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all">
+          <ChevronLeft size={20} />
+        </button>
+      </div>
     </div>
   );
 }
