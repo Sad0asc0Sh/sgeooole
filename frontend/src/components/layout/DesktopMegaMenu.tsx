@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, Menu, Loader2, Grid3X3 } from "lucide-react";
@@ -82,7 +83,9 @@ export default function DesktopMegaMenu() {
     const [activeCategory, setActiveCategory] = useState<Category | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
+    const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const triggerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -102,8 +105,55 @@ export default function DesktopMegaMenu() {
         fetchCategories();
     }, []);
 
+    useEffect(() => {
+        if (!isOpen) return;
+        if (typeof window === "undefined") return;
+
+        const updatePosition = () => {
+            const triggerEl = triggerRef.current;
+            if (!triggerEl) return;
+
+            const rect = triggerEl.getBoundingClientRect();
+            const viewportPadding = 16;
+            const maxWidth = 800;
+            const gap = 8;
+
+            const width = Math.min(maxWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
+            let left = rect.right - width;
+            left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+            const top = rect.bottom + gap;
+            setOverlayPosition({ top, left, width });
+        };
+
+        updatePosition();
+        window.addEventListener("resize", updatePosition);
+        window.addEventListener("scroll", updatePosition, true);
+
+        return () => {
+            window.removeEventListener("resize", updatePosition);
+            window.removeEventListener("scroll", updatePosition, true);
+        };
+    }, [isOpen]);
+
     const handleMouseEnter = () => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (!isOpen) {
+            const triggerEl = triggerRef.current;
+            if (triggerEl && typeof window !== "undefined") {
+                const rect = triggerEl.getBoundingClientRect();
+                const viewportPadding = 16;
+                const maxWidth = 800;
+                const gap = 8;
+
+                const width = Math.min(maxWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
+                let left = rect.right - width;
+                left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+                const top = rect.bottom + gap;
+                setOverlayPosition({ top, left, width });
+            }
+        }
         setIsOpen(true);
     };
 
@@ -118,20 +168,30 @@ export default function DesktopMegaMenu() {
     };
 
     return (
-        <div
-            className="relative"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-        >
+        <div className="relative">
             {/* Trigger Button */}
-            <div className="flex items-center gap-2 cursor-pointer py-2 px-2 text-slate-800 hover:text-vita-600 transition-colors">
+            <div
+                ref={triggerRef}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                className="flex items-center gap-2 cursor-pointer py-2 px-2 text-slate-800 hover:text-vita-600 transition-colors"
+            >
                 <Menu className="w-6 h-6" />
                 <span className="font-bold text-sm">دسته‌بندی کالاها</span>
             </div>
 
             {/* Mega Menu Overlay - Compact like Digikala */}
-            {isOpen && (
-                <div className="absolute top-full right-0 w-[800px] max-w-[calc(100vw-2rem)] bg-white shadow-xl rounded-lg border border-slate-200 z-50 flex max-h-[420px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            {isOpen && overlayPosition && typeof document !== "undefined" && createPortal(
+                <div
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                    style={{
+                        top: overlayPosition.top,
+                        left: overlayPosition.left,
+                        width: overlayPosition.width,
+                    }}
+                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[1000] flex max-h-[420px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                >
 
                     {isLoading ? (
                         <div className="w-full h-full flex items-center justify-center">
@@ -283,7 +343,8 @@ export default function DesktopMegaMenu() {
                             </div>
                         </>
                     )}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

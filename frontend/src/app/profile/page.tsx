@@ -13,51 +13,108 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 // Skeleton Components for Fast Initial Render
 // ============================================
 const ProfileSkeleton = () => (
-    <div className="min-h-screen bg-gray-50 pb-24 animate-pulse">
-        {/* Header Skeleton */}
-        <div className="bg-white p-6 pb-8 pt-8 rounded-b-[2.5rem] shadow-sm">
-            <div className="flex items-center gap-5">
-                <div className="w-20 h-20 rounded-full bg-gray-200" />
-                <div className="flex-1">
-                    <div className="h-6 w-32 bg-gray-200 rounded mb-2" />
-                    <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
-                    <div className="flex gap-2">
-                        <div className="h-6 w-20 bg-gray-200 rounded-full" />
-                        <div className="h-6 w-24 bg-gray-200 rounded-full" />
+    <div className="min-h-screen bg-gray-50 pb-24 lg:pb-12 animate-pulse">
+        {/* Desktop Layout Container */}
+        <div className="lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-8">
+            <div className="lg:flex lg:gap-8">
+
+                {/* Desktop Sidebar Skeleton */}
+                <aside className="hidden lg:block lg:w-80 lg:flex-shrink-0">
+                    <div className="space-y-6">
+                        {/* User Card Skeleton */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="bg-gradient-to-br from-gray-200 to-gray-300 p-6">
+                                <div className="flex flex-col items-center">
+                                    <div className="w-24 h-24 rounded-full bg-gray-300 mb-4" />
+                                    <div className="h-6 w-32 bg-gray-300 rounded mb-2" />
+                                    <div className="h-4 w-24 bg-gray-300 rounded" />
+                                </div>
+                            </div>
+                            <div className="p-4 flex gap-2">
+                                <div className="flex-1 h-10 bg-gray-200 rounded-xl" />
+                                <div className="flex-1 h-10 bg-gray-200 rounded-xl" />
+                            </div>
+                        </div>
+
+                        {/* Wallet Skeleton */}
+                        <div className="bg-gray-300 p-6 rounded-2xl h-40" />
+
+                        {/* Stats Skeleton */}
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                            <div className="h-4 w-24 bg-gray-200 rounded mb-4" />
+                            <div className="space-y-3">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="flex justify-between py-2 border-b border-gray-50">
+                                        <div className="h-3 w-20 bg-gray-200 rounded" />
+                                        <div className="h-4 w-8 bg-gray-200 rounded" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </aside>
+
+                {/* Main Content */}
+                <main className="lg:flex-1 lg:min-w-0">
+                    {/* Mobile Header Skeleton */}
+                    <div className="lg:hidden bg-white p-6 pb-8 pt-8 rounded-b-[2.5rem] shadow-sm">
+                        <div className="flex items-center gap-5">
+                            <div className="w-20 h-20 rounded-full bg-gray-200" />
+                            <div className="flex-1">
+                                <div className="h-6 w-32 bg-gray-200 rounded mb-2" />
+                                <div className="h-4 w-24 bg-gray-200 rounded mb-3" />
+                                <div className="flex gap-2">
+                                    <div className="h-6 w-20 bg-gray-200 rounded-full" />
+                                    <div className="h-6 w-24 bg-gray-200 rounded-full" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mobile Wallet Skeleton */}
+                    <div className="lg:hidden px-4 -mt-6 mb-6 relative z-20">
+                        <div className="bg-gray-300 p-5 rounded-2xl h-24" />
+                    </div>
+
+                    {/* Orders Skeleton */}
+                    <div className="bg-white mx-4 lg:mx-0 rounded-2xl p-5 lg:p-6 shadow-sm mb-6">
+                        <div className="h-5 w-24 bg-gray-200 rounded mb-5" />
+                        <div className="grid grid-cols-4 gap-2 lg:gap-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="flex flex-col items-center gap-2 lg:gap-3">
+                                    <div className="w-12 h-12 lg:w-16 lg:h-16 rounded-2xl bg-gray-200" />
+                                    <div className="h-3 w-12 bg-gray-200 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Menu Skeleton */}
+                    <div className="bg-white mx-4 lg:mx-0 rounded-2xl shadow-sm overflow-hidden mb-8">
+                        {/* Desktop Grid */}
+                        <div className="hidden lg:grid lg:grid-cols-2 lg:p-4 lg:gap-3">
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                <div key={i} className="flex items-center gap-3.5 p-4 border border-gray-100 rounded-xl">
+                                    <div className="w-10 h-10 rounded-xl bg-gray-200" />
+                                    <div className="h-4 w-24 bg-gray-200 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                        {/* Mobile List */}
+                        <div className="lg:hidden">
+                            {[1, 2, 3, 4, 5, 6].map(i => (
+                                <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50">
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="w-8 h-8 rounded-full bg-gray-200" />
+                                        <div className="h-4 w-24 bg-gray-200 rounded" />
+                                    </div>
+                                    <div className="w-4 h-4 bg-gray-200 rounded" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </main>
             </div>
-        </div>
-
-        {/* Wallet Skeleton */}
-        <div className="px-4 -mt-6 mb-6 relative z-20">
-            <div className="bg-gray-300 p-5 rounded-2xl h-24" />
-        </div>
-
-        {/* Orders Skeleton */}
-        <div className="bg-white mx-4 rounded-2xl p-5 shadow-sm mb-6">
-            <div className="h-5 w-24 bg-gray-200 rounded mb-5" />
-            <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-200" />
-                        <div className="h-3 w-12 bg-gray-200 rounded" />
-                    </div>
-                ))}
-            </div>
-        </div>
-
-        {/* Menu Skeleton */}
-        <div className="bg-white mx-4 rounded-2xl shadow-sm overflow-hidden mb-8">
-            {[1, 2, 3, 4, 5, 6].map(i => (
-                <div key={i} className="flex items-center justify-between p-4 border-b border-gray-50">
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-8 h-8 rounded-full bg-gray-200" />
-                        <div className="h-4 w-24 bg-gray-200 rounded" />
-                    </div>
-                    <div className="w-4 h-4 bg-gray-200 rounded" />
-                </div>
-            ))}
         </div>
     </div>
 );
@@ -400,131 +457,277 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header Section */}
-            <div className="bg-white p-6 pb-8 pt-8 rounded-b-[2.5rem] shadow-sm relative z-10">
-                <div className="flex items-center gap-5">
-                    <div className="relative">
-                        <div
-                            className="w-20 h-20 rounded-full bg-gray-100 border-4 border-white shadow-md overflow-hidden relative"
-                        >
-                            {user.avatar ? (
-                                <img
-                                    src={user.avatar.startsWith("http") ? user.avatar : `http://localhost:5000/${user.avatar}`}
-                                    alt={user.name}
-                                    className="w-full h-full object-cover"
-                                    referrerPolicy="no-referrer"
-                                />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
-                                    <UserIcon size={32} />
+        <div className="min-h-screen bg-gray-50 pb-24 lg:pb-12">
+            {/* Desktop Layout Container */}
+            <div className="lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-8">
+                <div className="lg:flex lg:gap-8">
+
+                    {/* ============================================ */}
+                    {/* DESKTOP SIDEBAR - Sticky on large screens */}
+                    {/* ============================================ */}
+                    <aside className="hidden lg:block lg:w-80 lg:flex-shrink-0">
+                        <div className="lg:sticky lg:top-24 space-y-6">
+                            {/* User Card - Desktop */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                                {/* Profile Header with Gradient */}
+                                <div className="bg-gradient-to-br from-vita-500 via-vita-600 to-welf-800 p-6 relative overflow-hidden">
+                                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+                                    <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full blur-xl" />
+
+                                    <div className="relative z-10 flex flex-col items-center text-center">
+                                        <div className="w-24 h-24 rounded-full bg-white/20 backdrop-blur-sm p-1 mb-4 shadow-lg">
+                                            <div className="w-full h-full rounded-full bg-white overflow-hidden">
+                                                {user.avatar ? (
+                                                    <img
+                                                        src={user.avatar.startsWith("http") ? user.avatar : `http://localhost:5000/${user.avatar}`}
+                                                        alt={user.name}
+                                                        className="w-full h-full object-cover"
+                                                        referrerPolicy="no-referrer"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
+                                                        <UserIcon size={40} />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <h1 className="text-xl font-black text-white mb-1">{user.name || "کاربر مهمان"}</h1>
+                                        <p className="text-sm text-white/70 font-mono tracking-wider">{user.mobile}</p>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    </div>
 
-                    <div className="flex-1">
-                        <h1 className="text-xl font-black text-gray-800 mb-1">{user.name || "کاربر مهمان"}</h1>
-                        <p className="text-sm text-gray-400 font-mono mb-2">{user.mobile}</p>
-
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setEditSheetOpen(true)}
-                                className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors font-bold"
-                            >
-                                ویرایش پروفایل
-                            </button>
-
-                            <button
-                                onClick={() => setPasswordSheetOpen(true)}
-                                className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors font-bold"
-                            >
-                                تغییر رمز عبور
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Wallet Card */}
-            <div className="px-4 -mt-6 mb-6 relative z-20">
-                <div className="bg-gradient-to-r from-welf-900 to-gray-800 text-white p-5 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-between relative overflow-hidden">
-                    <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
-
-                    <div className="flex flex-col gap-1.5 z-10">
-                        <span className="text-xs text-gray-300 flex items-center gap-1.5 font-medium">
-                            <Wallet size={14} className="text-vita-400" /> موجودی کیف پول
-                        </span>
-                        <div className="flex items-baseline gap-1.5">
-                            <span className="text-2xl font-black tracking-tight">{(user.wallet || 0).toLocaleString("fa-IR")}</span>
-                            <span className="text-xs text-gray-400">تومان</span>
-                        </div>
-                    </div>
-
-                    <button className="z-10 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold py-2.5 px-5 rounded-xl transition-all border border-white/10 active:scale-95">
-                        افزایش موجودی
-                    </button>
-                </div>
-            </div>
-
-            {/* Order Status */}
-            <div className="bg-white mx-4 rounded-2xl p-5 shadow-sm mb-6 border border-gray-100">
-                <div className="flex justify-between items-center mb-5">
-                    <h2 className="font-bold text-sm text-gray-800 flex items-center gap-2">
-                        <Box size={16} className="text-vita-600" />
-                        سفارش‌های من
-                    </h2>
-                    <Link href="/profile/orders" className="text-[10px] text-gray-400 flex items-center gap-0.5 hover:text-vita-600 transition font-medium">
-                        مشاهده همه <ChevronLeft size={12} />
-                    </Link>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                    <OrderStatusItem icon={CreditCard} label="در انتظار پرداخت" count={orderStats.pending} active={orderStats.pending > 0} href="/profile/orders?status=pending" />
-                    <OrderStatusItem icon={Box} label="جاری" count={orderStats.processing} active={orderStats.processing > 0} href="/profile/orders?status=current" />
-                    <OrderStatusItem icon={CheckCircle2} label="تحویل شده" count={orderStats.delivered} href="/profile/orders?status=delivered" />
-                    <OrderStatusItem icon={XCircle} label="لغو شده" count={orderStats.cancelled} href="/profile/orders?status=cancelled" />
-                </div>
-            </div>
-
-            {/* Menu Items */}
-            <div className="bg-white mx-4 rounded-2xl shadow-sm overflow-hidden mb-8 border border-gray-100">
-                {menuItems.map((item, idx) => (
-                    <Link key={idx} href={item.href} className="block">
-                        <div className="flex items-center justify-between p-4 border-b border-gray-50 last:border-none hover:bg-gray-50 cursor-pointer transition-colors group">
-                            <div className="flex items-center gap-3.5">
-                                <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center group-hover:bg-vita-50 group-hover:text-vita-600 transition-colors">
-                                    <item.icon size={16} />
+                                {/* Action Buttons - Desktop */}
+                                <div className="p-4 flex gap-2">
+                                    <button
+                                        onClick={() => setEditSheetOpen(true)}
+                                        className="flex-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl transition-colors font-bold flex items-center justify-center gap-1.5"
+                                    >
+                                        <Edit2 size={14} />
+                                        ویرایش پروفایل
+                                    </button>
+                                    <button
+                                        onClick={() => setPasswordSheetOpen(true)}
+                                        className="flex-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl transition-colors font-bold flex items-center justify-center gap-1.5"
+                                    >
+                                        <Lock size={14} />
+                                        تغییر رمز عبور
+                                    </button>
                                 </div>
-                                <span className="text-sm text-gray-700 font-bold group-hover:text-gray-900 transition-colors">{item.label}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {item.status && (
-                                    <span className={`text-[10px] font-bold ${item.statusColor || 'text-gray-400'}`}>{item.status}</span>
-                                )}
-                                {item.badge && (
-                                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">{item.badge}</span>
-                                )}
-                                <ChevronLeft size={16} className="text-gray-300 group-hover:text-vita-500 transition-colors" />
+
+                            {/* Wallet Card - Desktop */}
+                            <div className="bg-gradient-to-br from-welf-900 via-gray-800 to-gray-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                                <div className="absolute -right-8 -top-8 w-40 h-40 bg-vita-500/20 rounded-full blur-3xl" />
+                                <div className="absolute -left-6 bottom-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+
+                                <div className="relative z-10">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                                            <Wallet size={20} className="text-vita-400" />
+                                        </div>
+                                        <span className="text-sm text-gray-300 font-medium">موجودی کیف پول</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-2 mb-5">
+                                        <span className="text-3xl font-black tracking-tight">{(user.wallet || 0).toLocaleString("fa-IR")}</span>
+                                        <span className="text-sm text-gray-400">تومان</span>
+                                    </div>
+                                    <button className="w-full bg-vita-500 hover:bg-vita-600 text-white text-sm font-bold py-3 px-5 rounded-xl transition-all shadow-lg shadow-vita-500/25 active:scale-95">
+                                        افزایش موجودی
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* User Stats Summary - Desktop Only */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                                <h3 className="font-bold text-sm text-gray-800 mb-4">خلاصه فعالیت</h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                                        <span className="text-xs text-gray-500">تعداد سفارش‌ها</span>
+                                        <span className="text-sm font-bold text-gray-800">{orderStats.total.toLocaleString("fa-IR")}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                                        <span className="text-xs text-gray-500">تحویل شده</span>
+                                        <span className="text-sm font-bold text-green-600">{orderStats.delivered.toLocaleString("fa-IR")}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between py-2">
+                                        <span className="text-xs text-gray-500">در حال پردازش</span>
+                                        <span className="text-sm font-bold text-blue-600">{orderStats.processing.toLocaleString("fa-IR")}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </Link>
-                ))}
+                    </aside>
 
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-between p-4 hover:bg-red-50 cursor-pointer transition-colors group mt-2 border-t border-gray-100"
-                >
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition-colors">
-                            <LogOut size={16} />
+                    {/* ============================================ */}
+                    {/* MAIN CONTENT */}
+                    {/* ============================================ */}
+                    <main className="lg:flex-1 lg:min-w-0">
+                        {/* ============================================ */}
+                        {/* MOBILE ONLY: Header Section */}
+                        {/* ============================================ */}
+                        <div className="lg:hidden bg-white p-6 pb-8 pt-8 rounded-b-[2.5rem] shadow-sm relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className="relative">
+                                    <div
+                                        className="w-20 h-20 rounded-full bg-gray-100 border-4 border-white shadow-md overflow-hidden relative"
+                                    >
+                                        {user.avatar ? (
+                                            <img
+                                                src={user.avatar.startsWith("http") ? user.avatar : `http://localhost:5000/${user.avatar}`}
+                                                alt={user.name}
+                                                className="w-full h-full object-cover"
+                                                referrerPolicy="no-referrer"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400">
+                                                <UserIcon size={32} />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex-1">
+                                    <h1 className="text-xl font-black text-gray-800 mb-1">{user.name || "کاربر مهمان"}</h1>
+                                    <p className="text-sm text-gray-400 font-mono mb-2">{user.mobile}</p>
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setEditSheetOpen(true)}
+                                            className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors font-bold"
+                                        >
+                                            ویرایش پروفایل
+                                        </button>
+
+                                        <button
+                                            onClick={() => setPasswordSheetOpen(true)}
+                                            className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-3 py-1 rounded-full transition-colors font-bold"
+                                        >
+                                            تغییر رمز عبور
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <span className="text-sm text-red-500 font-bold">خروج از حساب کاربری</span>
-                    </div>
-                </button>
-            </div>
 
-            <div className="text-center mt-4 mb-24 text-[10px] text-gray-300 font-mono">
-                WelfVita App v1.0.0
+                        {/* ============================================ */}
+                        {/* MOBILE ONLY: Wallet Card */}
+                        {/* ============================================ */}
+                        <div className="lg:hidden px-4 -mt-6 mb-6 relative z-20">
+                            <div className="bg-gradient-to-r from-welf-900 to-gray-800 text-white p-5 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-between relative overflow-hidden">
+                                <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+
+                                <div className="flex flex-col gap-1.5 z-10">
+                                    <span className="text-xs text-gray-300 flex items-center gap-1.5 font-medium">
+                                        <Wallet size={14} className="text-vita-400" /> موجودی کیف پول
+                                    </span>
+                                    <div className="flex items-baseline gap-1.5">
+                                        <span className="text-2xl font-black tracking-tight">{(user.wallet || 0).toLocaleString("fa-IR")}</span>
+                                        <span className="text-xs text-gray-400">تومان</span>
+                                    </div>
+                                </div>
+
+                                <button className="z-10 bg-white/10 hover:bg-white/20 backdrop-blur-md text-white text-xs font-bold py-2.5 px-5 rounded-xl transition-all border border-white/10 active:scale-95">
+                                    افزایش موجودی
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ============================================ */}
+                        {/* Order Status - Both Mobile & Desktop */}
+                        {/* ============================================ */}
+                        <div className="bg-white mx-4 lg:mx-0 rounded-2xl p-5 lg:p-6 shadow-sm mb-6 border border-gray-100">
+                            <div className="flex justify-between items-center mb-5">
+                                <h2 className="font-bold text-sm lg:text-base text-gray-800 flex items-center gap-2">
+                                    <Box size={16} className="text-vita-600 lg:w-5 lg:h-5" />
+                                    سفارش‌های من
+                                </h2>
+                                <Link href="/profile/orders" className="text-[10px] lg:text-xs text-gray-400 flex items-center gap-0.5 hover:text-vita-600 transition font-medium">
+                                    مشاهده همه <ChevronLeft size={12} className="lg:w-4 lg:h-4" />
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 lg:gap-4">
+                                <OrderStatusItem icon={CreditCard} label="در انتظار پرداخت" count={orderStats.pending} active={orderStats.pending > 0} href="/profile/orders?status=pending" />
+                                <OrderStatusItem icon={Box} label="جاری" count={orderStats.processing} active={orderStats.processing > 0} href="/profile/orders?status=current" />
+                                <OrderStatusItem icon={CheckCircle2} label="تحویل شده" count={orderStats.delivered} href="/profile/orders?status=delivered" />
+                                <OrderStatusItem icon={XCircle} label="لغو شده" count={orderStats.cancelled} href="/profile/orders?status=cancelled" />
+                            </div>
+                        </div>
+
+                        {/* ============================================ */}
+                        {/* Menu Items - Both Mobile & Desktop */}
+                        {/* ============================================ */}
+                        <div className="bg-white mx-4 lg:mx-0 rounded-2xl shadow-sm overflow-hidden mb-8 border border-gray-100">
+                            {/* Desktop: Grid layout for menu items */}
+                            <div className="hidden lg:grid lg:grid-cols-2 lg:p-4 lg:gap-3">
+                                {menuItems.map((item, idx) => (
+                                    <Link key={idx} href={item.href} className="block">
+                                        <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-vita-200 hover:bg-vita-50/50 cursor-pointer transition-all group">
+                                            <div className="flex items-center gap-3.5">
+                                                <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-vita-100 group-hover:text-vita-600 transition-colors">
+                                                    <item.icon size={20} />
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm text-gray-700 font-bold group-hover:text-gray-900 transition-colors block">{item.label}</span>
+                                                    {item.status && (
+                                                        <span className={`text-[10px] font-medium ${item.statusColor || 'text-gray-400'}`}>{item.status}</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {item.badge && (
+                                                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">{item.badge}</span>
+                                                )}
+                                                <ChevronLeft size={18} className="text-gray-300 group-hover:text-vita-500 transition-colors" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            {/* Mobile: List layout for menu items */}
+                            <div className="lg:hidden">
+                                {menuItems.map((item, idx) => (
+                                    <Link key={idx} href={item.href} className="block">
+                                        <div className="flex items-center justify-between p-4 border-b border-gray-50 last:border-none hover:bg-gray-50 cursor-pointer transition-colors group">
+                                            <div className="flex items-center gap-3.5">
+                                                <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center group-hover:bg-vita-50 group-hover:text-vita-600 transition-colors">
+                                                    <item.icon size={16} />
+                                                </div>
+                                                <span className="text-sm text-gray-700 font-bold group-hover:text-gray-900 transition-colors">{item.label}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                {item.status && (
+                                                    <span className={`text-[10px] font-bold ${item.statusColor || 'text-gray-400'}`}>{item.status}</span>
+                                                )}
+                                                {item.badge && (
+                                                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">{item.badge}</span>
+                                                )}
+                                                <ChevronLeft size={16} className="text-gray-300 group-hover:text-vita-500 transition-colors" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+
+                            {/* Logout Button - Both */}
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center justify-between p-4 hover:bg-red-50 cursor-pointer transition-colors group mt-2 border-t border-gray-100"
+                            >
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full lg:rounded-xl bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                        <LogOut size={16} className="lg:w-5 lg:h-5" />
+                                    </div>
+                                    <span className="text-sm text-red-500 font-bold">خروج از حساب کاربری</span>
+                                </div>
+                            </button>
+                        </div>
+
+                        <div className="text-center mt-4 mb-24 lg:mb-8 text-[10px] lg:text-xs text-gray-300 font-mono">
+                            WelfVita App v1.0.0
+                        </div>
+                    </main>
+                </div>
             </div>
 
             {/* Edit Profile Sheet */}
@@ -793,18 +996,18 @@ export default function ProfilePage() {
 
 function OrderStatusItem({ icon: Icon, label, count, active = false, href }: any) {
     const content = (
-        <div className="flex flex-col items-center gap-2 cursor-pointer group select-none">
+        <div className="flex flex-col items-center gap-2 lg:gap-3 cursor-pointer group select-none">
             <div className="relative">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${active ? 'bg-vita-50 text-vita-600 shadow-sm shadow-vita-100' : 'bg-gray-50 text-gray-400 group-hover:bg-gray-100'}`}>
-                    <Icon size={20} strokeWidth={2} />
+                <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${active ? 'bg-vita-50 text-vita-600 shadow-sm shadow-vita-100' : 'bg-gray-50 text-gray-400 group-hover:bg-gray-100'}`}>
+                    <Icon size={20} strokeWidth={2} className="lg:w-6 lg:h-6" />
                 </div>
                 {count > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] lg:text-xs font-bold w-5 h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
                         {count}
                     </span>
                 )}
             </div>
-            <span className={`text-[10px] font-bold transition-colors text-center max-w-[55px] leading-tight ${active ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-700'}`}>{label}</span>
+            <span className={`text-[10px] lg:text-xs font-bold transition-colors text-center max-w-[55px] lg:max-w-[80px] leading-tight ${active ? 'text-gray-800' : 'text-gray-500 group-hover:text-gray-700'}`}>{label}</span>
         </div>
     );
 

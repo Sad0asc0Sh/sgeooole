@@ -21,7 +21,11 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { user } = useAuth();
     const { itemCount } = useCart();
-    const isNavVisible = useScrollDirection();
+    const isNavVisible = useScrollDirection({
+        topOffset: 50,
+        topLockOffset: 120,
+        transitionMs: 350,
+    });
 
     const desktopNavLinks = [
         { href: "/", label: "خانه" },
@@ -102,7 +106,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             >
                                 <User className="h-5 w-5" />
                                 <span className="text-sm font-medium">
-                                    {user ? user.name : "حساب کاربری"}
+                                    {user ? user.name : "ورود/ثبت نام"}
                                 </span>
                             </Link>
 
@@ -125,8 +129,8 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     {/* Bottom Row: Navigation Links */}
                     <div
                         className={`border-t border-welf-100 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
-                                ? 'max-h-14 opacity-100'
-                                : 'max-h-0 opacity-0'
+                            ? 'max-h-14 opacity-100'
+                            : 'max-h-0 opacity-0'
                             }`}
                     >
                         <nav className="flex items-center gap-8 h-14 px-4">
