@@ -527,7 +527,7 @@ export default function CheckoutPage() {
 
     return (
         <ProtectedRoute>
-            <div className="min-h-screen bg-gray-50 pb-32">
+            <div className="min-h-screen bg-gray-50">
                 {/* Header */}
                 <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
                     <h1 className="font-bold text-lg text-gray-900">تکمیل خرید</h1>
@@ -536,292 +536,334 @@ export default function CheckoutPage() {
                     </Link>
                 </header>
 
-                <div className="p-4 space-y-4">
-                    {/* Step 1: Shipping Address */}
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                                    <MapPin size={16} className="text-amber-600" />
-                                </div>
-                                <h2 className="font-bold text-gray-900">آدرس تحویل گیرنده</h2>
-                            </div>
-                            <button
-                                onClick={handleOpenAdd}
-                                className="flex items-center gap-1 text-xs text-amber-600 font-bold hover:text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full transition-colors"
-                            >
-                                <Plus size={14} />
-                                افزودن آدرس
-                            </button>
-                        </div>
+                {/* Content - 2 Column Layout on Desktop */}
+                <div className="container mx-auto px-4 py-6 pb-32 lg:pb-6">
+                    <div className="flex flex-col-reverse lg:grid lg:grid-cols-12 gap-6">
 
-                        {loadingAddresses ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Loader2 className="animate-spin text-amber-600" size={24} />
-                            </div>
-                        ) : addresses.length === 0 ? (
-                            <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                                <p className="text-sm text-gray-500 mb-3 font-medium">هنوز آدرسی ثبت نشده است</p>
-                                <button
-                                    onClick={handleOpenAdd}
-                                    className="px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 transition-colors"
-                                >
-                                    ثبت اولین آدرس
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {addresses.map((addr) => (
-                                    <div
-                                        key={addr._id}
-                                        onClick={() => setSelectedAddressId(addr._id!)}
-                                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedAddressId === addr._id
-                                            ? "border-amber-500 bg-amber-50 shadow-sm"
-                                            : "border-gray-100 hover:border-gray-200 bg-gray-50"
-                                            }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="font-bold text-gray-900 text-sm">{addr.title}</span>
-                                                    {addr.isDefault && (
-                                                        <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
-                                                            پیش‌فرض
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className="text-xs text-gray-600 leading-relaxed mb-2">
-                                                    {addr.province}، {addr.city}، {addr.address}
-                                                    {addr.plaque && `، پلاک ${addr.plaque}`}
-                                                    {addr.unit && `، واحد ${addr.unit}`}
-                                                </p>
-                                                <div className="flex items-center gap-4 text-xs text-gray-500">
-                                                    <span className="flex items-center gap-1">
-                                                        <User size={12} /> {addr.fullName}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 font-mono">
-                                                        <Phone size={12} /> {addr.mobile}
+                        {/* Left Column: Order Summary (Mobile Bottom, Desktop 4 cols, Sticky) */}
+                        <div className="lg:col-span-4">
+                            <div className="lg:sticky lg:top-24 space-y-4">
+                                {/* Order Summary */}
+                                <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                                    <div className="flex items-center gap-2 mb-4">
+                                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                            <Package size={16} className="text-amber-600" />
+                                        </div>
+                                        <h2 className="font-bold text-gray-900">خلاصه سفارش</h2>
+                                    </div>
+
+                                    <div className="space-y-3 mb-4 max-h-48 overflow-y-auto pr-1">
+                                        {cartItems.map((item, index) => {
+                                            const variantKey = item.variantOptions?.map((v) => `${v.name}:${v.value}`).join('|') || 'no-variant';
+                                            const itemKey = `${String(item.id ?? index)}-${item.color || 'no-color'}-${variantKey}`;
+                                            return (
+                                                <div key={itemKey} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-none">
+                                                    <div className="relative w-14 h-14 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
+                                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-bold text-gray-800 truncate mb-1">{item.name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">تعداد: {item.qty}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-sm font-black text-gray-900">
+                                                        {(item.price * item.qty).toLocaleString("fa-IR")} <span className="text-[10px] font-normal text-gray-400">تومان</span>
                                                     </span>
                                                 </div>
-                                            </div>
+                                            );
+                                        })}
+                                    </div>
 
-                                            <div className="flex flex-col gap-2 items-end">
-                                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedAddressId === addr._id ? "border-amber-500 bg-amber-500" : "border-gray-300"
-                                                    }`}>
-                                                    {selectedAddressId === addr._id && <Check size={12} className="text-white" />}
-                                                </div>
-
-                                                <button
-                                                    onClick={(e) => handleOpenEdit(e, addr)}
-                                                    className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded-lg transition-colors mt-1"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
+                                    <div className="space-y-2 pt-4 border-t border-gray-100">
+                                        <div className="flex justify-between text-sm text-gray-600">
+                                            <span>جمع کالاها ({cartItems.length} کالا)</span>
+                                            <span>{totalPrice.toLocaleString("fa-IR")} تومان</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm text-gray-600">
+                                            <span>هزینه ارسال</span>
+                                            <span>{shippingPrice.toLocaleString("fa-IR")} تومان</span>
+                                        </div>
+                                        {totalSavings > 0 && (
+                                            <div className="flex justify-between text-sm text-red-500 font-bold">
+                                                <span>سود شما از این خرید</span>
+                                                <span>{totalSavings.toLocaleString("fa-IR")} تومان</span>
                                             </div>
+                                        )}
+                                        {discount > 0 && (
+                                            <div className="flex justify-between text-xs text-gray-400">
+                                                <span>کد تخفیف ({couponCode})</span>
+                                                <span>{discount.toLocaleString("fa-IR")} - تومان</span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-100 mt-2">
+                                            <span>مبلغ قابل پرداخت</span>
+                                            <span className="text-amber-600">{finalTotalPrice.toLocaleString("fa-IR")} تومان</span>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                                </div>
 
-                    {/* Step 2: Shipping Method */}
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                                <Package size={16} className="text-amber-600" />
+                                {/* Desktop Submit Button (Hidden on Mobile) */}
+                                <button
+                                    onClick={handlePlaceOrder}
+                                    disabled={isSubmitting || !selectedAddressId}
+                                    className={`hidden lg:flex w-full py-4 rounded-xl font-bold text-base text-white transition-all duration-300 items-center justify-center gap-2 ${isSubmitting || !selectedAddressId
+                                        ? "bg-gray-300 cursor-not-allowed"
+                                        : "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:via-amber-700 hover:to-amber-800 shadow-lg shadow-amber-200 hover:shadow-xl hover:shadow-amber-300 transform hover:-translate-y-1 active:scale-95 active:translate-y-0"
+                                        }`}
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={20} />
+                                            <span>در حال ثبت...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>ثبت نهایی سفارش</span>
+                                            <ChevronLeft size={20} className="animate-pulse" />
+                                        </>
+                                    )}
+                                </button>
+
+                                {error && (
+                                    <div className="hidden lg:flex bg-red-50 border border-red-200 rounded-xl p-4 items-start gap-3">
+                                        <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
+                                        <p className="text-sm text-red-700 font-medium">{error}</p>
+                                    </div>
+                                )}
                             </div>
-                            <h2 className="font-bold text-gray-900">روش ارسال</h2>
                         </div>
 
-                        {loadingShipping ? (
-                            <div className="flex items-center justify-center py-4">
-                                <Loader2 className="animate-spin text-amber-600" size={24} />
+                        {/* Right Column: Forms (Mobile Top, Desktop 8 cols) */}
+                        <div className="lg:col-span-8 space-y-4">
+                            {/* Step 1: Shipping Address */}
+                            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                            <MapPin size={16} className="text-amber-600" />
+                                        </div>
+                                        <h2 className="font-bold text-gray-900">آدرس تحویل گیرنده</h2>
+                                    </div>
+                                    <button
+                                        onClick={handleOpenAdd}
+                                        className="flex items-center gap-1 text-xs text-amber-600 font-bold hover:text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full transition-colors"
+                                    >
+                                        <Plus size={14} />
+                                        افزودن آدرس
+                                    </button>
+                                </div>
+
+                                {loadingAddresses ? (
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="animate-spin text-amber-600" size={24} />
+                                    </div>
+                                ) : addresses.length === 0 ? (
+                                    <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                                        <p className="text-sm text-gray-500 mb-3 font-medium">هنوز آدرسی ثبت نشده است</p>
+                                        <button
+                                            onClick={handleOpenAdd}
+                                            className="px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 transition-colors"
+                                        >
+                                            ثبت اولین آدرس
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {addresses.map((addr) => (
+                                            <div
+                                                key={addr._id}
+                                                onClick={() => setSelectedAddressId(addr._id!)}
+                                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedAddressId === addr._id
+                                                    ? "border-amber-500 bg-amber-50 shadow-sm"
+                                                    : "border-gray-100 hover:border-gray-200 bg-gray-50"
+                                                    }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="font-bold text-gray-900 text-sm">{addr.title}</span>
+                                                            {addr.isDefault && (
+                                                                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                                                                    پیش‌فرض
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 leading-relaxed mb-2">
+                                                            {addr.province}، {addr.city}، {addr.address}
+                                                            {addr.plaque && `، پلاک ${addr.plaque}`}
+                                                            {addr.unit && `، واحد ${addr.unit}`}
+                                                        </p>
+                                                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                                                            <span className="flex items-center gap-1">
+                                                                <User size={12} /> {addr.fullName}
+                                                            </span>
+                                                            <span className="flex items-center gap-1 font-mono">
+                                                                <Phone size={12} /> {addr.mobile}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-2 items-end">
+                                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedAddressId === addr._id ? "border-amber-500 bg-amber-500" : "border-gray-300"
+                                                            }`}>
+                                                            {selectedAddressId === addr._id && <Check size={12} className="text-white" />}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={(e) => handleOpenEdit(e, addr)}
+                                                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-100 rounded-lg transition-colors mt-1"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        ) : shippingMethods.length === 0 ? (
-                            <div className="text-center py-4 text-gray-500 text-sm">
-                                هیچ روش ارسالی یافت نشد.
+
+                            {/* Step 2: Shipping Method */}
+                            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                        <Package size={16} className="text-amber-600" />
+                                    </div>
+                                    <h2 className="font-bold text-gray-900">روش ارسال</h2>
+                                </div>
+
+                                {loadingShipping ? (
+                                    <div className="flex items-center justify-center py-4">
+                                        <Loader2 className="animate-spin text-amber-600" size={24} />
+                                    </div>
+                                ) : shippingMethods.length === 0 ? (
+                                    <div className="text-center py-4 text-gray-500 text-sm">
+                                        هیچ روش ارسالی یافت نشد.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {shippingMethods.map((method) => (
+                                            <label
+                                                key={method._id}
+                                                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedShippingMethodId === method._id ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name="shippingMethod"
+                                                    value={method._id}
+                                                    checked={selectedShippingMethodId === method._id}
+                                                    onChange={() => setSelectedShippingMethodId(method._id)}
+                                                    className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
+                                                />
+                                                <div className="flex-1">
+                                                    <span className="block text-sm font-bold text-gray-900">{method.name}</span>
+                                                    {method.description && (
+                                                        <span className="text-xs text-gray-500 mt-0.5 block">{method.description}</span>
+                                                    )}
+                                                </div>
+                                                <div className="text-sm font-bold text-gray-900">
+                                                    {method.cost === 0 ? "رایگان" : `${method.cost.toLocaleString("fa-IR")} تومان`}
+                                                </div>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {shippingMethods.map((method) => (
+
+                            {/* Step 3: Payment Method */}
+                            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                        <CreditCard size={16} className="text-amber-600" />
+                                    </div>
+                                    <h2 className="font-bold text-gray-900">روش پرداخت</h2>
+                                </div>
+
+                                <div className="space-y-3">
                                     <label
-                                        key={method._id}
-                                        className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedShippingMethodId === method._id ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
+                                        className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "online" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
                                             }`}
                                     >
                                         <input
                                             type="radio"
-                                            name="shippingMethod"
-                                            value={method._id}
-                                            checked={selectedShippingMethodId === method._id}
-                                            onChange={() => setSelectedShippingMethodId(method._id)}
+                                            name="paymentMethod"
+                                            value="online"
+                                            checked={paymentMethod === "online"}
+                                            onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
                                             className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
                                         />
                                         <div className="flex-1">
-                                            <span className="block text-sm font-bold text-gray-900">{method.name}</span>
-                                            {method.description && (
-                                                <span className="text-xs text-gray-500 mt-0.5 block">{method.description}</span>
+                                            <span className="block text-sm font-bold text-gray-900">پرداخت اینترنتی</span>
+                                            <span className="text-xs text-gray-500 mt-0.5 block">پرداخت آنلاین با کلیه کارت‌های بانکی</span>
+
+                                            {/* Gateway Selection (Only visible if Online Payment is selected) */}
+                                            {paymentMethod === "online" && availableGateways.length > 0 && (
+                                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    {availableGateways.map((gateway) => (
+                                                        <label
+                                                            key={gateway.id}
+                                                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedGateway === gateway.id
+                                                                ? "border-amber-500 bg-amber-50"
+                                                                : "border-gray-200 hover:border-gray-300"
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="radio"
+                                                                name="gateway"
+                                                                value={gateway.id}
+                                                                checked={selectedGateway === gateway.id}
+                                                                onChange={() => setSelectedGateway(gateway.id)}
+                                                                className="w-3 h-3 text-amber-600 accent-amber-600"
+                                                            />
+                                                            <span className="text-sm text-gray-700">{gateway.name}</span>
+                                                        </label>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="text-sm font-bold text-gray-900">
-                                            {method.cost === 0 ? "رایگان" : `${method.cost.toLocaleString("fa-IR")} تومان`}
+                                    </label>
+
+                                    <label
+                                        className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "cod" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
+                                            }`}
+                                    >
+                                        <input
+                                            type="radio"
+                                            name="paymentMethod"
+                                            value="cod"
+                                            checked={paymentMethod === "cod"}
+                                            onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
+                                            className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
+                                        />
+                                        <div className="flex-1">
+                                            <span className="block text-sm font-bold text-gray-900">پرداخت در محل</span>
+                                            <span className="text-xs text-gray-500 mt-0.5 block">پرداخت وجه هنگام تحویل کالا</span>
                                         </div>
                                     </label>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Step 3: Payment Method */}
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                                <CreditCard size={16} className="text-amber-600" />
-                            </div>
-                            <h2 className="font-bold text-gray-900">روش پرداخت</h2>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label
-                                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "online" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
-                                    }`}
-                            >
-                                <input
-                                    type="radio"
-                                    name="paymentMethod"
-                                    value="online"
-                                    checked={paymentMethod === "online"}
-                                    onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
-                                    className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
-                                />
-                                <div className="flex-1">
-                                    <span className="block text-sm font-bold text-gray-900">پرداخت اینترنتی</span>
-                                    <span className="text-xs text-gray-500 mt-0.5 block">پرداخت آنلاین با کلیه کارت‌های بانکی</span>
-
-                                    {/* Gateway Selection (Only visible if Online Payment is selected) */}
-                                    {paymentMethod === "online" && availableGateways.length > 0 && (
-                                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {availableGateways.map((gateway) => (
-                                                <label
-                                                    key={gateway.id}
-                                                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedGateway === gateway.id
-                                                        ? "border-amber-500 bg-amber-50"
-                                                        : "border-gray-200 hover:border-gray-300"
-                                                        }`}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name="gateway"
-                                                        value={gateway.id}
-                                                        checked={selectedGateway === gateway.id}
-                                                        onChange={() => setSelectedGateway(gateway.id)}
-                                                        className="w-3 h-3 text-amber-600 accent-amber-600"
-                                                    />
-                                                    <span className="text-sm text-gray-700">{gateway.name}</span>
-                                                </label>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
-                            </label>
-
-                            <label
-                                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "cod" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
-                                    }`}
-                            >
-                                <input
-                                    type="radio"
-                                    name="paymentMethod"
-                                    value="cod"
-                                    checked={paymentMethod === "cod"}
-                                    onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
-                                    className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
-                                />
-                                <div className="flex-1">
-                                    <span className="block text-sm font-bold text-gray-900">پرداخت در محل</span>
-                                    <span className="text-xs text-gray-500 mt-0.5 block">پرداخت وجه هنگام تحویل کالا</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Step 3: Order Summary */}
-                    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                                <Package size={16} className="text-amber-600" />
                             </div>
-                            <h2 className="font-bold text-gray-900">خلاصه سفارش</h2>
-                        </div>
 
-                        <div className="space-y-3 mb-4 max-h-48 overflow-y-auto pr-1">
-                            {cartItems.map((item, index) => {
-                                const variantKey = item.variantOptions?.map((v) => `${v.name}:${v.value}`).join('|') || 'no-variant';
-                                const itemKey = `${String(item.id ?? index)}-${item.color || 'no-color'}-${variantKey}`;
-                                return (
-                                    <div key={itemKey} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-none">
-                                        <div className="relative w-14 h-14 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                                            <Image src={item.image} alt={item.name} fill className="object-cover" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-gray-800 truncate mb-1">{item.name}</p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">تعداد: {item.qty}</span>
-                                            </div>
-                                        </div>
-                                        <span className="text-sm font-black text-gray-900">
-                                            {(item.price * item.qty).toLocaleString("fa-IR")} <span className="text-[10px] font-normal text-gray-400">تومان</span>
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        <div className="space-y-2 pt-4 border-t border-gray-100">
-                            <div className="flex justify-between text-sm text-gray-600">
-                                <span>جمع کالاها ({cartItems.length} کالا)</span>
-                                <span>{totalPrice.toLocaleString("fa-IR")} تومان</span>
-                            </div>
-                            <div className="flex justify-between text-sm text-gray-600">
-                                <span>هزینه ارسال</span>
-                                <span>{shippingPrice.toLocaleString("fa-IR")} تومان</span>
-                            </div>
-                            {totalSavings > 0 && (
-                                <div className="flex justify-between text-sm text-red-500 font-bold">
-                                    <span>سود شما از این خرید</span>
-                                    <span>{totalSavings.toLocaleString("fa-IR")} تومان</span>
+                            {/* Mobile Error */}
+                            {error && (
+                                <div className="lg:hidden bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                                    <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
+                                    <p className="text-sm text-red-700 font-medium">{error}</p>
                                 </div>
                             )}
-                            {discount > 0 && (
-                                <div className="flex justify-between text-xs text-gray-400">
-                                    <span>کد تخفیف ({couponCode})</span>
-                                    <span>{discount.toLocaleString("fa-IR")} - تومان</span>
-                                </div>
-                            )}
-                            <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-100 mt-2">
-                                <span>مبلغ قابل پرداخت</span>
-                                <span className="text-amber-600">{finalTotalPrice.toLocaleString("fa-IR")} تومان</span>
-                            </div>
                         </div>
                     </div>
-
-                    {error && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                            <AlertCircle className="text-red-500 flex-shrink-0" size={20} />
-                            <p className="text-sm text-red-700 font-medium">{error}</p>
-                        </div>
-                    )}
                 </div>
 
-                {/* Submit Button (Static at the end) */}
-                <div className="pt-6 px-8 pb-8">
+                {/* Mobile Sticky Submit Button (Hidden on Desktop) */}
+                <div className="lg:hidden fixed bottom-[65px] left-0 w-full bg-white border-t border-gray-200 p-4 z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
                     <button
                         onClick={handlePlaceOrder}
                         disabled={isSubmitting || !selectedAddressId}
-                        className={`w-full py-3 rounded-xl font-bold text-base text-white transition-all duration-300 flex items-center justify-center gap-2 ${isSubmitting || !selectedAddressId
+                        className={`w-full py-3.5 rounded-xl font-bold text-base text-white transition-all duration-300 flex items-center justify-center gap-2 ${isSubmitting || !selectedAddressId
                             ? "bg-gray-300 cursor-not-allowed"
-                            : "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-600 hover:via-amber-700 hover:to-amber-800 shadow-lg shadow-amber-200 hover:shadow-xl hover:shadow-amber-300 transform hover:-translate-y-1 active:scale-95 active:translate-y-0"
+                            : "bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 shadow-lg shadow-amber-200 active:scale-95"
                             }`}
                     >
                         {isSubmitting ? (
@@ -832,7 +874,7 @@ export default function CheckoutPage() {
                         ) : (
                             <>
                                 <span>ثبت نهایی سفارش</span>
-                                <ChevronLeft size={20} className="animate-pulse" />
+                                <ChevronLeft size={20} />
                             </>
                         )}
                     </button>

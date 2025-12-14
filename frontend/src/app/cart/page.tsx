@@ -118,56 +118,73 @@ export default function CartPage() {
     if (!loading && isEmpty) return <EmptyCart />;
 
     return (
-        <div className="flex flex-col h-full bg-gray-50">
+        <div className="flex flex-col min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
                 <h1 className="font-bold text-lg text-welf-900">سبد خرید <span className="text-xs font-normal text-gray-500">({cartItems.length} کالا)</span></h1>
                 <Link href="/" className="p-2 bg-gray-100 rounded-full"><ChevronLeft size={20} /></Link>
             </header>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 pb-40 space-y-4 no-scrollbar">
-                {/* Cart Expiry Warning for Guest Users */}
-                <CartExpiryWarning />
+            {/* Content - 2 Column Layout on Desktop */}
+            <div className="container mx-auto flex-1 px-4 py-6 pb-32 lg:pb-6">
+                <div className="flex flex-col lg:grid lg:grid-cols-12 gap-6">
 
-                {/* Items */}
-                {cartItems.map((item, index) => {
-                    // Create unique key using product ID (string), color, and variants
-                    // Note: Items are already deduplicated in useCart hook
-                    const productId = String(item.id ?? index);
-                    const variantKey = item.variantOptions
-                        ?.map((v) => `${v.name}:${v.value}`)
-                        .sort() // Sort to ensure consistent key generation
-                        .join("|") || "no-variant";
-                    const itemKey = `${productId}-${item.color || "no-color"}-${variantKey}`;
+                    {/* Right Column: Cart Items (Mobile Full Width, Desktop 8 cols) */}
+                    <div className="lg:col-span-8 space-y-4">
+                        {/* Cart Expiry Warning for Guest Users */}
+                        <CartExpiryWarning />
 
-                    return (
-                        <CartItem
-                            key={itemKey}
-                            item={item}
-                            onIncrease={() => handleIncrease(item.id, item.variantOptions)}
-                            onDecrease={() => handleDecrease(item.id, item.qty, item.variantOptions)}
-                        />
-                    );
-                })}
+                        {/* Items */}
+                        {cartItems.map((item, index) => {
+                            const productId = String(item.id ?? index);
+                            const variantKey = item.variantOptions
+                                ?.map((v) => `${v.name}:${v.value}`)
+                                .sort()
+                                .join("|") || "no-variant";
+                            const itemKey = `${productId}-${item.color || "no-color"}-${variantKey}`;
 
-                {/* Summary Card */}
-                <CartSummary
-                    totalPrice={totalPrice}
-                    totalOriginalPrice={totalOriginalPrice}
-                    shipping={shipping}
-                    finalPrice={finalPrice}
-                    discount={discount}
-                    onApplyCoupon={handleApplyCoupon}
-                    couponLoading={couponLoading}
-                    couponError={couponError}
-                    couponSuccess={couponSuccess}
-                />
+                            return (
+                                <CartItem
+                                    key={itemKey}
+                                    item={item}
+                                    onIncrease={() => handleIncrease(item.id, item.variantOptions)}
+                                    onDecrease={() => handleDecrease(item.id, item.qty, item.variantOptions)}
+                                />
+                            );
+                        })}
+                    </div>
+
+                    {/* Left Column: Summary (Mobile Full Width, Desktop 4 cols, Sticky) */}
+                    <div className="lg:col-span-4">
+                        <div className="lg:sticky lg:top-24 space-y-4">
+                            {/* Summary Card */}
+                            <CartSummary
+                                totalPrice={totalPrice}
+                                totalOriginalPrice={totalOriginalPrice}
+                                shipping={shipping}
+                                finalPrice={finalPrice}
+                                discount={discount}
+                                onApplyCoupon={handleApplyCoupon}
+                                couponLoading={couponLoading}
+                                couponError={couponError}
+                                couponSuccess={couponSuccess}
+                            />
+
+                            {/* Desktop Checkout Button (Hidden on Mobile) */}
+                            <button
+                                onClick={handleCheckoutProcess}
+                                className="hidden lg:flex w-full bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 hover:from-vita-600 hover:to-vita-700 hover:shadow-xl hover:shadow-vita-300 transition-all active:scale-95 items-center justify-center gap-2"
+                            >
+                                <span>ادامه فرآیند خرید</span>
+                                <ChevronLeft size={20} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            {/* Sticky Checkout Footer (Fixed ABOVE Bottom Nav) */}
-            <div className="fixed bottom-[65px] left-0 w-full bg-white border-t border-gray-200 p-4 z-40 flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-
+            {/* Mobile Sticky Checkout Footer (Fixed ABOVE Bottom Nav, Hidden on Desktop) */}
+            <div className="lg:hidden fixed bottom-[65px] left-0 w-full bg-white border-t border-gray-200 p-4 z-40 flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
                 {/* Total Price Section */}
                 <div className="flex flex-col items-start">
                     <span className="text-[10px] text-gray-500">مبلغ قابل پرداخت</span>
