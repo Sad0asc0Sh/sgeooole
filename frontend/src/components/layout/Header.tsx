@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
 import DesktopMegaMenu from "./DesktopMegaMenu";
 import DesktopSearch from "@/components/features/search/DesktopSearch";
+import { useScrollDirection } from "@/hooks/useScrollDirection";
 
 interface HeaderProps {
     isAIOpen: boolean;
@@ -20,6 +21,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { user } = useAuth();
     const { itemCount } = useCart();
+    const isNavVisible = useScrollDirection();
 
     const desktopNavLinks = [
         { href: "/", label: "خانه" },
@@ -121,14 +123,19 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     </div>
 
                     {/* Bottom Row: Navigation Links */}
-                    <div className="border-t border-welf-100">
+                    <div
+                        className={`border-t border-welf-100 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
+                                ? 'max-h-14 opacity-100'
+                                : 'max-h-0 opacity-0'
+                            }`}
+                    >
                         <nav className="flex items-center gap-8 h-14 px-4">
                             <DesktopMegaMenu />
                             {desktopNavLinks.filter(link => link.href !== "/categories").map((link) => (
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className="text-sm font-medium text-welf-700 hover:text-vita-600 transition-colors relative group"
+                                    className="text-sm font-medium text-welf-700 hover:text-vita-600 transition-colors relative group whitespace-nowrap"
                                 >
                                     {link.label}
                                     <span className="absolute bottom-0 right-0 w-0 h-0.5 bg-vita-600 group-hover:w-full transition-all duration-300"></span>
