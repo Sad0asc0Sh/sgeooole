@@ -8,6 +8,7 @@ import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import DesktopMegaMenu from "./DesktopMegaMenu";
 
 interface HeaderProps {
     isAIOpen: boolean;
@@ -132,7 +133,8 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     {/* Bottom Row: Navigation Links */}
                     <div className="border-t border-welf-100">
                         <nav className="flex items-center gap-8 h-14 px-4">
-                            {desktopNavLinks.map((link) => (
+                            <DesktopMegaMenu />
+                            {desktopNavLinks.filter(link => link.href !== "/categories").map((link) => (
                                 <Link
                                     key={link.href}
                                     href={link.href}
