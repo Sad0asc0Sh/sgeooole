@@ -202,8 +202,8 @@ function ProductListingContent() {
       : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 pt-6">
-      <div className="container mx-auto max-w-7xl px-4">
+    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8 pt-6">
+      <div className="container mx-auto px-4">
         {/* Search Results Header */}
         {searchQuery && !brandDetails && (
           <motion.div
@@ -270,7 +270,8 @@ function ProductListingContent() {
           </div>
         )}
 
-        <div className="flex gap-6">
+        {/* Main Grid Layout */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6">
           {itemList && (
             <script
               type="application/ld+json"
@@ -278,15 +279,164 @@ function ProductListingContent() {
               dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
             />
           )}
-          {/* Sidebar (Filters) */}
-          <aside
+
+          {/* Desktop Sidebar - Sticky on lg+ */}
+          <aside className="hidden lg:block lg:col-span-3">
+            <div className="sticky top-24 space-y-4">
+              {/* Active Filters Summary */}
+              {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
+                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-bold text-gray-500">فیلترهای فعال</span>
+                    <button onClick={handleClearFilters} className="text-[10px] text-red-500 hover:underline">
+                      حذف همه
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {minPriceParam && (
+                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
+                        از {Number(minPriceParam).toLocaleString()} تومان
+                      </span>
+                    )}
+                    {maxPriceParam && (
+                      <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-1 rounded-md">
+                        تا {Number(maxPriceParam).toLocaleString()} تومان
+                      </span>
+                    )}
+                    {Object.entries(selectedProperties).map(([key, value]) => (
+                      <button
+                        key={key}
+                        onClick={() => handlePropertyFilter(key, '')}
+                        className="bg-vita-100 text-vita-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-vita-200"
+                      >
+                        {key}: {value}
+                        <X size={10} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Price Range */}
+              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
+                <h3 className="font-bold text-sm text-gray-800 mb-4">بازه قیمت (تومان)</h3>
+                <div className="px-2 mb-6" dir="ltr">
+                  <Slider
+                    range
+                    min={0}
+                    max={priceRange.max}
+                    value={sliderValue}
+                    onChange={(val) => setSliderValue(val as [number, number])}
+                    reverse={true}
+                    trackStyle={[{ backgroundColor: "#f97316" }]}
+                    handleStyle={[
+                      { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
+                      { borderColor: "#f97316", backgroundColor: "#fff", opacity: 1 },
+                    ]}
+                    railStyle={{ backgroundColor: "#e5e7eb" }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-600 mb-4 font-medium">
+                  <span>{sliderValue[0].toLocaleString()}</span>
+                  <span>{sliderValue[1].toLocaleString()}</span>
+                </div>
+                <button
+                  onClick={handlePriceFilter}
+                  className="w-full bg-gray-900 text-white text-xs font-bold py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                >
+                  اعمال بازه قیمت
+                </button>
+              </div>
+
+              {/* Availability Toggle */}
+              <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-700">فقط کالاهای موجود</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={searchParams.get("inStock") === "true"}
+                    onChange={(e) => {
+                      const params = new URLSearchParams(searchParams.toString());
+                      if (e.target.checked) params.set("inStock", "true");
+                      else params.delete("inStock");
+                      router.push(`/products?${params.toString()}`);
+                    }}
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-vita-500"></div>
+                </label>
+              </div>
+
+              {/* Dynamic Category Properties Filters */}
+              {categoryDetails && categoryDetails.properties.length > 0 && (
+                <div className="space-y-3">
+                  {categoryDetails.properties.map((prop) => (
+                    <div key={prop.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                      <button
+                        onClick={() => toggleFilterExpanded(prop.name)}
+                        className="w-full flex items-center justify-between p-4 text-right"
+                      >
+                        <span className="font-bold text-sm text-gray-800">
+                          {prop.name}
+                          {prop.unit && <span className="font-normal text-gray-500 text-xs mr-1">({prop.unit})</span>}
+                        </span>
+                        <ChevronDown
+                          className={`text-gray-400 transition-transform ${expandedFilters[prop.name] ? 'rotate-180' : ''}`}
+                          size={18}
+                        />
+                      </button>
+
+                      {expandedFilters[prop.name] && (
+                        <div className="px-4 pb-4">
+                          {prop.type === 'select' && prop.options && prop.options.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {prop.options.map((option) => {
+                                const isSelected = selectedProperties[prop.name] === option;
+                                return (
+                                  <button
+                                    key={option}
+                                    onClick={() => handlePropertyFilter(prop.name, isSelected ? '' : option)}
+                                    className={`
+                                      px-3 py-1.5 rounded-lg text-xs font-medium transition-all
+                                      ${isSelected
+                                        ? 'bg-vita-500 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                      }
+                                    `}
+                                  >
+                                    {option}
+                                    {isSelected && <Check size={12} className="inline mr-1" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <input
+                              type={prop.type === 'number' ? 'number' : 'text'}
+                              placeholder={`جستجو در ${prop.name}...`}
+                              value={selectedProperties[prop.name] || ''}
+                              onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-vita-200 focus:border-vita-400"
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Mobile Filter Drawer */}
+          <div
             className={`
-          fixed inset-0 z-[100] bg-white lg:static lg:bg-transparent lg:z-auto lg:w-64 lg:block
-          ${showFilters ? "block" : "hidden"}
-        `}
+              fixed inset-0 z-[100] bg-white lg:hidden
+              ${showFilters ? "block" : "hidden"}
+            `}
           >
-            <div className="h-full lg:h-auto overflow-y-auto p-5 lg:p-0 bg-white lg:bg-transparent">
-              <div className="flex items-center justify-between lg:hidden mb-6">
+            <div className="h-full overflow-y-auto p-5 bg-white">
+              <div className="flex items-center justify-between mb-6">
                 <span className="font-bold text-lg">فیلترها</span>
                 <button onClick={() => setShowFilters(false)}>
                   <X size={24} />
@@ -294,7 +444,7 @@ function ProductListingContent() {
               </div>
 
               <div className="space-y-6">
-                {/* Active Filters Summary */}
+                {/* Mobile: Same filters as desktop sidebar */}
                 {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
                   <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex items-center justify-between mb-3">
@@ -328,7 +478,6 @@ function ProductListingContent() {
                   </div>
                 )}
 
-                {/* Price Range */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                   <h3 className="font-bold text-sm text-gray-800 mb-4">بازه قیمت (تومان)</h3>
                   <div className="px-2 mb-6" dir="ltr">
@@ -362,7 +511,6 @@ function ProductListingContent() {
                   </button>
                 </div>
 
-                {/* Mobile Availability Toggle */}
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
                   <span className="text-sm font-bold text-gray-700">فقط کالاهای موجود</span>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -381,7 +529,6 @@ function ProductListingContent() {
                   </label>
                 </div>
 
-                {/* Dynamic Category Properties Filters */}
                 {categoryDetails && categoryDetails.properties.length > 0 && (
                   <div className="space-y-3">
                     {categoryDetails.properties.map((prop) => (
@@ -444,16 +591,16 @@ function ProductListingContent() {
                 )}
               </div>
             </div>
-          </aside>
+          </div>
 
-          {/* Main Content (Grid) */}
-          <main className="flex-1">
+          {/* Main Content (Grid) - 9 cols on desktop */}
+          <main className="lg:col-span-9">
             {/* Filter & Sort Bar */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowSortSheet(true)}
-                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
                 >
                   <ArrowUpDown size={16} />
                   <span className="hidden sm:inline">مرتب‌سازی بر اساس:</span>
@@ -471,7 +618,7 @@ function ProductListingContent() {
 
                 <button
                   onClick={() => setShowFilters(true)}
-                  className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+                  className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
                 >
                   <SlidersHorizontal size={16} />
                   فیلترها
@@ -497,7 +644,7 @@ function ProductListingContent() {
             ) : (
               <motion.div
                 layout
-                className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
               >
                 <AnimatePresence mode="popLayout">
                   {products.map((product) => (
@@ -523,19 +670,19 @@ function ProductListingContent() {
       <AnimatePresence>
         {showSortSheet && (
           <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/50 z-[10003]"
-                onClick={() => setShowSortSheet(false)}
-              />
             <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] p-6 pb-8 shadow-2xl"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-[10003]"
+              onClick={() => setShowSortSheet(false)}
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] p-6 pb-8 shadow-2xl"
             >
               <div className="flex items-center justify-between mb-6">
                 <h3 className="font-bold text-lg">مرتب‌سازی</h3>
