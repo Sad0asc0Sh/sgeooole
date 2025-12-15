@@ -24,7 +24,7 @@ export default function ProductHeader({ product }: ProductHeaderProps) {
 
     return (
         <>
-            <div className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm flex justify-between items-center px-4 py-3 border-b border-gray-100">
+            <div className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm flex justify-between items-center px-4 py-3 border-b border-gray-100 md:hidden">
                 {/* Right: Close Button */}
                 <button
                     onClick={() => router.back()}

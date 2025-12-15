@@ -107,7 +107,7 @@ export default function OrderDetailPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-8">
             {/* Header */}
-            <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm md:static">
                 <h1 className="font-bold text-lg text-gray-900">جزئیات سفارش</h1>
                 <Link href="/" className="p-2 bg-gray-100 rounded-full">
                     <ChevronLeft size={20} />

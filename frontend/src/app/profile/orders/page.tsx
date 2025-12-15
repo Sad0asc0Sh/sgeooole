@@ -129,7 +129,7 @@ export default function OrdersPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-20 shadow-sm">
+            <div className="bg-white sticky top-0 z-20 shadow-sm md:static">
                 <div className="p-4 flex items-center gap-3 border-b border-gray-100">
                     <Link href="/profile" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                         <ChevronRight size={24} />

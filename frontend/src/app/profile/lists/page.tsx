@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { ArrowRight, Heart, Trash2, ShoppingCart, Loader2, Plus, Minus } from "lucide-react";
+import { ArrowRight, Heart, Trash2, ShoppingCart, Loader2, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { wishlistService, WishlistItem } from "@/services/wishlistService";
@@ -8,12 +8,15 @@ import { useCart } from "@/hooks/useCart";
 import { Product } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
 
+const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
+
 export default function ListsPage() {
     const [items, setItems] = useState<WishlistItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
     const [now, setNow] = useState(() => Date.now());
+    const [currentPage, setCurrentPage] = useState(1);
 
     const { addToCart, updateQuantity, removeFromCart, getItemQuantity, cartItems } = useCart();
 
@@ -27,6 +30,11 @@ export default function ListsPage() {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
+
+    // Reset to page 1 when items change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [items.length]);
 
     const loadWishlist = async () => {
         try {
@@ -156,25 +164,31 @@ export default function ListsPage() {
         return "/images/placeholder-product.png";
     };
 
+    // Pagination calculations
+    const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const currentItems = items.slice(startIndex, endIndex);
+
     // Loading State
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 pb-24">
-                <div className="bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+            <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
+                <div className="md:hidden bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
                     <Link href="/profile" className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors">
                         <ArrowRight size={20} />
                     </Link>
                     <h1 className="font-bold text-lg text-gray-800">لیست علاقه‌مندی‌ها</h1>
                 </div>
-                <div className="p-4 space-y-3">
-                    {[1, 2, 3].map((key) => (
-                        <div key={key} className="bg-white p-3 rounded-2xl flex gap-3 shadow-sm animate-pulse">
-                            <div className="w-24 h-24 bg-gray-200 rounded-xl" />
-                            <div className="flex-1 space-y-2 py-1">
-                                <div className="h-3 bg-gray-200 rounded w-3/4" />
-                                <div className="h-3 bg-gray-200 rounded w-1/2" />
-                                <div className="h-8 bg-gray-200 rounded mt-2" />
-                            </div>
+                <div className="hidden md:block max-w-6xl mx-auto px-6 pt-6 pb-4">
+                    <h1 className="text-2xl font-black text-gray-800">علاقه‌مندی‌ها</h1>
+                </div>
+                <div className="p-4 md:max-w-6xl md:mx-auto md:px-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    {[1, 2, 3, 4, 5].map((key) => (
+                        <div key={key} className="bg-white p-3 rounded-2xl animate-pulse">
+                            <div className="aspect-square bg-gray-200 rounded-xl mb-3" />
+                            <div className="h-3 bg-gray-200 rounded w-3/4 mb-2" />
+                            <div className="h-3 bg-gray-200 rounded w-1/2" />
                         </div>
                     ))}
                 </div>
@@ -185,12 +199,15 @@ export default function ListsPage() {
     // Error State
     if (error) {
         return (
-            <div className="min-h-screen bg-gray-50 pb-24">
-                <div className="bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+            <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
+                <div className="md:hidden bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
                     <Link href="/profile" className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors">
                         <ArrowRight size={20} />
                     </Link>
                     <h1 className="font-bold text-lg text-gray-800">لیست علاقه‌مندی‌ها</h1>
+                </div>
+                <div className="hidden md:block max-w-6xl mx-auto px-6 pt-6 pb-4">
+                    <h1 className="text-2xl font-black text-gray-800">علاقه‌مندی‌ها</h1>
                 </div>
                 <div className="text-center py-16 px-4">
                     <p className="text-red-500 text-sm mb-4">{error}</p>
@@ -203,72 +220,85 @@ export default function ListsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <div className="bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+        <div className="min-h-screen bg-gray-50 pb-24 md:pb-8">
+            {/* Mobile Header - Only visible on mobile */}
+            <div className="md:hidden bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
                 <Link href="/profile" className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors">
                     <ArrowRight size={20} />
                 </Link>
                 <h1 className="font-bold text-lg text-gray-800">لیست علاقه‌مندی‌ها</h1>
                 {items.length > 0 && (
                     <span className="mr-auto text-xs text-gray-400">
-                        {items.length} محصول
+                        {items.length.toLocaleString('fa-IR')} محصول
                     </span>
                 )}
             </div>
 
+            {/* Desktop Breadcrumb - Only visible on desktop */}
+            <div className="hidden md:block max-w-6xl mx-auto px-6 pt-6 pb-4">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-black text-gray-800">علاقه‌مندی‌ها</h1>
+                    {items.length > 0 && (
+                        <span className="text-sm text-gray-500">
+                            {items.length.toLocaleString('fa-IR')} محصول
+                        </span>
+                    )}
+                </div>
+            </div>
+
             {/* Wishlist Items */}
-            <div className="p-4 space-y-3">
-                {items.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Heart size={40} className="text-gray-300" strokeWidth={1.5} />
-                        </div>
-                        <div className="text-center">
-                            <p className="text-gray-800 font-medium text-sm mb-1">لیست علاقه‌مندی‌های شما خالی است</p>
-                            <p className="text-gray-400 text-xs mb-6">محصولات مورد علاقه خود را با کلیک روی آیکون قلب ذخیره کنید</p>
-                            <Link href="/" className="inline-block px-6 py-2.5 bg-vita-500 text-white text-sm font-bold rounded-lg hover:bg-vita-600 transition-colors">
-                                مشاهده محصولات
-                            </Link>
-                        </div>
+            {items.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-4 px-4">
+                    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Heart size={40} className="text-gray-300" strokeWidth={1.5} />
                     </div>
-                ) : (
-                    items.map((product) => {
-                        const qty = getItemQuantity(product._id);
-                        const stock = product.countInStock ?? product.stock;
-                        const isOutOfStock = stock !== undefined && stock <= 0;
-                        const pricing = getPricing(product);
+                    <div className="text-center">
+                        <p className="text-gray-800 font-medium text-sm mb-1">لیست علاقه‌مندی‌های شما خالی است</p>
+                        <p className="text-gray-400 text-xs mb-6">محصولات مورد علاقه خود را با کلیک روی آیکون قلب ذخیره کنید</p>
+                        <Link href="/" className="inline-block px-6 py-2.5 bg-vita-500 text-white text-sm font-bold rounded-lg hover:bg-vita-600 transition-colors">
+                            مشاهده محصولات
+                        </Link>
+                    </div>
+                </div>
+            ) : (
+                <>
+                    {/* Products Grid */}
+                    <div className="p-4 md:max-w-6xl md:mx-auto md:px-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+                        {currentItems.map((product) => {
+                            const qty = getItemQuantity(product._id);
+                            const stock = product.countInStock ?? product.stock;
+                            const isOutOfStock = stock !== undefined && stock <= 0;
+                            const pricing = getPricing(product);
 
-                        return (
-                            <div key={product._id} className="bg-white p-3 rounded-2xl flex gap-3 shadow-sm border border-gray-50 hover:shadow-md transition-shadow">
-                                {/* Product Image */}
-                                <Link href={`/product/${product._id}`} className="relative w-24 h-24 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                                    <Image
-                                        src={getImageUrl(product)}
-                                        fill
-                                        className={`object-cover ${isOutOfStock ? "grayscale opacity-60" : ""}`}
-                                        alt={product.name}
-                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
-                                    />
-                                    {pricing.discount > 0 && (
-                                        <div className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                            {pricing.discount}%
-                                        </div>
-                                    )}
-                                    {isOutOfStock && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-white/40">
-                                            <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md">ناموجود</span>
-                                        </div>
-                                    )}
-                                </Link>
+                            return (
+                                <div key={product._id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50 hover:shadow-md transition-shadow flex flex-col">
+                                    {/* Product Image */}
+                                    <Link href={`/product/${product._id}`} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-3">
+                                        <Image
+                                            src={getImageUrl(product)}
+                                            fill
+                                            className={`object-cover hover:scale-110 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                                            alt={product.name}
+                                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                        />
+                                        {pricing.discount > 0 && (
+                                            <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                                                {pricing.discount}%
+                                            </div>
+                                        )}
+                                        {isOutOfStock && (
+                                            <div className="absolute inset-0 flex items-center justify-center bg-white/40">
+                                                <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md">ناموجود</span>
+                                            </div>
+                                        )}
+                                    </Link>
 
-                                {/* Product Info */}
-                                <div className="flex-1 flex flex-col justify-between py-1">
-                                    <Link href={`/product/${product._id}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-2 hover:text-vita-600 transition-colors">
+                                    {/* Product Info */}
+                                    <Link href={`/product/${product._id}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-2 hover:text-vita-600 transition-colors mb-auto min-h-[2.5rem]">
                                         {product.name}
                                     </Link>
 
-                                    <div className="flex items-center gap-2 mt-2">
+                                    <div className="flex items-center gap-2 mt-3">
                                         <span className="text-sm font-black text-gray-900">
                                             {pricing.finalPrice.toLocaleString("fa-IR")}
                                         </span>
@@ -281,7 +311,7 @@ export default function ListsPage() {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex gap-2 mt-2 h-9">
+                                    <div className="flex gap-2 mt-3 h-9">
                                         {qty > 0 ? (
                                             // Stepper
                                             <div className="flex-1 flex items-center justify-between bg-gray-50 rounded-lg border border-gray-100 px-1">
@@ -291,7 +321,7 @@ export default function ListsPage() {
                                                 >
                                                     <Plus size={16} />
                                                 </button>
-                                                <span className="font-bold text-sm text-gray-800">{qty}</span>
+                                                <span className="font-bold text-sm text-gray-800">{qty.toLocaleString('fa-IR')}</span>
                                                 <button
                                                     onClick={() => handleDecrease(product)}
                                                     className="w-8 h-full flex items-center justify-center text-red-500 hover:bg-red-50 rounded-md transition"
@@ -325,11 +355,47 @@ export default function ListsPage() {
                                         </button>
                                     </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Pagination Controls - Only on Desktop */}
+                    {totalPages > 1 && (
+                        <div className="hidden md:flex items-center justify-center gap-2 pb-8 px-4">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronRight size={20} />
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setCurrentPage(page)}
+                                        className={`min-w-[2.5rem] h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === page
+                                            ? 'bg-vita-600 text-white'
+                                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        {page.toLocaleString('fa-IR')}
+                                    </button>
+                                ))}
                             </div>
-                        );
-                    })
-                )}
-            </div>
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft size={20} />
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
         </div>
     );
 }

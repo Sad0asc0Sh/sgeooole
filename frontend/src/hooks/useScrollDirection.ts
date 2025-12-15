@@ -24,9 +24,11 @@ export function useScrollDirection(options: ScrollDirectionOptions = {}) {
 
     // نگه‌داری آخرین موقعیت اسکرول و آخرین وضعیت نمایش بدون دخالت در DOM
     const lastScrollYRef = useRef(0);
+    const latestScrollYRef = useRef(0);
     const lastToggleYRef = useRef(0);
     const lastVisibilityRef = useRef(true);
     const ignoreUntilRef = useRef(0);
+    const activeScrollerRef = useRef<EventTarget | null>(null);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -34,8 +36,10 @@ export function useScrollDirection(options: ScrollDirectionOptions = {}) {
         // مقدار اولیه برای زمان لود صفحه یا تغییر روت
         const initialScrollY = window.scrollY || 0;
         lastScrollYRef.current = initialScrollY;
+        latestScrollYRef.current = initialScrollY;
         lastToggleYRef.current = initialScrollY;
         lastVisibilityRef.current = true;
+        activeScrollerRef.current = window;
         setIsVisible(true);
 
         let rafId: number | null = null;
@@ -44,6 +48,35 @@ export function useScrollDirection(options: ScrollDirectionOptions = {}) {
             typeof performance !== 'undefined' && typeof performance.now === 'function'
                 ? performance.now()
                 : Date.now();
+
+        const isVerticallyScrollable = (el: Element) => {
+            if (!(el instanceof HTMLElement)) return false;
+            return el.scrollHeight > el.clientHeight + 1;
+        };
+
+        const normalizeScrollTarget = (target: EventTarget | null): EventTarget => {
+            if (!target) return window;
+            if (target === window) return window;
+            if (target === document) return window;
+            if (target instanceof Document) return window;
+            if (target instanceof Element) {
+                if (target === document.documentElement || target === document.body) {
+                    return window;
+                }
+            }
+            return target;
+        };
+
+        const getScrollYFromTarget = (target: EventTarget): number | null => {
+            if (target === window) return window.scrollY || 0;
+
+            if (target instanceof Element) {
+                if (!isVerticallyScrollable(target)) return null;
+                return (target as HTMLElement).scrollTop || 0;
+            }
+
+            return window.scrollY || 0;
+        };
 
         const setVisibility = (nextVisible: boolean, scrollY: number) => {
             setIsVisible(nextVisible);
@@ -55,7 +88,7 @@ export function useScrollDirection(options: ScrollDirectionOptions = {}) {
         };
 
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
+            const currentScrollY = latestScrollYRef.current;
 
             // همیشه نزدیک بالای صفحه، نوار دوم را نمایش بده و همه stateهای مرجع را هم‌تراز کن
             if (transitionMs > 0 && getNow() < ignoreUntilRef.current) {
@@ -101,17 +134,33 @@ export function useScrollDirection(options: ScrollDirectionOptions = {}) {
             lastScrollYRef.current = currentScrollY;
         };
 
-        const onScroll = () => {
+        const onScroll = (event: Event) => {
+            const normalizedTarget = normalizeScrollTarget(event.target);
+            const nextScrollY = getScrollYFromTarget(normalizedTarget);
+
+            // Ignore scroll events from non-vertical scrollers (e.g. horizontal rails)
+            if (nextScrollY === null) return;
+
+            latestScrollYRef.current = nextScrollY;
+
+            // When switching between different scroll containers, reset baselines to prevent jumps.
+            if (activeScrollerRef.current !== normalizedTarget) {
+                activeScrollerRef.current = normalizedTarget;
+                lastScrollYRef.current = nextScrollY;
+                lastToggleYRef.current = nextScrollY;
+            }
+
             if (rafId !== null) {
                 cancelAnimationFrame(rafId);
             }
             rafId = requestAnimationFrame(handleScroll);
         };
 
-        window.addEventListener('scroll', onScroll, { passive: true });
+        const listenerOptions: AddEventListenerOptions = { passive: true, capture: true };
+        window.addEventListener('scroll', onScroll, listenerOptions);
 
         return () => {
-            window.removeEventListener('scroll', onScroll);
+            window.removeEventListener('scroll', onScroll, listenerOptions);
             if (rafId !== null) {
                 cancelAnimationFrame(rafId);
             }

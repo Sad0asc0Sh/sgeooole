@@ -529,7 +529,7 @@ export default function CheckoutPage() {
         <ProtectedRoute>
             <div className="min-h-screen bg-gray-50">
                 {/* Header */}
-                <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+                <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm md:static">
                     <h1 className="font-bold text-lg text-gray-900">تکمیل خرید</h1>
                     <Link href="/cart" className="p-2 bg-gray-100 rounded-full">
                         <ChevronLeft size={20} />

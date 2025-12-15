@@ -168,7 +168,7 @@ export default function TicketsPage() {
             )}
 
             {/* Header */}
-            <div className="bg-white sticky top-0 z-20 shadow-sm">
+            <div className="bg-white sticky top-0 z-20 shadow-sm md:static">
                 <div className="p-4 flex items-center gap-3 border-b border-gray-100">
                     <Link
                         href="/profile"

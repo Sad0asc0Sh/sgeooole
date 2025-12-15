@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, Sparkles, ShoppingCart, User, Heart } from "lucide-react";
+import { Search, Sparkles, ShoppingCart, User } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useState } from "react";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
@@ -24,6 +24,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
     const isNavVisible = useScrollDirection({
         topOffset: 50,
         topLockOffset: 120,
+        minSwitchDistance: 20,
         transitionMs: 350,
     });
 
@@ -37,7 +38,14 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
     ];
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-welf-200 bg-white/80 backdrop-blur-md">
+        <>
+            {/* Spacer: keeps layout stable when header is fixed (and animates with nav collapse/expand) */}
+            <div
+                aria-hidden
+                className={`h-16 transition-[height] duration-300 ease-in-out ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
+            />
+
+            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-welf-200 bg-white/80 backdrop-blur-md">
             {/* MOBILE HEADER */}
             <div className="md:hidden mobile-container flex h-16 items-center justify-between">
                 {/* Right: Brand Logo */}
@@ -68,8 +76,6 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                         <Sparkles className="h-5 w-5" />
                     </button>
 
-                    <AIChatSheet open={isAIOpen} onOpenChange={setIsAIOpen} />
-                    <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
                 </div>
             </div>
 
@@ -152,10 +158,11 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     </div>
                 </div>
 
-                {/* Shared Components */}
-                <AIChatSheet open={isAIOpen} onOpenChange={setIsAIOpen} />
-                <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
             </div>
         </header>
+
+            <AIChatSheet open={isAIOpen} onOpenChange={setIsAIOpen} />
+            <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+        </>
     );
 }

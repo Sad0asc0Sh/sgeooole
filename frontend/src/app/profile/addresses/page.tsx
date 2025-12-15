@@ -316,7 +316,7 @@ export default function AddressesPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             {/* Header */}
-            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3">
+            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:static">
                 <Link href="/profile" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
                     <ChevronRight size={24} />
                 </Link>

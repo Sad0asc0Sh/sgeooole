@@ -307,3 +307,49 @@ exports.postAdminReply = async (req, res) => {
     })
   }
 }
+
+/**
+ * @desc    دریافت نظرات کاربر (برای خود کاربر)
+ * @route   GET /api/reviews/user/my-reviews
+ * @access  Private
+ */
+exports.getUserReviews = async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'کاربر احراز هویت نشده است',
+      })
+    }
+
+    const page = parseInt(req.query.page, 10) || 1
+    const limit = parseInt(req.query.limit, 10) || 20
+    const skip = (page - 1) * limit
+
+    const total = await Review.countDocuments({ user: req.user._id })
+    const reviews = await Review.find({ user: req.user._id })
+      .populate('product', 'name slug images price finalPrice discount')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+
+    res.status(200).json({
+      success: true,
+      data: reviews,
+      pagination: {
+        page,
+        pages: Math.ceil(total / limit),
+        total,
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching user reviews:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت نظرات',
+      error: error.message,
+    })
+  }
+}
+

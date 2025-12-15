@@ -7,6 +7,7 @@ const {
   postAdminReply, // پاسخ ادمین به نظر
   getProductReviews,
   addReview,
+  getUserReviews, // دریافت نظرات کاربر
 } = require('../controllers/reviewController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
@@ -14,6 +15,7 @@ const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 // روت‌های عمومی و کاربر
 // ============================================
 router.get('/product/:productId', getProductReviews)
+router.get('/user/my-reviews', protect, getUserReviews)
 router.post('/:productId', protect, addReview)
 
 // ============================================

@@ -37,7 +37,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     }, [product]);
 
     return (
-        <div className="min-h-screen bg-white pb-24 pt-14">
+        <div className="min-h-screen bg-white pb-24 pt-14 md:pt-0">
             {/* Track product view */}
             <ProductHistoryTracker product={product} />
 

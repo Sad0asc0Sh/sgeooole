@@ -3,7 +3,7 @@
 export default function Loading() {
   return (
     <div className="min-h-screen bg-white pb-24">
-      <div className="fixed top-0 left-0 w-full z-20 flex justify-between items-center p-4">
+      <div className="fixed top-0 left-0 w-full z-20 flex justify-between items-center p-4 md:hidden">
         <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
         <div className="flex gap-3">
           <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />

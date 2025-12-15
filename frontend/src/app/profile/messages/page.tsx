@@ -67,7 +67,7 @@ export default function MessagesPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
-            <div className="bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10">
+            <div className="bg-white p-4 flex items-center gap-3 shadow-sm sticky top-0 z-10 md:static">
                 <Link
                     href="/profile"
                     className="p-2 bg-gray-100 rounded-full text-gray-600 hover:bg-gray-200 transition-colors"

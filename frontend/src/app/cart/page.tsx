@@ -120,7 +120,7 @@ export default function CartPage() {
     return (
         <div className="flex flex-col min-h-screen bg-gray-50">
             {/* Header */}
-            <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm md:static">
                 <h1 className="font-bold text-lg text-welf-900">سبد خرید <span className="text-xs font-normal text-gray-500">({cartItems.length} کالا)</span></h1>
                 <Link href="/" className="p-2 bg-gray-100 rounded-full"><ChevronLeft size={20} /></Link>
             </header>

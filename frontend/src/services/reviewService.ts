@@ -6,7 +6,15 @@ export interface Review {
         _id: string;
         name: string;
     };
-    product: string;
+    product: string | {
+        _id: string;
+        name: string;
+        slug: string;
+        images: Array<{ url: string; alt?: string }>;
+        price: number;
+        finalPrice?: number;
+        discount?: number;
+    };
     rating: number;
     comment: string;
     isApproved: boolean;
@@ -39,6 +47,12 @@ export const reviewService = {
         return data;
     },
 
+    // Get current user's reviews
+    getUserReviews: async (page = 1, limit = 20) => {
+        const { data } = await api.get<ReviewResponse>(`/reviews/user/my-reviews?page=${page}&limit=${limit}`);
+        return data;
+    },
+
     // Admin Methods
     getAllReviews: async (page = 1, limit = 20, isApproved?: boolean) => {
         let url = `/reviews/admin?page=${page}&limit=${limit}`;
@@ -64,3 +78,4 @@ export const reviewService = {
         return data;
     }
 };
+
