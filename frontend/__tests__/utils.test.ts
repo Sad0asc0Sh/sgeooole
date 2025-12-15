@@ -2,8 +2,8 @@ import { formatPrice, calculateDiscountPrice, cn } from "@/lib/utils";
 
 describe("utils", () => {
   test("formatPrice formats number with locale", () => {
-    const formatted = formatPrice(123456);
-    expect(formatted).toMatch(/123[,٬]456/);
+    expect(formatPrice(123456)).toBe((123456).toLocaleString("fa-IR"));
+    expect(formatPrice(123456, "en-US")).toBe("123,456");
   });
 
   test("calculateDiscountPrice applies percentage and rounds", () => {

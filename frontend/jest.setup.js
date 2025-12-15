@@ -1,10 +1,11 @@
-import "@testing-library/jest-dom/extend-expect";
+const React = require("react");
+require("@testing-library/jest-dom");
 
 // Mock Next.js Image to render a basic img
 jest.mock("next/image", () => ({
   __esModule: true,
   default: (props) => {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
+    return React.createElement("img", { ...props });
   },
 }));

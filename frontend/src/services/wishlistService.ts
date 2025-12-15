@@ -5,13 +5,22 @@ import api from "@/lib/api";
  */
 export interface WishlistItem {
   _id: string;
+  slug?: string;
   name: string;
   price: number;
+  compareAtPrice?: number;
   discount?: number;
+  campaignLabel?: string;
+  campaignTheme?: string;
+  isFlashDeal?: boolean;
+  flashDealEndTime?: string;
+  isSpecialOffer?: boolean;
+  specialOfferEndTime?: string;
   images?: Array<{
     url: string;
     public_id?: string;
   }>;
+  stock?: number;
   countInStock?: number;
   category?: string;
   brand?: string;

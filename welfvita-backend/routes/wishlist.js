@@ -16,7 +16,9 @@ router.get('/', protect, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).populate({
       path: 'wishlist',
-      select: 'name price discount images countInStock category brand rating isActive',
+      // Include time-based promotion fields so the frontend can correctly hide expired discounts
+      // and revert pricing when countdowns end (Flash Deals / Special Offers).
+      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme',
       match: { isActive: true }, // Only return active products
     });
 

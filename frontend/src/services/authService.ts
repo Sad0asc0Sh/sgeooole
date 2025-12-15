@@ -163,7 +163,7 @@ export const authService = {
       };
 
       // Map backend user to frontend User interface
-      return {
+      const user = {
         id: userData._id || userData.id,
         name: userData.name,
         mobile: userData.mobile,
@@ -191,6 +191,13 @@ export const authService = {
         orderStats: mappedOrderStats,
         googleId: userData.googleId,
       };
+
+      // Update localStorage with fresh data
+      if (typeof window !== "undefined") {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      return user;
     } catch (error: any) {
       console.error("Error fetching profile:", error);
 
@@ -288,6 +295,7 @@ export const authService = {
         companyProvince: userData.companyProvince,
         companyCity: userData.companyCity,
         orderStats: mappedOrderStats,
+        googleId: userData.googleId,
       };
     } catch {
       return null;
@@ -431,6 +439,14 @@ export const authService = {
     try {
       console.log("[AUTH] Updating profile");
       const response = await api.put("/auth/me/update", data);
+
+      // Update localStorage if user data is returned
+      if (response.data.success && response.data.data?.user) {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("user", JSON.stringify(response.data.data.user));
+        }
+      }
+
       return response.data;
     } catch (error: any) {
       console.error("Error updating profile:", error);

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import CartSummary from "@/components/cart/CartSummary";
 
 describe("CartSummary", () => {
@@ -10,10 +10,13 @@ describe("CartSummary", () => {
         shipping={0}
         finalPrice={85000}
         discount={5000}
-      />
+      />,
     );
 
-    expect(screen.getByText(/85,000|85٬000/)).toBeInTheDocument();
-    expect(screen.getByText(/5,000|5٬000/)).toBeInTheDocument(); // coupon discount
+    expect(screen.getByText((85000).toLocaleString("fa-IR"), { exact: false })).toBeInTheDocument();
+
+    const couponRow = screen.getByText("کد تخفیف").closest("div");
+    expect(couponRow).not.toBeNull();
+    expect(within(couponRow as HTMLElement).getByText((5000).toLocaleString("fa-IR"), { exact: false })).toBeInTheDocument();
   });
 });

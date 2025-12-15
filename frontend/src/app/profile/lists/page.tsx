@@ -6,18 +6,26 @@ import Image from "next/image";
 import { wishlistService, WishlistItem } from "@/services/wishlistService";
 import { useCart } from "@/hooks/useCart";
 import { Product } from "@/services/productService";
+import { resolvePricing } from "@/lib/pricing";
 
 export default function ListsPage() {
     const [items, setItems] = useState<WishlistItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
+    const [now, setNow] = useState(() => Date.now());
 
     const { addToCart, updateQuantity, removeFromCart, getItemQuantity, cartItems } = useCart();
 
     // Fetch wishlist on mount
     useEffect(() => {
         loadWishlist();
+    }, []);
+
+    // Tick every second so countdown expirations reflect in wishlist pricing/badges
+    useEffect(() => {
+        const id = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(id);
     }, []);
 
     const loadWishlist = async () => {
@@ -65,18 +73,39 @@ export default function ListsPage() {
      * Convert WishlistItem to Product for useCart
      */
     const mapToProduct = (item: WishlistItem): Product => {
+        const pricing = resolvePricing({
+            price: item.price,
+            discount: item.discount || 0,
+            compareAtPrice: item.compareAtPrice || item.price,
+            isFlashDeal: item.isFlashDeal,
+            flashDealEndTime: item.flashDealEndTime,
+            isSpecialOffer: item.isSpecialOffer,
+            specialOfferEndTime: item.specialOfferEndTime,
+            campaignLabel: item.campaignLabel,
+            now,
+        });
+
         return {
             id: item._id,
             name: item.name,
             title: item.name,
-            price: item.price,
-            discount: item.discount || 0,
+            price: pricing.finalPrice,
+            oldPrice: pricing.oldPrice,
+            compareAtPrice: pricing.basePrice,
+            discount: pricing.discount,
             image: item.images && item.images.length > 0 ? item.images[0].url : "/placeholder.jpg",
             images: item.images ? item.images.map(img => img.url) : [],
             category: item.category || "",
             rating: item.rating || 0,
             reviewCount: 0,
-            countInStock: item.countInStock || 0,
+            countInStock: item.countInStock ?? item.stock ?? 0,
+            slug: item.slug,
+            campaignLabel: item.campaignLabel,
+            campaignTheme: item.campaignTheme,
+            isFlashDeal: item.isFlashDeal,
+            flashDealEndTime: item.flashDealEndTime,
+            isSpecialOffer: item.isSpecialOffer,
+            specialOfferEndTime: item.specialOfferEndTime,
         };
     };
 
@@ -104,15 +133,18 @@ export default function ListsPage() {
         }
     };
 
-    /**
-     * Calculate final price with discount
-     */
-    const getFinalPrice = (item: WishlistItem) => {
-        if (item.discount && item.discount > 0) {
-            return item.price - (item.price * item.discount) / 100;
-        }
-        return item.price;
-    };
+    const getPricing = (item: WishlistItem) =>
+        resolvePricing({
+            price: item.price,
+            discount: item.discount || 0,
+            compareAtPrice: item.compareAtPrice || item.price,
+            isFlashDeal: item.isFlashDeal,
+            flashDealEndTime: item.flashDealEndTime,
+            isSpecialOffer: item.isSpecialOffer,
+            specialOfferEndTime: item.specialOfferEndTime,
+            campaignLabel: item.campaignLabel,
+            now,
+        });
 
     /**
      * Get first image URL or fallback
@@ -203,7 +235,9 @@ export default function ListsPage() {
                 ) : (
                     items.map((product) => {
                         const qty = getItemQuantity(product._id);
-                        const isOutOfStock = product.countInStock !== undefined && product.countInStock <= 0;
+                        const stock = product.countInStock ?? product.stock;
+                        const isOutOfStock = stock !== undefined && stock <= 0;
+                        const pricing = getPricing(product);
 
                         return (
                             <div key={product._id} className="bg-white p-3 rounded-2xl flex gap-3 shadow-sm border border-gray-50 hover:shadow-md transition-shadow">
@@ -216,9 +250,9 @@ export default function ListsPage() {
                                         alt={product.name}
                                         onError={(e) => { e.currentTarget.style.display = "none"; }}
                                     />
-                                    {product.discount && product.discount > 0 && (
+                                    {pricing.discount > 0 && (
                                         <div className="absolute top-1 left-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                            {product.discount}%
+                                            {pricing.discount}%
                                         </div>
                                     )}
                                     {isOutOfStock && (
@@ -236,12 +270,12 @@ export default function ListsPage() {
 
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="text-sm font-black text-gray-900">
-                                            {getFinalPrice(product).toLocaleString("fa-IR")}
+                                            {pricing.finalPrice.toLocaleString("fa-IR")}
                                         </span>
                                         <span className="text-[9px] text-gray-500">تومان</span>
-                                        {(product.discount || 0) > 0 && (
+                                        {pricing.oldPrice && pricing.discount > 0 && (
                                             <span className="text-[10px] text-gray-400 line-through">
-                                                {product.price.toLocaleString("fa-IR")}
+                                                {pricing.oldPrice.toLocaleString("fa-IR")}
                                             </span>
                                         )}
                                     </div>

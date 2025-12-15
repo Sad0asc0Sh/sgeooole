@@ -3,26 +3,27 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-    MapPin, Plus, Edit2, Trash2, CheckCircle2, ChevronRight, Home, Phone, User, FileText, Hash, Building2, UserCheck
+    MapPin, Plus, Edit2, Trash2, CheckCircle2, ChevronRight, Home, Phone, User, FileText, Hash, Building2, UserCheck, Info
 } from "lucide-react";
 import { authService, User as UserType } from "@/services/authService";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 interface Address {
     _id?: string;
     title: string;
-    fullName: string;
-    mobile: string;
-    nationalCode: string;
+    recipientName: string;
+    recipientMobile: string;
+    nationalCode?: string;
     province: string;
     city: string;
     address: string;
-    plaque: string;
-    unit: string;
+    plaque?: string;
+    unit?: string;
     postalCode: string;
     isDefault: boolean;
-    recipientName?: string;
-    recipientPhone?: string;
+    // Additional fields for UI display
+    fullName?: string;
+    mobile?: string;
     recipientNationalCode?: string;
 }
 
@@ -41,7 +42,7 @@ export default function AddressesPage() {
     // Form State
     const [isRecipientMe, setIsRecipientMe] = useState(true);
 
-    // Buyer Info
+    // Buyer Info (The logged-in user)
     const [buyerInfo, setBuyerInfo] = useState({
         firstName: "",
         lastName: "",
@@ -61,7 +62,7 @@ export default function AddressesPage() {
         isDefault: false
     });
 
-    // Recipient Info
+    // Recipient Info (The person who receives the order)
     const [recipientInfo, setRecipientInfo] = useState({
         firstName: "",
         lastName: "",
@@ -81,12 +82,10 @@ export default function AddressesPage() {
             // @ts-ignore
             const userAddresses = (profileData.addresses || []).map((addr: any) => ({
                 ...addr,
-                fullName: addr.fullName, // Buyer Name
-                mobile: addr.mobile, // Buyer Mobile
-                nationalCode: addr.nationalCode || "", // Buyer National Code
-                recipientName: addr.recipientName || addr.fullName, // Fallback for legacy
-                recipientPhone: addr.recipientPhone || addr.mobile, // Fallback for legacy
-                recipientNationalCode: addr.recipientNationalCode || addr.nationalCode || "",
+                // Map backend fields to our interface
+                recipientName: addr.recipientName || addr.fullName || "",
+                recipientMobile: addr.recipientMobile || addr.recipientPhone || addr.mobile || "",
+                nationalCode: addr.nationalCode || "",
                 plaque: addr.plaque || "",
                 unit: addr.unit || ""
             }));
@@ -118,7 +117,7 @@ export default function AddressesPage() {
             firstName: userSplit.firstName,
             lastName: userSplit.lastName,
             mobile: user?.mobile || "",
-            nationalCode: ""
+            nationalCode: user?.nationalCode || ""
         });
 
         setAddressInfo({
@@ -145,40 +144,33 @@ export default function AddressesPage() {
     const handleOpenEdit = (addr: Address) => {
         setEditingAddress(addr);
 
-        // Check if recipient matches buyer (or is undefined/legacy)
-        const isMe = (!addr.recipientName || (addr.recipientName === addr.fullName && addr.recipientPhone === addr.mobile));
-        setIsRecipientMe(isMe);
+        // Use profile data if available, otherwise fallback to address data
+        const hasProfileName = !!(user?.name && user.name.trim().length > 0);
+        const userSplit = splitName(user?.name || "");
+        const buyerSplit = hasProfileName ? userSplit : splitName(addr.recipientName || "");
 
-        const buyerSplit = splitName(addr.fullName || "");
         setBuyerInfo({
             firstName: buyerSplit.firstName,
             lastName: buyerSplit.lastName,
-            mobile: addr.mobile || "",
-            nationalCode: addr.nationalCode || ""
+            mobile: user?.mobile || addr.recipientMobile || "",
+            nationalCode: user?.nationalCode || addr.nationalCode || ""
         });
 
         setAddressInfo({
-            title: addr.title,
+            title: addr.title || "",
             province: addr.province,
             city: addr.city,
             address: addr.address,
-            plaque: addr.plaque,
-            unit: addr.unit,
+            plaque: addr.plaque || "",
+            unit: addr.unit || "",
             postalCode: addr.postalCode,
             isDefault: addr.isDefault
         });
 
-        if (!isMe) {
-            const recipientSplit = splitName(addr.recipientName || "");
-            setRecipientInfo({
-                firstName: recipientSplit.firstName,
-                lastName: recipientSplit.lastName,
-                mobile: addr.recipientPhone || "",
-                nationalCode: addr.recipientNationalCode || ""
-            });
-        } else {
-            setRecipientInfo({ firstName: "", lastName: "", mobile: "", nationalCode: "" });
-        }
+        // For now, we'll treat recipient as "me" for simplicity
+        // since the original address data structure doesn't clearly distinguish buyer vs recipient
+        setIsRecipientMe(true);
+        setRecipientInfo({ firstName: "", lastName: "", mobile: "", nationalCode: "" });
 
         setSheetOpen(true);
     };
@@ -205,8 +197,7 @@ export default function AddressesPage() {
         const buyerFullName = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim();
 
         let finalRecipientName = buyerFullName;
-        let finalRecipientPhone = buyerInfo.mobile;
-        let finalRecipientNationalCode = buyerInfo.nationalCode;
+        let finalRecipientMobile = buyerInfo.mobile;
 
         if (!isRecipientMe) {
             if (!recipientInfo.firstName || !recipientInfo.lastName) {
@@ -217,28 +208,53 @@ export default function AddressesPage() {
                 alert("شماره موبایل گیرنده الزامی است");
                 return;
             }
-            if (!recipientInfo.nationalCode || recipientInfo.nationalCode.length !== 10) {
-                alert("کد ملی گیرنده الزامی است و باید ۱۰ رقم باشد");
-                return;
-            }
             finalRecipientName = `${recipientInfo.firstName} ${recipientInfo.lastName}`.trim();
-            finalRecipientPhone = recipientInfo.mobile;
-            finalRecipientNationalCode = recipientInfo.nationalCode;
+            finalRecipientMobile = recipientInfo.mobile;
         }
 
         try {
             setSubmitLoading(true);
 
-            const payload = {
-                ...addressInfo,
-                fullName: buyerFullName, // Always Buyer Name
-                mobile: buyerInfo.mobile, // Always Buyer Mobile
-                nationalCode: buyerInfo.nationalCode, // Always Buyer National Code
+            // ---------------------------------------------------------
+            // INTEGRATION LOGIC: Sync with Profile
+            // ---------------------------------------------------------
+            const currentProfileName = user?.name || "";
+            const currentProfileNationalCode = user?.nationalCode || "";
+
+            const nameChanged = buyerFullName && buyerFullName !== currentProfileName;
+            const nationalCodeChanged = buyerInfo.nationalCode && buyerInfo.nationalCode !== currentProfileNationalCode;
+
+            if (nameChanged || nationalCodeChanged) {
+                await authService.updateProfile({
+                    name: buyerFullName,
+                    nationalCode: buyerInfo.nationalCode
+                });
+                // Refresh user data locally
+                const updatedUser = await authService.getProfile();
+                setUser(updatedUser);
+            }
+            // ---------------------------------------------------------
+
+            // Build payload with ONLY backend-expected fields
+            const payload: any = {
+                // Required by backend addressSchema
                 recipientName: finalRecipientName,
-                recipientPhone: finalRecipientPhone,
-                recipientNationalCode: finalRecipientNationalCode,
-                phone: finalRecipientPhone // For delivery contact
+                recipientMobile: finalRecipientMobile,
+                province: addressInfo.province,
+                city: addressInfo.city,
+                address: addressInfo.address,
+                plaque: addressInfo.plaque,
+                postalCode: addressInfo.postalCode,
+                isDefault: addressInfo.isDefault
             };
+
+            // Optional fields
+            if (addressInfo.title) {
+                payload.title = addressInfo.title;
+            }
+            if (addressInfo.unit) {
+                payload.unit = addressInfo.unit;
+            }
 
             let response;
             if (editingAddress && editingAddress._id) {
@@ -250,12 +266,9 @@ export default function AddressesPage() {
             if (response.success) {
                 const updatedAddresses = response.data.map((addr: any) => ({
                     ...addr,
-                    fullName: addr.fullName,
-                    mobile: addr.mobile,
+                    recipientName: addr.recipientName || addr.fullName || "",
+                    recipientMobile: addr.recipientMobile || addr.recipientPhone || addr.mobile || "",
                     nationalCode: addr.nationalCode || "",
-                    recipientName: addr.recipientName || addr.fullName,
-                    recipientPhone: addr.recipientPhone || addr.mobile,
-                    recipientNationalCode: addr.recipientNationalCode || addr.nationalCode || "",
                     plaque: addr.plaque || "",
                     unit: addr.unit || ""
                 }));
@@ -276,12 +289,9 @@ export default function AddressesPage() {
             if (response.success) {
                 const updatedAddresses = response.data.map((addr: any) => ({
                     ...addr,
-                    fullName: addr.fullName,
-                    mobile: addr.mobile,
+                    recipientName: addr.recipientName || addr.fullName || "",
+                    recipientMobile: addr.recipientMobile || addr.recipientPhone || addr.mobile || "",
                     nationalCode: addr.nationalCode || "",
-                    recipientName: addr.recipientName || addr.fullName,
-                    recipientPhone: addr.recipientPhone || addr.mobile,
-                    recipientNationalCode: addr.recipientNationalCode || addr.nationalCode || "",
                     plaque: addr.plaque || "",
                     unit: addr.unit || ""
                 }));
@@ -334,7 +344,7 @@ export default function AddressesPage() {
                             <div key={addr._id} className={`bg-white rounded-2xl p-5 border transition-all ${addr.isDefault ? 'border-vita-500 shadow-md shadow-vita-100' : 'border-gray-100 shadow-sm'}`}>
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-center gap-2">
-                                        <span className="font-bold text-gray-800 text-base">{addr.title}</span>
+                                        <span className="font-bold text-gray-800 text-base">{addr.title || "آدرس"}</span>
                                         {addr.isDefault && (
                                             <span className="bg-vita-50 text-vita-600 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                                 <CheckCircle2 size={10} /> پیش‌فرض
@@ -371,11 +381,11 @@ export default function AddressesPage() {
                                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50">
                                         <div className="flex items-center gap-1.5">
                                             <User size={14} className="text-gray-400" />
-                                            <span className="text-xs">{addr.fullName}</span>
+                                            <span className="text-xs">{addr.recipientName}</span>
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <Phone size={14} className="text-gray-400" />
-                                            <span className="text-xs font-mono">{addr.mobile}</span>
+                                            <span className="text-xs font-mono">{addr.recipientMobile}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -412,6 +422,12 @@ export default function AddressesPage() {
                                 <UserCheck size={18} className="text-vita-600" />
                                 مشخصات شما (خریدار)
                             </h3>
+
+                            <div className="bg-blue-50 text-blue-600 p-3 rounded-xl text-xs flex items-start gap-2 leading-relaxed">
+                                <Info size={16} className="shrink-0 mt-0.5" />
+                                اطلاعات وارد شده در این بخش، در پروفایل کاربری شما نیز ذخیره و به‌روزرسانی خواهد شد.
+                            </div>
+
                             <div className="bg-vita-50 p-4 rounded-xl border border-vita-100 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
@@ -441,7 +457,7 @@ export default function AddressesPage() {
                                             value={buyerInfo.mobile}
                                             onChange={(e) => setBuyerInfo({ ...buyerInfo, mobile: e.target.value })}
                                             disabled={!!user?.mobile}
-                                            className={`w-full border rounded-xl p-3 text-sm outline-none transition-all text-left ${user?.mobile ? "bg-gray-100 text-gray-500 border-gray-200" : "bg-white border-gray-200 focus:border-vita-500 focus:ring-1 focus:ring-vita-500"
+                                            className={`w-full border rounded-xl p-3 text-sm outline-none transition-all text-left ${user?.mobile ? "bg-gray-100 text-gray-500 border-gray-200 cursor-not-allowed" : "bg-white border-gray-200 focus:border-vita-500 focus:ring-1 focus:ring-vita-500"
                                                 }`}
                                             dir="ltr"
                                         />
@@ -610,7 +626,7 @@ export default function AddressesPage() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-gray-500 mb-1.5">کد ملی <span className="text-red-500">*</span></label>
+                                                <label className="block text-xs font-bold text-gray-500 mb-1.5">کد ملی</label>
                                                 <input
                                                     type="text"
                                                     value={recipientInfo.nationalCode}

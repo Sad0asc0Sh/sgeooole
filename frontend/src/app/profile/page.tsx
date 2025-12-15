@@ -734,7 +734,7 @@ export default function ProfilePage() {
             <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
                 <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-24">
                     <SheetHeader className="mb-6">
-                        <SheetTitle className="text-center text-lg font-bold text-gray-800">ویرایش اطلاعات کاربری</SheetTitle>
+                        <SheetTitle className="text-center text-lg font-bold text-gray-800">ویرایش سریع اطلاعات کاربری</SheetTitle>
                     </SheetHeader>
                     <div className="space-y-4">
                         <div>

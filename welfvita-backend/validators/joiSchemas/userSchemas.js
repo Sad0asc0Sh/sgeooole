@@ -236,6 +236,24 @@ const addressSchema = Joi.object({
             'any.required': 'آدرس الزامی است',
         }),
 
+    plaque: Joi.string()
+        .trim()
+        .max(20)
+        .required()
+        .messages({
+            'string.max': 'پلاک نباید بیشتر از ۲۰ کاراکتر باشد',
+            'any.required': 'پلاک الزامی است',
+        }),
+
+    unit: Joi.string()
+        .trim()
+        .max(20)
+        .optional()
+        .allow('')
+        .messages({
+            'string.max': 'واحد نباید بیشتر از ۲۰ کاراکتر باشد',
+        }),
+
     postalCode: Joi.string()
         .pattern(/^\d{10}$/)
         .required()
@@ -288,6 +306,17 @@ const addressUpdateSchema = Joi.object({
         .min(10)
         .max(500)
         .optional(),
+
+    plaque: Joi.string()
+        .trim()
+        .max(20)
+        .optional(),
+
+    unit: Joi.string()
+        .trim()
+        .max(20)
+        .optional()
+        .allow(''),
 
     postalCode: Joi.string()
         .pattern(/^\d{10}$/)
