@@ -75,8 +75,9 @@ export default function VerificationPage() {
                 if (userData.addresses && userData.addresses.length > 0) {
                     const defaultAddr = userData.addresses.find((a: any) => a.isDefault) || userData.addresses[0];
                     // If address name is significantly longer (likely contains surname), use it
-                    if (defaultAddr && defaultAddr.fullName && defaultAddr.fullName.trim().length > fullName.trim().length) {
-                        fullName = defaultAddr.fullName;
+                    const addressName = defaultAddr?.fullName || defaultAddr?.recipientName;
+                    if (addressName && addressName.trim().length > fullName.trim().length) {
+                        fullName = addressName;
                     }
                     setPrimaryAddress(defaultAddr);
                 }
@@ -488,7 +489,7 @@ export default function VerificationPage() {
                                                     </p>
                                                     <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
                                                         <span>کد پستی: {primaryAddress.postalCode}</span>
-                                                        <span>گیرنده: {primaryAddress.recipientName || primaryAddress.fullName}</span>
+                                                        <span>گیرنده: {primaryAddress.recipientName || primaryAddress.fullName || user?.name || `${formData.name} ${formData.surname}`.trim() || "—"}</span>
                                                     </div>
                                                 </div>
                                             </div>
