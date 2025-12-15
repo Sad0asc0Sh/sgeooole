@@ -1235,13 +1235,31 @@ exports.updateAvatar = async (req, res) => {
 // Add Address
 exports.addAddress = async (req, res) => {
   try {
-    const { title, fullName, mobile, nationalCode, province, city, address, plaque, unit, postalCode, isDefault } = req.body
+    const {
+      title,
+      fullName,
+      mobile,
+      nationalCode,
+      province,
+      city,
+      address,
+      plaque,
+      unit,
+      postalCode,
+      isDefault,
+      recipientName,
+      recipientPhone,
+      recipientMobile,
+      recipientNationalCode,
+    } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
     const user = await User.findById(userId)
     if (!user) {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
     }
+
+    const resolvedRecipientPhone = recipientPhone || recipientMobile
 
     const newAddress = {
       title,
@@ -1254,7 +1272,10 @@ exports.addAddress = async (req, res) => {
       plaque,
       unit,
       postalCode,
-      isDefault: isDefault || false
+      isDefault: isDefault || false,
+      recipientName,
+      recipientPhone: resolvedRecipientPhone,
+      recipientNationalCode,
     }
 
     // If set as default, unset other default addresses
@@ -1283,7 +1304,23 @@ exports.addAddress = async (req, res) => {
 exports.updateAddress = async (req, res) => {
   try {
     const { addressId } = req.params
-    const { title, fullName, mobile, nationalCode, province, city, address, plaque, unit, postalCode, isDefault } = req.body
+    const {
+      title,
+      fullName,
+      mobile,
+      nationalCode,
+      province,
+      city,
+      address,
+      plaque,
+      unit,
+      postalCode,
+      isDefault,
+      recipientName,
+      recipientPhone,
+      recipientMobile,
+      recipientNationalCode,
+    } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
     const user = await User.findById(userId)
@@ -1307,6 +1344,11 @@ exports.updateAddress = async (req, res) => {
     if (plaque) user.addresses[addressIndex].plaque = plaque
     if (unit) user.addresses[addressIndex].unit = unit
     if (postalCode) user.addresses[addressIndex].postalCode = postalCode
+    if (recipientName) user.addresses[addressIndex].recipientName = recipientName
+
+    const resolvedRecipientPhone = recipientPhone || recipientMobile
+    if (resolvedRecipientPhone) user.addresses[addressIndex].recipientPhone = resolvedRecipientPhone
+    if (recipientNationalCode) user.addresses[addressIndex].recipientNationalCode = recipientNationalCode
 
     if (isDefault !== undefined) {
       if (isDefault) {

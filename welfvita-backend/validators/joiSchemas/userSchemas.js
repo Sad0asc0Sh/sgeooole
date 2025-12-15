@@ -188,6 +188,13 @@ const addressSchema = Joi.object({
             'string.max': 'عنوان آدرس نباید بیشتر از ۱۰۰ کاراکتر باشد',
         }),
 
+    // Buyer info (optional)
+    fullName: Joi.string().trim().min(2).max(100).optional(),
+
+    mobile: Joi.string().pattern(iranMobilePattern).optional(),
+
+    nationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+
     recipientName: Joi.string()
         .trim()
         .min(2)
@@ -199,9 +206,14 @@ const addressSchema = Joi.object({
             'any.required': 'نام گیرنده الزامی است',
         }),
 
+    // Recipient phone (accept both legacy `recipientMobile` and canonical `recipientPhone`)
+    recipientPhone: Joi.string().pattern(iranMobilePattern).optional(),
+
+    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+
     recipientMobile: Joi.string()
         .pattern(iranMobilePattern)
-        .required()
+        .optional()
         .messages({
             'string.pattern.base': 'شماره موبایل گیرنده باید در فرمت 09xxxxxxxxx باشد',
             'any.required': 'شماره موبایل گیرنده الزامی است',
@@ -268,7 +280,7 @@ const addressSchema = Joi.object({
         lat: Joi.number().min(-90).max(90).optional(),
         lng: Joi.number().min(-180).max(180).optional(),
     }).optional(),
-});
+}).or('recipientPhone', 'recipientMobile');
 
 /**
  * Address update schema (all fields optional)
@@ -279,15 +291,25 @@ const addressUpdateSchema = Joi.object({
         .max(100)
         .optional(),
 
+    // Buyer info (optional)
+    fullName: Joi.string().trim().min(2).max(100).optional(),
+
+    mobile: Joi.string().pattern(iranMobilePattern).optional(),
+
+    nationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+
     recipientName: Joi.string()
         .trim()
         .min(2)
         .max(100)
         .optional(),
 
-    recipientMobile: Joi.string()
-        .pattern(iranMobilePattern)
-        .optional(),
+    // Recipient phone (accept both legacy `recipientMobile` and canonical `recipientPhone`)
+    recipientPhone: Joi.string().pattern(iranMobilePattern).optional(),
+
+    recipientMobile: Joi.string().pattern(iranMobilePattern).optional(),
+
+    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
 
     province: Joi.string()
         .trim()
