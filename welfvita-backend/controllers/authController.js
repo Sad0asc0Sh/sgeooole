@@ -107,12 +107,21 @@ exports.updateMyProfile = async (req, res) => {
     if (req.body.companyProvince !== undefined) user.companyProvince = req.body.companyProvince
     if (req.body.companyCity !== undefined) user.companyCity = req.body.companyCity
 
-    // OU_Oñ OñU.Oý O1O"U^Oñ OªO_UOO_ OOñO3OU, O'O_UØOO O›U+ OñO UØO' UcU+
+    // SECURITY: Password validation per NIST/OWASP guidelines
     if (password && password.trim() !== '') {
-      if (password.length < 6) {
+      // Minimum 8 characters
+      if (password.length < 8) {
         return res.status(400).json({
           success: false,
-          message: 'OñU.Oý O1O"U^Oñ O"OUOO_ O-O_OU,U, U UcOOñOUcO¦Oñ O"OO\'O_',
+          message: 'رمز عبور باید حداقل ۸ کاراکتر باشد',
+        })
+      }
+      // Must contain letters and numbers
+      const passwordRegex = /^(?=.*[a-zA-Z])(?=.*[0-9])/
+      if (!passwordRegex.test(password)) {
+        return res.status(400).json({
+          success: false,
+          message: 'رمز عبور باید شامل حروف و اعداد باشد',
         })
       }
       user.password = password

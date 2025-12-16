@@ -21,7 +21,9 @@ const baseConfig: NextConfig = {
     deviceSizes: [360, 640, 768, 1024, 1280, 1536],
     imageSizes: [64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
-    dangerouslyAllowSVG: true,
+    // SECURITY: SVG disabled to prevent XSS attacks
+    // SVG files can contain malicious JavaScript
+    dangerouslyAllowSVG: false,
     contentDispositionType: "attachment",
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
@@ -40,6 +42,40 @@ const baseConfig: NextConfig = {
         port: "5000",
       },
     ],
+  },
+  // SECURITY: Add security headers
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "X-XSS-Protection",
+            value: "1; mode=block",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          ...(process.env.NODE_ENV === "production"
+            ? [
+              {
+                key: "Strict-Transport-Security",
+                value: "max-age=31536000; includeSubDomains; preload",
+              },
+            ]
+            : []),
+        ],
+      },
+    ];
   },
   async redirects() {
     try {

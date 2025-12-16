@@ -6,11 +6,23 @@ const compression = require('compression')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const mongoSanitize = require('express-mongo-sanitize')
-const xss = require('xss-clean')
+// SECURITY: xss-clean removed - using express-validator for input validation instead
+// const xss = require('xss-clean') // DEPRECATED - removed for security
 const hpp = require('hpp')
 require('dotenv').config()
 
+// SECURITY: Silence console.log/info/debug in production
+// Must be loaded AFTER dotenv to read NODE_ENV
+require('./utils/productionConsole')
+
 const app = express()
+
+// ============================================
+// SECURITY: Trust Proxy Configuration
+// Required for rate limiting behind reverse proxies (Nginx, Cloudflare, AWS ELB)
+// Without this, all requests appear from proxy IP, causing false rate limits
+// ============================================
+app.set('trust proxy', 1)
 
 if (process.env.NODE_ENV === 'production') {
   console.log('Security mode: Production (stack traces hidden)')
@@ -19,9 +31,35 @@ if (process.env.NODE_ENV === 'production') {
 // ============================================
 // 1. Security Headers (Helmet)
 // ============================================
-app.use(helmet({
+// ============================================
+// SECURITY: Helmet with Strict Security Headers
+// ============================================
+const helmetConfig = {
   crossOriginResourcePolicy: false, // allow loading images/assets from other origins
-}))
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Required for some CSS
+      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
+      fontSrc: ["'self'", "data:"],
+      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:3000'].filter(Boolean),
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  } : false, // Disable CSP in development for easier debugging
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  noSniff: true, // X-Content-Type-Options: nosniff
+  xssFilter: true,
+  hidePoweredBy: true,
+}
+app.use(helmet(helmetConfig))
 
 // ============================================
 // 2. Rate Limiting
@@ -29,22 +67,20 @@ app.use(helmet({
 
 // Generous limiter for product browsing (public read-only endpoints)
 // These endpoints are hit frequently during normal browsing
+// SECURITY: user-agent bypass removed - it's forgeable by attackers
+// If you need SSR bypass, use a secret internal header from Next.js
 const productLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 200, // 200 requests per minute per IP for products
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Skip rate limiting for server-side requests (Next.js SSR)
-    const userAgent = req.headers['user-agent'] || '';
-    return userAgent.includes('node-fetch') || userAgent.includes('undici');
-  },
   message: { success: false, message: 'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید.' },
 })
 // Apply to product endpoints before general limiter
 app.use('/api/products', productLimiter)
 
 // General API limiter
+// SECURITY: user-agent bypass removed - it's forgeable
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5000, // increased limit to handle more requests per window
@@ -53,9 +89,7 @@ const limiter = rateLimit({
   skip: (req) => {
     // Skip for product endpoints (already handled by productLimiter)
     if (req.path.startsWith('/products')) return true;
-    // Skip rate limiting for server-side requests (Next.js SSR)
-    const userAgent = req.headers['user-agent'] || '';
-    return userAgent.includes('node-fetch') || userAgent.includes('undici');
+    return false;
   },
   message: { success: false, message: 'تعداد درخواست‌های شما بیش از حد مجاز است، لطفاً ۱۵ دقیقه دیگر تلاش کنید.' },
 })
@@ -158,9 +192,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // ============================================
 // 5. Data Sanitization
 // ============================================
-app.use(mongoSanitize()) // NoSQL injection
-app.use(xss()) // XSS protection
-app.use(hpp()) // HTTP Parameter Pollution
+app.use(mongoSanitize()) // NoSQL injection prevention
+// SECURITY NOTE: xss-clean removed - use express-validator for input sanitization
+// XSS protection is handled by:
+// 1. Helmet CSP headers (prevents inline script execution)
+// 2. express-validator sanitization in route handlers
+// 3. React/Next.js automatic output escaping on frontend
+app.use(hpp()) // HTTP Parameter Pollution protection
 
 // Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
@@ -177,9 +215,25 @@ if (process.env.NODE_ENV === 'development') {
 // Routes
 // ============================================
 
-// Health Check with Performance Stats
+// ============================================
+// Health Check Endpoints (Secured)
+// Public: Basic status only
+// Admin: Detailed stats with authentication
+// ============================================
 const { getCacheStats } = require('./middleware/cache')
+
+// Public health check - minimal info to prevent fingerprinting
 app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+  })
+})
+
+// Detailed health check - Admin only (requires auth token)
+const { protect, checkPermission, PERMISSIONS } = require('./middleware/auth')
+app.get('/api/health/details', protect, checkPermission(PERMISSIONS.SETTINGS_READ), (req, res) => {
   const cacheStats = getCacheStats()
   const memUsage = process.memoryUsage()
 
@@ -393,6 +447,12 @@ const connectDB = async () => {
         console.log(`API: http://localhost:${PORT}/api`)
         console.log(`Uploads: http://localhost:${PORT}/uploads`)
         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`)
+
+        // PM2 readiness signal (works with wait_ready: true in ecosystem.config.js)
+        if (process.send) {
+          process.send('ready')
+          console.log('📡 PM2 ready signal sent')
+        }
       })
 
       // Start Jobs

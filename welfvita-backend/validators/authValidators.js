@@ -5,9 +5,12 @@ const emailValidation = body('email')
   .isEmail()
   .withMessage('Email is invalid')
 
+// SECURITY: Minimum 8 characters per NIST/OWASP guidelines
 const passwordValidation = body('password')
-  .isLength({ min: 6, max: 128 })
-  .withMessage('Password must be between 6 and 128 characters')
+  .isLength({ min: 8, max: 128 })
+  .withMessage('رمز عبور باید حداقل ۸ کاراکتر باشد')
+  .matches(/^(?=.*[a-zA-Z])(?=.*[0-9])/)
+  .withMessage('رمز عبور باید شامل حروف و اعداد باشد')
 
 const mobileValidation = body('mobile')
   .optional()

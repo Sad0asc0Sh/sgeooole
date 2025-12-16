@@ -158,10 +158,9 @@ const checkPermission = (requiredPermission) => {
 
     const userRole = req.user.role || 'guest'
 
-    // Superadmin Bypass: Superadmin has access to everything
-    if (userRole === 'superadmin') {
-      return next()
-    }
+    // SECURITY: No hardcoded superadmin bypass
+    // Superadmin permissions are defined in config/rbac.js
+    // This ensures all access is logged and auditable
 
     // Get permissions for the user's role (fail-safe: empty array if role not found)
     const userPermissions = ROLES[userRole] || []
@@ -204,10 +203,8 @@ const checkAnyPermission = (...permissions) => {
 
     const userRole = req.user.role || 'guest'
 
-    // Superadmin Bypass
-    if (userRole === 'superadmin') {
-      return next()
-    }
+    // SECURITY: No hardcoded superadmin bypass
+    // Superadmin permissions are defined in config/rbac.js
 
     const userPermissions = ROLES[userRole] || []
 
@@ -246,10 +243,8 @@ const checkAllPermissions = (...permissions) => {
 
     const userRole = req.user.role || 'guest'
 
-    // Superadmin Bypass
-    if (userRole === 'superadmin') {
-      return next()
-    }
+    // SECURITY: No hardcoded superadmin bypass
+    // Superadmin permissions are defined in config/rbac.js
 
     const userPermissions = ROLES[userRole] || []
 

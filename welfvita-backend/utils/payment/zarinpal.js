@@ -1,9 +1,12 @@
 const axios = require('axios')
+const logger = require('../logger')
 
 /**
  * ZarinPal Payment Strategy
  * Implements payment request and verification for ZarinPal gateway
  */
+
+const isProduction = process.env.NODE_ENV === 'production'
 
 /**
  * درخواست پرداخت به درگاه زرین‌پال
@@ -49,10 +52,10 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
       },
     }
 
-    console.log('🔵 ZarinPal Request:', {
-      url: `${baseUrl}/request.json`,
-      merchantId: merchantId.substring(0, 8) + '***',
+    // SECURITY: Only log non-sensitive data
+    logger.payment('ZarinPal payment request initiated', {
       amount: amountInRials,
+      sandbox: isSandbox,
     })
 
     const response = await axios.post(`${baseUrl}/request.json`, requestData, {
@@ -62,12 +65,14 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
       timeout: 15000, // 15 seconds timeout
     })
 
-    console.log('🟢 ZarinPal Response:', response.data)
-
     const { data } = response.data
 
     // بررسی کد وضعیت (100 = موفق)
     if (data.code === 100) {
+      logger.payment('ZarinPal payment request successful', {
+        authority: data.authority.substring(0, 8) + '***',
+      })
+
       return {
         success: true,
         url: `${startPayUrl}${data.authority}`,
@@ -75,13 +80,18 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
         gateway: 'zarinpal',
       }
     } else {
-      throw new Error(`خطای درگاه زرین‌پال: کد ${data.code}`)
+      const errorMsg = `خطای درگاه زرین‌پال: کد ${data.code}`
+      logger.error(errorMsg)
+      throw new Error(errorMsg)
     }
   } catch (error) {
-    console.error('❌ خطا در درخواست پرداخت زرین‌پال:', error.message)
+    logger.error('خطا در درخواست پرداخت زرین‌پال', { error: error.message })
 
     if (error.response) {
-      console.error('Response data:', error.response.data)
+      logger.error('ZarinPal API error response', {
+        status: error.response.status,
+        // Don't log full response body - may contain sensitive data
+      })
       throw new Error(`خطای درگاه زرین‌پال: ${error.response.data.errors || error.message}`)
     }
 
@@ -115,11 +125,10 @@ exports.verifyPayment = async ({ amount, authority, config }) => {
       authority: authority,
     }
 
-    console.log('🔵 ZarinPal Verify Request:', {
-      url: `${baseUrl}/verify.json`,
-      merchantId: merchantId.substring(0, 8) + '***',
+    // SECURITY: Only log non-sensitive verification data
+    logger.payment('ZarinPal verify request', {
       amount: amountInRials,
-      authority,
+      authority: authority.substring(0, 8) + '***',
     })
 
     const response = await axios.post(`${baseUrl}/verify.json`, verifyData, {
@@ -129,12 +138,15 @@ exports.verifyPayment = async ({ amount, authority, config }) => {
       timeout: 15000,
     })
 
-    console.log('🟢 ZarinPal Verify Response:', response.data)
-
     const { data } = response.data
 
     // کدهای موفقیت: 100 = تراکنش موفق، 101 = تراکنش قبلاً تایید شده
     if (data.code === 100 || data.code === 101) {
+      logger.payment('ZarinPal verification successful', {
+        refId: data.ref_id,
+        // SECURITY: Card info not logged
+      })
+
       return {
         success: true,
         refId: data.ref_id,
@@ -144,6 +156,7 @@ exports.verifyPayment = async ({ amount, authority, config }) => {
         fee: data.fee || null,
       }
     } else {
+      logger.warn('ZarinPal verification failed', { code: data.code })
       return {
         success: false,
         code: data.code,
@@ -151,10 +164,10 @@ exports.verifyPayment = async ({ amount, authority, config }) => {
       }
     }
   } catch (error) {
-    console.error('❌ خطا در تایید پرداخت زرین‌پال:', error.message)
+    logger.error('خطا در تایید پرداخت زرین‌پال', { error: error.message })
 
     if (error.response) {
-      console.error('Response data:', error.response.data)
+      logger.error('ZarinPal verify API error', { status: error.response.status })
     }
 
     return {

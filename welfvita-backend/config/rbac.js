@@ -404,9 +404,9 @@ const ROLES = {
 
 // ============================================
 // Helper function: Check if a role has a specific permission
+// SECURITY: Uses RBAC config only (superadmin has all permissions in ROLES array)
 // ============================================
 const hasPermission = (role, permission) => {
-    if (role === 'superadmin') return true
     const rolePermissions = ROLES[role] || []
     return rolePermissions.includes(permission)
 }
