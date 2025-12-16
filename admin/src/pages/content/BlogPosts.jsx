@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import { Editor } from '@tinymce/tinymce-react'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -41,25 +40,9 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${day} ${month} ${year}`
 }
 
-// تنظیمات Quill برای RTL و فارسی
-const quillModules = {
-  toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }, { 'direction': 'rtl' }],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    [{ 'indent': '-1' }, { 'indent': '+1' }],
-    ['link', 'image'],
-    ['clean']
-  ],
-}
-
-const quillFormats = [
-  'header', 'bold', 'italic', 'underline', 'strike',
-  'color', 'background', 'align', 'direction',
-  'list', 'bullet', 'indent', 'link', 'image'
-]
+// TinyMCE API Key - Free tier (limited features)
+// For production, register at https://www.tiny.cloud/
+const TINYMCE_API_KEY = 'no-api-key'
 
 function BlogPosts() {
   const [posts, setPosts] = useState([])
@@ -323,22 +306,27 @@ function BlogPosts() {
           </Form.Item>
 
           <Form.Item label="محتوا *" required>
-            <div style={{ direction: 'rtl' }}>
-              <ReactQuill
-                theme="snow"
-                value={editorContent}
-                onChange={setEditorContent}
-                modules={quillModules}
-                formats={quillFormats}
-                style={{
-                  height: 300,
-                  marginBottom: 50,
-                  direction: 'rtl',
-                  textAlign: 'right'
-                }}
-                placeholder="محتوای پست را اینجا بنویسید..."
-              />
-            </div>
+            <Editor
+              apiKey={TINYMCE_API_KEY}
+              value={editorContent}
+              onEditorChange={(content) => setEditorContent(content)}
+              init={{
+                height: 400,
+                menubar: false,
+                directionality: 'rtl',
+                language: 'fa',
+                plugins: [
+                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+                  'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                  'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
+                ],
+                toolbar: 'undo redo | blocks | ' +
+                  'bold italic forecolor | alignleft aligncenter ' +
+                  'alignright alignjustify | bullist numlist outdent indent | ' +
+                  'removeformat | help',
+                content_style: 'body { font-family: Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }'
+              }}
+            />
           </Form.Item>
 
           <Form.Item name="metaTitle" label="Meta Title">

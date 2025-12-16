@@ -233,9 +233,13 @@ app.get('/api/health', (req, res) => {
 
 // Detailed health check - Admin only (requires auth token)
 const { protect, checkPermission, PERMISSIONS } = require('./middleware/auth')
-app.get('/api/health/details', protect, checkPermission(PERMISSIONS.SETTINGS_READ), (req, res) => {
+const redis = require('./utils/redis')
+
+app.get('/api/health/details', protect, checkPermission(PERMISSIONS.SETTINGS_READ), async (req, res) => {
   const cacheStats = getCacheStats()
   const memUsage = process.memoryUsage()
+  const redisHealth = redis.getHealthStatus()
+  const redisPing = await redis.ping()
 
   res.json({
     success: true,
@@ -243,6 +247,12 @@ app.get('/api/health/details', protect, checkPermission(PERMISSIONS.SETTINGS_REA
     timestamp: new Date().toISOString(),
     uptime: Math.floor(process.uptime()) + ' seconds',
     database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    redis: {
+      status: redisHealth.status,
+      isConnected: redisHealth.isConnected,
+      ping: redisPing ? 'PONG' : 'FAILED',
+      metrics: redisHealth.metrics,
+    },
     cache: {
       hits: cacheStats.hits,
       misses: cacheStats.misses,
@@ -442,6 +452,14 @@ const connectDB = async () => {
       console.log('Database:', mongoose.connection.name)
 
       // Start Server only after DB connection
+      // Initialize Redis (fail-safe, won't block if Redis is down)
+      const redisModule = require('./utils/redis')
+      redisModule.initRedis().then(() => {
+        console.log('🔴 Redis initialization attempted')
+      }).catch(() => {
+        console.log('⚠️ Redis not available - system will operate without caching')
+      })
+
       app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`)
         console.log(`API: http://localhost:${PORT}/api`)
@@ -495,8 +513,19 @@ mongoose.connection.on('error', (err) => {
 connectDB()
 
 // Graceful Shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server gracefully...')
+
+  // Disconnect Redis first
+  try {
+    const redisModule = require('./utils/redis')
+    await redisModule.disconnect()
+    console.log('Redis connection closed')
+  } catch (e) {
+    // Ignore Redis disconnect errors
+  }
+
+  // Then close MongoDB
   mongoose.connection.close(false, () => {
     console.log('MongoDB connection closed')
     process.exit(0)

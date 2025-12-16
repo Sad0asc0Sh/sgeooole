@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 const Admin = require('../models/Admin')
 const User = require('../models/User')
-const { getClient } = require('../utils/redis')
+const redis = require('../utils/redis')
 
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
@@ -32,8 +32,9 @@ const protect = async (req, res, next) => {
     }
 
     // Check Redis blacklist (logout / password change tokens)
-    const redisClient = getClient()
-    const isBlacklisted = await redisClient.get(`blacklist:${token}`)
+    // ⚠️ FAIL-SAFE: If Redis is down, isTokenBlacklisted returns FALSE
+    // This is intentional - we fail-open to prevent Redis from blocking all auth
+    const isBlacklisted = await redis.isTokenBlacklisted(token)
     if (isBlacklisted) {
       return res.status(401).json({
         success: false,
@@ -90,7 +91,10 @@ const protect = async (req, res, next) => {
 
     next()
   } catch (error) {
-    console.error('Auth middleware error:', error)
+    // Don't log full error for expected JWT errors
+    if (error.name !== 'JsonWebTokenError' && error.name !== 'TokenExpiredError') {
+      console.error('Auth middleware error:', error.message)
+    }
 
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
@@ -283,4 +287,3 @@ module.exports = {
   checkAllPermissions,
   PERMISSIONS, // Re-export for convenience
 }
-

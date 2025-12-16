@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 const User = require('../models/User')
-const { getClient } = require('../utils/redis')
+const redis = require('../utils/redis')
 
 const JWT_SECRET = process.env.JWT_SECRET
 const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
@@ -10,6 +10,8 @@ const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
  * Optional Authentication Middleware
  * اگر توکن موجود باشد، کاربر را شناسایی می‌کند
  * اما اگر توکن نباشد یا نامعتبر باشد، درخواست را مسدود نمی‌کند
+ * 
+ * ⚠️ FAIL-SAFE: If Redis is down, auth continues without blacklist check
  */
 const optionalAuth = async (req, res, next) => {
     try {
@@ -27,9 +29,8 @@ const optionalAuth = async (req, res, next) => {
             return next()
         }
 
-        // Check Redis blacklist
-        const redisClient = getClient()
-        const isBlacklisted = await redisClient.get(`blacklist:${token}`)
+        // Check Redis blacklist (fail-safe: returns false if Redis is down)
+        const isBlacklisted = await redis.isTokenBlacklisted(token)
         if (isBlacklisted) {
             return next() // توکن نامعتبر است اما درخواست را رد نمی‌کنیم
         }
@@ -52,6 +53,7 @@ const optionalAuth = async (req, res, next) => {
         next()
     } catch (error) {
         // در صورت هر خطایی، فقط ادامه می‌دهیم بدون user
+        // No logging needed for optional auth failures
         next()
     }
 }
