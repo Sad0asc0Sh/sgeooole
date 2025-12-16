@@ -366,4 +366,47 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
   }
 };
 
+/**
+ * Fetch related products by category (SSR-safe, uses native fetch)
+ * This replaces productService.getRelated for server components to avoid url.parse() deprecation
+ * @param categoryId - Category ID to fetch products from
+ * @param currentProductId - Current product ID to exclude from results
+ * @param limit - Number of products to return (default: 10)
+ */
+export const fetchRelatedProducts = cache(async (
+  categoryId: string,
+  currentProductId: string,
+  limit: number = 10
+): Promise<(Product & { isActive?: boolean })[]> => {
+  try {
+    // Fetch extra products to ensure we have enough after filtering
+    const fetchLimit = limit + 5;
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?category=${categoryId}&limit=${fetchLimit}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (!response.ok) return [];
+
+    const payload = await response.json();
+    const items = Array.isArray(payload?.data) ? payload.data : [];
+
+    // Filter out the current product and limit results
+    const relatedProducts = items
+      .filter((item: BackendProduct) => (item._id || item.id) !== currentProductId)
+      .slice(0, limit)
+      .map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+
+    return relatedProducts;
+  } catch (error) {
+    console.error(`[productData] Error fetching related products for category ${categoryId}:`, error);
+    return []; // Return empty array instead of throwing to prevent page crash
+  }
+});
+
 export { buildProductUrl };

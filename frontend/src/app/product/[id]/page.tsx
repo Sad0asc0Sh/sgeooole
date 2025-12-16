@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
-import { fetchProductById, fetchProductsForStatic } from "@/lib/productData";
+import { fetchProductById, fetchProductsForStatic, fetchRelatedProducts } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 import ProductRail from "@/components/home/ProductRail";
 
@@ -75,6 +75,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     const [product, relatedProducts] = await Promise.all([
         fetchProductById(id),
         // Fetch related products only if we have a category
+        // Uses native fetch (fetchRelatedProducts) instead of axios to avoid DEP0169 warning
         (async () => {
             try {
                 const currentProduct = await fetchProductById(id);
@@ -84,8 +85,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 const categoryId = currentProduct.categoryPath?.[currentProduct.categoryPath.length - 1]?.id;
                 if (!categoryId) return [];
 
-                const { productService } = await import('@/services/productService');
-                return await productService.getRelated(categoryId, id, 10);
+                // Use SSR-safe fetch function instead of axios-based productService
+                return await fetchRelatedProducts(categoryId, id, 10);
             } catch (error) {
                 console.error('Error fetching related products:', error);
                 return []; // Return empty array on error to prevent page crash
