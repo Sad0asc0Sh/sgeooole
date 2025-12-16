@@ -51,8 +51,8 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                 if (data.success && data.settings?.searchSettings) {
                     setSearchSettings(data.settings.searchSettings);
                 }
-            } catch (error) {
-                console.error('Failed to fetch search settings:', error);
+            } catch {
+                // Silently fail - using default settings when backend is unavailable
             }
         };
 

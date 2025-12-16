@@ -62,8 +62,11 @@ api.interceptors.response.use(
           console.error(`Error: ${data?.message || "Something went wrong"}`);
       }
     } else if (error.request) {
-      // Request was made but no response received
-      console.error("Network error - Unable to reach server");
+      // Request was made but no response received (server not running)
+      // Use console.warn in development to reduce noise
+      if (process.env.NODE_ENV === 'development') {
+        console.warn("[API] Server unreachable - is backend running?");
+      }
     } else {
       // Something else happened
       console.error("Error:", error.message);

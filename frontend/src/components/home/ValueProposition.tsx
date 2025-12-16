@@ -27,11 +27,7 @@ export default function ValueProposition() {
                     {benefits.map((benefit, index) => (
                         <div
                             key={index}
-                            className="flex items-center gap-3 md:gap-4 p-3 md:p-4 lg:p-5 rounded-lg 
-                                     bg-welf-800/50 border border-welf-700 
-                                     hover:border-[#D4AF37] hover:bg-welf-800/70 
-                                     transition-all duration-300 
-                                     hover:shadow-lg hover:shadow-[#D4AF37]/20"
+                            className="flex items-center gap-3 md:gap-4 p-3 md:p-4 lg:p-5 rounded-lg bg-welf-800/50 border border-welf-700 hover:border-[#D4AF37] hover:bg-welf-800/70 transition-all duration-300 hover:shadow-lg hover:shadow-[#D4AF37]/20"
                         >
                             <CheckCircle2
                                 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 flex-shrink-0"
