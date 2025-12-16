@@ -1,6 +1,6 @@
 const multer = require('multer')
 const { v2: cloudinary } = require('cloudinary')
-const { CloudinaryStorage } = require('multer-storage-cloudinary')
+const { Readable } = require('stream')
 const crypto = require('crypto')
 const path = require('path')
 
@@ -66,9 +66,76 @@ const generateSafeFilename = (originalName) => {
 }
 
 // ============================================
-// Cloudinary Storage with Security Enhancements
+// Custom Cloudinary Storage Engine for Multer
+// Compatible with Cloudinary SDK v2.x
+// Replaces deprecated multer-storage-cloudinary
 // ============================================
-const storage = new CloudinaryStorage({
+class CloudinaryStorageEngine {
+  constructor(options = {}) {
+    this.cloudinary = options.cloudinary || cloudinary
+    this.params = options.params || {}
+  }
+
+  _handleFile(req, file, cb) {
+    // Determine upload parameters
+    const getParams = typeof this.params === 'function'
+      ? this.params(req, file)
+      : this.params
+
+    Promise.resolve(getParams)
+      .then((params) => {
+        // Create upload stream to Cloudinary
+        const uploadStream = this.cloudinary.uploader.upload_stream(
+          {
+            folder: params.folder || 'welfvita/uploads',
+            resource_type: params.resource_type || 'image',
+            public_id: params.public_id || crypto.randomUUID(),
+            allowed_formats: params.allowed_formats || ['jpg', 'jpeg', 'png', 'webp', 'gif'],
+          },
+          (error, result) => {
+            if (error) {
+              console.error('[CLOUDINARY] Upload error:', error.message)
+              return cb(error)
+            }
+
+            // Return Cloudinary result matching multer-storage-cloudinary format
+            cb(null, {
+              path: result.secure_url,
+              filename: result.public_id,
+              public_id: result.public_id,
+              size: result.bytes,
+              format: result.format,
+              width: result.width,
+              height: result.height,
+              secure_url: result.secure_url,
+              url: result.url,
+              resource_type: result.resource_type,
+            })
+          }
+        )
+
+        // Pipe file stream to Cloudinary
+        file.stream.pipe(uploadStream)
+      })
+      .catch((err) => {
+        cb(err)
+      })
+  }
+
+  _removeFile(req, file, cb) {
+    // Delete from Cloudinary if needed
+    if (file.public_id) {
+      this.cloudinary.uploader.destroy(file.public_id, { resource_type: 'image' }, cb)
+    } else {
+      cb(null)
+    }
+  }
+}
+
+// ============================================
+// Create Storage Instance
+// ============================================
+const storage = new CloudinaryStorageEngine({
   cloudinary,
   params: (req, file) => {
     let folder = 'welfvita/uploads'
@@ -215,4 +282,5 @@ module.exports = {
   ALLOWED_EXTENSIONS,
   BLOCKED_MIME_TYPES,
   BLOCKED_EXTENSIONS,
+  CloudinaryStorageEngine, // Export for testing/custom usage
 }
