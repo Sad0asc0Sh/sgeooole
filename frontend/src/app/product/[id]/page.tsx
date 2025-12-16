@@ -71,36 +71,34 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
-    // Parallel data fetching to avoid waterfall
-    const [product, relatedProducts] = await Promise.all([
-        fetchProductById(id),
-        // Fetch related products only if we have a category
-        // Uses native fetch (fetchRelatedProducts) instead of axios to avoid DEP0169 warning
-        (async () => {
-            try {
-                const currentProduct = await fetchProductById(id);
-                if (!currentProduct) return [];
-
-                // Get the last category in the path (most specific)
-                const categoryId = currentProduct.categoryPath?.[currentProduct.categoryPath.length - 1]?.id;
-                if (!categoryId) return [];
-
-                // Use SSR-safe fetch function instead of axios-based productService
-                return await fetchRelatedProducts(categoryId, id, 10);
-            } catch (error) {
-                console.error('Error fetching related products:', error);
-                return []; // Return empty array on error to prevent page crash
-            }
-        })()
-    ]);
+    // Step 1: Fetch the main product first
+    const product = await fetchProductById(id);
 
     if (!product) {
         notFound();
     }
 
+    // Step 2: Fetch related products using the product's category
+    // This is SSR-rendered for SEO benefits - crawlers will see related product links
+    let relatedProducts: Awaited<ReturnType<typeof fetchRelatedProducts>> = [];
+
+    try {
+        // Get the most specific category (last in path)
+        const categoryId = product.categoryPath?.[product.categoryPath.length - 1]?.id;
+
+        if (categoryId) {
+            // Use SSR-safe native fetch function (avoids url.parse deprecation)
+            relatedProducts = await fetchRelatedProducts(categoryId, id, 10);
+        }
+    } catch (error) {
+        // Silent fail - don't break the page if related products fail
+        console.error('[ProductPage] Error fetching related products:', error);
+    }
+
     return (
         <>
-            <ProductStructuredData product={product} />
+            {/* SEO: Structured data with related products for better crawling */}
+            <ProductStructuredData product={product} relatedProducts={relatedProducts} />
             <ProductDetailClient product={product} />
 
             {/* Related Products Section */}
