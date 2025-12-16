@@ -7,6 +7,7 @@ import Image from "next/image";
 import { ChevronLeft, Menu, Loader2, Grid3X3 } from "lucide-react";
 import { categoryService, Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
+import { useScrollLock } from "@/hooks/useScrollLock";
 
 // Helper to extract icon URL from category
 const getIconUrl = (category: Category): string | null => {
@@ -86,6 +87,7 @@ export default function DesktopMegaMenu() {
     const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
+    const { lock, unlock } = useScrollLock();
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -137,6 +139,7 @@ export default function DesktopMegaMenu() {
     }, [isOpen]);
 
     const handleMouseEnter = () => {
+        lock();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (!isOpen) {
             const triggerEl = triggerRef.current;
@@ -160,6 +163,7 @@ export default function DesktopMegaMenu() {
     const handleMouseLeave = () => {
         timeoutRef.current = setTimeout(() => {
             setIsOpen(false);
+            unlock();
         }, 200); // Small delay for better UX
     };
 

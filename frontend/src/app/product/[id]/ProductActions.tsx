@@ -8,9 +8,10 @@ import { useCart } from "@/hooks/useCart";
 type ProductActionsProps = {
     product: Product;
     selectedColor: ProductColor | null;
+    isDesktop?: boolean;
 };
 
-export default function ProductActions({ product, selectedColor }: ProductActionsProps) {
+export default function ProductActions({ product, selectedColor, isDesktop = false }: ProductActionsProps) {
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
     const [now, setNow] = useState(() => Date.now());
@@ -95,6 +96,108 @@ export default function ProductActions({ product, selectedColor }: ProductAction
         }
     };
 
+    // Desktop inline layout
+    if (isDesktop) {
+        return (
+            <div className="flex items-center justify-between gap-6">
+                {/* Price Section */}
+                <div className="flex flex-col">
+                    {/* Show old price and discount badge only when there's an active promotion */}
+                    {product.oldPrice && hasActivePromotion && (
+                        <div className="flex items-center gap-3 mb-2">
+                            {product.discount > 0 && (
+                                <div className={`text-white text-xs font-bold px-3 py-1 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
+                                    product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
+                                        product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
+                                            product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
+                                                isFlashDealActive ? 'bg-amber-500' : 'bg-[#ef394e]'
+                                    }`}>
+                                    {product.discount.toLocaleString("fa-IR")}٪
+                                </div>
+                            )}
+                            <span className="text-sm text-gray-400 line-through decoration-gray-300 decoration-1">
+                                {product.oldPrice.toLocaleString("fa-IR")}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <span className="text-3xl font-black text-black">
+                            {displayPrice.toLocaleString("fa-IR")}
+                        </span>
+                        <span className="text-sm text-gray-500">تومان</span>
+                    </div>
+                </div>
+
+                {/* Cart Actions */}
+                <div className="flex-1 max-w-[220px] h-[56px] relative flex justify-end">
+                    <AnimatePresence mode="wait" initial={false}>
+                        {quantity > 0 ? (
+                            <motion.div
+                                key="quantity-controls"
+                                initial={{ opacity: 0, width: "100%" }}
+                                animate={{ opacity: 1, width: "180px" }}
+                                exit={{ opacity: 0, width: "100%" }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="h-full flex items-center justify-between bg-white border-2 border-amber-200 rounded-xl shadow-sm px-2"
+                            >
+                                <motion.button
+                                    whileTap={{ scale: 0.8 }}
+                                    onClick={handleDecrement}
+                                    className="w-11 h-11 flex items-center justify-center text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                                >
+                                    {quantity === 1 ? <Trash2 size={22} /> : <Minus size={22} />}
+                                </motion.button>
+
+                                <motion.span
+                                    key={quantity}
+                                    initial={{ y: 10, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="text-xl font-bold text-amber-700 w-10 text-center"
+                                >
+                                    {quantity.toLocaleString("fa-IR")}
+                                </motion.span>
+
+                                <motion.button
+                                    whileTap={{ scale: 0.8 }}
+                                    onClick={handleIncrement}
+                                    className="w-11 h-11 flex items-center justify-center text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                                >
+                                    <Plus size={22} />
+                                </motion.button>
+                            </motion.div>
+                        ) : (
+                            <motion.button
+                                key="add-to-cart"
+                                initial={{ opacity: 0, width: "180px" }}
+                                animate={{ opacity: 1, width: "100%" }}
+                                exit={{ opacity: 0, width: "180px" }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={handleAddToCart}
+                                disabled={product.countInStock === 0 || addingToCart}
+                                className={`h-full font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all text-base ${product.countInStock === 0
+                                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    : "bg-gradient-to-l from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 shadow-amber-200"
+                                    }`}
+                            >
+                                {product.countInStock === 0 ? (
+                                    "ناموجود"
+                                ) : addingToCart ? (
+                                    <>
+                                        <Loader2 className="animate-spin" size={22} />
+                                        <span>...</span>
+                                    </>
+                                ) : (
+                                    "افزودن به سبد خرید"
+                                )}
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        );
+    }
+
+    // Mobile fixed bottom bar layout (default)
     return (
         <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col">

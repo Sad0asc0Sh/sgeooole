@@ -41,195 +41,385 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
             {/* Track product view */}
             <ProductHistoryTracker product={product} />
 
-            {/* Header (Transparent/Floating) */}
-            <ProductHeader product={product} />
-
-            {/* Gallery Slider - Compact */}
-            <ProductGallery product={product} />
-
-            {/* Info Section - Seamless connection with gallery */}
-            <div className="px-4 py-2 relative bg-white z-10">
-
-                {/* === Digikala-style Category Navigation === */}
-
-                {/* Row 1: Full Category Path (Welfvita > Main Category > Subcategory) */}
-                <div className="space-y-1.5 mb-2">
-                    {product.categoryPath && product.categoryPath.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
-                            {/* Site Name as first breadcrumb item */}
-                            <Link
-                                href="/"
-                                className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
-                            >
-                                ویلف ویتا
-                            </Link>
-                            {product.categoryPath.map((cat, index) => (
-                                <span key={cat.id} className="flex items-center">
-                                    <span className="mx-1 text-gray-400">&lt;</span>
-                                    <Link
-                                        href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
-                                        className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
-                                            ? 'text-red-500 hover:text-red-600'
-                                            : 'text-gray-600 hover:text-vita-700'
-                                            }`}
-                                    >
-                                        {cat.name}
-                                    </Link>
-                                </span>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Row 2: Brand + Product's Last Category */}
-                    {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
-                            <Link
-                                href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
-                            >
-                                {product.brand}
-                            </Link>
-                            <span className="mx-1 text-gray-400">&lt;</span>
-                            <span className="text-gray-700 font-semibold">
-                                {/* Product type in this category */}
-                                {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
-                            </span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Title & Rating */}
-                <div className="flex justify-between items-start mb-1">
-                    <div className="flex flex-col">
-                        <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
-                        {product.enTitle && (
-                            <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Timer for Special Offers / Flash Deals / Campaign Offers */}
-                {(() => {
-                    // Helper logic for offer details - Priority: Campaign > Special Offer > Flash Deal
-                    // Check if we have an active campaign or time-based offer
-                    const endTime = product.specialOfferEndTime || product.flashDealEndTime;
-                    if (!endTime) return null;
-
-                    const endTs = Date.parse(endTime);
-                    // Use real-time now state for countdown check
-                    const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
-                    if (!isCountdownActive) return null;
-
-                    // Determine theme class based on campaignTheme
-                    const theme = product.campaignTheme;
-                    let themeClass = 'bg-red-50 text-red-600'; // Default for Special Offer
-
-                    if (theme === 'gold-red' || theme === 'gold') {
-                        themeClass = 'bg-amber-50 text-amber-700';
-                    } else if (theme === 'red-purple' || theme === 'fire' || theme === 'red') {
-                        themeClass = 'bg-rose-50 text-rose-700';
-                    } else if (theme === 'lime-orange' || theme === 'lime' || theme === 'green-orange') {
-                        themeClass = 'bg-lime-50 text-lime-700';
-                    } else if (theme) {
-                        themeClass = 'bg-blue-50 text-blue-700';
-                    }
-
-                    // Determine label - Use campaignLabel if available, otherwise use defaults
-                    let label = product.campaignLabel;
-                    if (!label) {
-                        if (product.isSpecialOffer) {
-                            label = 'پیشنهاد شگفت‌انگیز';
-                        } else if (product.isFlashDeal) {
-                            label = 'پیشنهاد لحظه‌ای';
-                        } else {
-                            label = 'فروش ویژه';
-                        }
-                    }
-
-                    return (
-                        <div className="mb-4">
-                            <div className={`p-3 rounded-xl flex items-center justify-between ${themeClass}`}>
-                                <span className="text-sm font-bold flex items-center gap-2">
-                                    <Store size={16} />
-                                    {label}
-                                </span>
-                                <div className="flex items-center gap-2" dir="ltr">
-                                    <CountdownTimer
-                                        targetDate={endTime}
-                                        className="text-sm font-bold"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })()}
-
-                {/* Rating Section */}
-                {product.rating > 0 && (
-                    <div className="flex items-center gap-1 mb-4">
-                        <Star size={14} className="text-yellow-400 fill-yellow-400" />
-                        <span className="text-sm font-bold text-gray-800">{product.rating}</span>
-                        <span className="text-xs text-gray-400">
-                            ({product.reviewCount} {product.reviewCount === 0 ? "" : "دیدگاه"})
-                        </span>
-                    </div>
-                )}
-
-                {/* Wishlist & Share Actions */}
-                <ProductSocialActions product={product} />
-
-                <hr className="border-gray-100 mb-6" />
-
-                {/* Color Selector (if colors available) */}
-                <ColorSelector
-                    colors={product.colors || []}
-                    selectedColor={selectedColor}
-                    onColorChange={setSelectedColor}
-                />
-
-                {/* Features (Stock, Brand) */}
-                <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6">
-                    {product.brand && (
-                        <>
-                            <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <ShieldCheck size={18} className="text-gray-400" />
-                                <span>برند: {product.brand}</span>
-                            </div>
-                            <div className="h-px bg-gray-200 w-full" />
-                        </>
-                    )}
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <Store size={18} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
-                        <span>
-                            {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Low Stock Warning - Only show when stock is 1, 2, or 3 */}
-                {product.countInStock > 0 && product.countInStock <= 3 && (
-                    <div className="mb-6 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
-                        <div className="p-2 bg-amber-100 rounded-lg">
-                            <AlertTriangle size={20} className="text-amber-600" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-bold text-amber-800">
-                                تنها {product.countInStock} عدد باقی مانده!
-                            </span>
-                            <span className="text-xs text-amber-600">
-                                قبل از اتمام موجودی اقدام کنید
-                            </span>
-                        </div>
-                    </div>
-                )}
-
-                {/* Product Tabs (Description, Specs, Reviews) */}
-                <ProductTabs product={product} />
-
+            {/* Header (Transparent/Floating) - Only show on mobile */}
+            <div className="lg:hidden">
+                <ProductHeader product={product} />
             </div>
 
-            {/* Sticky Action Bar */}
-            <ProductActions product={product} selectedColor={selectedColor} />
+
+            {/* Desktop Two-Column Layout - With proper header clearance */}
+            <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8">
+                <div className="flex flex-row-reverse gap-10">
+                    {/* Right Column - Gallery (Sticky) - Positioned below header with margin */}
+                    <div className="w-[45%] flex-shrink-0">
+                        <div className="sticky top-36">
+                            <ProductGallery product={product} />
+                        </div>
+                    </div>
+
+                    {/* Left Column - Product Info */}
+                    <div className="flex-1 min-w-0">
+                        {/* Breadcrumb */}
+                        <div className="space-y-1.5 mb-4">
+                            {product.categoryPath && product.categoryPath.length > 0 && (
+                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
+                                    <Link
+                                        href="/"
+                                        className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
+                                    >
+                                        ویلف ویتا
+                                    </Link>
+                                    {product.categoryPath.map((cat, index) => (
+                                        <span key={cat.id} className="flex items-center">
+                                            <span className="mx-1 text-gray-400">&lt;</span>
+                                            <Link
+                                                href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
+                                                className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
+                                                    ? 'text-red-500 hover:text-red-600'
+                                                    : 'text-gray-600 hover:text-vita-700'
+                                                    }`}
+                                            >
+                                                {cat.name}
+                                            </Link>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
+                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
+                                    <Link
+                                        href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                        className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
+                                    >
+                                        {product.brand}
+                                    </Link>
+                                    <span className="mx-1 text-gray-400">&lt;</span>
+                                    <span className="text-gray-700 font-semibold">
+                                        {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Title & Rating */}
+                        <div className="mb-4">
+                            <h1 className="text-2xl font-bold text-gray-900 leading-snug mb-1">{product.title}</h1>
+                            {product.enTitle && (
+                                <span className="text-sm text-gray-400 font-mono">{product.enTitle}</span>
+                            )}
+                        </div>
+
+                        {/* Rating Section */}
+                        {product.rating > 0 && (
+                            <div className="flex items-center gap-2 mb-4">
+                                <Star size={16} className="text-yellow-400 fill-yellow-400" />
+                                <span className="text-base font-bold text-gray-800">{product.rating}</span>
+                                <span className="text-sm text-gray-400">
+                                    ({product.reviewCount} {product.reviewCount === 0 ? "" : "دیدگاه"})
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Timer for Special Offers */}
+                        {(() => {
+                            const endTime = product.specialOfferEndTime || product.flashDealEndTime;
+                            if (!endTime) return null;
+
+                            const endTs = Date.parse(endTime);
+                            const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
+                            if (!isCountdownActive) return null;
+
+                            const theme = product.campaignTheme;
+                            let themeClass = 'bg-red-50 text-red-600';
+
+                            if (theme === 'gold-red' || theme === 'gold') {
+                                themeClass = 'bg-amber-50 text-amber-700';
+                            } else if (theme === 'red-purple' || theme === 'fire' || theme === 'red') {
+                                themeClass = 'bg-rose-50 text-rose-700';
+                            } else if (theme === 'lime-orange' || theme === 'lime' || theme === 'green-orange') {
+                                themeClass = 'bg-lime-50 text-lime-700';
+                            } else if (theme) {
+                                themeClass = 'bg-blue-50 text-blue-700';
+                            }
+
+                            let label = product.campaignLabel;
+                            if (!label) {
+                                if (product.isSpecialOffer) {
+                                    label = 'پیشنهاد شگفت‌انگیز';
+                                } else if (product.isFlashDeal) {
+                                    label = 'پیشنهاد لحظه‌ای';
+                                } else {
+                                    label = 'فروش ویژه';
+                                }
+                            }
+
+                            return (
+                                <div className="mb-6">
+                                    <div className={`p-4 rounded-xl flex items-center justify-between ${themeClass}`}>
+                                        <span className="text-base font-bold flex items-center gap-2">
+                                            <Store size={18} />
+                                            {label}
+                                        </span>
+                                        <div className="flex items-center gap-2" dir="ltr">
+                                            <CountdownTimer
+                                                targetDate={endTime}
+                                                className="text-base font-bold"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Wishlist & Share Actions */}
+                        <ProductSocialActions product={product} />
+
+                        <hr className="border-gray-100 my-6" />
+
+                        {/* Color Selector */}
+                        <ColorSelector
+                            colors={product.colors || []}
+                            selectedColor={selectedColor}
+                            onColorChange={setSelectedColor}
+                        />
+
+                        {/* Features (Stock, Brand) */}
+                        <div className="bg-gray-50 rounded-xl p-5 space-y-4 mb-6">
+                            {product.brand && (
+                                <>
+                                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                                        <ShieldCheck size={20} className="text-gray-400" />
+                                        <span>برند: {product.brand}</span>
+                                    </div>
+                                    <div className="h-px bg-gray-200 w-full" />
+                                </>
+                            )}
+                            <div className="flex items-center gap-3 text-sm text-gray-600">
+                                <Store size={20} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
+                                <span>
+                                    {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Low Stock Warning */}
+                        {product.countInStock > 0 && product.countInStock <= 3 && (
+                            <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
+                                <div className="p-2 bg-amber-100 rounded-lg">
+                                    <AlertTriangle size={22} className="text-amber-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-base font-bold text-amber-800">
+                                        تنها {product.countInStock} عدد باقی مانده!
+                                    </span>
+                                    <span className="text-sm text-amber-600">
+                                        قبل از اتمام موجودی اقدام کنید
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Desktop Price & Add to Cart Box */}
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+                            <ProductActions product={product} selectedColor={selectedColor} isDesktop={true} />
+                        </div>
+
+                        {/* Product Tabs */}
+                        <ProductTabs product={product} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile Layout - Unchanged */}
+            <div className="lg:hidden">
+                {/* Gallery Slider - Compact */}
+                <ProductGallery product={product} />
+
+                {/* Info Section - Seamless connection with gallery */}
+                <div className="px-4 py-2 relative bg-white z-10">
+
+                    {/* === Digikala-style Category Navigation === */}
+
+                    {/* Row 1: Full Category Path (Welfvita > Main Category > Subcategory) */}
+                    <div className="space-y-1.5 mb-2">
+                        {product.categoryPath && product.categoryPath.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
+                                {/* Site Name as first breadcrumb item */}
+                                <Link
+                                    href="/"
+                                    className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
+                                >
+                                    ویلف ویتا
+                                </Link>
+                                {product.categoryPath.map((cat, index) => (
+                                    <span key={cat.id} className="flex items-center">
+                                        <span className="mx-1 text-gray-400">&lt;</span>
+                                        <Link
+                                            href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
+                                            className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
+                                                ? 'text-red-500 hover:text-red-600'
+                                                : 'text-gray-600 hover:text-vita-700'
+                                                }`}
+                                        >
+                                            {cat.name}
+                                        </Link>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Row 2: Brand + Product's Last Category */}
+                        {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
+                            <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
+                                <Link
+                                    href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                    className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
+                                >
+                                    {product.brand}
+                                </Link>
+                                <span className="mx-1 text-gray-400">&lt;</span>
+                                <span className="text-gray-700 font-semibold">
+                                    {/* Product type in this category */}
+                                    {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Title & Rating */}
+                    <div className="flex justify-between items-start mb-1">
+                        <div className="flex flex-col">
+                            <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
+                            {product.enTitle && (
+                                <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Timer for Special Offers / Flash Deals / Campaign Offers */}
+                    {(() => {
+                        // Helper logic for offer details - Priority: Campaign > Special Offer > Flash Deal
+                        // Check if we have an active campaign or time-based offer
+                        const endTime = product.specialOfferEndTime || product.flashDealEndTime;
+                        if (!endTime) return null;
+
+                        const endTs = Date.parse(endTime);
+                        // Use real-time now state for countdown check
+                        const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
+                        if (!isCountdownActive) return null;
+
+                        // Determine theme class based on campaignTheme
+                        const theme = product.campaignTheme;
+                        let themeClass = 'bg-red-50 text-red-600'; // Default for Special Offer
+
+                        if (theme === 'gold-red' || theme === 'gold') {
+                            themeClass = 'bg-amber-50 text-amber-700';
+                        } else if (theme === 'red-purple' || theme === 'fire' || theme === 'red') {
+                            themeClass = 'bg-rose-50 text-rose-700';
+                        } else if (theme === 'lime-orange' || theme === 'lime' || theme === 'green-orange') {
+                            themeClass = 'bg-lime-50 text-lime-700';
+                        } else if (theme) {
+                            themeClass = 'bg-blue-50 text-blue-700';
+                        }
+
+                        // Determine label - Use campaignLabel if available, otherwise use defaults
+                        let label = product.campaignLabel;
+                        if (!label) {
+                            if (product.isSpecialOffer) {
+                                label = 'پیشنهاد شگفت‌انگیز';
+                            } else if (product.isFlashDeal) {
+                                label = 'پیشنهاد لحظه‌ای';
+                            } else {
+                                label = 'فروش ویژه';
+                            }
+                        }
+
+                        return (
+                            <div className="mb-4">
+                                <div className={`p-3 rounded-xl flex items-center justify-between ${themeClass}`}>
+                                    <span className="text-sm font-bold flex items-center gap-2">
+                                        <Store size={16} />
+                                        {label}
+                                    </span>
+                                    <div className="flex items-center gap-2" dir="ltr">
+                                        <CountdownTimer
+                                            targetDate={endTime}
+                                            className="text-sm font-bold"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* Rating Section */}
+                    {product.rating > 0 && (
+                        <div className="flex items-center gap-1 mb-4">
+                            <Star size={14} className="text-yellow-400 fill-yellow-400" />
+                            <span className="text-sm font-bold text-gray-800">{product.rating}</span>
+                            <span className="text-xs text-gray-400">
+                                ({product.reviewCount} {product.reviewCount === 0 ? "" : "دیدگاه"})
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Wishlist & Share Actions */}
+                    <ProductSocialActions product={product} />
+
+                    <hr className="border-gray-100 mb-6" />
+
+                    {/* Color Selector (if colors available) */}
+                    <ColorSelector
+                        colors={product.colors || []}
+                        selectedColor={selectedColor}
+                        onColorChange={setSelectedColor}
+                    />
+
+                    {/* Features (Stock, Brand) */}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6">
+                        {product.brand && (
+                            <>
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <ShieldCheck size={18} className="text-gray-400" />
+                                    <span>برند: {product.brand}</span>
+                                </div>
+                                <div className="h-px bg-gray-200 w-full" />
+                            </>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <Store size={18} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
+                            <span>
+                                {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Low Stock Warning - Only show when stock is 1, 2, or 3 */}
+                    {product.countInStock > 0 && product.countInStock <= 3 && (
+                        <div className="mb-6 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
+                            <div className="p-2 bg-amber-100 rounded-lg">
+                                <AlertTriangle size={20} className="text-amber-600" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-sm font-bold text-amber-800">
+                                    تنها {product.countInStock} عدد باقی مانده!
+                                </span>
+                                <span className="text-xs text-amber-600">
+                                    قبل از اتمام موجودی اقدام کنید
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Product Tabs (Description, Specs, Reviews) */}
+                    <ProductTabs product={product} />
+
+                </div>
+
+                {/* Sticky Action Bar */}
+                <ProductActions product={product} selectedColor={selectedColor} />
+            </div>
         </div>
     );
 }
