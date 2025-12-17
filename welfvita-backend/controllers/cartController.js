@@ -31,6 +31,32 @@ async function getCartSettings() {
   }
 }
 
+const normalizeVariantOptions = (variantOptions) => {
+  if (!Array.isArray(variantOptions)) return []
+
+  return variantOptions
+    .filter((vo) => vo && vo.name != null && vo.value != null)
+    .map((vo) => ({
+      name: String(vo.name).trim(),
+      value: String(vo.value).trim(),
+    }))
+    .sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name)
+      if (nameCompare !== 0) return nameCompare
+      return a.value.localeCompare(b.value)
+    })
+}
+
+const getVariantKey = (normalizedVariantOptions) => {
+  if (!Array.isArray(normalizedVariantOptions) || normalizedVariantOptions.length === 0) {
+    return 'no-variant'
+  }
+
+  return normalizedVariantOptions
+    .map((vo) => `${String(vo.name).trim()}:${String(vo.value).trim()}`)
+    .join('|')
+}
+
 const findMatchingVariant = (product, variantOptions) => {
   if (
     !product ||
@@ -172,6 +198,7 @@ const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => 
     items: enhancedItems,
     totalPrice,
     couponCode: populatedCart.couponCode,
+    version: populatedCart.version ?? 0,
   }
 }
 
@@ -434,6 +461,7 @@ exports.getMyCart = async (req, res) => {
         data: {
           items: [],
           totalPrice: 0,
+          version: 0,
         },
       })
     }
@@ -446,6 +474,7 @@ exports.getMyCart = async (req, res) => {
         items: pricedCart.items,
         totalPrice: pricedCart.totalPrice,
         couponCode: pricedCart.couponCode,
+        version: pricedCart.version,
       },
     })
   } catch (error) {
@@ -494,9 +523,25 @@ exports.syncCart = async (req, res) => {
       }
 
       // پیدا کردن آیتم در سبد موجود
-      const existingItemIndex = cart.items.findIndex(
-        (item) => item.product.toString() === incomingItem.product
-      )
+      const incomingVariantOptions = normalizeVariantOptions(incomingItem.variantOptions)
+      const incomingVariantKey = getVariantKey(incomingVariantOptions)
+
+      const existingItemIndex = cart.items.findIndex((item) => {
+        if (item.product.toString() !== incomingItem.product) return false
+
+        if (item.variantKey && item.variantKey === incomingVariantKey) return true
+
+        const itemVariants = Array.isArray(item.variantOptions) ? item.variantOptions : []
+        if (itemVariants.length !== incomingVariantOptions.length) return false
+
+        return itemVariants.every((v1) =>
+          incomingVariantOptions.some((v2) =>
+            v1 && v2 &&
+            String(v1.name).trim() === String(v2.name).trim() &&
+            String(v1.value).trim() === String(v2.value).trim()
+          )
+        )
+      })
 
       if (existingItemIndex > -1) {
         // به‌روزرسانی تعداد (حداکثر مقدار)
@@ -505,6 +550,8 @@ exports.syncCart = async (req, res) => {
           incomingItem.quantity || 1
         )
         cart.items[existingItemIndex].price = product.price
+        cart.items[existingItemIndex].variantOptions = incomingVariantOptions
+        cart.items[existingItemIndex].variantKey = incomingVariantKey
       } else {
         // افزودن آیتم جدید
         cart.items.push({
@@ -515,13 +562,15 @@ exports.syncCart = async (req, res) => {
           image: product.images && product.images[0] ?
             (typeof product.images[0] === 'string' ? product.images[0] : product.images[0].url) :
             null,
-          variantOptions: incomingItem.variantOptions || [],
+          variantOptions: incomingVariantOptions,
+          variantKey: incomingVariantKey,
         })
       }
     }
 
     // محاسبه و ذخیره
     cart.calculateTotal()
+    cart.version = (Number(cart.version) || 0) + 1
     await cart.save()
 
     // بازگرداندن سبد populated با اعمال تخفیف‌های فعال
@@ -533,6 +582,7 @@ exports.syncCart = async (req, res) => {
         items: pricedCart.items,
         totalPrice: pricedCart.totalPrice,
         couponCode: pricedCart.couponCode,
+        version: pricedCart.version,
       },
     })
   } catch (error) {
@@ -551,11 +601,281 @@ exports.syncCart = async (req, res) => {
 // ============================================
 // POST /api/cart/item - افزودن/به‌روزرسانی آیتم
 // ============================================
+// ============================================
+// POST /api/cart/item/adjust - Atomic delta update (race-safe)
+// Body: { product, delta, variantOptions? }
+// ============================================
+exports.adjustItemQuantity = async (req, res) => {
+  try {
+    console.log('[CART] Adjust Item Request:', req.body)
+
+    const { product: productId, delta, variantOptions } = req.body
+
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      })
+    }
+
+    const userId = req.user._id
+    const parsedDelta = Number(delta)
+
+    if (!productId || !Number.isFinite(parsedDelta) || parsedDelta === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid input: product and non-zero delta are required',
+      })
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Product ID format',
+      })
+    }
+
+    const normalizedVariantOptions = normalizeVariantOptions(variantOptions)
+    const variantKey = getVariantKey(normalizedVariantOptions)
+
+    const product = await Product.findById(productId)
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found',
+      })
+    }
+
+    // Resolve base price & image (variant-aware)
+    const matchingVariant = findMatchingVariant(product, normalizedVariantOptions)
+    const resolvedPrice = Number((matchingVariant && matchingVariant.price) ?? product.price ?? 0) || 0
+
+    let resolvedImage =
+      Array.isArray(product.images) && product.images[0]
+        ? typeof product.images[0] === 'string'
+          ? product.images[0]
+          : product.images[0].url
+        : null
+
+    if (matchingVariant && Array.isArray(matchingVariant.images) && matchingVariant.images.length > 0) {
+      resolvedImage = matchingVariant.images[0].url || matchingVariant.images[0]
+    }
+
+    const cartSettings = await getCartSettings()
+    const expiryUpdate = {}
+
+    if (cartSettings.permanentCart) {
+      expiryUpdate.expiresAt = null
+      expiryUpdate.isExpired = false
+      expiryUpdate.expiryWarningSent = false
+    } else if (cartSettings.autoExpireEnabled) {
+      expiryUpdate.expiresAt = new Date(Date.now() + cartSettings.ttlHours * 60 * 60 * 1000)
+      expiryUpdate.isExpired = false
+      expiryUpdate.expiryWarningSent = false
+    }
+
+    // Ensure cart exists (single doc per user)
+    const baseCart = await Cart.findOneAndUpdate(
+      { user: userId, status: 'active' },
+      { $setOnInsert: { user: userId, status: 'active', items: [], totalPrice: 0, version: 0 } },
+      { new: true, upsert: true },
+    ).select('_id expiresAt version')
+
+    const cartId = baseCart._id
+
+    // Match item by stable variantKey, but also support legacy cart items that don't yet have variantKey stored.
+    // For legacy items we fall back to a set-equality match on variantOptions (order-insensitive).
+    const matchVariant = (() => {
+      if (variantKey === 'no-variant') {
+        return {
+          $or: [
+            { variantKey: 'no-variant' },
+            {
+              variantKey: { $exists: false },
+              $or: [{ variantOptions: { $exists: false } }, { variantOptions: { $size: 0 } }],
+            },
+            {
+              variantKey: null,
+              $or: [{ variantOptions: { $exists: false } }, { variantOptions: { $size: 0 } }],
+            },
+          ],
+        }
+      }
+
+      const normalized = Array.isArray(normalizedVariantOptions) ? normalizedVariantOptions : []
+      const variantOptionsSetMatch =
+        normalized.length === 0
+          ? { $or: [{ variantOptions: { $exists: false } }, { variantOptions: { $size: 0 } }] }
+          : {
+              variantOptions: {
+                $size: normalized.length,
+                $all: normalized.map((opt) => ({
+                  $elemMatch: { name: opt.name, value: opt.value },
+                })),
+              },
+            }
+
+      return {
+        $or: [
+          { variantKey },
+          { variantKey: { $exists: false }, ...variantOptionsSetMatch },
+          { variantKey: null, ...variantOptionsSetMatch },
+        ],
+      }
+    })()
+
+    const itemMatch = { product: product._id, ...matchVariant }
+
+    let updatedCart = null
+
+    if (parsedDelta > 0) {
+      // 1) Try atomic increment on existing item
+      updatedCart = await Cart.findOneAndUpdate(
+        { _id: cartId, items: { $elemMatch: itemMatch } },
+        {
+          $inc: { 'items.$.quantity': parsedDelta, version: 1 },
+          $set: {
+            'items.$.name': product.name,
+            'items.$.price': resolvedPrice,
+            'items.$.image': resolvedImage,
+            'items.$.variantOptions': normalizedVariantOptions,
+            'items.$.variantKey': variantKey,
+            ...expiryUpdate,
+          },
+        },
+        { new: true },
+      )
+
+      // 2) If item doesn't exist, push it (guarded to prevent duplicates)
+      if (!updatedCart) {
+        updatedCart = await Cart.findOneAndUpdate(
+          { _id: cartId, items: { $not: { $elemMatch: itemMatch } } },
+          {
+            $push: {
+              items: {
+                product: product._id,
+                name: product.name,
+                price: resolvedPrice,
+                quantity: parsedDelta,
+                image: resolvedImage,
+                variantOptions: normalizedVariantOptions,
+                variantKey,
+              },
+            },
+            $inc: { version: 1 },
+            $set: { ...expiryUpdate },
+          },
+          { new: true },
+        )
+
+        // 3) If another request inserted it first, retry the increment once
+        if (!updatedCart) {
+          updatedCart = await Cart.findOneAndUpdate(
+            { _id: cartId, items: { $elemMatch: itemMatch } },
+            {
+              $inc: { 'items.$.quantity': parsedDelta, version: 1 },
+              $set: {
+                'items.$.name': product.name,
+                'items.$.price': resolvedPrice,
+                'items.$.image': resolvedImage,
+                'items.$.variantOptions': normalizedVariantOptions,
+                'items.$.variantKey': variantKey,
+                ...expiryUpdate,
+              },
+            },
+            { new: true },
+          )
+        }
+      }
+    } else {
+      // Negative delta: safe decrement (never below 1); removal handled by removeItem endpoint.
+      const minQty = Math.abs(parsedDelta) + 1
+      updatedCart = await Cart.findOneAndUpdate(
+        { _id: cartId, items: { $elemMatch: { ...itemMatch, quantity: { $gte: minQty } } } },
+        {
+          $inc: { 'items.$.quantity': parsedDelta, version: 1 },
+          $set: {
+            'items.$.name': product.name,
+            'items.$.price': resolvedPrice,
+            'items.$.image': resolvedImage,
+            'items.$.variantOptions': normalizedVariantOptions,
+            'items.$.variantKey': variantKey,
+            ...expiryUpdate,
+          },
+        },
+        { new: true },
+      )
+
+      if (!updatedCart) {
+        // Distinguish between "item missing" (e.g. removed concurrently / legacy mismatch) vs "min qty violation".
+        const cartWithItem = await Cart.findOne(
+          { _id: cartId, items: { $elemMatch: itemMatch } },
+          { version: 1, expiresAt: 1, items: { $elemMatch: itemMatch } },
+        ).lean()
+
+        // Item is not present anymore: treat as no-op success so clients can reconcile without surfacing an error.
+        if (!cartWithItem || !Array.isArray(cartWithItem.items) || cartWithItem.items.length === 0) {
+          const pricedCart = await buildCartResponse(cartId, { updateStoredTotal: false })
+          return res.json({
+            success: true,
+            data: {
+              items: pricedCart.items,
+              totalPrice: pricedCart.totalPrice,
+              couponCode: pricedCart.couponCode,
+              expiresAt: baseCart.expiresAt,
+              version: pricedCart.version,
+            },
+          })
+        }
+
+        const currentQty = Number(cartWithItem.items[0]?.quantity ?? cartWithItem.items[0]?.qty ?? 1) || 1
+
+        return res.status(409).json({
+          success: false,
+          code: 'CART_MIN_QTY',
+          message: 'Quantity would drop below 1; use remove endpoint instead',
+          currentQuantity: currentQty,
+          version: cartWithItem.version ?? 0,
+        })
+      }
+    }
+
+    if (!updatedCart) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update cart',
+      })
+    }
+
+    const pricedCart = await buildCartResponse(updatedCart._id, { updateStoredTotal: true })
+
+    res.json({
+      success: true,
+      data: {
+        items: pricedCart.items,
+        totalPrice: pricedCart.totalPrice,
+        couponCode: pricedCart.couponCode,
+        expiresAt: updatedCart.expiresAt,
+        version: pricedCart.version,
+      },
+    })
+  } catch (error) {
+    console.error('[CART] Error adjusting cart item:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error adjusting cart item',
+      error: error.message,
+    })
+  }
+}
+
 exports.addOrUpdateItem = async (req, res) => {
   try {
     console.log('[CART] Add/Update Item Request:', req.body)
 
     const { product: productId, quantity, variantOptions } = req.body
+    const normalizedVariantOptions = normalizeVariantOptions(variantOptions)
+    const variantKey = getVariantKey(normalizedVariantOptions)
 
     if (!req.user || !req.user._id) {
       console.error('[CART] User not found in request')
@@ -603,11 +923,11 @@ exports.addOrUpdateItem = async (req, res) => {
       null
 
     // اگر محصول متغیر است، قیمت را از واریانت پیدا کن
-    if (product.productType === 'variable' && Array.isArray(variantOptions) && variantOptions.length > 0) {
+    if (product.productType === 'variable' && Array.isArray(normalizedVariantOptions) && normalizedVariantOptions.length > 0) {
       const matchingVariant = product.variants.find(variant => {
         // بررسی تطابق همه گزینه‌ها
         return variant.options.every(opt =>
-          variantOptions.some(vo =>
+          normalizedVariantOptions.some(vo =>
             vo.name === opt.name && vo.value === opt.value
           )
         )
@@ -652,7 +972,7 @@ exports.addOrUpdateItem = async (req, res) => {
 
       // بررسی variantOptions
       const itemVariants = Array.isArray(item.variantOptions) ? item.variantOptions : []
-      const newVariants = Array.isArray(variantOptions) ? variantOptions : []
+      const newVariants = normalizedVariantOptions
 
       // اگر تعداد variant ها فرق کند، آیتم‌های متفاوتی هستند
       if (itemVariants.length !== newVariants.length) return false
@@ -671,6 +991,9 @@ exports.addOrUpdateItem = async (req, res) => {
       // به‌روزرسانی تعداد
       cart.items[existingItemIndex].quantity = quantity
       cart.items[existingItemIndex].price = finalPrice
+      cart.items[existingItemIndex].image = finalImage
+      cart.items[existingItemIndex].variantOptions = normalizedVariantOptions
+      cart.items[existingItemIndex].variantKey = variantKey
     } else {
       // افزودن آیتم جدید
       cart.items.push({
@@ -679,7 +1002,8 @@ exports.addOrUpdateItem = async (req, res) => {
         price: finalPrice,
         quantity,
         image: finalImage,
-        variantOptions: variantOptions || [],
+        variantOptions: normalizedVariantOptions,
+        variantKey,
       })
     }
 
@@ -704,6 +1028,8 @@ exports.addOrUpdateItem = async (req, res) => {
       cart.expiryWarningSent = false // Reset warning flag on cart update
     }
 
+    cart.version = (Number(cart.version) || 0) + 1
+
     console.log('[CART] Saving cart...')
     await cart.save()
     console.log('[CART] Cart saved successfully')
@@ -716,7 +1042,9 @@ exports.addOrUpdateItem = async (req, res) => {
       data: {
         items: pricedCart.items,
         totalPrice: pricedCart.totalPrice,
+        couponCode: pricedCart.couponCode,
         expiresAt: cart.expiresAt,
+        version: pricedCart.version,
       },
     })
   } catch (error) {
@@ -786,6 +1114,7 @@ exports.removeItem = async (req, res) => {
 
     // محاسبه و ذخیره
     cart.calculateTotal()
+    cart.version = (Number(cart.version) || 0) + 1
     await cart.save()
 
     // بازگرداندن سبد populated با محاسبه تخفیف‌های فعال
@@ -796,6 +1125,8 @@ exports.removeItem = async (req, res) => {
       data: {
         items: pricedCart.items,
         totalPrice: pricedCart.totalPrice,
+        couponCode: pricedCart.couponCode,
+        version: pricedCart.version,
       },
     })
   } catch (error) {
@@ -831,6 +1162,7 @@ exports.clearCart = async (req, res) => {
     // پاک کردن آیتم‌ها
     cart.items = []
     cart.totalPrice = 0
+    cart.version = (Number(cart.version) || 0) + 1
     await cart.save()
 
     res.json({
@@ -839,6 +1171,7 @@ exports.clearCart = async (req, res) => {
       data: {
         items: [],
         totalPrice: 0,
+        version: cart.version || 0,
       },
     })
   } catch (error) {

@@ -7,6 +7,7 @@ const {
   sendSmsReminder,
   getMyCart,
   syncCart,
+  adjustItemQuantity,
   addOrUpdateItem,
   removeItem,
   clearCart,
@@ -94,6 +95,7 @@ router.post('/cart/sync', protect, syncCart)
 // نیاز به احراز هویت (مشتری لاگین شده)
 // Body: { product, quantity, variantOptions? }
 router.post('/cart/item', protect, addOrUpdateItem)
+router.post('/cart/item/adjust', protect, adjustItemQuantity)
 
 // DELETE /api/cart/item/:productId - حذف آیتم از سبد
 // نیاز به احراز هویت (مشتری لاگین شده)
@@ -104,4 +106,3 @@ router.delete('/cart/item/:productId', protect, removeItem)
 router.delete('/cart', protect, clearCart)
 
 module.exports = router
-

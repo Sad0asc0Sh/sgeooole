@@ -268,8 +268,7 @@ export const fetchProductById = cache(async (id: string): Promise<(Product & { i
     const response = await fetchWithRetry(
       `${apiBaseUrl}/products/${id}?nocache=true`,
       {
-        next: { revalidate: 0 },
-        cache: 'no-store',
+        next: { revalidate: 60 },
       } as RequestInit,
       3, // max retries
       1000 // initial delay
@@ -315,8 +314,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
     const response = await fetchWithRetry(
       `${apiBaseUrl}/products/code/${normalizedCode}?nocache=true`,
       {
-        next: { revalidate: 0 },
-        cache: 'no-store',
+        next: { revalidate: 60 },
       } as RequestInit,
       2,
       1000
@@ -351,8 +349,7 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
     const resSlug = await fetchWithRetry(
       `${apiBaseUrl}/products/slug/${slug}?nocache=true`,
       {
-        next: { revalidate: 0 },
-        cache: 'no-store',
+        next: { revalidate: 60 },
       } as RequestInit,
       3,
       1000
@@ -372,8 +369,7 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
     const res = await fetchWithRetry(
       `${apiBaseUrl}/products?slug=${slug}&nocache=true`,
       {
-        next: { revalidate: 0 },
-        cache: 'no-store',
+        next: { revalidate: 60 },
       } as RequestInit,
       2,
       1000
@@ -396,8 +392,7 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
     const response = await fetchWithRetry(
       `${apiBaseUrl}/products?limit=${limit}&nocache=true`,
       {
-        next: { revalidate: 0 },
-        cache: 'no-store',
+        next: { revalidate: 3600 },
       } as RequestInit,
       3,
       1000
@@ -415,42 +410,60 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
 /**
  * Fetch related products by category (SSR-safe, uses native fetch)
  * This replaces productService.getRelated for server components to avoid url.parse() deprecation
- * @param categoryId - Category ID to fetch products from
+ * Uses smart category fallback: tries leaf category first, then parent categories with includeChildren
+ * @param categoryPath - Array of category objects from root to leaf
  * @param currentProductId - Current product ID to exclude from results
  * @param limit - Number of products to return (default: 10)
  */
 export const fetchRelatedProducts = cache(async (
-  categoryId: string,
+  categoryPath: Array<{ id: string; name?: string; slug?: string }>,
   currentProductId: string,
   limit: number = 10
 ): Promise<(Product & { isActive?: boolean })[]> => {
+  if (!categoryPath || categoryPath.length === 0) {
+    return [];
+  }
+
   try {
-    // Fetch extra products to ensure we have enough after filtering
     const fetchLimit = limit + 5;
-    const response = await fetchWithRetry(
-      `${apiBaseUrl}/products?category=${categoryId}&limit=${fetchLimit}&nocache=true`,
-      {
-        next: { revalidate: 0 },
-        cache: 'no-store',
-      } as RequestInit,
-      2,
-      1000
-    );
+    let relatedProducts: (Product & { isActive?: boolean })[] = [];
 
-    if (!response.ok) return [];
+    // Strategy: Start from the leaf category and move up to parent categories
+    // Use includeChildren to get products from subcategories too
+    for (let i = categoryPath.length - 1; i >= 0 && relatedProducts.length < limit; i--) {
+      const category = categoryPath[i];
+      if (!category?.id) continue;
 
-    const payload = await response.json();
-    const items = Array.isArray(payload?.data) ? payload.data : [];
+      // Use includeChildren=true to get products from this category and all its children
+      const response = await fetchWithRetry(
+        `${apiBaseUrl}/products?category=${category.id}&includeChildren=true&limit=${fetchLimit}&nocache=true`,
+        {
+          next: { revalidate: 60 },
+        } as RequestInit,
+        2,
+        1000
+      );
 
-    // Filter out the current product and limit results
-    const relatedProducts = items
-      .filter((item: BackendProduct) => (item._id || item.id) !== currentProductId)
-      .slice(0, limit)
-      .map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+      if (!response.ok) continue;
+
+      const payload = await response.json();
+      const items = Array.isArray(payload?.data) ? payload.data : [];
+
+      // Filter out the current product
+      const filteredItems = items
+        .filter((item: BackendProduct) => (item._id || item.id) !== currentProductId)
+        .slice(0, limit)
+        .map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+
+      if (filteredItems.length > 0) {
+        relatedProducts = filteredItems;
+        break; // Found enough products, stop searching
+      }
+    }
 
     return relatedProducts;
   } catch (error) {
-    console.error(`[productData] Error fetching related products for category ${categoryId}:`, error);
+    console.error(`[productData] Error fetching related products:`, error);
     return []; // Return empty array instead of throwing to prevent page crash
   }
 });

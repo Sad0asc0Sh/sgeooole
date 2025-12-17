@@ -1,14 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
-import { fetchProductById, fetchProductByCode, fetchProductBySlug, fetchProductsForStatic, fetchRelatedProducts } from "@/lib/productData";
+import RelatedProducts from "./RelatedProducts";
+import { fetchProductById, fetchProductByCode, fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
-import ProductRail from "@/components/home/ProductRail";
 
-// Force dynamic rendering - no caching, always fetch fresh data
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Enable ISR with 1-hour revalidation
+export const revalidate = 3600;
 export const dynamicParams = true;
 
 type PageParams = {
@@ -130,34 +130,30 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         redirect(newUrl);
     }
 
-    // Fetch related products using the product's category
-    let relatedProducts: Awaited<ReturnType<typeof fetchRelatedProducts>> = [];
-
-    try {
-        const categoryId = product.categoryPath?.[product.categoryPath.length - 1]?.id;
-        if (categoryId) {
-            relatedProducts = await fetchRelatedProducts(categoryId, product.id, 10);
-        }
-    } catch (error) {
-        console.error('[ProductPage] Error fetching related products:', error);
-    }
-
     // Get product code - use stored productCode or generate from SKU/ID
     const productCode = (product as any).productCode ||
         `KY-${(product.sku?.replace(/\D/g, '').slice(-7) || product.id.slice(-7)).padStart(7, '0')}`;
 
+    const categoryPath = product.categoryPath || [];
+
     return (
         <>
-            <ProductStructuredData product={product} relatedProducts={relatedProducts} />
+            <ProductStructuredData product={product} relatedProducts={[]} />
             <ProductDetailClient product={product} />
 
-            {relatedProducts.length > 0 && (
-                <div className="pb-4">
-                    <ProductRail
-                        title="محصولات مشابه"
-                        products={relatedProducts}
-                    />
-                </div>
+            {categoryPath.length > 0 && (
+                <Suspense fallback={
+                    <div className="pb-4 px-4">
+                        <div className="h-8 w-48 bg-gray-200 rounded mb-4 animate-pulse" />
+                        <div className="flex gap-4 overflow-hidden">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="w-40 h-64 bg-gray-100 rounded-xl flex-shrink-0 animate-pulse" />
+                            ))}
+                        </div>
+                    </div>
+                }>
+                    <RelatedProducts categoryPath={categoryPath} productId={product.id} />
+                </Suspense>
             )}
 
             <div className="bg-gray-50 py-6 px-4 pb-28 border-t border-gray-100">

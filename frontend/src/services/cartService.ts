@@ -40,6 +40,8 @@ interface CartResponse {
     items: CartItem[];
     totalPrice: number;
     couponCode?: string;
+    expiresAt?: string | null;
+    version?: number;
   };
 }
 
@@ -67,6 +69,15 @@ interface AddItemRequest {
     name: string;
     value: string;
   }>;
+}
+
+/**
+ * Adjust Item Quantity (Delta) Request Body
+ */
+interface AdjustItemRequest {
+  product: string;
+  delta: number;
+  variantOptions?: AddItemRequest["variantOptions"];
 }
 
 /**
@@ -188,6 +199,38 @@ export const cartService = {
       throw new Error(
         error.response?.data?.message || "خطا در به‌روزرسانی محصول"
       );
+    }
+  },
+
+  /**
+   * Adjust Item Quantity (Delta)
+   * Atomic, race-safe operation for rapid +/- clicks (server applies $inc and returns cart version)
+   */
+  adjustItem: async (
+    product: string,
+    delta: number,
+    variantOptions?: AdjustItemRequest["variantOptions"]
+  ): Promise<CartResponse> => {
+    try {
+      console.log(`[CART] Adjusting item ${product} by delta: ${delta}`);
+
+      const response = await api.post("/carts/cart/item/adjust", {
+        product,
+        delta,
+        variantOptions,
+      });
+
+      return response.data;
+    } catch (error: any) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
+      const message = data?.message || "Error adjusting cart item";
+      const err = Object.assign(new Error(message), {
+        status,
+        code: data?.code,
+        data,
+      });
+      throw err;
     }
   },
 

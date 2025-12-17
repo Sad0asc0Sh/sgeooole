@@ -4,8 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
+    "clean:next": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
     "lint": "eslint",
     "analyze": "ANALYZE=true next build",
     "test": "jest",

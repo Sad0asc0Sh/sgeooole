@@ -9,6 +9,12 @@ const cartItemSchema = new mongoose.Schema({
     ref: 'Product',
     required: true,
   },
+  // Stable identifier for matching product + variant (computed from variantOptions)
+  variantKey: {
+    type: String,
+    default: 'no-variant',
+    index: true,
+  },
   name: {
     type: String,
     required: true,
@@ -78,6 +84,14 @@ const cartSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+
+    // Monotonic cart version for race-safe client reconciliation
+    version: {
+      type: Number,
+      default: 0,
+      min: 0,
+      index: true,
     },
 
     // تاریخ انقضای سبد خرید (TTL - Time To Live)
