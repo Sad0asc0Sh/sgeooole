@@ -29,11 +29,9 @@ import api from '../../api'
 
 function BrandsPage() {
   // Zustand Store - Single Source of Truth
-  const { brands, loading, fetchBrands } = useBrandStore((state) => ({
-    brands: state.brands,
-    loading: state.loading,
-    fetchBrands: state.fetchBrands,
-  }))
+  const brands = useBrandStore((state) => state.brands)
+  const loading = useBrandStore((state) => state.loading)
+  const fetchBrands = useBrandStore((state) => state.fetchBrands)
 
   // Local State
   const [modalVisible, setModalVisible] = useState(false)

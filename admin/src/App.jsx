@@ -66,16 +66,16 @@ const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 
 // Loading fallback component
 const LoadingFallback = () => (
-  <div
-    style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      height: '100vh',
-    }}
-  >
-    <Spin size="large" tip="در حال بارگذاری..." />
-  </div>
+  <Spin size="large" tip="در حال بارگذاری..." spinning>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+      }}
+    />
+  </Spin>
 )
 
 function App() {

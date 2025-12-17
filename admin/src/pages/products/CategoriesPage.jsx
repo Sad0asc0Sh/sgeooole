@@ -30,13 +30,9 @@ import api from '../../api'
 
 function CategoriesPage() {
   // Zustand Store - Single Source of Truth
-  const { categoriesTree, loading, fetchCategoriesTree } = useCategoryStore(
-    (state) => ({
-      categoriesTree: state.categoriesTree,
-      loading: state.loading,
-      fetchCategoriesTree: state.fetchCategoriesTree,
-    }),
-  )
+  const categoriesTree = useCategoryStore((state) => state.categoriesTree)
+  const loading = useCategoryStore((state) => state.loading)
+  const fetchCategoriesTree = useCategoryStore((state) => state.fetchCategoriesTree)
 
   // Local State
   const [modalVisible, setModalVisible] = useState(false)
@@ -298,7 +294,9 @@ function CategoriesPage() {
       <Card>
         {loading && categoriesTree.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Spin tip="در حال دریافت دسته‌بندی‌ها..." />
+            <Spin tip="در حال دریافت دسته‌بندی‌ها..." spinning>
+              <div style={{ height: 24 }} />
+            </Spin>
           </div>
         ) : categoriesTree.length === 0 ? (
           <div

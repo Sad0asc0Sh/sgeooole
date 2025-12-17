@@ -68,18 +68,12 @@ function ProductForm() {
   const [specs, setSpecs] = useState({}) // { propertyName: value }
 
   // Category store (Zustand)
-  const { categoriesTree, loading: categoriesLoading } = useCategoryStore(
-    (state) => ({
-      categoriesTree: state.categoriesTree,
-      loading: state.loading,
-    }),
-  )
+  const categoriesTree = useCategoryStore((state) => state.categoriesTree)
+  const categoriesLoading = useCategoryStore((state) => state.loading)
 
   // Brand store (Zustand)
-  const { brands, loading: brandsLoading } = useBrandStore((state) => ({
-    brands: state.brands,
-    loading: state.loading,
-  }))
+  const brands = useBrandStore((state) => state.brands)
+  const brandsLoading = useBrandStore((state) => state.loading)
 
   // ============================================
   // یافتن ویژگی‌های دسته‌بندی انتخاب‌شده (Category Properties)
@@ -666,7 +660,9 @@ function ProductForm() {
                     >
                       {categoriesLoading && categoriesTree.length === 0 ? (
                         <div style={{ padding: 20, textAlign: 'center' }}>
-                          <Spin tip="در حال دریافت دسته‌بندی‌ها..." />
+                          <Spin tip="در حال دریافت دسته‌بندی‌ها..." spinning>
+                            <div style={{ height: 24 }} />
+                          </Spin>
                         </div>
                       ) : (
                         <TreeSelect
@@ -701,7 +697,9 @@ function ProductForm() {
                     >
                       {brandsLoading && brands.length === 0 ? (
                         <div style={{ padding: 20, textAlign: 'center' }}>
-                          <Spin tip="در حال دریافت برندها..." />
+                          <Spin tip="در حال دریافت برندها..." spinning>
+                            <div style={{ height: 24 }} />
+                          </Spin>
                         </div>
                       ) : (
                         <Select
