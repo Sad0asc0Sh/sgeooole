@@ -191,16 +191,17 @@ function ProductForm() {
   useEffect(() => {
     const fetchGlobalTimers = async () => {
       try {
+        const nowIso = new Date().toISOString();
         const [resOffer, resFlash] = await Promise.all([
-          api.get('/products?isSpecialOffer=true&limit=1'),
-          api.get('/products?isFlashDeal=true&limit=1')
+          api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${nowIso}&limit=1&fields=specialOfferEndTime&nocache=true`),
+          api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${nowIso}&limit=1&fields=flashDealEndTime&nocache=true`)
         ]);
 
-        const activeOffer = resOffer.data.data.find(p => p.specialOfferEndTime && new Date(p.specialOfferEndTime) > new Date());
-        if (activeOffer) setActiveGlobalOfferTime(activeOffer.specialOfferEndTime);
+        const activeOffer = resOffer?.data?.data?.[0];
+        if (activeOffer?.specialOfferEndTime) setActiveGlobalOfferTime(activeOffer.specialOfferEndTime);
 
-        const activeFlash = resFlash.data.data.find(p => p.flashDealEndTime && new Date(p.flashDealEndTime) > new Date());
-        if (activeFlash) setActiveGlobalFlashDealTime(activeFlash.flashDealEndTime);
+        const activeFlash = resFlash?.data?.data?.[0];
+        if (activeFlash?.flashDealEndTime) setActiveGlobalFlashDealTime(activeFlash.flashDealEndTime);
       } catch (err) {
         console.error("Failed to check global offer times", err);
       }

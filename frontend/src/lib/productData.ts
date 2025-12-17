@@ -244,10 +244,11 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     specs: backend.specs,
     campaignLabel: backend.campaignLabel,
     campaignTheme: backend.campaignTheme,
-    isFlashDeal: pricing.flashActive,
-    flashDealEndTime: pricing.flashActive ? backend.flashDealEndTime : undefined,
-    isSpecialOffer: pricing.specialActive,
-    specialOfferEndTime: pricing.specialActive ? backend.specialOfferEndTime : undefined,
+    // Time-based promotions (keep raw flags/timers; UI derives active state)
+    isFlashDeal: Boolean(backend.isFlashDeal),
+    flashDealEndTime: backend.flashDealEndTime || undefined,
+    isSpecialOffer: Boolean(backend.isSpecialOffer),
+    specialOfferEndTime: backend.specialOfferEndTime || undefined,
     isActive: backend.isActive,
   };
 };

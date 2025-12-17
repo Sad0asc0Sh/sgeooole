@@ -643,6 +643,9 @@ router.put(
           { $unset: { specialOfferEndTime: "" } }
         )
 
+        clearCacheByPrefix('/api/products')
+        clearCacheByPrefix('/api/v1/admin/products')
+
         return res.json({
           success: true,
           message: `Timer disabled for ${result.modifiedCount} products`,
@@ -657,15 +660,26 @@ router.put(
         })
       }
 
-      console.log('[ADMIN] Updating special offer timer to:', endTime)
+      const parsedEndTime = new Date(endTime)
+      if (Number.isNaN(parsedEndTime.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid end time value',
+        })
+      }
+
+      console.log('[ADMIN] Updating special offer timer to:', parsedEndTime.toISOString())
 
       // Update all products that have isSpecialOffer: true
       const result = await Product.updateMany(
         { isSpecialOffer: true },
-        { $set: { specialOfferEndTime: endTime } }
+        { $set: { specialOfferEndTime: parsedEndTime } }
       )
 
       console.log('[ADMIN] Update result:', result)
+
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
 
       res.json({
         success: true,
@@ -674,6 +688,75 @@ router.put(
       })
     } catch (error) {
       console.error('Error updating special offer timer:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Failed to update timer',
+        error: error.message,
+      })
+    }
+  }
+)
+
+// ============================================
+// PUT /api/products/flash-deals/timer
+// Update timer for all active flash deal products
+// ============================================
+router.put(
+  '/flash-deals/timer',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  async (req, res) => {
+    try {
+      const { endTime, disable } = req.body
+
+      if (disable) {
+        const result = await Product.updateMany(
+          { isFlashDeal: true },
+          { $unset: { flashDealEndTime: "" } }
+        )
+
+        clearCacheByPrefix('/api/products')
+        clearCacheByPrefix('/api/v1/admin/products')
+
+        return res.json({
+          success: true,
+          message: `Timer disabled for ${result.modifiedCount} products`,
+          data: { modifiedCount: result.modifiedCount }
+        })
+      }
+
+      if (!endTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'End time is required',
+        })
+      }
+
+      const parsedEndTime = new Date(endTime)
+      if (Number.isNaN(parsedEndTime.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid end time value',
+        })
+      }
+
+      console.log('[ADMIN] Updating flash deal timer to:', parsedEndTime.toISOString())
+
+      const result = await Product.updateMany(
+        { isFlashDeal: true },
+        { $set: { flashDealEndTime: parsedEndTime } }
+      )
+
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      res.json({
+        success: true,
+        message: `Updated timer for ${result.modifiedCount} products`,
+        data: { modifiedCount: result.modifiedCount }
+      })
+    } catch (error) {
+      console.error('Error updating flash deal timer:', error)
       res.status(500).json({
         success: false,
         message: 'Failed to update timer',
@@ -1728,7 +1811,7 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
         productObj.compareAtPrice = originalPrice
 
         if (productObj.isFlashDeal) {
-          productObj.campaignLabel = 'فروش ویژه'
+          productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
           productObj.campaignTheme = 'gold-red'
         }
       }

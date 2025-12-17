@@ -50,6 +50,8 @@ function ProductsList({ mode }) {
   const [uploading, setUploading] = useState(false)
   const [timerModalVisible, setTimerModalVisible] = useState(false)
   const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
+  const [flashTimerModalVisible, setFlashTimerModalVisible] = useState(false)
+  const [flashDealEndTime, setFlashDealEndTime] = useState('')
 
   useEffect(() => {
     ; (async () => {
@@ -74,7 +76,10 @@ function ProductsList({ mode }) {
       params.set('page', String(page))
       params.set('limit', String(pageSize))
       params.set('sort', '-createdAt')
-      params.set('fields', 'name,sku,price,stock,isActive,images,_id,category,productType')
+      params.set(
+        'fields',
+        'name,sku,price,stock,isActive,images,_id,category,productType,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,discount',
+      )
       // ✅ FIX: Get raw prices for admin panel (without discount calculation)
       params.set('skipDiscount', 'true')
 
@@ -414,6 +419,46 @@ function ProductsList({ mode }) {
     }
   }
 
+  const handleUpdateFlashTimer = async () => {
+    try {
+      setLoading(true)
+      const endTime = flashDealEndTime instanceof Date
+        ? flashDealEndTime.toISOString()
+        : new Date(flashDealEndTime).toISOString()
+
+      const res = await api.put('/products/flash-deals/timer', { endTime })
+      const count = res?.data?.data?.modifiedCount || 0
+
+      if (count > 0) {
+        message.success(`Flash Deal timer updated for ${count} products`)
+        setFlashTimerModalVisible(false)
+        fetchProducts()
+      } else {
+        message.warning('No products with active Flash Deal found.')
+      }
+    } catch (err) {
+      message.error(err?.message || 'Failed to update Flash Deal timer')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDisableFlashTimer = async () => {
+    try {
+      setLoading(true)
+      const res = await api.put('/products/flash-deals/timer', { disable: true })
+      const count = res?.data?.data?.modifiedCount || 0
+
+      message.success(`Flash Deal timer disabled for ${count} products`)
+      setFlashTimerModalVisible(false)
+      fetchProducts()
+    } catch (err) {
+      message.error(err?.message || 'Failed to disable Flash Deal timer')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div>
       <div
@@ -431,6 +476,9 @@ function ProductsList({ mode }) {
           </Button>
           <Button icon={<FieldTimeOutlined />} onClick={() => setTimerModalVisible(true)}>
             تنظیم تایمر
+          </Button>
+          <Button icon={<FieldTimeOutlined />} onClick={() => setFlashTimerModalVisible(true)}>
+            Flash Deal Timer
           </Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>
             برون‌ریزی Excel
@@ -605,6 +653,36 @@ function ProductsList({ mode }) {
             value={specialOfferEndTime}
             onChange={setSpecialOfferEndTime}
           />
+        </div>
+      </Modal>
+
+      {/* Flash Deal Timer Modal */}
+      <Modal
+        title="Flash Deal Timer"
+        open={flashTimerModalVisible}
+        onCancel={() => setFlashTimerModalVisible(false)}
+        onOk={handleUpdateFlashTimer}
+        okText="Update Timer"
+        cancelText="Cancel"
+        confirmLoading={loading}
+        footer={[
+          <Button key="disable" danger onClick={handleDisableFlashTimer} loading={loading}>
+            Disable Timer
+          </Button>,
+          <Button key="back" onClick={() => setFlashTimerModalVisible(false)}>
+            Cancel
+          </Button>,
+          <Button key="submit" type="primary" onClick={handleUpdateFlashTimer} loading={loading}>
+            Update Timer
+          </Button>,
+        ]}
+      >
+        <p style={{ marginBottom: 12, color: '#666' }}>
+          This sets a shared countdown end time for all products marked as Flash Deal.
+        </p>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', marginBottom: 8 }}>End time:</label>
+          <JalaliDateTimePicker value={flashDealEndTime} onChange={setFlashDealEndTime} />
         </div>
       </Modal>
     </div>

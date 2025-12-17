@@ -123,12 +123,19 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
                         {/* Timer for Special Offers */}
                         {(() => {
-                            const endTime = product.specialOfferEndTime || product.flashDealEndTime;
-                            if (!endTime) return null;
+                            const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
+                            const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 
-                            const endTs = Date.parse(endTime);
-                            const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
-                            if (!isCountdownActive) return null;
+                            const flashActive = Boolean(product.isFlashDeal && Number.isFinite(flashEndTs) && flashEndTs > now);
+                            const specialActive = Boolean(product.isSpecialOffer && Number.isFinite(specialEndTs) && specialEndTs > now);
+
+                            const endTime = flashActive
+                                ? product.flashDealEndTime
+                                : specialActive
+                                    ? product.specialOfferEndTime
+                                    : undefined;
+
+                            if (!endTime) return null;
 
                             const theme = product.campaignTheme;
                             let themeClass = 'bg-red-50 text-red-600';
@@ -152,6 +159,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                                 } else {
                                     label = 'فروش ویژه';
                                 }
+                            }
+
+                            if (!product.campaignLabel) {
+                                if (flashActive) label = 'پیشنهاد لحظه‌ای';
+                                else if (specialActive) label = 'پیشنهاد شگفت‌انگیز';
                             }
 
                             return (
@@ -299,15 +311,21 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
                     {/* Timer for Special Offers / Flash Deals / Campaign Offers */}
                     {(() => {
-                        // Helper logic for offer details - Priority: Campaign > Special Offer > Flash Deal
+                        // Helper logic for offer details - Priority: Campaign Label > Flash Deal > Special Offer
                         // Check if we have an active campaign or time-based offer
-                        const endTime = product.specialOfferEndTime || product.flashDealEndTime;
-                        if (!endTime) return null;
+                        const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
+                        const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 
-                        const endTs = Date.parse(endTime);
-                        // Use real-time now state for countdown check
-                        const isCountdownActive = !Number.isNaN(endTs) && endTs > now;
-                        if (!isCountdownActive) return null;
+                        const flashActive = Boolean(product.isFlashDeal && Number.isFinite(flashEndTs) && flashEndTs > now);
+                        const specialActive = Boolean(product.isSpecialOffer && Number.isFinite(specialEndTs) && specialEndTs > now);
+
+                        const endTime = flashActive
+                            ? product.flashDealEndTime
+                            : specialActive
+                                ? product.specialOfferEndTime
+                                : undefined;
+
+                        if (!endTime) return null;
 
                         // Determine theme class based on campaignTheme
                         const theme = product.campaignTheme;
@@ -333,6 +351,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                             } else {
                                 label = 'فروش ویژه';
                             }
+                        }
+
+                        if (!product.campaignLabel) {
+                            if (flashActive) label = 'پیشنهاد لحظه‌ای';
+                            else if (specialActive) label = 'پیشنهاد شگفت‌انگیز';
                         }
 
                         return (

@@ -22,6 +22,11 @@ export function useFlashDeals(limit: number = 10) {
         () => productService.getFlashDeals(limit),
         {
             ...swrConfig,
+            // Promotions change from admin: refetch when tab refocuses
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            // Allow refreshInterval to actually fire (avoid 60s dedupe blocking 30s refresh)
+            dedupingInterval: 5000,
             refreshInterval: 30000, // Refresh every 30s for time-sensitive deals
         }
     );
@@ -44,6 +49,9 @@ export function useSpecialOffers(limit: number = 10) {
         () => productService.getSpecialOffers(limit),
         {
             ...swrConfig,
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            dedupingInterval: 5000,
             refreshInterval: 30000, // Refresh every 30s for time-sensitive offers
         }
     );

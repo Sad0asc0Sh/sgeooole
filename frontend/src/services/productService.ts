@@ -236,11 +236,11 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     campaignLabel: backendProduct.campaignLabel,
     campaignTheme: backendProduct.campaignTheme,
 
-    // Time-based promotions
-    isFlashDeal: pricing.flashActive,
-    flashDealEndTime: pricing.flashActive ? backendProduct.flashDealEndTime : undefined,
-    isSpecialOffer: pricing.specialActive,
-    specialOfferEndTime: pricing.specialActive ? backendProduct.specialOfferEndTime : undefined,
+    // Time-based promotions (keep raw flags/timers; UI derives active state)
+    isFlashDeal: Boolean(backendProduct.isFlashDeal),
+    flashDealEndTime: backendProduct.flashDealEndTime || undefined,
+    isSpecialOffer: Boolean(backendProduct.isSpecialOffer),
+    specialOfferEndTime: backendProduct.specialOfferEndTime || undefined,
   };
 };
 
@@ -383,7 +383,7 @@ export const productService = {
       // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
       const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
-      const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
+      const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
@@ -402,7 +402,7 @@ export const productService = {
       // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
       const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
-      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
+      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
