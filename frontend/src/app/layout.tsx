@@ -6,7 +6,6 @@ import "swiper/css/free-mode";
 import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";
-import CanonicalTag from "@/components/CanonicalTag";
 import SWRProvider from "@/providers/SWRProvider";
 import { Suspense } from "react";
 
@@ -32,6 +31,9 @@ export const metadata: Metadata = {
       return new URL("https://welfvita.ir");
     }
   })(),
+  alternates: {
+    canonical: "./",
+  },
   title: "فروشگاه ولفویتا | خرید آنلاین محصولات",
   description: "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
 };
@@ -42,7 +44,6 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body className={`font-sans antialiased bg-gray-50 text-gray-900 ${vazirmatn.className}`}>
-        <CanonicalTag />
         <GoogleAuthProvider>
           <SWRProvider>
             <Suspense fallback={null}>

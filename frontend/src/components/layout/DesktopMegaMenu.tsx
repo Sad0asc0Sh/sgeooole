@@ -85,9 +85,18 @@ export default function DesktopMegaMenu() {
     const [isLoading, setIsLoading] = useState(true);
     const [isOpen, setIsOpen] = useState(false);
     const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
     const { lock, unlock } = useScrollLock();
+
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+                timeoutRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(() => {
         const fetchCategories = async () => {
