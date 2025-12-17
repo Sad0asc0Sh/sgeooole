@@ -1,4 +1,4 @@
-import { Product } from "@/services/productService";
+import type { Product } from "@/types/product";
 import { buildProductUrl } from "@/lib/paths";
 
 type ProductStructuredDataProps = {

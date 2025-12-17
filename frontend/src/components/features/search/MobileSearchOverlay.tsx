@@ -48,8 +48,8 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                 const { default: api } = await import('@/lib/api');
                 const response = await api.get('/settings/public');
                 const data = response.data;
-                if (data.success && data.settings?.searchSettings) {
-                    setSearchSettings(data.settings.searchSettings);
+                if (data.success && data.data?.searchSettings) {
+                    setSearchSettings(data.data.searchSettings);
                 }
             } catch {
                 // Silently fail - using default settings when backend is unavailable

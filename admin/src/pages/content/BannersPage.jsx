@@ -68,19 +68,28 @@ const BANNER_POSITIONS = {
   'main-slider': {
     label: '🖼️ اسلایدر اصلی',
     description: 'بنرهای بزرگ بالای صفحه اصلی',
-    size: '1920×600 پیکسل',
+    size: '1920×500 پیکسل',
+    aspectRatio: '21:9 یا 16:9',
+    minSize: '1200×315 پیکسل',
+    mobileTip: 'متن/محتوا را در مرکز تصویر قرار دهید',
     color: 'blue',
   },
   'middle-banner': {
     label: '📢 بنرهای تبلیغاتی',
-    description: 'بنرهای میانه صفحه اصلی',
-    size: '600×300 پیکسل',
+    description: 'بنرهای میانه صفحه اصلی (حداکثر ۳ عدد)',
+    size: '600×200 پیکسل',
+    aspectRatio: '3:1',
+    minSize: '400×133 پیکسل',
+    mobileTip: 'در موبایل تمام عرض نمایش داده می‌شود',
     color: 'orange',
   },
   'campaign-banner': {
     label: '🎯 بنر کمپین',
     description: 'بنر ویژه کمپین و تخفیفات',
-    size: '1200×400 پیکسل',
+    size: '1200×375 پیکسل',
+    aspectRatio: '16:5',
+    minSize: '800×250 پیکسل',
+    mobileTip: 'متن مهم را در ناحیه امن مرکز بگذارید',
     color: 'purple',
   },
 }
@@ -97,6 +106,7 @@ function BannersPage() {
   const [saving, setSaving] = useState(false)
   const [fileList, setFileList] = useState([])
   const [previewImage, setPreviewImage] = useState(null)
+  const [selectedPosition, setSelectedPosition] = useState('main-slider')
 
   // ============================================
   // دریافت لیست بنرها
@@ -282,6 +292,7 @@ function BannersPage() {
     form.resetFields()
     setFileList([])
     setPreviewImage(null)
+    setSelectedPosition('main-slider')
     form.setFieldsValue({
       position: 'main-slider',
       isActive: true,
@@ -294,6 +305,7 @@ function BannersPage() {
     setEditing(banner)
     setFileList([])
     setPreviewImage(banner.image?.url || null)
+    setSelectedPosition(banner.position || 'main-slider')
     form.setFieldsValue({
       title: banner.title,
       link: banner.link,
@@ -410,28 +422,76 @@ function BannersPage() {
       </div>
 
       {/* ============================================ */}
-      {/* راهنمای موقعیت‌ها */}
+      {/* راهنمای کامل ابعاد بنرها */}
       {/* ============================================ */}
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="راهنمای موقعیت بنرها"
-        description={
-          <Row gutter={16} style={{ marginTop: 8 }}>
-            {Object.entries(BANNER_POSITIONS).map(([key, config]) => (
-              <Col span={8} key={key}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Tag color={config.color}>{config.label}</Tag>
-                  <span style={{ fontSize: 12, color: '#666' }}>
-                    {config.description} ({config.size})
-                  </span>
-                </div>
-              </Col>
-            ))}
-          </Row>
+      <Card
+        size="small"
+        style={{ marginBottom: 16, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%)', border: '1px solid #91caff' }}
+        title={
+          <Space>
+            <PictureOutlined style={{ color: '#1677ff' }} />
+            <span style={{ fontWeight: 'bold', fontSize: 14 }}>📐 راهنمای ابعاد بنرها</span>
+          </Space>
         }
-      />
+      >
+        <Row gutter={[16, 16]}>
+          {Object.entries(BANNER_POSITIONS).map(([key, config]) => (
+            <Col xs={24} md={8} key={key}>
+              <div
+                style={{
+                  background: '#fff',
+                  borderRadius: 8,
+                  padding: 12,
+                  border: `2px solid`,
+                  borderColor: config.color === 'blue' ? '#1677ff' : config.color === 'orange' ? '#fa8c16' : '#722ed1',
+                  height: '100%',
+                }}
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <Tag color={config.color} style={{ fontSize: 13, padding: '2px 8px' }}>
+                    {config.label}
+                  </Tag>
+                </div>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
+                  {config.description}
+                </div>
+                <Divider style={{ margin: '8px 0' }} />
+                <div style={{ display: 'grid', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#888', fontSize: 11 }}>🎯 سایز ایده‌آل:</span>
+                    <strong style={{ fontSize: 12, color: '#1677ff' }}>{config.size}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#888', fontSize: 11 }}>📏 نسبت تصویر:</span>
+                    <span style={{ fontSize: 12 }}>{config.aspectRatio}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#888', fontSize: 11 }}>📉 حداقل سایز:</span>
+                    <span style={{ fontSize: 12, color: '#fa541c' }}>{config.minSize}</span>
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, padding: '6px 8px', background: '#fffbe6', borderRadius: 4, fontSize: 11, color: '#ad6800' }}>
+                  💡 {config.mobileTip}
+                </div>
+              </div>
+            </Col>
+          ))}
+        </Row>
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginTop: 12 }}
+          message="نکات مهم برای آپلود بنر"
+          description={
+            <ul style={{ margin: 0, paddingRight: 20, fontSize: 12 }}>
+              <li><strong>فرمت‌های مجاز:</strong> JPG, PNG, WEBP (ترجیحاً WEBP برای سرعت بارگذاری)</li>
+              <li><strong>حداکثر حجم:</strong> 2 مگابایت</li>
+              <li><strong>محتوای مهم:</strong> متن و لوگو را در 60% مرکزی تصویر قرار دهید تا در موبایل بریده نشود</li>
+              <li><strong>کیفیت:</strong> تصویر با کیفیت بالا (DPI بالا) استفاده نکنید - باعث کندی سایت می‌شود</li>
+            </ul>
+          }
+        />
+      </Card>
 
       {/* ============================================ */}
       {/* فیلتر و جدول */}
@@ -531,13 +591,16 @@ function BannersPage() {
                     label="📍 موقعیت نمایش"
                     rules={[{ required: true, message: 'موقعیت را انتخاب کنید' }]}
                   >
-                    <Select size="large">
+                    <Select
+                      size="large"
+                      onChange={(val) => setSelectedPosition(val)}
+                    >
                       {Object.entries(BANNER_POSITIONS).map(([key, config]) => (
                         <Select.Option key={key} value={key}>
                           <div>
                             <div>{config.label}</div>
                             <div style={{ fontSize: 11, color: '#999' }}>
-                              {config.size}
+                              {config.size} • {config.aspectRatio}
                             </div>
                           </div>
                         </Select.Option>
@@ -577,6 +640,51 @@ function BannersPage() {
 
             {/* ستون راست - تصویر */}
             <Col span={10}>
+              {/* باکس اطلاعات ابعاد */}
+              <div
+                style={{
+                  background: 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)',
+                  border: '1px solid #91d5ff',
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ fontWeight: 'bold', marginBottom: 8, color: '#0050b3' }}>
+                  📐 ابعاد توصیه شده برای موقعیت انتخابی:
+                </div>
+                <div style={{ display: 'grid', gap: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#666' }}>سایز ایده‌آل:</span>
+                    <strong style={{ color: '#1677ff' }}>
+                      {BANNER_POSITIONS[selectedPosition]?.size}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#666' }}>نسبت تصویر:</span>
+                    <span>{BANNER_POSITIONS[selectedPosition]?.aspectRatio}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#666' }}>حداقل سایز:</span>
+                    <span style={{ color: '#fa541c' }}>
+                      {BANNER_POSITIONS[selectedPosition]?.minSize}
+                    </span>
+                  </div>
+                </div>
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '6px 8px',
+                    background: '#fffbe6',
+                    borderRadius: 4,
+                    fontSize: 11,
+                    color: '#ad6800'
+                  }}
+                >
+                  💡 {BANNER_POSITIONS[selectedPosition]?.mobileTip}
+                </div>
+              </div>
+
               <Form.Item label="📷 تصویر بنر">
                 {/* پیش‌نمایش */}
                 {previewImage && (
@@ -611,7 +719,10 @@ function BannersPage() {
                     تصویر را اینجا رها کنید یا کلیک کنید
                   </p>
                   <p className="ant-upload-hint" style={{ fontSize: 11 }}>
-                    فرمت‌های مجاز: JPG, PNG, WEBP
+                    فرمت‌های مجاز: JPG, PNG, WEBP (ترجیحاً WEBP)
+                  </p>
+                  <p className="ant-upload-hint" style={{ fontSize: 10, color: '#888' }}>
+                    حداکثر حجم: 2 مگابایت
                   </p>
                 </Upload.Dragger>
               </Form.Item>

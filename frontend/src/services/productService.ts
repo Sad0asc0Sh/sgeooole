@@ -1,86 +1,42 @@
+"use client";
+/**
+ * Product Service - Client-Side API Wrapper
+ * 
+ * ⚠️  DEP0169 SAFETY NOTE:
+ * This file uses axios which internally calls url.parse() (deprecated in Node.js).
+ * This file is marked as "use client" to prevent it from being bundled in Server Components.
+ * 
+ * For Server Components (SSR), use:
+ * - Import types from "@/types/product" (SSR-safe, no runtime dependencies)
+ * - Use functions from "@/lib/productData" for data fetching (uses native fetch)
+ * 
+ * DO NOT import this file in Server Components!
+ */
+
 import api from "@/lib/api";
 import { resolvePricing } from "@/lib/pricing";
 
-// Color Interface
-export interface ProductColor {
-  id: number;
-  hex: string;
-  name: string;
-}
+// Re-export types from the SSR-safe types file for backward compatibility
+// This allows existing client components to continue using `import { Product } from "@/services/productService"`
+export type {
+  Product,
+  ProductColor,
+  ProductSpec,
+  CategoryPathItem,
+  CategoryProperty,
+  CategoryDetails,
+  ProductWithStatus,
+} from "@/types/product";
 
-// Specification Interface
-export interface ProductSpec {
-  label: string;
-  value: string;
-}
-
-// Category Path Interface
-export interface CategoryPathItem {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-// Category Property Interface (for dynamic filters)
-export interface CategoryProperty {
-  name: string;
-  type: 'text' | 'number' | 'select';
-  options?: string[];
-  isFilterable?: boolean;
-  unit?: string;
-  order?: number;
-}
-
-// Category Details Interface
-export interface CategoryDetails {
-  _id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  parent?: {
-    _id: string;
-    name: string;
-    slug: string;
-  };
-  properties: CategoryProperty[];
-}
-
-// Frontend Product Interface (matching our UI expectations)
-export interface Product {
-  id: string;
-  name: string;
-  title: string; // Display name (same as name for now)
-  slug?: string;
-  sku?: string; // Product SKU
-  productCode?: string; // SEO-friendly product code (KY-XXXXXXX)
-  enTitle?: string; // English title (optional)
-  price: number;
-  oldPrice?: number; // Original price before discount
-  discount: number;
-  image: string;
-  images: string[]; // Gallery images
-  category: string;
-  categoryPath?: CategoryPathItem[]; // Structured category hierarchy
-  brand?: string;
-  brandSlug?: string; // Brand slug for navigation links
-  description?: string;
-  rating: number;
-  reviewCount: number;
-  countInStock: number;
-  colors?: ProductColor[]; // Optional color variants
-  specs?: ProductSpec[]; // Technical specifications
-  campaignLabel?: string; // Active campaign name (time-limited discount)
-  campaignTheme?: string; // Badge color theme
-  compareAtPrice?: number; // Original price for comparison
-
-  // Time-based promotion fields
-  isFlashDeal?: boolean;
-  flashDealEndTime?: string; // ISO date string
-  isSpecialOffer?: boolean;
-  specialOfferEndTime?: string; // ISO date string
-}
-
-// ... (BackendProduct interface remains same)
+// Import types for internal use
+import type {
+  Product,
+  ProductColor,
+  ProductSpec,
+  CategoryPathItem,
+  CategoryProperty,
+  CategoryDetails,
+} from "@/types/product";
 
 
 
@@ -89,6 +45,7 @@ interface BackendProduct {
   _id: string;
   name: string;
   sku?: string;
+  productCode?: string;
   enTitle?: string;
   price: number;
   image?: string;
@@ -196,6 +153,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     title: backendProduct.name, // Use name as title
     slug: (backendProduct as any).slug, // Ensure slug is mapped if available
     sku: backendProduct.sku,
+    productCode: (backendProduct as any).productCode,
     enTitle: backendProduct.enTitle,
 
     // Price calculations
@@ -341,7 +299,7 @@ export const productService = {
   getNewest: async (limit: number = 10): Promise<Product[]> => {
     try {
       // OPTIMIZED: Only fetch fields needed for rail display
-      const fields = 'name,slug,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime';
+      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime';
       const response = await api.get(`/products?sort=-createdAt&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -358,7 +316,7 @@ export const productService = {
   getBestSellers: async (limit: number = 10): Promise<Product[]> => {
     try {
       // OPTIMIZED: Only fetch fields needed for rail display, sort by salesCount
-      const fields = 'name,slug,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,salesCount';
+      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,salesCount';
       const response = await api.get(`/products?sort=-salesCount&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -424,7 +382,7 @@ export const productService = {
       // Query products with isFlashDeal=true and flashDealEndTime greater than now
       // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
-      const fields = 'name,slug,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
+      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
       const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -443,7 +401,7 @@ export const productService = {
       // Query products with isSpecialOffer=true and specialOfferEndTime greater than now
       // OPTIMIZED: Only fetch fields needed for rail display
       const now = new Date().toISOString();
-      const fields = 'name,slug,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
+      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
       const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -555,4 +513,3 @@ export const productService = {
     }
   },
 };
-

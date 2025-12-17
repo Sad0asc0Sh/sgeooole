@@ -10,7 +10,7 @@ exports.getPublicSettings = async (req, res) => {
       return res.json({
         success: true,
         data: {
-          storeName: 'فروشگاه من',
+          storeName: 'ویلف‌ویتا',
           paymentConfig: { activeGateway: 'zarinpal' }
         }
       })
@@ -54,7 +54,7 @@ exports.getPublicSettings = async (req, res) => {
 
     res.json({
       success: true,
-      settings: publicData,
+      data: publicData,
     })
   } catch (error) {
     console.error('Error fetching public settings:', error)

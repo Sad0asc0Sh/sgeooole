@@ -109,7 +109,7 @@ export default function CheckoutPage() {
                 const res = await api.get('/settings/public');
                 console.log("Settings response:", res.data);
 
-                if (res.data.success) {
+                if (res.data.success && res.data.data) {
                     const config = res.data.data.paymentConfig;
                     const defaultGateway = config?.activeGateway || 'zarinpal';
 

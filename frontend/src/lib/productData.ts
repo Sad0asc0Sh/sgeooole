@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { Product, ProductColor } from "@/services/productService";
+import type { Product, ProductColor } from "@/types/product";
 import { buildProductUrl } from "./paths";
 import { resolvePricing } from "@/lib/pricing";
 
@@ -265,7 +265,7 @@ export class RateLimitError extends Error {
 export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
   try {
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/${id}`,
+      `${apiBaseUrl}/products/${id}?nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',
@@ -312,7 +312,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
   try {
     // Try to fetch by productCode first
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/code/${normalizedCode}`,
+      `${apiBaseUrl}/products/code/${normalizedCode}?nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',
@@ -348,7 +348,7 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   try {
     // Try a slug endpoint first with retry
     const resSlug = await fetchWithRetry(
-      `${apiBaseUrl}/products/slug/${slug}`,
+      `${apiBaseUrl}/products/slug/${slug}?nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',
@@ -369,7 +369,7 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   // Fallback: try list query with retry
   try {
     const res = await fetchWithRetry(
-      `${apiBaseUrl}/products?slug=${slug}`,
+      `${apiBaseUrl}/products?slug=${slug}&nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',
@@ -393,7 +393,7 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
 export const fetchProductsForStatic = async (limit: number = 100): Promise<(Product & { isActive?: boolean })[]> => {
   try {
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products?limit=${limit}`,
+      `${apiBaseUrl}/products?limit=${limit}&nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',
@@ -427,7 +427,7 @@ export const fetchRelatedProducts = cache(async (
     // Fetch extra products to ensure we have enough after filtering
     const fetchLimit = limit + 5;
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products?category=${categoryId}&limit=${fetchLimit}`,
+      `${apiBaseUrl}/products?category=${categoryId}&limit=${fetchLimit}&nocache=true`,
       {
         next: { revalidate: 0 },
         cache: 'no-store',

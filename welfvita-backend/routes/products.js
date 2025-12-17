@@ -784,17 +784,36 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     if (!activeSale && product.category) {
       const categoryId = typeof product.category === 'object' ? product.category._id : product.category
 
-      const categorySale = await Sale.findOne({
+      // Support includeSubcategories sales by checking the full category path (ancestors)
+      const categoryPathIds = Array.isArray(productObj.categoryPath) && productObj.categoryPath.length > 0
+        ? productObj.categoryPath.map((c) => c._id).filter(Boolean)
+        : [categoryId].filter(Boolean)
+
+      const categorySales = await Sale.find({
         isActive: true,
         startDate: { $lte: now },
         endDate: { $gte: now },
-        categories: categoryId,
+        categories: { $in: categoryPathIds },
       })
-        .select('name discountPercentage badgeTheme endDate includeSubcategories')
+        .select('name discountPercentage badgeTheme endDate includeSubcategories categories')
         .lean()
 
-      if (categorySale) {
-        activeSale = categorySale
+      const leafCategoryId = categoryId ? categoryId.toString() : null
+      const ancestorIds = categoryPathIds.map((c) => c.toString())
+
+      const matchedSale = categorySales.find((sale) => {
+        const includeSubs = sale.includeSubcategories !== false
+        const saleCategoryIds = Array.isArray(sale.categories) ? sale.categories.map((c) => c.toString()) : []
+
+        // Always apply when the product is directly in the sale category
+        if (leafCategoryId && saleCategoryIds.includes(leafCategoryId)) return true
+
+        // Apply to descendants when includeSubcategories is enabled (sale category is an ancestor)
+        return includeSubs && saleCategoryIds.some((cid) => ancestorIds.includes(cid))
+      })
+
+      if (matchedSale) {
+        activeSale = matchedSale
       }
     }
 
@@ -1617,6 +1636,7 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
   try {
     const { code } = req.params
     const normalizedCode = code.toUpperCase()
+    const skipDiscount = req.query.skipDiscount === 'true'
 
     const product = await Product.findOne({ productCode: normalizedCode })
       .populate('category', '_id name slug parent')
@@ -1630,35 +1650,94 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
       })
     }
 
-    // Build categoryPath for frontend
-    let categoryPath = []
-    if (product.category) {
-      if (product.category.parent) {
-        const parentCategory = await Category.findById(product.category.parent)
-          .select('_id name slug')
+    const productObj = { ...product }
+
+    // Build full category path from root to leaf
+    if (productObj.category && productObj.category._id) {
+      productObj.categoryPath = await buildCategoryPath(productObj.category._id)
+    }
+
+    // If skipDiscount is true, return raw product data without discount calculation
+    // This is used for admin editing to preserve original prices
+    if (!skipDiscount) {
+      const now = new Date()
+
+      // Check for direct product campaign
+      let activeSale = await Sale.findOne({
+        isActive: true,
+        startDate: { $lte: now },
+        endDate: { $gte: now },
+        products: productObj._id,
+      })
+        .select('name discountPercentage badgeTheme endDate')
+        .lean()
+
+      // If no direct campaign, check category-based campaign (supports includeSubcategories)
+      if (!activeSale && productObj.categoryPath && productObj.categoryPath.length > 0) {
+        const leafCategoryId = productObj.categoryPath[productObj.categoryPath.length - 1]._id
+        const categoryPathIds = productObj.categoryPath.map((c) => c._id).filter(Boolean)
+
+        const categorySales = await Sale.find({
+          isActive: true,
+          startDate: { $lte: now },
+          endDate: { $gte: now },
+          categories: { $in: categoryPathIds },
+        })
+          .select('name discountPercentage badgeTheme endDate includeSubcategories categories')
           .lean()
-        if (parentCategory) {
-          categoryPath.push({
-            _id: parentCategory._id,
-            id: parentCategory._id,
-            name: parentCategory.name,
-            slug: parentCategory.slug,
-          })
+
+        const leafCategoryIdStr = leafCategoryId ? leafCategoryId.toString() : null
+        const ancestorIds = categoryPathIds.map((c) => c.toString())
+
+        const matchedSale = categorySales.find((sale) => {
+          const includeSubs = sale.includeSubcategories !== false
+          const saleCategoryIds = Array.isArray(sale.categories) ? sale.categories.map((c) => c.toString()) : []
+
+          // Always apply when the product is directly in the sale category
+          if (leafCategoryIdStr && saleCategoryIds.includes(leafCategoryIdStr)) return true
+
+          // Apply to descendants when includeSubcategories is enabled (sale category is an ancestor)
+          return includeSubs && saleCategoryIds.some((cid) => ancestorIds.includes(cid))
+        })
+
+        if (matchedSale) {
+          activeSale = matchedSale
         }
       }
-      categoryPath.push({
-        _id: product.category._id,
-        id: product.category._id,
-        name: product.category.name,
-        slug: product.category.slug,
-      })
+
+      if (activeSale) {
+        productObj.campaignLabel = activeSale.name
+        productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
+        if (activeSale.discountPercentage > 0) {
+          productObj.discount = activeSale.discountPercentage
+          productObj.isSpecialOffer = true
+          productObj.isFromActiveSale = true
+          productObj.specialOfferEndTime = activeSale.endDate
+
+          // Calculate final price
+          const originalPrice = productObj.price
+          const discountAmount = (originalPrice * activeSale.discountPercentage) / 100
+          productObj.price = originalPrice - discountAmount
+          productObj.compareAtPrice = originalPrice
+        }
+      } else if (productObj.discount > 0) {
+        // Apply direct product discount
+        const originalPrice = productObj.price
+        const discountAmount = (originalPrice * productObj.discount) / 100
+        productObj.price = originalPrice - discountAmount
+        productObj.compareAtPrice = originalPrice
+
+        if (productObj.isFlashDeal) {
+          productObj.campaignLabel = 'فروش ویژه'
+          productObj.campaignTheme = 'gold-red'
+        }
+      }
     }
 
     res.json({
       success: true,
       data: {
-        ...product,
-        categoryPath,
+        ...productObj,
       },
     })
   } catch (error) {

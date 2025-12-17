@@ -90,7 +90,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             <div className="container mx-auto">
                 {/* Main Slider - standard autoplay with 3s pause */}
                 {mainBanners.length > 0 && (
-                    <div className="w-full rounded-2xl overflow-hidden shadow-sm md:h-[400px] lg:h-[450px]">
+                    <div className="w-full rounded-2xl overflow-hidden shadow-sm">
                         <Swiper
                             modules={[Autoplay, Pagination]}
                             spaceBetween={10}
@@ -104,7 +104,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 pauseOnMouseEnter: true,
                                 reverseDirection: true,
                             }}
-                            className="w-full aspect-[2/1] md:h-full"
+                            className="w-full aspect-[2/1] sm:aspect-[21/9] md:aspect-[21/7] lg:aspect-[21/6]"
                             dir="ltr"
                         >
                             {mainBanners.map((banner) => {
@@ -134,8 +134,9 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                                 src={imageUrl}
                                                 alt={banner.title}
                                                 fill
-                                                className="object-cover"
+                                                className="object-cover object-center"
                                                 priority
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
                                             />
                                         </div>
                                     </SwiperSlide>
@@ -145,9 +146,9 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     </div>
                 )}
 
-                {/* Static Banners (Middle Banners) */}
+                {/* Static Banners (Middle Banners) - 3:1 aspect ratio, centered */}
                 {middleBanners.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-2 mt-2">
+                    <div className="flex flex-wrap justify-center gap-3 mt-3">
                         {middleBanners.map((banner) => {
                             const imageUrl = resolveImageUrl(
                                 (banner as any).image,
@@ -158,7 +159,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 <Link
                                     key={banner._id}
                                     href={banner.link || "#"}
-                                    className={`w-full md:w-[calc(50%-4px)] lg:w-[calc(33.333%-6px)] aspect-[4/1] md:aspect-[3/1] rounded-xl overflow-hidden bg-gray-100 relative block ${!banner.link ? "pointer-events-none" : ""
+                                    className={`w-full md:w-[calc(50%-6px)] lg:w-[calc(33.333%-8px)] aspect-[3/1] rounded-xl overflow-hidden bg-gray-100 relative block shadow-sm hover:shadow-md transition-shadow ${!banner.link ? "pointer-events-none" : ""
                                         }`}
                                 >
                                     <div className="w-full h-full relative">
@@ -166,7 +167,8 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                             src={imageUrl}
                                             alt={banner.title}
                                             fill
-                                            className="object-cover"
+                                            className="object-cover object-center"
+                                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
                                         />
                                     </div>
                                 </Link>

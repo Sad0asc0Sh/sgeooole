@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
-import ProductDetailClient from "../product/[id]/ProductDetailClient";
+import ProductDetailClient from "../product/[...segments]/ProductDetailClient";
 import { fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 

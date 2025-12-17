@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useSearchHistory } from "@/hooks/useSearchHistory";
+import { useScrollLock } from "@/hooks/useScrollLock";
 import { productService, Product } from "@/services/productService";
 import { categoryService, Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import { cn } from "@/lib/utils";
 export default function DesktopSearch() {
     const router = useRouter();
     const [query, setQuery] = useState("");
-    const [isOpen, setIsOpen] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
@@ -63,6 +64,14 @@ export default function DesktopSearch() {
 
     const debouncedQuery = useDebounce(query, 500);
     const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+    const { lock, unlock } = useScrollLock();
+
+    const closeSearch = () => setIsSearchOpen(false);
+
+    useEffect(() => {
+        if (isSearchOpen) lock();
+        else unlock();
+    }, [isSearchOpen, lock, unlock]);
 
     // Load all categories once for client-side filtering
     useEffect(() => {
@@ -75,17 +84,6 @@ export default function DesktopSearch() {
             }
         };
         loadCategories();
-    }, []);
-
-    // Handle outside click to close
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
     // Search Logic
@@ -129,7 +127,7 @@ export default function DesktopSearch() {
         if (query.trim()) {
             addToHistory(query.trim());
             router.push(`/products?search=${encodeURIComponent(query.trim())}`);
-            setIsOpen(false);
+            closeSearch();
         }
     };
 
@@ -144,17 +142,26 @@ export default function DesktopSearch() {
 
     return (
         <div ref={containerRef} className="relative w-full">
+            {/* Full screen overlay: captures outside clicks and only closes the search */}
+            {isSearchOpen && (
+                <div
+                    aria-hidden="true"
+                    className="fixed inset-0 z-40 h-screen w-screen bg-transparent"
+                    onClick={closeSearch}
+                />
+            )}
+
             {/* Search Input Bar */}
             <div
-                onClick={() => { setIsOpen(true); inputRef.current?.focus(); }}
+                onClick={() => { setIsSearchOpen(true); inputRef.current?.focus(); }}
                 className={cn(
-                    "relative flex items-center h-12 w-full rounded-xl bg-welf-50 px-4 transition-all duration-200 border border-transparent",
-                    isOpen ? "bg-white border-welf-200 shadow-sm ring-2 ring-vita-100" : "hover:bg-welf-100"
+                    "relative z-50 flex items-center h-12 w-full rounded-xl bg-welf-50 px-4 transition-all duration-200 border border-transparent",
+                    isSearchOpen ? "bg-white border-welf-200 shadow-sm ring-2 ring-vita-100" : "hover:bg-welf-100"
                 )}
             >
                 <Search className={cn(
                     "w-5 h-5 transition-colors",
-                    isOpen ? "text-vita-500" : "text-welf-500"
+                    isSearchOpen ? "text-vita-500" : "text-welf-500"
                 )} />
 
                 <form onSubmit={handleSearchSubmit} className="flex-1 mx-3">
@@ -164,9 +171,9 @@ export default function DesktopSearch() {
                         value={query}
                         onChange={(e) => {
                             setQuery(e.target.value);
-                            setIsOpen(true);
+                            setIsSearchOpen(true);
                         }}
-                        onFocus={() => setIsOpen(true)}
+                        onFocus={() => setIsSearchOpen(true)}
                         placeholder="جستجو در بین هزاران محصول..."
                         className="w-full bg-transparent text-sm text-welf-900 placeholder:text-welf-500 focus:outline-none"
                     />
@@ -183,8 +190,8 @@ export default function DesktopSearch() {
             </div>
 
             {/* Dropdown Results */}
-            {isOpen && (
-                <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-xl shadow-xl border border-welf-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
+            {isSearchOpen && (
+                <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-xl shadow-xl border border-welf-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {/* State: Loading */}
                     {isLoading && (
@@ -261,7 +268,7 @@ export default function DesktopSearch() {
                                                 onClick={(e) => {
                                                     // Prevent click if we were dragging
                                                     if (isDragging) e.preventDefault();
-                                                    else setIsOpen(false);
+                                                    else closeSearch();
                                                 }}
                                                 draggable={false}
                                                 className="flex flex-col items-center gap-2 min-w-[80px] group select-none"
@@ -293,7 +300,7 @@ export default function DesktopSearch() {
                                                 <Link
                                                     key={product.id}
                                                     href={`/product/${product.slug || product.id}`}
-                                                    onClick={() => { addToHistory(query); setIsOpen(false); }}
+                                                    onClick={() => { addToHistory(query); closeSearch(); }}
                                                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-welf-50 transition-colors group"
                                                 >
                                                     <div className="w-10 h-10 rounded-md bg-white border border-welf-100 flex-shrink-0 overflow-hidden">

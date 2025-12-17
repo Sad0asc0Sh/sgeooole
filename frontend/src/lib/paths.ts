@@ -1,4 +1,4 @@
-import type { Product } from "@/services/productService";
+import type { Product } from "@/types/product";
 
 /**
  * Build SEO-friendly product URL

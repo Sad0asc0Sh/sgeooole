@@ -194,7 +194,7 @@ export default function DesktopMegaMenu() {
                         left: overlayPosition.left,
                         width: overlayPosition.width,
                     }}
-                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[1000] flex max-h-[420px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[40] flex max-h-[420px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                 >
 
                     {isLoading ? (
