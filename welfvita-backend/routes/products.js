@@ -1608,4 +1608,67 @@ router.post(
   },
 )
 
+// ============================================
+// GET /api/products/code/:code
+// Get product by productCode (e.g., "KY-1234567")
+// Public route - used for SEO-friendly URLs
+// ============================================
+router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
+  try {
+    const { code } = req.params
+    const normalizedCode = code.toUpperCase()
+
+    const product = await Product.findOne({ productCode: normalizedCode })
+      .populate('category', '_id name slug parent')
+      .populate('brand', '_id name slug')
+      .lean()
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'محصول یافت نشد',
+      })
+    }
+
+    // Build categoryPath for frontend
+    let categoryPath = []
+    if (product.category) {
+      if (product.category.parent) {
+        const parentCategory = await Category.findById(product.category.parent)
+          .select('_id name slug')
+          .lean()
+        if (parentCategory) {
+          categoryPath.push({
+            _id: parentCategory._id,
+            id: parentCategory._id,
+            name: parentCategory.name,
+            slug: parentCategory.slug,
+          })
+        }
+      }
+      categoryPath.push({
+        _id: product.category._id,
+        id: product.category._id,
+        name: product.category.name,
+        slug: product.category.slug,
+      })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...product,
+        categoryPath,
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching product by code:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطای سرور',
+      error: error.message,
+    })
+  }
+})
+
 module.exports = router

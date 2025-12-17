@@ -52,6 +52,7 @@ export interface Product {
   title: string; // Display name (same as name for now)
   slug?: string;
   sku?: string; // Product SKU
+  productCode?: string; // SEO-friendly product code (KY-XXXXXXX)
   enTitle?: string; // English title (optional)
   price: number;
   oldPrice?: number; // Original price before discount

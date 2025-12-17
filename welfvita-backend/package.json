@@ -7,6 +7,13 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node seedAdmin.js",
+    "migrate:slugs": "node scripts/generate-all-slugs.js",
+    "migrate:slugs:dry": "node scripts/generate-all-slugs.js --dry-run --verbose",
+    "migrate:product-slugs": "node scripts/generate-product-slugs.js",
+    "migrate:category-slugs": "node scripts/generate-category-slugs.js",
+    "migrate:product-codes": "node scripts/generate-product-codes.js",
+    "migrate:product-codes:dry": "node scripts/generate-product-codes.js --dry-run --verbose",
+    "migrate:all": "npm run migrate:slugs && npm run migrate:product-codes",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

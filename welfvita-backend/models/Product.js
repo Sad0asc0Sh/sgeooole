@@ -92,6 +92,17 @@ const ProductSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // ============================================
+    // کد یکتای محصول برای URL (مثل: ky-1234567)
+    // ============================================
+    productCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      uppercase: true,
+    },
+
     description: {
       type: String,
       default: '',
@@ -296,8 +307,11 @@ ProductSchema.index({ isActive: 1, createdAt: -1 })
 // Index for Smart Filter Properties (category-based specs filtering)
 ProductSchema.index({ 'properties.label': 1, 'properties.value': 1 })
 
-// Simple slug generator from name if not provided
-ProductSchema.pre('save', function (next) {
+// ============================================
+// Pre-save Hook: Generate slug and productCode
+// ============================================
+ProductSchema.pre('save', async function (next) {
+  // 1. Generate slug from name if not provided
   if (this.isModified('name') && !this.slug) {
     const base = (this.name || '').toString().trim().toLowerCase()
     let slug = base
@@ -313,10 +327,54 @@ ProductSchema.pre('save', function (next) {
 
     this.slug = slug
   }
+
+  // 2. Generate productCode (KY-XXXXXXX) if not provided
+  if (!this.productCode) {
+    let code = ''
+
+    // Try to extract 7 digits from SKU first
+    if (this.sku) {
+      const skuDigits = this.sku.replace(/\D/g, '')
+      if (skuDigits.length > 0) {
+        code = skuDigits.slice(-7).padStart(7, '0')
+      }
+    }
+
+    // If no valid SKU, generate from MongoDB ObjectId or random
+    if (!code) {
+      const id = this._id ? this._id.toString() : new mongoose.Types.ObjectId().toString()
+      // Convert hex to numeric and take last 7 digits
+      const numericId = parseInt(id.slice(-8), 16)
+      code = (numericId % 10000000).toString().padStart(7, '0')
+    }
+
+    this.productCode = `KY-${code}`
+
+    // Ensure uniqueness
+    const Product = mongoose.model('Product')
+    let existingProduct = await Product.findOne({
+      productCode: this.productCode,
+      _id: { $ne: this._id }
+    })
+
+    let suffix = 1
+    const baseCode = this.productCode
+    while (existingProduct) {
+      suffix++
+      const newNum = (parseInt(code) + suffix) % 10000000
+      this.productCode = `KY-${newNum.toString().padStart(7, '0')}`
+      existingProduct = await Product.findOne({
+        productCode: this.productCode,
+        _id: { $ne: this._id }
+      })
+    }
+  }
+
   next()
 })
 
 ProductSchema.index({ slug: 1 }, { unique: true, sparse: true })
+ProductSchema.index({ productCode: 1 }, { unique: true, sparse: true })
 ProductSchema.index({ name: 1 })
 ProductSchema.index({ isFeatured: 1 })
 ProductSchema.index({ isActive: 1 })

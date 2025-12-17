@@ -85,6 +85,7 @@ type BackendProduct = {
   title?: string;
   slug?: string;
   sku?: string;
+  productCode?: string; // SEO-friendly code (KY-XXXXXXX)
   enTitle?: string;
   price: number;
   image?: BackendImage;
@@ -223,6 +224,7 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     title: backend.title || backend.name,
     slug: backend.slug,
     sku: backend.sku,
+    productCode: backend.productCode, // SEO-friendly product code (KY-XXXXXXX)
     enTitle: backend.enTitle,
     price: pricing.finalPrice,
     oldPrice: pricing.oldPrice,
@@ -297,6 +299,49 @@ export const fetchProductById = cache(async (id: string): Promise<(Product & { i
     console.error(`[productData] Error fetching product ${id}:`, error);
     throw error;
   }
+});
+
+/**
+ * Fetch product by productCode (e.g., "ky-1234567" or "KY-1234567")
+ * Falls back to ID lookup if code lookup fails
+ */
+export const fetchProductByCode = cache(async (code: string): Promise<(Product & { isActive?: boolean; productCode?: string }) | null> => {
+  // Normalize code to uppercase
+  const normalizedCode = code.toUpperCase();
+
+  try {
+    // Try to fetch by productCode first
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products/code/${normalizedCode}`,
+      {
+        next: { revalidate: 0 },
+        cache: 'no-store',
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (response.ok) {
+      const payload = await response.json();
+      const data = (payload as any)?.data ?? payload;
+      if (data) {
+        const product = mapBackendProduct(data as BackendProduct, apiBaseUrl);
+        // Attach productCode to the result
+        return { ...product, productCode: data.productCode || normalizedCode };
+      }
+    }
+  } catch (e) {
+    console.warn('[productData] Code lookup failed, trying fallback:', e);
+  }
+
+  // Fallback: try by ID (for backward compatibility with old URLs)
+  try {
+    return await fetchProductById(code);
+  } catch (e) {
+    console.warn('[productData] ID fallback also failed');
+  }
+
+  return null;
 });
 
 export const fetchProductBySlug = cache(async (slug: string): Promise<(Product & { isActive?: boolean }) | null> => {

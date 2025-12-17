@@ -1,8 +1,8 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
-import { fetchProductById, fetchProductsForStatic, fetchRelatedProducts } from "@/lib/productData";
+import { fetchProductById, fetchProductByCode, fetchProductBySlug, fetchProductsForStatic, fetchRelatedProducts } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 import ProductRail from "@/components/home/ProductRail";
 
@@ -11,9 +11,58 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const dynamicParams = true;
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
-    const { id } = await params;
-    const product = await fetchProductById(id);
+type PageParams = {
+    segments: string[];  // Catch-all: can be ["ky-1234567", "slug"] or just ["old-id"]
+};
+
+/**
+ * Smart product resolver that handles both URL formats:
+ * - New format: /product/ky-1234567/slug-here
+ * - Old format: /product/mongodb-object-id
+ * - Slug format: /product/product-name-slug
+ */
+async function resolveProduct(segments: string[]) {
+    const firstSegment = segments[0];
+
+    if (!firstSegment) {
+        return { product: null, isNewFormat: false };
+    }
+
+    // Check if first segment looks like a product code (KY-XXXXXXX)
+    if (/^ky-/i.test(firstSegment)) {
+        // New URL format: /product/ky-1234567/slug
+        const product = await fetchProductByCode(firstSegment);
+        if (product) {
+            return { product, isNewFormat: true };
+        }
+    }
+
+    // Try as MongoDB ObjectId (old format)
+    try {
+        const product = await fetchProductById(firstSegment);
+        if (product) {
+            return { product, isNewFormat: false };
+        }
+    } catch (e) {
+        // Not a valid ID, continue
+    }
+
+    // Try by slug as last resort
+    try {
+        const productBySlug = await fetchProductBySlug(firstSegment);
+        if (productBySlug) {
+            return { product: productBySlug, isNewFormat: false };
+        }
+    } catch (e) {
+        // Not found by slug either
+    }
+
+    return { product: null, isNewFormat: false };
+}
+
+export async function generateMetadata({ params }: { params: Promise<PageParams> }): Promise<Metadata> {
+    const { segments } = await params;
+    const { product } = await resolveProduct(segments);
 
     if (!product) {
         return {
@@ -24,7 +73,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     }
 
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
-    const slug = product.slug || product.id;
     const canonicalPath = buildProductUrl(product);
     const canonicalUrl = siteUrl ? `${siteUrl}${canonicalPath}` : canonicalPath;
     const coverImage = product.images?.[0];
@@ -68,40 +116,41 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     };
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = await params;
-
-    // Step 1: Fetch the main product first
-    const product = await fetchProductById(id);
+export default async function ProductPage({ params }: { params: Promise<PageParams> }) {
+    const { segments } = await params;
+    const { product, isNewFormat } = await resolveProduct(segments);
 
     if (!product) {
         notFound();
     }
 
-    // Step 2: Fetch related products using the product's category
-    // This is SSR-rendered for SEO benefits - crawlers will see related product links
+    // If user accessed via old URL format and product has productCode, redirect to new SEO-friendly URL
+    if (!isNewFormat && (product as any).productCode) {
+        const newUrl = buildProductUrl(product);
+        redirect(newUrl);
+    }
+
+    // Fetch related products using the product's category
     let relatedProducts: Awaited<ReturnType<typeof fetchRelatedProducts>> = [];
 
     try {
-        // Get the most specific category (last in path)
         const categoryId = product.categoryPath?.[product.categoryPath.length - 1]?.id;
-
         if (categoryId) {
-            // Use SSR-safe native fetch function (avoids url.parse deprecation)
-            relatedProducts = await fetchRelatedProducts(categoryId, id, 10);
+            relatedProducts = await fetchRelatedProducts(categoryId, product.id, 10);
         }
     } catch (error) {
-        // Silent fail - don't break the page if related products fail
         console.error('[ProductPage] Error fetching related products:', error);
     }
 
+    // Get product code - use stored productCode or generate from SKU/ID
+    const productCode = (product as any).productCode ||
+        `KY-${(product.sku?.replace(/\D/g, '').slice(-7) || product.id.slice(-7)).padStart(7, '0')}`;
+
     return (
         <>
-            {/* SEO: Structured data with related products for better crawling */}
             <ProductStructuredData product={product} relatedProducts={relatedProducts} />
             <ProductDetailClient product={product} />
 
-            {/* Related Products Section */}
             {relatedProducts.length > 0 && (
                 <div className="pb-4">
                     <ProductRail
@@ -111,26 +160,11 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 </div>
             )}
 
-            {/* Product Code Footer */}
             <div className="bg-gray-50 py-6 px-4 pb-28 border-t border-gray-100">
                 <div className="flex flex-col items-center justify-center gap-2">
                     <span className="text-xs text-gray-400">کد محصول</span>
                     <span className="text-lg font-mono font-bold bg-white text-gray-800 px-4 py-2 rounded-lg border border-gray-200 tracking-widest shadow-sm">
-                        {(() => {
-                            const skuDigits = product.sku ? product.sku.replace(/\D/g, '') : '';
-                            let code = '';
-                            if (skuDigits.length > 0) {
-                                code = skuDigits.slice(-7).padStart(7, '0');
-                            } else {
-                                let hash = 0;
-                                for (let i = 0; i < product.id.length; i++) {
-                                    hash = ((hash << 5) - hash) + product.id.charCodeAt(i);
-                                    hash |= 0;
-                                }
-                                code = Math.abs(hash).toString().slice(0, 7).padStart(7, '0');
-                            }
-                            return `KY-${code}`;
-                        })()}
+                        {productCode}
                     </span>
                 </div>
             </div>
@@ -140,5 +174,9 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
 export async function generateStaticParams() {
     const products = await fetchProductsForStatic(100);
-    return products.map((p) => ({ id: p.id }));
+    return products.map((p) => {
+        const code = (p as any).productCode?.toLowerCase() || p.id;
+        const slug = p.slug || p.id;
+        return { segments: [code, slug] };
+    });
 }
