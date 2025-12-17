@@ -17,7 +17,21 @@ const vazirmatn = Vazirmatn({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://welfvita.ir'),
+  metadataBase: (() => {
+    const raw = process.env.NEXT_PUBLIC_SITE_URL;
+    if (!raw) return new URL("https://welfvita.ir");
+
+    try {
+      return new URL(raw);
+    } catch {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[metadata] Invalid NEXT_PUBLIC_SITE_URL: ${raw}`);
+      } else {
+        console.warn("[metadata] Invalid NEXT_PUBLIC_SITE_URL; falling back to default");
+      }
+      return new URL("https://welfvita.ir");
+    }
+  })(),
   title: "فروشگاه ولفویتا | خرید آنلاین محصولات",
   description: "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
 };
@@ -41,4 +55,3 @@ export default function RootLayout({
     </html>
   );
 }
-

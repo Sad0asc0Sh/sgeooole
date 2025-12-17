@@ -9,7 +9,11 @@ export async function generateStaticParams() {
     const categories = await categoryService.getAll({ limit: 1000 });
     return categories.map((cat) => ({ slug: cat.slug || cat._id }));
   } catch (error) {
-    console.error("[categories] failed to build params", error);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[categories] failed to build params", error);
+    } else {
+      console.warn("[categories] failed to build params");
+    }
     return [];
   }
 }

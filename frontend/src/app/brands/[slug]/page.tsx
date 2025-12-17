@@ -15,7 +15,11 @@ export async function generateStaticParams() {
         const brands = await brandService.getAll({ limit: 1000 });
         return brands.map((brand) => ({ slug: brand.slug || brand._id }));
     } catch (error) {
-        console.error("[brands] failed to build params", error);
+        if (process.env.NODE_ENV !== "production") {
+            console.warn("[brands] failed to build params", error);
+        } else {
+            console.warn("[brands] failed to build params");
+        }
         return [];
     }
 }

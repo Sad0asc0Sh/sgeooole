@@ -3,10 +3,14 @@ import axios from "axios";
 // Get API base URL from environment variable or default to localhost
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
 
+// Fail fast during `next build` prerender to avoid build timeouts when the backend is unavailable.
+const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
+const apiTimeoutMs = isBuildPhase ? 8000 : 30000;
+
 // Create axios instance with default configuration
 const api = axios.create({
   baseURL,
-  timeout: 30000, // 30 second timeout
+  timeout: apiTimeoutMs,
   headers: {
     "Content-Type": "application/json",
   },

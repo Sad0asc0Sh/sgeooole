@@ -12,9 +12,17 @@ const fetchWithRetry = async (
 ): Promise<Response> => {
   let lastError: Error | null = null;
 
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
+  const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
+  const effectiveRetries = isBuildPhase ? Math.min(1, maxRetries) : maxRetries;
+  const baseDelay = isBuildPhase ? 0 : initialDelay;
+  const timeoutMs = isBuildPhase ? 3000 : 15000;
+
+  for (let attempt = 0; attempt < effectiveRetries; attempt++) {
+    const controller = options.signal ? null : new AbortController();
+    const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, { ...options, signal: options.signal ?? controller?.signal });
 
       // Success - return response
       if (response.ok) {
@@ -31,14 +39,16 @@ const fetchWithRetry = async (
         const retryAfter = response.headers.get('Retry-After');
         const delay = retryAfter
           ? parseInt(retryAfter, 10) * 1000
-          : initialDelay * Math.pow(2, attempt);
+          : baseDelay * Math.pow(2, attempt);
 
         // If this is the last attempt, return the error response
-        if (attempt === maxRetries - 1) {
+        if (attempt === effectiveRetries - 1) {
           return response;
         }
 
-        console.warn(`[productData] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms for: ${url}`);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`[productData] Retry attempt ${attempt + 1}/${effectiveRetries} after ${delay}ms for: ${url}`);
+        }
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
@@ -50,12 +60,16 @@ const fetchWithRetry = async (
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // Network error - retry with backoff
-      if (attempt < maxRetries - 1) {
-        const delay = initialDelay * Math.pow(2, attempt);
-        console.warn(`[productData] Network error, retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+      if (attempt < effectiveRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`[productData] Network error, retry attempt ${attempt + 1}/${effectiveRetries} after ${delay}ms`);
+        }
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }
 
@@ -291,13 +305,20 @@ export const fetchProductById = cache(async (id: string): Promise<(Product & { i
 
     return mapBackendProduct(data as BackendProduct, apiBaseUrl);
   } catch (error) {
-    // Re-throw RateLimitError for error boundary to catch
+    // Keep RateLimitError for runtime error boundaries, but never fail the production build.
     if (error instanceof RateLimitError) {
+      if (process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export") {
+        return null;
+      }
       throw error;
     }
-    // Log other errors and return null to prevent page crash
-    console.error(`[productData] Error fetching product ${id}:`, error);
-    throw error;
+
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[productData] Error fetching product ${id}:`, error);
+    } else {
+      console.warn(`[productData] Error fetching product ${id}`);
+    }
+    return null;
   }
 });
 
@@ -330,7 +351,11 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
       }
     }
   } catch (e) {
-    console.warn('[productData] Code lookup failed, trying fallback:', e);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn('[productData] Code lookup failed, trying fallback:', e);
+    } else {
+      console.warn('[productData] Code lookup failed, trying fallback');
+    }
   }
 
   // Fallback: try by ID (for backward compatibility with old URLs)
@@ -361,7 +386,11 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
     }
   } catch (e) {
     // fall back to other methods
-    console.warn('[productData] Slug endpoint failed, trying fallback:', e);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn('[productData] Slug endpoint failed, trying fallback:', e);
+    } else {
+      console.warn('[productData] Slug endpoint failed, trying fallback');
+    }
   }
 
   // Fallback: try list query with retry
@@ -402,7 +431,11 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
     const items = Array.isArray(payload?.data) ? payload.data : [];
     return items.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
   } catch (error) {
-    console.error("[product static] failed to fetch", error);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[product static] failed to fetch", error);
+    } else {
+      console.warn("[product static] failed to fetch");
+    }
     return [];
   }
 };
@@ -463,7 +496,11 @@ export const fetchRelatedProducts = cache(async (
 
     return relatedProducts;
   } catch (error) {
-    console.error(`[productData] Error fetching related products:`, error);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`[productData] Error fetching related products:`, error);
+    } else {
+      console.warn(`[productData] Error fetching related products`);
+    }
     return []; // Return empty array instead of throwing to prevent page crash
   }
 });

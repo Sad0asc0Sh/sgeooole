@@ -15,30 +15,42 @@ type CategoryItem = {
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").replace(/\/$/, "");
 
+const fetchJsonWithTimeout = async (url: string, init: RequestInit & { next?: any }, timeoutMs: number) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const logBuildFetchWarning = (message: string, error?: unknown) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(message, error);
+  } else {
+    console.warn(message);
+  }
+};
+
 async function fetchProducts(): Promise<ProductItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/products?limit=1000&isActive=true`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await fetchJsonWithTimeout(`${API_BASE}/products?limit=1000&isActive=true`, { next: { revalidate: 3600 } }, 8000);
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
-    console.error("[sitemap] Failed to fetch products", error);
+    logBuildFetchWarning("[sitemap] Failed to fetch products", error);
     return [];
   }
 }
 
 async function fetchCategories(): Promise<CategoryItem[]> {
   try {
-    const res = await fetch(`${API_BASE}/categories`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return [];
-    const json = await res.json();
+    const json = await fetchJsonWithTimeout(`${API_BASE}/categories`, { next: { revalidate: 3600 } }, 8000);
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
-    console.error("[sitemap] Failed to fetch categories", error);
+    logBuildFetchWarning("[sitemap] Failed to fetch categories", error);
     return [];
   }
 }

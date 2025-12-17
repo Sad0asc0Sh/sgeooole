@@ -22,42 +22,64 @@ const OG_IMAGE = process.env.NEXT_PUBLIC_OG_IMAGE || (SITE_URL ? `${SITE_URL}/og
 
 type ApiResponse<T> = { data?: T };
 
+const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit & { next?: any }, timeoutMs: number): Promise<T | null> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    if (!res.ok) return null;
+    return (await res.json().catch(() => null)) as T | null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+const logBuildFetchWarning = (message: string, error?: unknown) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(message, error);
+  } else {
+    console.warn(message);
+  }
+};
+
 async function fetchFeaturedCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${API_BASE}/categories/featured?_t=${Date.now()}`, {
-      next: { revalidate }
-    });
-    if (!res.ok) throw new Error("failed featured");
-    const json: ApiResponse<Category[]> = await res.json();
+    const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
+      `${API_BASE}/categories/featured?_t=${Date.now()}`,
+      { next: { revalidate } },
+      8000
+    );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
-    console.error("[home] Failed to fetch featured categories", error);
+    logBuildFetchWarning("[home] Failed to fetch featured categories", error);
     return [];
   }
 }
 
 async function fetchPopularCategories(): Promise<Category[]> {
   try {
-    const res = await fetch(`${API_BASE}/categories/popular?_t=${Date.now()}`, {
-      next: { revalidate }
-    });
-    if (!res.ok) throw new Error("failed popular");
-    const json: ApiResponse<Category[]> = await res.json();
+    const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
+      `${API_BASE}/categories/popular?_t=${Date.now()}`,
+      { next: { revalidate } },
+      8000
+    );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
-    console.error("[home] Failed to fetch popular categories", error);
+    logBuildFetchWarning("[home] Failed to fetch popular categories", error);
     return [];
   }
 }
 
 async function fetchBanners(): Promise<Banner[]> {
   try {
-    const res = await fetch(`${API_BASE}/banners?isActive=true&sort=sortOrder`, { next: { revalidate } });
-    if (!res.ok) throw new Error("failed banners");
-    const json: ApiResponse<Banner[]> = await res.json();
+    const json = await fetchJsonWithTimeout<ApiResponse<Banner[]>>(
+      `${API_BASE}/banners?isActive=true&sort=sortOrder`,
+      { next: { revalidate } },
+      8000
+    );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
-    console.error("[home] Failed to fetch banners", error);
+    logBuildFetchWarning("[home] Failed to fetch banners", error);
     return [];
   }
 }

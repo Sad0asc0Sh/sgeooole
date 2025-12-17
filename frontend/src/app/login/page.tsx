@@ -567,19 +567,21 @@ export default function LoginPage() {
                                         </div>
 
                                         {/* Google Login Button */}
-                                        <div className="w-full">
-                                            <GoogleLogin
-                                                onSuccess={handleGoogleSuccess}
-                                                onError={handleGoogleError}
-                                                useOneTap
-                                                theme="outline"
-                                                size="large"
-                                                text="signin_with"
-                                                shape="rectangular"
-                                                logo_alignment="left"
-                                                width="100%"
-                                            />
-                                        </div>
+                                        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+                                            <div className="w-full">
+                                                <GoogleLogin
+                                                    onSuccess={handleGoogleSuccess}
+                                                    onError={handleGoogleError}
+                                                    useOneTap
+                                                    theme="outline"
+                                                    size="large"
+                                                    text="signin_with"
+                                                    shape="rectangular"
+                                                    logo_alignment="left"
+                                                    width="100%"
+                                                />
+                                            </div>
+                                        )}
 
                                         {/* UX Hints */}
                                         <p className="text-[10px] text-gray-400 text-center mt-6 leading-5">

@@ -4,6 +4,18 @@ const withBundleAnalyzer =
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
+const fetchJsonWithTimeout = async (url: string, timeoutMs: number) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    return await res.json().catch(() => null);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
 const buildProductUrl = (product: any) => {
   const path = Array.isArray(product?.categoryPath)
     ? product.categoryPath.map((c: any) => c.slug).filter(Boolean).join("/")
@@ -79,8 +91,7 @@ const baseConfig: NextConfig = {
   },
   async redirects() {
     try {
-      const res = await fetch(`${API_BASE}/products?limit=100`);
-      const json = await res.json();
+      const json = await fetchJsonWithTimeout(`${API_BASE}/products?limit=100`, 8000);
       const items: any[] = Array.isArray(json?.data) ? json.data : [];
 
       const mapped = items
@@ -98,7 +109,11 @@ const baseConfig: NextConfig = {
 
       return mapped;
     } catch (error) {
-      console.warn("Failed to build product redirects", error);
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Failed to build product redirects", error);
+      } else {
+        console.warn("Failed to build product redirects");
+      }
       return [];
     }
   },

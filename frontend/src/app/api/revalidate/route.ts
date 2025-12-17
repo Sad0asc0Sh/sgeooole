@@ -27,7 +27,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ message: "Nothing to revalidate" }, { status: 400 });
   } catch (error: any) {
-    console.error("[revalidate] Error", error);
-    return NextResponse.json({ message: "Error revalidating", error: error?.message }, { status: 500 });
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[revalidate] Error", error);
+      return NextResponse.json({ message: "Error revalidating", error: error?.message }, { status: 500 });
+    }
+
+    console.error("[revalidate] Error");
+    return NextResponse.json({ message: "Error revalidating" }, { status: 500 });
   }
 }
