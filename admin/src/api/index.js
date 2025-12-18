@@ -1,71 +1,91 @@
 import axios from 'axios'
-import { useAuthStore } from '../stores'
+import { useAuthStore } from '../stores' // مسیر استور خود را چک کنید
 
-// Base URL can be overridden via Vite env (VITE_API_BASE_URL)
-const baseURL = (import.meta?.env?.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api').replace(/\/$/, '')
+// ----------------------------------------------------------------------
+// 1. تنظیم هوشمند آدرس پایه (Base URL)
+// ----------------------------------------------------------------------
+// اولویت‌ها:
+// ۱. اگر در فایل .env متغیر VITE_API_BASE_URL باشد، از آن استفاده می‌کند.
+// ۲. اگر نباشد و در حالت Production (نِتلیفای) باشیم، از '/api-proxy' استفاده می‌کند (برای حل مشکل CORS).
+// ۳. اگر در حالت Development باشیم، به لوکال‌هاست وصل می‌شود.
 
-// Create a shared axios instance
+const getBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL
+  const isProd = import.meta.env.PROD
+
+  if (envUrl) return envUrl.replace(/\/$/, '') // اگر متغیر محیطی ست شده بود
+  if (isProd) return '/api-proxy'              // پیش‌فرض برای نِتلیفای (از طریق Rewrite)
+  return 'http://localhost:5000/api'           // پیش‌فرض برای سیستم خودتان
+}
+
 export const api = axios.create({
-  baseURL,
-  withCredentials: true,
+  baseURL: getBaseUrl(),
+  withCredentials: true, // برای کوکی‌ها و CORS لازم است
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 60000, // 60 seconds timeout for large file uploads
+  timeout: 60000, // ۶۰ ثانیه مهلت برای آپلود فایل
 })
 
-// Attach Authorization header from Zustand store for all requests except login endpoints
-// Also handle FormData properly by letting browser set Content-Type automatically
-api.interceptors.request.use((config) => {
-  try {
-    const url = (config.url || '').toString()
-    const isLogin = url.endsWith('/auth/login') || url.endsWith('/auth/admin/login')
-    if (!isLogin) {
+// ----------------------------------------------------------------------
+// 2. Request Interceptor: تزریق توکن و مدیریت فایل‌ها
+// ----------------------------------------------------------------------
+api.interceptors.request.use(
+  (config) => {
+    try {
       const token = useAuthStore.getState()?.token
+
+      // اگر توکن داریم، به هدر اضافه کن
       if (token) {
-        config.headers = config.headers || {}
         config.headers.Authorization = `Bearer ${token}`
       }
-    }
 
-    // CRITICAL: When sending FormData, let the browser set Content-Type automatically
-    // This ensures the correct boundary is included for multipart/form-data
-    if (config.data instanceof FormData) {
-      delete config.headers['Content-Type']
+      // نکته حیاتی برای آپلود عکس/فایل (FormData)
+      // اگر دیتا از نوع FormData باشد، Content-Type را حذف می‌کنیم
+      // تا خود مرورگر آن را با Boundary صحیح تنظیم کند.
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type']
+      }
+    } catch (error) {
+      console.error('Error in request interceptor:', error)
     }
-  } catch (_) { }
-  return config
-})
+    return config
+  },
+  (error) => Promise.reject(error)
+)
 
-// Optional: normalize API errors & handle auth expiry
+// ----------------------------------------------------------------------
+// 3. Response Interceptor: مدیریت خطاهای عمومی و انقضای توکن
+// ----------------------------------------------------------------------
 api.interceptors.response.use(
-  (res) => res,
-  (error) => {
-    const status = error?.response?.status
-    const url = error?.config?.url || ''
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+    const status = error.response?.status
 
-    const isLoginEndpoint =
-      url.endsWith('/auth/login') || url.endsWith('/auth/admin/login')
+    // اگر خطای 401 (عدم احراز هویت) گرفتیم و درخواست مربوط به لاگین نبود
+    if (status === 401 && !originalRequest._retry) {
+      // جلوگیری از لوپ بی‌نهایت
+      originalRequest._retry = true
 
-    if (status === 401 && !isLoginEndpoint) {
       try {
         const { logout } = useAuthStore.getState() || {}
         if (logout) {
-          logout()
+          logout() // پاک کردن توکن از استور
         }
-      } catch (_) {
-        // ignore
-      }
 
-      if (typeof window !== 'undefined' && window.location) {
-        window.location.href = '/login'
+        // ریدایرکت به صفحه لاگین (فقط در سمت کلاینت)
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          window.location.href = '/login'
+        }
+      } catch (e) {
+        console.error('Logout failed:', e)
       }
     }
 
-    // برگرداندن خطای اصلی axios به جای Error جدید
-    // این اجازه می‌دهد که err.response.data.message در catch قابل دسترس باشد
+    // بازگرداندن متن خطا برای نمایش در کامپوننت‌ها
     return Promise.reject(error)
-  },
+  }
 )
 
 export default api
