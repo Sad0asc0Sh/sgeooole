@@ -173,20 +173,18 @@ const allowedOrigins = allowedOriginsEnv
     // remove localhost entries in production
   ]
 
-// نسخه اصلاح شده و هوشمند CORS
 app.use(cors({
   origin: (origin, callback) => {
-    // ۱. اجازه به درخواست‌های بدون Origin (مثل موبایل یا ابزارهای تست)
-    // ۲. اجازه اگر آدرس در لیست CLIENT_URL باشد
-    // ۳. اجازه اگر CLIENT_URL شامل '*' باشد
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+    // اگر CLIENT_URL شامل '*' باشد، به همه اجازه بده (برای تست سریع)
+    const isWildcardAllowed = allowedOrigins.includes('*');
+
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || isWildcardAllowed) {
       callback(null, true);
     } else {
-      // به جای تولید Error (که باعث خطای 500 می‌شود)، فقط لاگ می‌گیریم
-      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_CONSOLE === 'true') {
-        console.error('🔴 CORS Blocked Origin:', origin);
-      }
-      callback(null, false); // فقط اجازه نمی‌دهد، اما سرور را کرش نمی‌کند
+      // بسیار مهم: به جای throw کردن Error، فقط اجازه دسترسی نمی‌دهیم
+      // این کار باعث می‌شود سرور کرش نکند و خطای 500 ندهد
+      console.error('🔴 CORS Rejected:', origin);
+      callback(null, false);
     }
   },
   credentials: true,
