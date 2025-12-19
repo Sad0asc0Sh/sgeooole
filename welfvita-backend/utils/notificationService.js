@@ -5,7 +5,32 @@ const axios = require('axios')
 const Settings = require('../models/Settings')
 
 // ============================================
-// Email Transporter Configuration
+// Resend API Configuration (Primary for Cloud)
+// ============================================
+let resendClient = null
+
+const getResendClient = () => {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    const { Resend } = require('resend')
+    resendClient = new Resend(process.env.RESEND_API_KEY)
+    console.log('[EMAIL] ✅ Using Resend API for email delivery')
+  }
+  return resendClient
+}
+
+// Check if we should use Resend
+const useResend = () => {
+  return !!process.env.RESEND_API_KEY
+}
+
+// Get the from email for Resend
+const getResendFromEmail = () => {
+  // Resend requires verified domain or onboarding@resend.dev for testing
+  return process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+}
+
+// ============================================
+// Email Transporter Configuration (Fallback SMTP)
 // ============================================
 const createTransporter = () => {
   const config = {
@@ -32,6 +57,58 @@ const createTransporter = () => {
   }
 
   return nodemailer.createTransport(config)
+}
+
+// ============================================
+// Universal Email Sender (Resend or SMTP)
+// ============================================
+const sendEmail = async ({ to, subject, html }) => {
+  // Try Resend first (works better on cloud platforms)
+  if (useResend()) {
+    try {
+      const resend = getResendClient()
+      const fromName = process.env.EMAIL_FROM_NAME || 'ویلف ویتا'
+      const fromEmail = getResendFromEmail()
+
+      const { data, error } = await resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+      })
+
+      if (error) {
+        console.error('[EMAIL-RESEND] ❌ Error:', error)
+        throw new Error(error.message)
+      }
+
+      console.log('[EMAIL-RESEND] ✅ Email sent:', data?.id)
+      return { success: true, messageId: data?.id, provider: 'resend' }
+    } catch (resendError) {
+      console.error('[EMAIL-RESEND] ❌ Failed, trying SMTP fallback:', resendError.message)
+      // Fall through to SMTP
+    }
+  }
+
+  // Fallback to SMTP (Nodemailer)
+  try {
+    const transporter = createTransporter()
+    const fromName = process.env.EMAIL_FROM_NAME || 'ویلف ویتا'
+    const fromEmail = process.env.EMAIL_USER
+
+    const info = await transporter.sendMail({
+      from: `"${fromName}" <${fromEmail}>`,
+      to,
+      subject,
+      html,
+    })
+
+    console.log('[EMAIL-SMTP] ✅ Email sent:', info.messageId)
+    return { success: true, messageId: info.messageId, provider: 'smtp' }
+  } catch (smtpError) {
+    console.error('[EMAIL-SMTP] ❌ Error:', smtpError.message)
+    throw smtpError
+  }
 }
 
 /**
@@ -314,49 +391,47 @@ exports.sendExpiryWarningSMS = async (phoneNumber, params) => {
  */
 exports.sendResetPasswordEmail = async (userEmail, userName, resetUrl) => {
   try {
-    const transporter = createTransporter()
-
-    const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
-      to: userEmail,
-      subject: 'بازنشانی رمز عبور - پنل ادمین ویلف ویتا',
-      html: `
-        <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-          <h2 style="color: #333; text-align: center;">بازنشانی رمز عبور</h2>
-          <p style="color: #555; font-size: 14px;">
-            سلام ${userName || 'کاربر گرامی'}،
-          </p>
-          <p style="color: #555; font-size: 14px;">
-            شما درخواست بازنشانی رمز عبور خود را ارسال کرده‌اید. برای ادامه، روی دکمه زیر کلیک کنید:
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${resetUrl}"
-               style="background-color: #1890ff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
-              بازنشانی رمز عبور
-            </a>
-          </div>
-          <p style="color: #999; font-size: 13px;">
-            یا این لینک را کپی کنید:
-          </p>
-          <p style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 12px;">
-            ${resetUrl}
-          </p>
-          <p style="color: #d9534f; font-size: 13px; margin-top: 20px;">
-            ⚠️ این لینک فقط برای <strong>10 دقیقه</strong> معتبر است.
-          </p>
-          <p style="color: #999; font-size: 12px; margin-top: 30px;">
-            اگر شما درخواست بازنشانی رمز عبور نداده‌اید، این ایمیل را نادیده بگیرید.
-          </p>
-          <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-            با تشکر، تیم ویلف ویتا
-          </p>
+    const html = `
+      <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #333; text-align: center;">بازنشانی رمز عبور</h2>
+        <p style="color: #555; font-size: 14px;">
+          سلام ${userName || 'کاربر گرامی'}،
+        </p>
+        <p style="color: #555; font-size: 14px;">
+          شما درخواست بازنشانی رمز عبور خود را ارسال کرده‌اید. برای ادامه، روی دکمه زیر کلیک کنید:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}"
+             style="background-color: #1890ff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+            بازنشانی رمز عبور
+          </a>
         </div>
-      `,
-    }
+        <p style="color: #999; font-size: 13px;">
+          یا این لینک را کپی کنید:
+        </p>
+        <p style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 12px;">
+          ${resetUrl}
+        </p>
+        <p style="color: #d9534f; font-size: 13px; margin-top: 20px;">
+          ⚠️ این لینک فقط برای <strong>10 دقیقه</strong> معتبر است.
+        </p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          اگر شما درخواست بازنشانی رمز عبور نداده‌اید، این ایمیل را نادیده بگیرید.
+        </p>
+        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+          با تشکر، تیم ویلف ویتا
+        </p>
+      </div>
+    `
 
-    const info = await transporter.sendMail(mailOptions)
-    console.log('Reset password email sent: %s', info.messageId)
-    return { success: true, messageId: info.messageId }
+    const result = await sendEmail({
+      to: userEmail,
+      subject: 'بازنشانی رمز عبور - ویلف ویتا',
+      html,
+    })
+
+    console.log('[RESET PASSWORD] Email sent via', result.provider)
+    return result
   } catch (error) {
     console.error('Error sending reset password email:', error)
     throw error
@@ -371,39 +446,37 @@ exports.sendResetPasswordEmail = async (userEmail, userName, resetUrl) => {
  */
 exports.sendVerificationEmail = async (userEmail, code) => {
   try {
-    const transporter = createTransporter()
+    const html = `
+      <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #333; text-align: center;">کد تایید ایمیل</h2>
+        <p style="color: #555; font-size: 14px;">
+          کاربر گرامی،
+        </p>
+        <p style="color: #555; font-size: 14px;">
+          برای تایید آدرس ایمیل خود، لطفا کد زیر را وارد کنید:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="background-color: #f0f0f0; color: #333; padding: 15px 30px; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; border: 1px solid #ccc;">
+            ${code}
+          </span>
+        </div>
+        <p style="color: #d9534f; font-size: 13px; margin-top: 20px;">
+          ⚠️ این کد فقط برای <strong>2 دقیقه</strong> معتبر است.
+        </p>
+        <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
+          با تشکر، تیم ویلف ویتا
+        </p>
+      </div>
+    `
 
-    const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
+    const result = await sendEmail({
       to: userEmail,
       subject: 'کد تایید ایمیل - ویلف ویتا',
-      html: `
-        <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-          <h2 style="color: #333; text-align: center;">کد تایید ایمیل</h2>
-          <p style="color: #555; font-size: 14px;">
-            کاربر گرامی،
-          </p>
-          <p style="color: #555; font-size: 14px;">
-            برای تایید آدرس ایمیل خود، لطفا کد زیر را وارد کنید:
-          </p>
-          <div style="text-align: center; margin: 30px 0;">
-            <span style="background-color: #f0f0f0; color: #333; padding: 15px 30px; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 8px; border: 1px solid #ccc;">
-              ${code}
-            </span>
-          </div>
-          <p style="color: #d9534f; font-size: 13px; margin-top: 20px;">
-            ⚠️ این کد فقط برای <strong>2 دقیقه</strong> معتبر است.
-          </p>
-          <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-            با تشکر، تیم ویلف ویتا
-          </p>
-        </div>
-      `,
-    }
+      html,
+    })
 
-    const info = await transporter.sendMail(mailOptions)
-    console.log('Verification email sent: %s', info.messageId)
-    return { success: true, messageId: info.messageId }
+    console.log('[VERIFICATION EMAIL] Email sent via', result.provider)
+    return result
   } catch (error) {
     console.error('Error sending verification email:', error)
     throw error
