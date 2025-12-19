@@ -173,18 +173,20 @@ const allowedOrigins = allowedOriginsEnv
     // remove localhost entries in production
   ]
 
+// جایگزین بخش CORS در server.js
 app.use(cors({
   origin: (origin, callback) => {
-    // اگر CLIENT_URL شامل '*' باشد، به همه اجازه بده (برای تست سریع)
-    const isWildcardAllowed = allowedOrigins.includes('*');
+    // ۱. اجازه به درخواست‌های داخلی یا ابزارهای تست (بدون origin)
+    // ۲. اجازه اگر دامنه در لیست CLIENT_URL باشد
+    // ۳. اجازه اگر CLIENT_URL برابر '*' تنظیم شده باشد
+    const isAllowed = !origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*');
 
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || isWildcardAllowed) {
+    if (isAllowed) {
       callback(null, true);
     } else {
-      // بسیار مهم: به جای throw کردن Error، فقط اجازه دسترسی نمی‌دهیم
-      // این کار باعث می‌شود سرور کرش نکند و خطای 500 ندهد
-      console.error('🔴 CORS Rejected:', origin);
-      callback(null, false);
+      // فقط لاگ می‌گیریم که چه آدرسی مسدود شده تا در پنل Railway ببینید
+      console.error('🔴 CORS Blocked for Origin:', origin);
+      callback(null, false); // اجازه نمی‌دهد اما سرور را کرش نمی‌کند
     }
   },
   credentials: true,
