@@ -101,6 +101,7 @@ const loginLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تلاش‌های ورود بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
 })
 app.use('/api/auth/login', loginLimiter)
@@ -113,6 +114,7 @@ const otpLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تعداد درخواست‌های OTP بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
 })
 app.use('/api/auth/send-otp', otpLimiter)
@@ -126,6 +128,7 @@ const passwordResetLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تعداد درخواست‌های بازنشانی رمز عبور بیش از حد مجاز است.' },
 })
 app.use('/api/auth/forgot-password', passwordResetLimiter)
