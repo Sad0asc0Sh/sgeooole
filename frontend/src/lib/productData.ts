@@ -280,9 +280,9 @@ export class RateLimitError extends Error {
 export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
   try {
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/${id}?nocache=true`,
+      `${apiBaseUrl}/products/${encodeURIComponent(id)}?nocache=true`,
       {
-        next: { revalidate: 60 },
+        next: { revalidate: PRODUCT_REVALIDATE },
       } as RequestInit,
       3, // max retries
       1000 // initial delay
@@ -333,9 +333,9 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
   try {
     // Try to fetch by productCode first
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/code/${normalizedCode}?nocache=true`,
+      `${apiBaseUrl}/products/code/${encodeURIComponent(normalizedCode)}?nocache=true`,
       {
-        next: { revalidate: 60 },
+        next: { revalidate: PRODUCT_REVALIDATE },
       } as RequestInit,
       2,
       1000
@@ -369,50 +369,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
 });
 
 export const fetchProductBySlug = cache(async (slug: string): Promise<(Product & { isActive?: boolean }) | null> => {
-  try {
-    // Try a slug endpoint first with retry
-    const resSlug = await fetchWithRetry(
-      `${apiBaseUrl}/products/slug/${slug}?nocache=true`,
-      {
-        next: { revalidate: 60 },
-      } as RequestInit,
-      3,
-      1000
-    );
-    if (resSlug.ok) {
-      const payload = await resSlug.json();
-      const data = (payload as any)?.data ?? payload;
-      if (data) return mapBackendProduct(data as BackendProduct, apiBaseUrl);
-    }
-  } catch (e) {
-    // fall back to other methods
-    if (process.env.NODE_ENV !== "production") {
-      console.warn('[productData] Slug endpoint failed, trying fallback:', e);
-    } else {
-      console.warn('[productData] Slug endpoint failed, trying fallback');
-    }
-  }
-
-  // Fallback: try list query with retry
-  try {
-    const res = await fetchWithRetry(
-      `${apiBaseUrl}/products?slug=${slug}&nocache=true`,
-      {
-        next: { revalidate: 60 },
-      } as RequestInit,
-      2,
-      1000
-    );
-    if (res.ok) {
-      const payload = await res.json();
-      const item = Array.isArray(payload?.data) ? payload.data[0] : payload?.data;
-      if (item) return mapBackendProduct(item as BackendProduct, apiBaseUrl);
-    }
-  } catch (e) {
-    // ignore and try final fallback
-  }
-
-  // Final fallback: maybe slug is actually ID
+  // Backend supports resolving by slug via GET /api/products/:id (fallback lookup by slug).
   return fetchProductById(slug);
 });
 

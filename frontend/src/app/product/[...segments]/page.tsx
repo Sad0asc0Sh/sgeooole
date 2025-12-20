@@ -7,8 +7,8 @@ import RelatedProducts from "./RelatedProducts";
 import { fetchProductById, fetchProductByCode, fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 
-// Enable ISR with 1-hour revalidation
-export const revalidate = 3600;
+// Keep product pages fresh after admin edits (images/pricing)
+export const revalidate = 30;
 export const dynamicParams = true;
 
 type PageParams = {

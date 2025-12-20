@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { Product, ProductColor } from "@/services/productService";
+import { productService } from "@/services/productService";
+import type { Product, ProductColor } from "@/services/productService";
 import CountdownTimer from "@/components/ui/CountdownTimer";
 import ProductTabs from "@/components/product/ProductTabs";
 import ProductHeader from "./ProductHeader";
@@ -16,11 +17,44 @@ type ProductDetailClientProps = {
     product: Product;
 };
 
-export default function ProductDetailClient({ product }: ProductDetailClientProps) {
+export default function ProductDetailClient({ product: initialProduct }: ProductDetailClientProps) {
+    const [product, setProduct] = useState<Product>(initialProduct);
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
         product.colors && product.colors.length > 0 ? product.colors[0] : null
     );
     const [now, setNow] = useState(() => Date.now());
+
+    // Keep state in sync on route transitions (client navigation)
+    useEffect(() => {
+        setProduct(initialProduct);
+    }, [initialProduct]);
+
+    // Refresh product once on mount to avoid stale ISR/SSR data (e.g. newly uploaded images)
+    useEffect(() => {
+        let cancelled = false;
+
+        const refresh = async () => {
+            try {
+                const latest = await productService.getById(initialProduct.id);
+                if (!cancelled) {
+                    setProduct(latest);
+                }
+            } catch (error) {
+                // Best-effort; keep initial SSR product if refresh fails
+                if (process.env.NODE_ENV !== "production") {
+                    console.warn("[ProductDetailClient] Failed to refresh product", error);
+                }
+            }
+        };
+
+        if (initialProduct?.id) {
+            refresh();
+        }
+
+        return () => {
+            cancelled = true;
+        };
+    }, [initialProduct?.id]);
 
     // Update now every second for real-time countdown checks
     useEffect(() => {
