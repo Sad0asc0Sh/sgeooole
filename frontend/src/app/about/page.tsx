@@ -53,7 +53,7 @@ const brands = [
         icon: "🚗"
     },
     {
-        name: "HSB",
+        name: "HSP",
         description: "نماینده انحصاری ریموت‌های کنترل تردد",
         icon: "🔑"
     }

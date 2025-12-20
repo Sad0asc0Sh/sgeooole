@@ -2,7 +2,7 @@
 
 export const BRANDS = [
     { id: 1, name: "VAKERA", logo: "/placeholder-brand.png" },
-    { id: 2, name: "HSB", logo: "/placeholder-brand.png" },
+    { id: 2, name: "HSP", logo: "/placeholder-brand.png" },
     { id: 3, name: "SUZUKI", logo: "/placeholder-brand.png" },
     { id: 4, name: "SAILGIS", logo: "/placeholder-brand.png" },
     { id: 5, name: "DAHUA", logo: "/placeholder-brand.png" },
