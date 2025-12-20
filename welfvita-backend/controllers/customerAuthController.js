@@ -57,10 +57,22 @@ exports.sendOtp = async (req, res) => {
 
     console.log(`[OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
-    // Send SMS
-    await sendOtpSMS(mobile, code)
-
+    // RESPOND IMMEDIATELY - Don't wait for SMS to send
     res.json({ success: true, message: 'کد ارسال شد', expiresIn: 120 })
+
+    // Send SMS in background (fire-and-forget)
+    sendOtpSMS(mobile, code)
+      .then((result) => {
+        if (result.success) {
+          console.log(`[OTP] SMS sent successfully to: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+        } else {
+          console.error(`[OTP] SMS sending failed: ${result.message}`)
+        }
+      })
+      .catch((smsError) => {
+        console.error('[OTP] SMS sending error:', smsError.message)
+      })
+
   } catch (error) {
     console.error('Error sending OTP:', error)
     res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })
@@ -511,7 +523,6 @@ exports.loginWithPassword = async (req, res) => {
   }
 }
 
-// ======================
 // Forgot Password
 // ======================
 exports.forgotPassword = async (req, res) => {
@@ -552,209 +563,31 @@ exports.forgotPassword = async (req, res) => {
     // Create reset URL
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password/${resetToken}`
 
-    // Send email (import the notification service)
-    const { sendResetPasswordEmail, sendVerificationEmail } = require('../utils/notificationService')
-
-    // ... (existing imports)
-
-    // ======================
-    // Bind Mobile: Send OTP
-    // ======================
-    // ... (existing sendBindOtp)
-
-    // ======================
-    // Bind Mobile: Verify OTP
-    // ======================
-    // ... (existing verifyBindOtp)
-
-    // ======================
-    // Change Email: Send OTP
-    // ======================
-    exports.sendEmailOtp = async (req, res) => {
-      try {
-        const { email } = req.body
-        const userId = req.userId || (req.user && req.user._id)
-
-        if (!email || !/\S+@\S+\.\S+/.test(email)) {
-          return res.status(400).json({ success: false, message: 'ایمیل نامعتبر است.' })
-        }
-
-        // Check if email is already used by another user
-        const existingUser = await User.findOne({ email })
-        if (existingUser) {
-          return res.status(400).json({ success: false, message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.' })
-        }
-
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-        const recentOtps = await OTP.countDocuments({ email, createdAt: { $gte: tenMinutesAgo } })
-        if (recentOtps >= 3) {
-          return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
-        }
-
-        const code = crypto.randomInt(1000, 9999).toString()
-        const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
-
-        const otp = new OTP({ email, code, expiresAt, verified: false, attempts: 0 })
-        await otp.save()
-
-        console.log(`[EMAIL OTP] Code generated for email: ${email}`)
-
-        // Send Email
-        await sendVerificationEmail(email, code)
-
-        res.json({ success: true, message: 'کد تایید به ایمیل ارسال شد', expiresIn: 120 })
-      } catch (error) {
-        console.error('Error sending email OTP:', error)
-        res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })
-      }
-    }
-
-    // ======================
-    // Change Email: Verify OTP
-    // ======================
-    exports.verifyEmailOtp = async (req, res) => {
-      try {
-        const { email, code } = req.body
-        const userId = req.userId || (req.user && req.user._id)
-
-        if (!email || !code) {
-          return res.status(400).json({ success: false, message: 'ورودی نامعتبر است.' })
-        }
-
-        const otp = await OTP.findOne({
-          email,
-          code,
-          verified: false,
-          expiresAt: { $gt: new Date() },
-        }).sort({ createdAt: -1 })
-
-        if (!otp) {
-          return res.status(400).json({ success: false, message: 'کد وارد شده معتبر نیست.' })
-        }
-
-        if (otp.attempts >= 3) {
-          return res.status(400).json({ success: false, message: 'تعداد تلاش بیش از حد مجاز.' })
-        }
-
-        otp.attempts += 1
-        otp.verified = true
-        await otp.save()
-
-        const user = await User.findById(userId)
-        if (!user) {
-          return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
-        }
-
-        // Check again if email is taken
-        const existingUser = await User.findOne({ email })
-        if (existingUser && existingUser._id.toString() !== userId.toString()) {
-          return res.status(400).json({ success: false, message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.' })
-        }
-
-        user.email = email
-        await user.save()
-        await OTP.cleanupOld(email)
-
-        console.log(`[AUTH] Email updated for user: ${user._id} -> ${email}`)
-
-        res.json({
-          success: true,
-          message: 'ایمیل با موفقیت تایید و ثبت شد.',
-          data: {
-            user: {
-              _id: user._id,
-              name: user.name,
-              mobile: user.mobile,
-              email: user.email,
-              wallet: user.wallet,
-              role: user.role,
-              isActive: user.isActive,
-              username: user.username,
-              avatar: user.avatar,
-              googleId: user.googleId
-            }
-          }
-        })
-      } catch (error) {
-        console.error('Error verifying email OTP:', error)
-        res.status(500).json({ success: false, message: 'خطا در تأیید کد', error: error.message })
-      }
-    }
-
-    // ======================
-    // Update Profile (Name, Password) - Email removed
-    // ======================
-    exports.updateProfile = async (req, res) => {
-      try {
-        const { name, password } = req.body // email removed from destructuring
-        const userId = req.userId || (req.user && req.user._id)
-
-        const user = await User.findById(userId).select('+password')
-        if (!user) {
-          return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
-        }
-
-        if (name) user.name = name
-
-        // Email update logic REMOVED. Must use verifyEmailOtp.
-        // if (email) ...
-
-        if (password && password.trim() !== '') {
-          if (password.length < 6) {
-            return res.status(400).json({ success: false, message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.' })
-          }
-          user.password = password
-        }
-
-        await user.save()
-
-        res.json({
-          success: true,
-          message: 'پروفایل با موفقیت بروزرسانی شد.',
-          data: {
-            user: {
-              _id: user._id,
-              name: user.name,
-              mobile: user.mobile,
-              email: user.email,
-              wallet: user.wallet,
-              role: user.role,
-              isActive: user.isActive,
-              username: user.username,
-              avatar: user.avatar,
-              googleId: user.googleId
-            }
-          }
-        })
-      } catch (error) {
-        console.error('Error updating profile:', error)
-        res.status(500).json({ success: false, message: 'خطا در بروزرسانی پروفایل', error: error.message })
-      }
-    }
-    await sendResetPasswordEmail(user.email, user.name, resetUrl)
-
-    console.log(`[AUTH] Password reset email sent to: ${email}`)
-
+    // RESPOND IMMEDIATELY - Don't wait for email to send
     res.status(200).json({
       success: true,
-      message: 'ایمیل بازیابی رمز عبور با موفقیت ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
+      message: 'اگر این ایمیل در سیستم وجود داشته باشد، لینک بازیابی برای شما ارسال می‌شود.',
     })
+
+    // Send email in background (fire-and-forget)
+    const { sendResetPasswordEmail } = require('../utils/notificationService')
+    sendResetPasswordEmail(user.email, user.name, resetUrl)
+      .then(() => {
+        console.log(`[AUTH] Password reset email sent to: ${email}`)
+      })
+      .catch((emailError) => {
+        console.error('[AUTH] Failed to send password reset email:', emailError.message)
+        // Clean up token since email failed
+        User.findByIdAndUpdate(user._id, {
+          $unset: { resetPasswordToken: 1, resetPasswordExpire: 1 }
+        }).catch(() => { })
+      })
+
   } catch (error) {
     console.error('Error in forgot password:', error)
-
-    // Clean up token if email sending failed
-    if (req.body.email) {
-      const user = await User.findOne({ email: req.body.email.toLowerCase() })
-      if (user) {
-        user.resetPasswordToken = undefined
-        user.resetPasswordExpire = undefined
-        await user.save({ validateBeforeSave: false })
-      }
-    }
-
     res.status(500).json({
       success: false,
-      message: 'خطا در ارسال ایمیل بازیابی. لطفاً دوباره تلاش کنید.',
+      message: 'خطا در پردازش درخواست. لطفاً دوباره تلاش کنید.',
       error: error.message,
     })
   }
