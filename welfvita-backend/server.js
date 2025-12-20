@@ -43,7 +43,13 @@ const helmetConfig = {
       styleSrc: ["'self'", "'unsafe-inline'"], // Required for some CSS
       imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
       fontSrc: ["'self'", "data:"],
-      connectSrc: ["'self'", process.env.CLIENT_URL || 'http://localhost:3000'].filter(Boolean),
+      connectSrc: [
+        "'self'",
+        // Parse CLIENT_URL properly - it may contain multiple comma-separated URLs
+        ...(process.env.CLIENT_URL
+          ? process.env.CLIENT_URL.split(',').map(url => url.trim()).filter(url => url && url !== '*')
+          : ['http://localhost:3000']),
+      ].filter(Boolean),
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
