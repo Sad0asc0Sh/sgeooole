@@ -1066,6 +1066,57 @@ router.put(
       const body = req.body || {}
       const { removeAllImages, imagesToRemove, ...updates } = body
 
+      // Allow clients to send arrays either as JSON arrays or JSON strings (FormData)
+      const normalizeImageList = (value) => {
+        if (value === undefined || value === null || value === '') return undefined
+        if (Array.isArray(value)) return value
+        if (typeof value === 'string') {
+          const trimmed = value.trim()
+          if (!trimmed) return undefined
+          try {
+            const parsed = JSON.parse(trimmed)
+            if (Array.isArray(parsed)) return parsed
+          } catch (_) {
+            // ignore JSON parse errors, fall back to single string
+          }
+          return [trimmed]
+        }
+        if (typeof value === 'object') return [value]
+        return undefined
+      }
+
+      const getImageUrl = (img) => {
+        if (!img) return undefined
+        if (typeof img === 'string') return img
+        if (typeof img === 'object' && typeof img.url === 'string') return img.url
+        return undefined
+      }
+
+      const getImagePublicId = (img) => {
+        if (!img || typeof img !== 'object') return undefined
+        return typeof img.public_id === 'string' ? img.public_id : undefined
+      }
+
+      const imagesMatch = (a, b) => {
+        const aId = getImagePublicId(a)
+        const bId = getImagePublicId(b)
+        if (aId && bId) return aId === bId
+
+        const aUrl = getImageUrl(a)
+        const bUrl = getImageUrl(b)
+        if (aUrl && bUrl) return aUrl === bUrl
+
+        return false
+      }
+
+      // Normalize `images` in updates (or drop it if it's an invalid type)
+      const incomingImages = normalizeImageList(updates.images)
+      if (incomingImages !== undefined) {
+        updates.images = incomingImages
+      } else if (updates.images !== undefined) {
+        delete updates.images
+      }
+
       const product = await Product.findById(req.params.id)
       if (!product) {
         return res.status(404).json({
@@ -1090,74 +1141,56 @@ router.put(
             }
           }
         }
-        updates.images = []
-      } else if (Array.isArray(imagesToRemove) && imagesToRemove.length > 0) {
-        const toRemove = imagesToRemove
-        console.log('[DEBUG] imagesToRemove:', JSON.stringify(toRemove, null, 2))
-        console.log('[DEBUG] product.images (before):', JSON.stringify(product.images, null, 2))
+        // If client also sent a new images list, treat it as replacement after deletion
+        updates.images = Array.isArray(updates.images) ? updates.images : []
+      } else {
+        const toRemove = normalizeImageList(imagesToRemove) || []
+        if (Array.isArray(toRemove) && toRemove.length > 0) {
+          console.log('[DEBUG] imagesToRemove:', JSON.stringify(toRemove, null, 2))
+          console.log('[DEBUG] product.images (before):', JSON.stringify(product.images, null, 2))
 
-        const remainingImages = []
+          const remainingImages = []
 
-        if (Array.isArray(product.images)) {
-          for (const img of product.images) {
-            const existingUrl =
-              img && typeof img === 'object'
-                ? img.url
-                : typeof img === 'string'
-                  ? img
-                  : undefined
-            const existingPublicId =
-              img && typeof img === 'object' && img.public_id ? img.public_id : undefined
+          if (Array.isArray(product.images)) {
+            for (const img of product.images) {
+              const existingUrl = getImageUrl(img)
+              const existingPublicId = getImagePublicId(img)
 
-            const shouldRemove = toRemove.some((r) => {
-              const rUrl =
-                r && typeof r === 'object'
-                  ? r.url
-                  : typeof r === 'string'
-                    ? r
-                    : undefined
-              const rPublicId =
-                r && typeof r === 'object' && r.public_id ? r.public_id : undefined
+              const shouldRemove = toRemove.some((r) => imagesMatch(img, r))
 
               console.log(`[DEBUG] Comparing:
                 Existing - ID: ${existingPublicId}, URL: ${existingUrl}
-                Remove - ID: ${rPublicId}, URL: ${rUrl}`)
+                Remove candidates: ${toRemove.length}
+                Should remove: ${shouldRemove}`)
 
-              if (existingPublicId && rPublicId) {
-                const match = existingPublicId === rPublicId
-                if (match) console.log('[DEBUG] Match found by public_id')
-                return match
-              }
-
-              if (!existingPublicId && existingUrl && rUrl) {
-                const match = existingUrl === rUrl
-                if (match) console.log('[DEBUG] Match found by URL')
-                return match
-              }
-
-              return false
-            })
-
-            if (shouldRemove) {
-              if (existingPublicId) {
-                try {
-                  console.log('[DEBUG] Deleting from Cloudinary:', existingPublicId)
-                  await cloudinary.uploader.destroy(existingPublicId)
-                } catch (err) {
-                  console.error(
-                    'Error deleting product image from Cloudinary during partial update:',
-                    err.message,
-                  )
+              if (shouldRemove) {
+                if (existingPublicId) {
+                  try {
+                    console.log('[DEBUG] Deleting from Cloudinary:', existingPublicId)
+                    await cloudinary.uploader.destroy(existingPublicId)
+                  } catch (err) {
+                    console.error(
+                      'Error deleting product image from Cloudinary during partial update:',
+                      err.message,
+                    )
+                  }
                 }
+              } else {
+                remainingImages.push(img)
               }
-            } else {
-              remainingImages.push(img)
             }
           }
-        }
 
-        console.log('[DEBUG] remainingImages:', JSON.stringify(remainingImages, null, 2))
-        updates.images = remainingImages
+          console.log('[DEBUG] remainingImages:', JSON.stringify(remainingImages, null, 2))
+
+          // If the client sent a final images list (e.g., existing + newly uploaded),
+          // don't drop new images just because imagesToRemove is present.
+          if (Array.isArray(updates.images)) {
+            updates.images = updates.images.filter((img) => !toRemove.some((r) => imagesMatch(img, r)))
+          } else {
+            updates.images = remainingImages
+          }
+        }
       }
 
       // Clean up invalid ObjectId references before updating

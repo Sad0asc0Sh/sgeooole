@@ -453,12 +453,13 @@ function ProductForm() {
     }, 300) // کمی تأخیر برای نمایش انیمیشن
 
     // Track removed images for existing products (edit mode)
-    if (file.url || file.public_id) {
+    const isNewUpload = !!file.originFileObj
+    if (isEdit && !isNewUpload && (file.url || file.public_id)) {
       setRemovedImages(prev => [...prev, { url: file.url, public_id: file.public_id }])
     }
 
     // حذف از Cloudinary در پس‌زمینه (async - بدون انتظار)
-    if (file.public_id) {
+    if (file.public_id && (!isEdit || isNewUpload)) {
       api.delete(`/uploads/image/${file.public_id}`)
         .then(() => {
           console.log('Image deleted from Cloudinary:', file.public_id)
@@ -577,6 +578,7 @@ function ProductForm() {
           imagesToRemove: removedImages,
         })
 
+        setRemovedImages([])
         message.success({ content: 'محصول با موفقیت به‌روزرسانی شد', key: 'save' })
       }
     } catch (err) {
