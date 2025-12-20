@@ -269,6 +269,12 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
 
 const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
+const encodePathSegment = (value: string) => {
+  // Avoid double-encoding: Next/router params may already be percent-encoded.
+  if (/%[0-9A-Fa-f]{2}/.test(value)) return value;
+  return encodeURIComponent(value);
+};
+
 // Custom error class for rate limiting
 export class RateLimitError extends Error {
   constructor(message: string) {
@@ -280,7 +286,7 @@ export class RateLimitError extends Error {
 export const fetchProductById = cache(async (id: string): Promise<(Product & { isActive?: boolean }) | null> => {
   try {
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/${encodeURIComponent(id)}?nocache=true`,
+      `${apiBaseUrl}/products/${encodePathSegment(id)}?nocache=true`,
       {
         next: { revalidate: PRODUCT_REVALIDATE },
       } as RequestInit,
@@ -333,7 +339,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
   try {
     // Try to fetch by productCode first
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products/code/${encodeURIComponent(normalizedCode)}?nocache=true`,
+      `${apiBaseUrl}/products/code/${encodePathSegment(normalizedCode)}?nocache=true`,
       {
         next: { revalidate: PRODUCT_REVALIDATE },
       } as RequestInit,
