@@ -403,6 +403,61 @@ export default function VerificationPage() {
                                 </div>
                             </div>
 
+                            {/* Legal Entity Info - Only shown when isLegal is true */}
+                            {formData.isLegal && (
+                                <div className="bg-white p-5 lg:p-8 rounded-2xl shadow-sm border border-blue-100 ring-2 ring-blue-50">
+                                    <h2 className="font-bold text-gray-800 flex items-center gap-2 text-lg mb-6">
+                                        <Building2 className="text-blue-600" />
+                                        اطلاعات شرکت / سازمان
+                                    </h2>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <Input
+                                            label="نام شرکت / سازمان"
+                                            name="companyName"
+                                            value={formData.companyName}
+                                            onChange={handleChange}
+                                            placeholder="نام رسمی شرکت"
+                                        />
+                                        <Input
+                                            label="شناسه ملی شرکت"
+                                            name="companyNationalId"
+                                            value={formData.companyNationalId}
+                                            onChange={handleChange}
+                                            placeholder="۱۱ رقم"
+                                            maxLength={11}
+                                        />
+                                        <Input
+                                            label="شماره ثبت شرکت"
+                                            name="companyRegistrationId"
+                                            value={formData.companyRegistrationId}
+                                            onChange={handleChange}
+                                            placeholder="شماره ثبت"
+                                        />
+                                        <Input
+                                            label="تلفن ثابت شرکت"
+                                            name="companyLandline"
+                                            value={formData.companyLandline}
+                                            onChange={handleChange}
+                                            placeholder="با پیش‌شماره"
+                                        />
+                                        <Input
+                                            label="استان"
+                                            name="companyProvince"
+                                            value={formData.companyProvince}
+                                            onChange={handleChange}
+                                            placeholder="استان محل ثبت"
+                                        />
+                                        <Input
+                                            label="شهر"
+                                            name="companyCity"
+                                            value={formData.companyCity}
+                                            onChange={handleChange}
+                                            placeholder="شهر محل ثبت"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Personal Info */}
                             <div className="bg-white p-5 lg:p-8 rounded-2xl shadow-sm border border-gray-100">
                                 <h2 className="font-bold text-gray-800 flex items-center gap-2 text-lg mb-6">
