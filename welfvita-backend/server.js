@@ -34,31 +34,47 @@ if (process.env.NODE_ENV === 'production') {
 const parseAllowedUrls = (envValue) => {
   if (!envValue) return []
 
-  return envValue
-    .split(',')
-    .map(url => url.trim())
-    .filter(url => {
-      // Skip empty strings and wildcards
-      if (!url || url === '*') return false
+  try {
+    return envValue
+      .split(',')
+      .map(url => url.trim())
+      .filter(url => {
+        // Skip empty strings and wildcards
+        if (!url || url === '*') return false
 
-      // Validate URL format
-      try {
-        new URL(url)
-        return true
-      } catch (e) {
-        console.error(`⚠️ Invalid URL in CLIENT_URL: "${url}" - skipping`)
-        return false
-      }
-    })
+        // Validate URL format
+        try {
+          new URL(url)
+          return true
+        } catch (e) {
+          console.error(`⚠️ Invalid URL in CLIENT_URL: "${url}" - skipping`)
+          return false
+        }
+      })
+  } catch (e) {
+    console.error('⚠️ Error parsing CLIENT_URL:', e.message)
+    return []
+  }
 }
 
-// Parse CLIENT_URL once at startup
-const clientUrls = parseAllowedUrls(process.env.CLIENT_URL)
-console.log('📋 Parsed CLIENT_URLs for CSP:', clientUrls.length > 0 ? clientUrls : ['(none - using localhost)'])
+// Parse CLIENT_URL once at startup (with error handling)
+let clientUrls = []
+try {
+  clientUrls = parseAllowedUrls(process.env.CLIENT_URL)
+  console.log('📋 Parsed CLIENT_URLs for CSP:', clientUrls.length > 0 ? clientUrls : ['(none - using localhost)'])
+} catch (e) {
+  console.error('⚠️ Failed to parse CLIENT_URL, using defaults:', e.message)
+}
+
+// CSP can be disabled via environment variable for debugging
+const disableCSP = process.env.DISABLE_CSP === 'true'
+if (disableCSP) {
+  console.warn('⚠️ CSP is DISABLED via DISABLE_CSP=true - this is insecure!')
+}
 
 const helmetConfig = {
   crossOriginResourcePolicy: false, // allow loading images/assets from other origins
-  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+  contentSecurityPolicy: (process.env.NODE_ENV === 'production' && !disableCSP) ? {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
@@ -67,14 +83,14 @@ const helmetConfig = {
       fontSrc: ["'self'", "data:"],
       connectSrc: [
         "'self'",
-        // Use parsed and validated URLs
-        ...(clientUrls.length > 0 ? clientUrls : ['http://localhost:3000']),
+        // Use parsed and validated URLs, fallback to allowing all HTTPS if none specified
+        ...(clientUrls.length > 0 ? clientUrls : ['https:', 'http://localhost:3000']),
       ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     },
-  } : false, // Disable CSP in development for easier debugging
+  } : false, // Disable CSP in development or when DISABLE_CSP=true
   hsts: {
     maxAge: 31536000, // 1 year
     includeSubDomains: true,
