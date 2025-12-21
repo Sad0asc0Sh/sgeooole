@@ -29,11 +29,13 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [modalActiveIndex, setModalActiveIndex] = useState(0);
     const [now, setNow] = useState(() => Date.now());
     const [mounted, setMounted] = useState(false);
-    const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
+    const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
     const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
-    const handleImageLoad = (index: number) => {
-        setLoadedImages(prev => ({ ...prev, [index]: true }));
+    const getImageKey = (index: number, url: string) => `${index}:${url}`;
+
+    const handleImageLoad = (key: string) => {
+        setLoadedImages(prev => ({ ...prev, [key]: true }));
     };
 
     useEffect(() => {
@@ -200,7 +202,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                         onSlideChange={(swiper) => setModalActiveIndex(swiper.activeIndex)}
                     >
                         {product.images.map((img, index) => (
-                            <SwiperSlide key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <SwiperSlide key={getImageKey(index, img)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className="swiper-zoom-container" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <div style={{ position: 'relative', width: '100%', height: '100%', maxHeight: '60vh' }}>
                                         <Image
@@ -340,7 +342,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                         >
                             {product.images.map((img, index) => (
-                                <SwiperSlide key={index} className="w-full h-full">
+                                <SwiperSlide key={getImageKey(index, img)} className="w-full h-full">
                                     <div
                                         className="w-full h-full relative cursor-zoom-in bg-white"
                                         onClick={() => {
@@ -349,7 +351,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                         }}
                                     >
                                         {/* Skeleton Loading Placeholder */}
-                                        {!loadedImages[index] && (
+                                        {!loadedImages[getImageKey(index, img)] && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                                                 <div className="relative w-24 h-24">
                                                     <div className="absolute inset-0 bg-gray-100 rounded-2xl overflow-hidden">
@@ -368,11 +370,11 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             alt={`${product.title} - ${index + 1}`}
                                             fill
                                             unoptimized
-                                            className={`object-contain transition-opacity duration-300 ${loadedImages[index] ? 'opacity-100' : 'opacity-0'}`}
+                                            className={`object-contain transition-opacity duration-300 ${loadedImages[getImageKey(index, img)] ? 'opacity-100' : 'opacity-0'}`}
                                             sizes="(max-width: 640px) 85vw, 384px"
                                             loading={index === 0 ? undefined : "lazy"}
                                             quality={85}
-                                            onLoad={() => handleImageLoad(index)}
+                                            onLoad={() => handleImageLoad(getImageKey(index, img))}
                                             priority={index === 0}
                                         />
                                         {showCampaignBadge && (
