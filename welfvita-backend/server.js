@@ -29,11 +29,33 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ============================================
-// 1. Security Headers (Helmet)
+// Helper: Parse and validate URLs from environment variable
 // ============================================
-// ============================================
-// SECURITY: Helmet with Strict Security Headers
-// ============================================
+const parseAllowedUrls = (envValue) => {
+  if (!envValue) return []
+
+  return envValue
+    .split(',')
+    .map(url => url.trim())
+    .filter(url => {
+      // Skip empty strings and wildcards
+      if (!url || url === '*') return false
+
+      // Validate URL format
+      try {
+        new URL(url)
+        return true
+      } catch (e) {
+        console.error(`⚠️ Invalid URL in CLIENT_URL: "${url}" - skipping`)
+        return false
+      }
+    })
+}
+
+// Parse CLIENT_URL once at startup
+const clientUrls = parseAllowedUrls(process.env.CLIENT_URL)
+console.log('📋 Parsed CLIENT_URLs for CSP:', clientUrls.length > 0 ? clientUrls : ['(none - using localhost)'])
+
 const helmetConfig = {
   crossOriginResourcePolicy: false, // allow loading images/assets from other origins
   contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
@@ -45,11 +67,9 @@ const helmetConfig = {
       fontSrc: ["'self'", "data:"],
       connectSrc: [
         "'self'",
-        // Parse CLIENT_URL properly - it may contain multiple comma-separated URLs
-        ...(process.env.CLIENT_URL
-          ? process.env.CLIENT_URL.split(',').map(url => url.trim()).filter(url => url && url !== '*')
-          : ['http://localhost:3000']),
-      ].filter(Boolean),
+        // Use parsed and validated URLs
+        ...(clientUrls.length > 0 ? clientUrls : ['http://localhost:3000']),
+      ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
@@ -172,31 +192,73 @@ app.use('/uploads', (req, res, next) => {
 // ============================================
 // 4. CORS Middleware
 // ============================================
-const allowedOriginsEnv = process.env.CLIENT_URL || process.env.FRONTEND_URL
-const allowedOrigins = allowedOriginsEnv
-  ? allowedOriginsEnv.split(',').map(origin => origin.trim()).filter(Boolean)
-  : [
+// استفاده از clientUrls که قبلاً parse شده (با اعتبارسنجی URL)
+// به علاوه localhost ها برای development
+const allowedOrigins = [
+  ...clientUrls,
+  // Localhost for development (ignored in production if clientUrls exist)
+  ...(clientUrls.length === 0 ? [
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:3001',
-    // remove localhost entries in production
-  ]
+  ] : []),
+]
 
-// جایگزین بخش CORS در server.js
+// اگر CLIENT_URL شامل * باشد، همه مجاز هستند
+const allowAllOrigins = (process.env.CLIENT_URL || '').includes('*')
+
+// Vercel و Netlify Preview URL patterns
+// این اجازه می‌دهد Preview deployments بدون اضافه کردن هر URL کار کنند
+const vercelProjectName = process.env.VERCEL_PROJECT_NAME || ''
+const netlifyProjectName = process.env.NETLIFY_PROJECT_NAME || ''
+
+// ساخت regex pattern برای پروژه‌های خاص
+const createProjectPattern = (projectName, domain) => {
+  if (!projectName) return null
+  const escaped = projectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`^https:\\/\\/${escaped}[\\w-]*\\.${domain}$`, 'i')
+}
+
+const vercelPattern = vercelProjectName ? createProjectPattern(vercelProjectName, 'vercel\\.app') : null
+const netlifyPattern = netlifyProjectName ? createProjectPattern(netlifyProjectName, 'netlify\\.app') : null
+
+console.log('🌐 CORS Config:', {
+  allowedOrigins: allowedOrigins.length > 0 ? allowedOrigins : '(none)',
+  allowAllOrigins,
+  vercelProject: vercelProjectName || '(not set)',
+  netlifyProject: netlifyProjectName || '(not set)',
+})
+
 app.use(cors({
   origin: (origin, callback) => {
     // ۱. اجازه به درخواست‌های داخلی یا ابزارهای تست (بدون origin)
-    // ۲. اجازه اگر دامنه در لیست CLIENT_URL باشد
-    // ۳. اجازه اگر CLIENT_URL برابر '*' تنظیم شده باشد
-    const isAllowed = !origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*');
-
-    if (isAllowed) {
-      callback(null, true);
-    } else {
-      // فقط لاگ می‌گیریم که چه آدرسی مسدود شده تا در پنل Railway ببینید
-      console.error('🔴 CORS Blocked for Origin:', origin);
-      callback(null, false); // اجازه نمی‌دهد اما سرور را کرش نمی‌کند
+    if (!origin) {
+      return callback(null, true);
     }
+
+    // ۲. اجازه اگر CLIENT_URL برابر '*' تنظیم شده باشد
+    if (allowAllOrigins) {
+      return callback(null, true);
+    }
+
+    // ۳. اجازه اگر دامنه در لیست مجاز باشد (exact match)
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // ۴. اجازه به Vercel preview URLs (فقط پروژه مشخص شده)
+    if (vercelPattern && vercelPattern.test(origin)) {
+      return callback(null, true);
+    }
+
+    // ۵. اجازه به Netlify preview URLs (فقط پروژه مشخص شده)
+    if (netlifyPattern && netlifyPattern.test(origin)) {
+      return callback(null, true);
+    }
+
+    // مسدود شد - لاگ می‌گیریم که چه آدرسی مسدود شده
+    console.error('🔴 CORS Blocked for Origin:', origin);
+    callback(null, false);
   },
   credentials: true,
 }))
