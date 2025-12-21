@@ -40,24 +40,40 @@ import type {
 
 
 
+type BackendImage = string | { url?: string };
+
+type BackendCategory = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  slug?: string;
+  parent?: BackendCategory | string | null;
+};
+
+type BackendBrand = { _id?: string; id?: string; name?: string; slug?: string } | string | null;
+
+type BackendCategoryPathItem = { _id?: string; id?: string; slug?: string; name?: string };
+
 // Backend MongoDB Product Interface (typical structure)
 interface BackendProduct {
   _id: string;
   name: string;
   sku?: string;
   productCode?: string;
+  slug?: string;
   enTitle?: string;
   price: number;
-  image?: string;
-  images?: string[];
-  category?: string;
+  image?: BackendImage;
+  images?: BackendImage[];
+  category?: BackendCategory | string | null;
+  categoryPath?: BackendCategoryPathItem[];
   // CRITICAL: Backend uses 'stock' field, not 'countInStock'
   stock?: number;
   countInStock?: number; // Keep for backward compatibility
   rating?: number;
   numReviews?: number;
   description?: string;
-  brand?: string;
+  brand?: BackendBrand;
   createdAt?: string;
   updatedAt?: string;
   discount?: number;
@@ -151,9 +167,9 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     // Name/Title mappings
     name: backendProduct.name,
     title: backendProduct.name, // Use name as title
-    slug: (backendProduct as any).slug, // Ensure slug is mapped if available
+    slug: backendProduct.slug, // Ensure slug is mapped if available
     sku: backendProduct.sku,
-    productCode: (backendProduct as any).productCode,
+    productCode: backendProduct.productCode,
     enTitle: backendProduct.enTitle,
 
     // Price calculations
@@ -168,6 +184,14 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
 
     // Category and Brand (Handle both string ID and populated object)
     category: (() => {
+      // Prefer backend-provided full category path when available (supports deep nesting)
+      if (Array.isArray(backendProduct.categoryPath) && backendProduct.categoryPath.length > 0) {
+        const names = backendProduct.categoryPath
+          .map((c) => (typeof c?.name === "string" ? c.name.trim() : ""))
+          .filter(Boolean);
+        if (names.length > 0) return names.join(" > ");
+      }
+
       let display = "عمومی";
       if (typeof backendProduct.category === 'object' && backendProduct.category !== null) {
         const cat = backendProduct.category as any;
@@ -187,6 +211,16 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     })(),
 
     categoryPath: (() => {
+      if (Array.isArray(backendProduct.categoryPath) && backendProduct.categoryPath.length > 0) {
+        return backendProduct.categoryPath
+          .map((c) => ({
+            id: c._id || c.id || "",
+            name: c.name || "",
+            slug: c.slug || c._id || c.id || "",
+          }))
+          .filter((c) => c.id);
+      }
+
       const path: CategoryPathItem[] = [];
       if (typeof backendProduct.category === 'object' && backendProduct.category !== null) {
         const cat = backendProduct.category as any;
@@ -210,7 +244,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
 
     brand: typeof backendProduct.brand === 'object' && backendProduct.brand !== null
       ? (backendProduct.brand as any).name
-      : backendProduct.brand,
+      : backendProduct.brand || undefined,
 
     brandSlug: typeof backendProduct.brand === 'object' && backendProduct.brand !== null
       ? (backendProduct.brand as any).slug
