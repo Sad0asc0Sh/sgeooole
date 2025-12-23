@@ -1027,7 +1027,7 @@ function SettingsPage() {
 
           <Form.Item
             name={['aiConfig', 'apiKey']}
-            label="Groq API Key"
+            label="API Key"
             extra={<a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">دریافت‌کلید</a>}
           >
             <Input.Password placeholder="gsk_..." />
