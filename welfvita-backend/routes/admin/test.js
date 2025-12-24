@@ -1,8 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const Settings = require('../models/Settings')
-const { sendOtpSMS } = require('../utils/notificationService')
-const { protect, authorize } = require('../middleware/auth')
+const Settings = require('../../models/Settings')
+const { sendOtpSMS } = require('../../utils/notificationService')
+const { protect, authorize } = require('../../middleware/auth')
 
 /**
  * @route   GET /api/admin/test/sms-settings
