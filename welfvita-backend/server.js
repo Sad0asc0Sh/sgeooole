@@ -479,6 +479,10 @@ app.use('/api/admin/setup', adminSetupRoutes)
 const settingsRoutes = require('./routes/settings')
 app.use('/api/settings', settingsRoutes)
 
+// Admin Test Routes (با احراز هویت - برای تست پیامک در production)
+const adminTestRoutes = require('./routes/admin/test')
+app.use('/api/admin/test', adminTestRoutes)
+
 // Audit Logs Routes
 const auditLogRoutes = require('./routes/auditLogs')
 app.use('/api/audit-logs', auditLogRoutes)
