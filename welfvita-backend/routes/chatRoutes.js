@@ -8,7 +8,7 @@ const { protect, optional } = require('../middleware/auth');
  * @desc    Send a message to AI assistant
  * @access  Public (but better with userId for personalized responses)
  */
-router.post('/', chatController.handleMessage);
+router.post('/', optional, chatController.handleMessage);
 
 /**
  * @route   GET /api/chat/suggestions

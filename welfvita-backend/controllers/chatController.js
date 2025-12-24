@@ -9,25 +9,48 @@ const { generateExpertResponse } = require('../utils/groqService');
  */
 exports.handleMessage = async (req, res) => {
   try {
-    const { message, userId } = req.body;
+    const { message } = req.body;
+
+    const rawSessionId = req.headers['x-session-id'] || req.body?.sessionId || null;
+    const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
+    const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : null;
+
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean();
+    const userLimit = settings?.aiConfig?.userDailyLimit || 20;
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'پیام نمی‌تواند خالی باشد' });
     }
 
-    // 1. Fetch History (if userId exists)
+    // 1. Resolve identity (authenticated user or guest session) + enforce daily limit
     let history = [];
     let chatSession = null;
 
-    if (userId) {
-      chatSession = await ChatHistory.findOne({ userId });
+    const authenticatedUserId = req.user?._id || null;
+    const ipAddress = req.ip || req.connection?.remoteAddress || null;
+
+    let identityQuery = null;
+    const isAuthenticated = Boolean(authenticatedUserId);
+
+    if (authenticatedUserId) {
+      identityQuery = { userId: authenticatedUserId };
+    } else if (normalizedSessionId) {
+      identityQuery = { sessionId: normalizedSessionId };
+    } else if (ipAddress) {
+      identityQuery = { sessionId: `ip:${ipAddress}` };
+    }
+
+    if (!identityQuery) {
+      return res.status(400).json({ success: false, message: 'Missing session identifier' });
+    }
+
+    if (identityQuery) {
+      chatSession = await ChatHistory.findOne(identityQuery);
       if (!chatSession) {
-        chatSession = new ChatHistory({ userId, messages: [] });
+        chatSession = new ChatHistory({ ...identityQuery, messages: [] });
       }
 
-      // --- Rate Limiting Logic ---
-      const settings = await Settings.findOne({ singletonKey: 'main_settings' });
-      const userLimit = settings?.aiConfig?.userDailyLimit || 20;
+      // --- Daily Message Limit Logic (User + Guest) ---
 
       // Check for daily reset
       const now = new Date();
@@ -38,7 +61,8 @@ exports.handleMessage = async (req, res) => {
         chatSession.usage = { dailyCount: 0, lastReset: now };
       }
 
-      if (chatSession.usage.dailyCount >= userLimit) {
+      const currentDailyCount = Number(chatSession.usage?.dailyCount) || 0;
+      if (currentDailyCount >= userLimit) {
         return res.status(429).json({
           success: false,
           message: `شما به سقف مجاز ${userLimit} پیام در روز رسیده‌اید. لطفاً فردا مجدداً تلاش کنید.`
@@ -46,8 +70,10 @@ exports.handleMessage = async (req, res) => {
       }
       // ---------------------------
 
-      // Pass plain objects to service
-      history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
+      // Pass plain objects to service (authenticated users only)
+      if (isAuthenticated) {
+        history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
+      }
     }
 
     // 2. Find Context (Smart Search)
@@ -132,21 +158,23 @@ exports.handleMessage = async (req, res) => {
     // 3. Generate Answer (Pass history and store info)
     const reply = await generateExpertResponse(message, productContext, history, storeInfoContext);
 
-    // 4. Save History (if userId exists)
+    // 4. Save History (authenticated users only; guests keep stateless history)
     if (chatSession) {
-      chatSession.messages.push({ role: 'user', content: message });
-      chatSession.messages.push({ role: 'assistant', content: reply });
+      if (isAuthenticated) {
+        chatSession.messages.push({ role: 'user', content: message });
+        chatSession.messages.push({ role: 'assistant', content: reply });
 
-      // Keep last 50 messages to prevent document from growing too large
-      if (chatSession.messages.length > 50) {
-        chatSession.messages = chatSession.messages.slice(-50);
+        // Keep last 50 messages to prevent document from growing too large
+        if (chatSession.messages.length > 50) {
+          chatSession.messages = chatSession.messages.slice(-50);
+        }
       }
 
       chatSession.lastUpdated = new Date();
 
       // Increment usage
       if (!chatSession.usage) chatSession.usage = { dailyCount: 0, lastReset: new Date() };
-      chatSession.usage.dailyCount += 1;
+      chatSession.usage.dailyCount = (Number(chatSession.usage.dailyCount) || 0) + 1;
 
       await chatSession.save();
     }
@@ -154,12 +182,11 @@ exports.handleMessage = async (req, res) => {
     // 5. Send Response (Frontend compatible)
     let usageInfo = null;
     if (chatSession && chatSession.usage) {
-      const settings = await Settings.findOne({ singletonKey: 'main_settings' });
-      const userLimit = settings?.aiConfig?.userDailyLimit || 20;
+      const currentCount = chatSession.usage.dailyCount || 0;
       usageInfo = {
-        current: chatSession.usage.dailyCount,
+        current: currentCount,
         limit: userLimit,
-        remaining: Math.max(0, userLimit - chatSession.usage.dailyCount)
+        remaining: Math.max(0, userLimit - currentCount)
       };
     }
 

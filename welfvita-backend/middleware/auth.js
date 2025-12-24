@@ -118,6 +118,55 @@ const protect = async (req, res, next) => {
 }
 
 // مجوز نقش‌ها (Legacy - kept for backward compatibility)
+// Optional authentication: attaches req.user if a valid token is provided,
+// otherwise continues as an anonymous request (never blocks the request).
+const optional = async (req, res, next) => {
+  try {
+    let token
+
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith('Bearer')
+    ) {
+      token = req.headers.authorization.split(' ')[1]
+    }
+
+    if (!token) {
+      return next()
+    }
+
+    // If token is blacklisted, treat as anonymous
+    const isBlacklisted = await redis.isTokenBlacklisted(token)
+    if (isBlacklisted) {
+      return next()
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
+
+    let user
+
+    if (decoded.type === 'customer') {
+      user = await User.findById(decoded.id)
+      if (!user || !user.isActive) {
+        return next()
+      }
+    } else {
+      user = await Admin.findById(decoded.id)
+      if (!user || !user.isActive) {
+        return next()
+      }
+    }
+
+    req.user = user
+    req.userId = user._id
+    req.userType = decoded.type || 'admin'
+
+    return next()
+  } catch (_error) {
+    return next()
+  }
+}
+
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -280,6 +329,7 @@ const admin = authorize('admin', 'manager', 'superadmin')
 
 module.exports = {
   protect,
+  optional,
   authorize,
   admin,
   checkPermission,

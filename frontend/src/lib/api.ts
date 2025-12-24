@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getOrCreateSessionId } from "./sessionId";
 
 // Get API base URL from environment variable or default to localhost
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
@@ -23,6 +24,11 @@ api.interceptors.request.use(
       const token = localStorage.getItem("token");
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      }
+
+      const sessionId = getOrCreateSessionId();
+      if (sessionId) {
+        config.headers["x-session-id"] = sessionId;
       }
     }
     return config;
