@@ -3,8 +3,6 @@ import { Product } from "@/services/productService";
 import { wishlistService } from "@/services/wishlistService";
 import { authService } from "@/services/authService";
 
-const LOCAL_WISHLIST_KEY = "welfvita_wishlist";
-
 export interface WishlistItem {
     id: string;
     name: string;
@@ -47,15 +45,8 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
                 const items = await wishlistService.getWishlist();
                 set({ wishlistItems: items.map(transformBackendItem), initialized: true });
             } else {
-                // Guest: Load from localStorage
-                if (typeof window !== "undefined") {
-                    const localWishlist = localStorage.getItem(LOCAL_WISHLIST_KEY);
-                    if (localWishlist) {
-                        set({ wishlistItems: JSON.parse(localWishlist), initialized: true });
-                    } else {
-                        set({ initialized: true });
-                    }
-                }
+                // Guest: wishlist requires authentication
+                set({ wishlistItems: [], initialized: true });
             }
         } catch (error) {
             console.error("Error loading wishlist:", error);
@@ -67,6 +58,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
     addToWishlist: async (product: Product) => {
         const isAuthenticated = authService.isAuthenticated();
         const { wishlistItems } = get();
+
+        if (!isAuthenticated) {
+            throw new Error("AUTH_REQUIRED");
+        }
 
         // Optimistic update
         const previousItems = [...wishlistItems];
@@ -81,16 +76,10 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         if (!wishlistItems.some(item => item.id === product.id)) {
             const newItems = [...wishlistItems, newItem];
             set({ wishlistItems: newItems });
-
-            if (!isAuthenticated && typeof window !== "undefined") {
-                localStorage.setItem(LOCAL_WISHLIST_KEY, JSON.stringify(newItems));
-            }
         }
 
         try {
-            if (isAuthenticated) {
-                await wishlistService.addToWishlist(product.id);
-            }
+            await wishlistService.addToWishlist(product.id);
         } catch (error) {
             console.error("Error adding to wishlist:", error);
             set({ wishlistItems: previousItems }); // Revert on error
@@ -101,19 +90,17 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
         const isAuthenticated = authService.isAuthenticated();
         const { wishlistItems } = get();
 
+        if (!isAuthenticated) {
+            throw new Error("AUTH_REQUIRED");
+        }
+
         // Optimistic update
         const previousItems = [...wishlistItems];
         const newItems = wishlistItems.filter(item => item.id !== productId);
         set({ wishlistItems: newItems });
 
-        if (!isAuthenticated && typeof window !== "undefined") {
-            localStorage.setItem(LOCAL_WISHLIST_KEY, JSON.stringify(newItems));
-        }
-
         try {
-            if (isAuthenticated) {
-                await wishlistService.removeFromWishlist(productId);
-            }
+            await wishlistService.removeFromWishlist(productId);
         } catch (error) {
             console.error("Error removing from wishlist:", error);
             set({ wishlistItems: previousItems }); // Revert on error

@@ -3,7 +3,7 @@ import { useWishlistStore } from "@/store/wishlistStore";
 import type { Product } from "@/services/productService";
 
 jest.mock("@/services/authService", () => ({
-  authService: { isAuthenticated: () => false },
+  authService: { isAuthenticated: () => true },
 }));
 
 jest.mock("@/services/wishlistService", () => ({

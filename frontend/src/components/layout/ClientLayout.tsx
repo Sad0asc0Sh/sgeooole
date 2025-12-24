@@ -7,6 +7,7 @@ import Header from "@/components/layout/Header";
 import BottomNav from "@/components/layout/BottomNav";
 import Footer from "@/components/layout/Footer";
 import ServicesWidget from "@/components/features/services/ServicesWidget";
+import AuthModalProvider from "@/providers/AuthModalProvider";
 
 export default function ClientLayout({
     children,
@@ -39,31 +40,33 @@ export default function ClientLayout({
     const hideHeaderOnMobile = isProfileSubPage || isProductPage || hasStandaloneMobileHeader;
 
     return (
-        <main className="min-h-screen flex flex-col">
-            {/* Header: hidden on mobile for profile sub-pages, always shown on desktop */}
-            {showHeader && (
-                <div className={hideHeaderOnMobile ? "hidden md:block" : ""}>
-                    <Header isAIOpen={isAIOpen} setIsAIOpen={setIsAIOpen} />
+        <AuthModalProvider>
+            <main className="min-h-screen flex flex-col">
+                {/* Header: hidden on mobile for profile sub-pages, always shown on desktop */}
+                {showHeader && (
+                    <div className={hideHeaderOnMobile ? "hidden md:block" : ""}>
+                        <Header isAIOpen={isAIOpen} setIsAIOpen={setIsAIOpen} />
+                    </div>
+                )}
+
+                <div className={`flex-grow ${showChrome ? "pb-32" : ""}`}>
+                    {children}
                 </div>
-            )}
 
-            <div className={`flex-grow ${showChrome ? "pb-32" : ""}`}>
-                {children}
-            </div>
-
-            {showChrome && (
-                <>
-                    <ServicesWidget isOpen={isServicesOpen} onOpenChange={setIsServicesOpen} />
-                    <Footer />
-                    <BottomNav
-                        isServicesOpen={isServicesOpen}
-                        onNavClick={() => {
-                            // Delay closing to allow navigation to happen behind the sheet
-                            setTimeout(() => setIsAIOpen(false), 500);
-                        }}
-                    />
-                </>
-            )}
-        </main>
+                {showChrome && (
+                    <>
+                        <ServicesWidget isOpen={isServicesOpen} onOpenChange={setIsServicesOpen} />
+                        <Footer />
+                        <BottomNav
+                            isServicesOpen={isServicesOpen}
+                            onNavClick={() => {
+                                // Delay closing to allow navigation to happen behind the sheet
+                                setTimeout(() => setIsAIOpen(false), 500);
+                            }}
+                        />
+                    </>
+                )}
+            </main>
+        </AuthModalProvider>
     );
 }
