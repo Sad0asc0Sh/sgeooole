@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer')
 const Kavenegar = require('kavenegar')
-const { SocksProxyAgent } = require('socks')
+const { SocksProxyAgent } = require('socks-proxy-agent')
 const https = require('https')
 const axios = require('axios')
 const Settings = require('../models/Settings')
@@ -77,7 +77,15 @@ const getSmsHttpsAgent = () => {
   const proxyUrl = process.env.SMS_PROXY
   if (proxyUrl) {
     console.warn('[SMS] Using SMS_PROXY for outbound SMS requests')
-    smsHttpsAgent = new SocksProxyAgent(proxyUrl)
+    try {
+      smsHttpsAgent = new SocksProxyAgent(proxyUrl)
+    } catch (error) {
+      console.error('[SMS] Invalid SMS_PROXY, falling back to direct connection:', error?.message || error)
+      smsHttpsAgent = new https.Agent({
+        keepAlive: true,
+        maxSockets: 50,
+      })
+    }
     return smsHttpsAgent
   }
 
@@ -111,8 +119,8 @@ const createTransporter = () => {
 
   if (process.env.EMAIL_PROXY) {
     console.log(`[EMAIL] Using Proxy: ${process.env.EMAIL_PROXY}`)
+    config.proxy = process.env.EMAIL_PROXY
     config.proxy_socks_module = require('socks')
-    config.agent = new SocksProxyAgent(process.env.EMAIL_PROXY)
   }
 
   return nodemailer.createTransport(config)
