@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer')
 const Kavenegar = require('kavenegar')
 const { SocksProxyAgent } = require('socks')
+const https = require('https')
 const axios = require('axios')
 const Settings = require('../models/Settings')
 const { maskMobile, normalizeIranMobile } = require('./phone')
@@ -28,6 +29,63 @@ const useResend = () => {
 const getResendFromEmail = () => {
   // Resend requires verified domain or onboarding@resend.dev for testing
   return process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'
+}
+
+// ============================================
+// SMS Configuration Helpers
+// ============================================
+let smsSettingsCache = { value: null, expiresAt: 0 }
+const SMS_SETTINGS_CACHE_TTL_MS = Math.max(0, Number(process.env.SMS_SETTINGS_CACHE_TTL_MS || 30000))
+
+const getSmsSettings = async ({ forceRefresh = false } = {}) => {
+  if (!forceRefresh && smsSettingsCache.value && smsSettingsCache.expiresAt > Date.now()) {
+    return smsSettingsCache.value
+  }
+
+  const settings = await Settings.findOne({ singletonKey: 'main_settings' }).select(
+    '+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey +notificationSettings.smsSenderNumber'
+  )
+
+  const smsUsernameRaw = settings?.notificationSettings?.smsUsername
+  const smsPasswordRaw = settings?.notificationSettings?.smsPassword
+  const smsApiKeyRaw = settings?.notificationSettings?.smsApiKey
+  const smsSenderNumberRaw = settings?.notificationSettings?.smsSenderNumber
+
+  const smsUsername = typeof smsUsernameRaw === 'string' ? smsUsernameRaw.trim() : ''
+  const smsPassword = typeof smsPasswordRaw === 'string' ? smsPasswordRaw.trim() : ''
+  const smsApiKey = typeof smsApiKeyRaw === 'string' ? smsApiKeyRaw.trim() : ''
+  const smsSenderNumber = typeof smsSenderNumberRaw === 'string' ? smsSenderNumberRaw.trim() : ''
+
+  const value = {
+    smsUsername,
+    smsPassword,
+    smsApiKey,
+    smsSenderNumber,
+    configured: Boolean(smsUsername && smsPassword),
+  }
+
+  smsSettingsCache = { value, expiresAt: Date.now() + SMS_SETTINGS_CACHE_TTL_MS }
+  return value
+}
+
+exports.getSmsSettings = getSmsSettings
+
+let smsHttpsAgent = null
+const getSmsHttpsAgent = () => {
+  if (smsHttpsAgent) return smsHttpsAgent
+
+  const proxyUrl = process.env.SMS_PROXY
+  if (proxyUrl) {
+    console.warn('[SMS] Using SMS_PROXY for outbound SMS requests')
+    smsHttpsAgent = new SocksProxyAgent(proxyUrl)
+    return smsHttpsAgent
+  }
+
+  smsHttpsAgent = new https.Agent({
+    keepAlive: true,
+    maxSockets: 50,
+  })
+  return smsHttpsAgent
 }
 
 // ============================================
@@ -499,18 +557,13 @@ exports.sendOtpSMS = async (mobile, code) => {
     throw err
   }
 
-  const settings = await Settings.findOne({ singletonKey: 'main_settings' })
-    .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey +notificationSettings.smsSenderNumber')
+  const smsSettings = await getSmsSettings()
+  const smsUsername = smsSettings.smsUsername
+  const smsPassword = smsSettings.smsPassword
+  const smsApiKey = smsSettings.smsApiKey
+  const smsSenderNumber = smsSettings.smsSenderNumber
 
-  const smsUsernameRaw = settings?.notificationSettings?.smsUsername
-  const smsPasswordRaw = settings?.notificationSettings?.smsPassword
-  const smsSenderNumberRaw = settings?.notificationSettings?.smsSenderNumber
-
-  const smsUsername = typeof smsUsernameRaw === 'string' ? smsUsernameRaw.trim() : ''
-  const smsPassword = typeof smsPasswordRaw === 'string' ? smsPasswordRaw.trim() : ''
-  const smsSenderNumber = typeof smsSenderNumberRaw === 'string' ? smsSenderNumberRaw.trim() : ''
-
-  if (!smsUsername || !smsPassword) {
+  if (!smsSettings.configured) {
     const err = new Error('تنظیمات پیامک (نام کاربری/رمز) در پنل ادمین کامل نیست')
     err.code = 'SMS_NOT_CONFIGURED'
     err.statusCode = 503
@@ -518,16 +571,19 @@ exports.sendOtpSMS = async (mobile, code) => {
   }
 
   const senderLine = smsSenderNumber || smsUsername
-  const payload = {
-    username: smsUsername,
-    password: smsPassword,
-    to: normalizedMobile,
-    from: senderLine,
-    text: `کد تایید شما: ${code}\nویلف ویتا\nلغو11`,
-    isflash: false,
-  }
+  const text = `کد تایید شما: ${code}\nویلف ویتا\nلغو11`
 
-  const url = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS'
+  const timeoutMs = Math.max(1000, Number(process.env.SMS_TIMEOUT_MS || 25000))
+  const maxAttempts = Math.max(1, Number(process.env.SMS_MAX_ATTEMPTS || 3))
+  const retryDelayMs = Math.max(0, Number(process.env.SMS_RETRY_DELAY_MS || 1000))
+
+  const axiosConfig = {
+    headers: { 'Content-Type': 'application/json' },
+    timeout: timeoutMs,
+    validateStatus: () => true,
+    httpsAgent: getSmsHttpsAgent(),
+    proxy: false,
+  }
 
   const shouldRetry = (error) => {
     const retryableCodes = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN'])
@@ -537,40 +593,77 @@ exports.sendOtpSMS = async (mobile, code) => {
     return false
   }
 
+  const sendViaPayamakRest = async () => {
+    const url = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS'
+    const payload = {
+      username: smsUsername,
+      password: smsPassword,
+      to: normalizedMobile,
+      from: senderLine,
+      text,
+      isflash: false,
+    }
+
+    const response = await axios.post(url, payload, axiosConfig)
+    const retStatus = Number(response?.data?.RetStatus)
+
+    if (retStatus === 1) {
+      return { success: true, data: response.data, provider: 'melipayamak-rest' }
+    }
+
+    const providerMessage = response?.data?.StrRetStatus || 'خطای نامشخص از سرویس پیامک'
+    const err = new Error(providerMessage)
+    err.code = 'SMS_PROVIDER_ERROR'
+    err.statusCode = 503
+    err.details = response.data
+    throw err
+  }
+
+  const sendViaMelipayamakConsole = async () => {
+    const url = `https://console.melipayamak.com/api/send/simple/${smsApiKey}`
+    const payload = { from: senderLine, to: normalizedMobile, text }
+
+    const response = await axios.post(url, payload, axiosConfig)
+
+    if (response.status >= 200 && response.status < 300) {
+      return { success: true, data: response.data, provider: 'melipayamak-console' }
+    }
+
+    const providerMessage =
+      (typeof response?.data?.status === 'string' && response.data.status) ||
+      (typeof response?.data?.message === 'string' && response.data.message) ||
+      'خطای نامشخص از سرویس پیامک'
+
+    const err = new Error(providerMessage)
+    err.code = 'SMS_PROVIDER_ERROR'
+    err.statusCode = 503
+    err.details = response.data
+    throw err
+  }
+
+  const providers = []
+  if (smsApiKey) providers.push({ name: 'melipayamak-console', send: sendViaMelipayamakConsole })
+  providers.push({ name: 'melipayamak-rest', send: sendViaPayamakRest })
+
   let lastError = null
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      if (attempt === 1) {
-        console.log(`[SMS] در حال ارسال پیامک OTP به ${maskMobile(normalizedMobile)} از طریق ملی‌پیامک...`)
-      } else {
-        console.warn(`[SMS] تلاش مجدد ارسال پیامک OTP (attempt ${attempt}) به ${maskMobile(normalizedMobile)}...`)
-      }
+  for (const provider of providers) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        if (attempt === 1) {
+          console.log(`[SMS] در حال ارسال پیامک OTP به ${maskMobile(normalizedMobile)} (${provider.name})...`)
+        } else {
+          console.warn(`[SMS] تلاش مجدد ارسال پیامک OTP (attempt ${attempt}) به ${maskMobile(normalizedMobile)} (${provider.name})...`)
+        }
 
-      const response = await axios.post(url, payload, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000,
-        validateStatus: () => true,
-      })
-
-      const retStatus = Number(response?.data?.RetStatus)
-      if (retStatus === 1) {
-        console.log(`[SMS] ✅ پیامک OTP توسط سرویس پذیرفته شد (${maskMobile(normalizedMobile)})`)
-        return { success: true, data: response.data }
+        return await provider.send()
+      } catch (error) {
+        lastError = error
+        if (attempt < maxAttempts && shouldRetry(error)) {
+          await new Promise((r) => setTimeout(r, retryDelayMs * attempt))
+          continue
+        }
+        break
       }
-
-      const providerMessage = response?.data?.StrRetStatus || 'خطای نامشخص از سرویس پیامک'
-      const err = new Error(providerMessage)
-      err.code = 'SMS_PROVIDER_ERROR'
-      err.statusCode = 503
-      err.details = response.data
-      throw err
-    } catch (error) {
-      lastError = error
-      if (attempt < 2 && shouldRetry(error)) {
-        await new Promise((r) => setTimeout(r, 600))
-        continue
-      }
-      break
     }
   }
 

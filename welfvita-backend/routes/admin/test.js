@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const axios = require('axios')
 const Settings = require('../../models/Settings')
 const { sendOtpSMS } = require('../../utils/notificationService')
 const { normalizeIranMobile } = require('../../utils/phone')
@@ -106,6 +107,67 @@ router.get('/health', protect, authorize('admin'), async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
+            error: error.message,
+        })
+    }
+})
+
+/**
+ * @route   GET /api/admin/test/outbound-ip
+ * @desc    نمایش IP خروجی سرور (برای بررسی محدودیت IP در سرویس پیامک)
+ * @access  Private/Admin
+ */
+router.get('/outbound-ip', protect, authorize('admin'), async (req, res) => {
+    try {
+        const startedAt = Date.now()
+        const response = await axios.get('https://api.ipify.org?format=json', { timeout: 7000 })
+
+        res.json({
+            success: true,
+            ip: response.data?.ip,
+            ms: Date.now() - startedAt,
+            note: 'در Render/Railway ممکن است IP ثابت نباشد (Dynamic Egress)',
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'خطا در دریافت IP خروجی سرور',
+            error: error.message,
+        })
+    }
+})
+
+/**
+ * @route   GET /api/admin/test/sms-ping
+ * @desc    تست دسترسی شبکه به دامنه‌های ملی‌پیامک (برای عیب‌یابی timeout)
+ * @access  Private/Admin
+ */
+router.get('/sms-ping', protect, authorize('admin'), async (req, res) => {
+    const ping = async (url) => {
+        const startedAt = Date.now()
+        try {
+            const r = await axios.get(url, { timeout: 7000, validateStatus: () => true })
+            return { url, ok: true, status: r.status, ms: Date.now() - startedAt }
+        } catch (e) {
+            return { url, ok: false, error: e.code || e.message, ms: Date.now() - startedAt }
+        }
+    }
+
+    try {
+        const [rest, consoleHost] = await Promise.all([
+            ping('https://rest.payamak-panel.com'),
+            ping('https://console.melipayamak.com'),
+        ])
+
+        res.json({
+            success: true,
+            rest,
+            console: consoleHost,
+        })
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'خطا در تست شبکه پیامک',
             error: error.message,
         })
     }

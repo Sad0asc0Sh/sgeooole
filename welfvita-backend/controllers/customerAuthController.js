@@ -5,7 +5,7 @@ const { OAuth2Client } = require('google-auth-library')
 const User = require('../models/User')
 const OTP = require('../models/OTP')
 const Order = require('../models/Order')
-const { sendVerificationEmail, sendOtpSMS } = require('../utils/notificationService')
+const { sendVerificationEmail, sendOtpSMS, getSmsSettings } = require('../utils/notificationService')
 const { normalizeIranMobile } = require('../utils/phone')
 
 // JWT configuration
@@ -44,6 +44,11 @@ exports.sendOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
     }
 
+    const smsSettings = await getSmsSettings()
+    if (!smsSettings.configured) {
+      return res.status(503).json({ success: false, message: 'سیستم پیامک در پنل ادمین تنظیم نشده است.' })
+    }
+
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
     const recentOtps = await OTP.countDocuments({ mobile, createdAt: { $gte: tenMinutesAgo } })
     if (recentOtps >= 3) {
@@ -58,21 +63,26 @@ exports.sendOtp = async (req, res) => {
 
     console.log(`[OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
-    try {
-      await sendOtpSMS(mobile, code)
-    } catch (smsError) {
-      console.error(`[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
-      // Prevent locking user out when SMS didn't send
-      await OTP.deleteOne({ _id: otp._id }).catch(() => { })
-      return res.status(smsError.statusCode || 503).json({
-        success: false,
-        message: smsError.code === 'SMS_NOT_CONFIGURED'
-          ? 'سیستم پیامک در پنل ادمین تنظیم نشده است.'
-          : 'ارسال پیامک با مشکل مواجه شد. لطفاً چند دقیقه دیگر دوباره تلاش کنید.',
-      })
-    }
-
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
+
+    // Send in background (do not block user login flow on network timeouts)
+    sendOtpSMS(mobile, code)
+      .then((result) => {
+        const provider = result?.provider ? ` (${result.provider})` : ''
+        console.log(`[OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+      })
+      .catch(async (smsError) => {
+        console.error(
+          `[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`,
+          smsError.code || 'UNKNOWN',
+          smsError.message
+        )
+
+        // If provider rejected the request (credentials/line/etc), remove the OTP to avoid locking user out
+        if (smsError.code === 'SMS_PROVIDER_ERROR' || smsError.code === 'SMS_NOT_CONFIGURED') {
+          await OTP.deleteOne({ _id: otp._id }).catch(() => { })
+        }
+      })
 
   } catch (error) {
     console.error('Error sending OTP:', error)
@@ -669,6 +679,11 @@ exports.sendBindOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
     }
 
+    const smsSettings = await getSmsSettings()
+    if (!smsSettings.configured) {
+      return res.status(503).json({ success: false, message: 'سیستم پیامک در پنل ادمین تنظیم نشده است.' })
+    }
+
     // Check if mobile is already used by another user
     const existingUser = await User.findOne({ mobile })
     if (existingUser) {
@@ -689,20 +704,24 @@ exports.sendBindOtp = async (req, res) => {
 
     console.log(`[BIND OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
-    try {
-      await sendOtpSMS(mobile, code)
-    } catch (smsError) {
-      console.error(`[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
-      await OTP.deleteOne({ _id: otp._id }).catch(() => { })
-      return res.status(smsError.statusCode || 503).json({
-        success: false,
-        message: smsError.code === 'SMS_NOT_CONFIGURED'
-          ? 'سیستم پیامک در پنل ادمین تنظیم نشده است.'
-          : 'ارسال پیامک با مشکل مواجه شد. لطفاً چند دقیقه دیگر دوباره تلاش کنید.',
-      })
-    }
-
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
+
+    sendOtpSMS(mobile, code)
+      .then((result) => {
+        const provider = result?.provider ? ` (${result.provider})` : ''
+        console.log(`[BIND OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+      })
+      .catch(async (smsError) => {
+        console.error(
+          `[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`,
+          smsError.code || 'UNKNOWN',
+          smsError.message
+        )
+
+        if (smsError.code === 'SMS_PROVIDER_ERROR' || smsError.code === 'SMS_NOT_CONFIGURED') {
+          await OTP.deleteOne({ _id: otp._id }).catch(() => { })
+        }
+      })
   } catch (error) {
     console.error('Error sending bind OTP:', error)
     res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })

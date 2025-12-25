@@ -639,6 +639,24 @@ function SettingsPage() {
           </Form.Item>
 
           <Form.Item
+            name={['notificationSettings', 'smsApiKey']}
+            label="توکن / API Key ملی‌پیامک (اختیاری)"
+            extra="در برخی سرورها (Render/Railway خارج ایران) استفاده از توکن کنسول می‌تواند پایدارتر باشد. از کنسول ملی‌پیامک > API دریافت کنید."
+            rules={[
+              {
+                required: false,
+                message: 'توکن الزامی نیست'
+              }
+            ]}
+          >
+            <Input.Password
+              placeholder="Console API Key"
+              dir="ltr"
+              autoComplete="new-password"
+            />
+          </Form.Item>
+
+          <Form.Item
             name={['notificationSettings', 'smsSenderNumber']}
             label="شماره فرستنده پیامک"
             extra="شماره اختصاصی یا اشتراکی که از پنل دریافت کرده‌اید (مثلاً 5000...، 3000... یا 10 رقمی)"
@@ -1552,4 +1570,3 @@ function SettingsPage() {
 }
 
 export default SettingsPage
-
