@@ -3,6 +3,7 @@ const Kavenegar = require('kavenegar')
 const { SocksProxyAgent } = require('socks')
 const axios = require('axios')
 const Settings = require('../models/Settings')
+const { maskMobile, normalizeIranMobile } = require('./phone')
 
 // ============================================
 // Resend API Configuration (Primary for Cloud)
@@ -490,58 +491,92 @@ exports.sendVerificationEmail = async (userEmail, code) => {
  * @returns {Promise}
  */
 exports.sendOtpSMS = async (mobile, code) => {
-  try {
-    const settings = await Settings.findOne({ singletonKey: 'main_settings' })
-      .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey')
-
-    const { smsUsername, smsPassword, smsSenderNumber } = settings?.notificationSettings || {}
-
-    if (!smsUsername || !smsPassword) {
-      console.log('[SMS] نام کاربری یا رمز عبور پنل ملی‌پیامک تنظیم نشده است. پیامک ارسال نمی‌شود.')
-      return { success: false, message: 'تنظیمات پیامک ناقص است' }
-    }
-
-    console.log(`[SMS] در حال ارسال پیامک به ${mobile} از طریق ملی‌پیامک...`)
-
-    // Melipayamak REST API (روش استاندارد با username/password)
-    const payload = {
-      username: smsUsername,
-      password: smsPassword,
-      to: mobile,
-      from: smsSenderNumber || smsUsername, // اگر شماره فرستنده تنظیم نشده، از username استفاده می‌شود
-      text: `کد تایید شما: ${code}\nویلف ویتا\nلغو11`,
-      isflash: false
-    }
-
-    console.log('[SMS] ارسال به:', payload.to, 'از:', payload.from)
-
-    // استفاده از REST API ملی‌پیامک
-    const response = await axios.post(
-      'https://rest.payamak-panel.com/api/SendSMS/SendSMS',
-      payload,
-      {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 15000
-      }
-    )
-
-    console.log('[SMS] پاسخ سرور:', response.data)
-
-    // بررسی وضعیت پاسخ
-    // RetStatus کدهای مختلفی دارد:
-    // 1 = موفق
-    // 35 = اطلاعات نامعتبر
-    // و غیره...
-    if (response.data.RetStatus === 1) {
-      console.log('[SMS] ✅ پیامک با موفقیت ارسال شد')
-      return { success: true, data: response.data }
-    } else {
-      console.error('[SMS] ❌ خطا در ارسال:', response.data.StrRetStatus)
-      return { success: false, message: response.data.StrRetStatus, data: response.data }
-    }
-
-  } catch (error) {
-    console.error('[SMS] ❌ خطا در ارسال پیامک:', error.response?.data || error.message)
-    return { success: false, message: error.message }
+  const normalizedMobile = normalizeIranMobile(mobile)
+  if (!normalizedMobile) {
+    const err = new Error('شماره موبایل برای ارسال پیامک معتبر نیست')
+    err.code = 'INVALID_MOBILE'
+    err.statusCode = 400
+    throw err
   }
+
+  const settings = await Settings.findOne({ singletonKey: 'main_settings' })
+    .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsApiKey +notificationSettings.smsSenderNumber')
+
+  const smsUsernameRaw = settings?.notificationSettings?.smsUsername
+  const smsPasswordRaw = settings?.notificationSettings?.smsPassword
+  const smsSenderNumberRaw = settings?.notificationSettings?.smsSenderNumber
+
+  const smsUsername = typeof smsUsernameRaw === 'string' ? smsUsernameRaw.trim() : ''
+  const smsPassword = typeof smsPasswordRaw === 'string' ? smsPasswordRaw.trim() : ''
+  const smsSenderNumber = typeof smsSenderNumberRaw === 'string' ? smsSenderNumberRaw.trim() : ''
+
+  if (!smsUsername || !smsPassword) {
+    const err = new Error('تنظیمات پیامک (نام کاربری/رمز) در پنل ادمین کامل نیست')
+    err.code = 'SMS_NOT_CONFIGURED'
+    err.statusCode = 503
+    throw err
+  }
+
+  const senderLine = smsSenderNumber || smsUsername
+  const payload = {
+    username: smsUsername,
+    password: smsPassword,
+    to: normalizedMobile,
+    from: senderLine,
+    text: `کد تایید شما: ${code}\nویلف ویتا\nلغو11`,
+    isflash: false,
+  }
+
+  const url = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS'
+
+  const shouldRetry = (error) => {
+    const retryableCodes = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN'])
+    if (retryableCodes.has(error?.code)) return true
+    const status = error?.response?.status
+    if (typeof status === 'number' && status >= 500) return true
+    return false
+  }
+
+  let lastError = null
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    try {
+      if (attempt === 1) {
+        console.log(`[SMS] در حال ارسال پیامک OTP به ${maskMobile(normalizedMobile)} از طریق ملی‌پیامک...`)
+      } else {
+        console.warn(`[SMS] تلاش مجدد ارسال پیامک OTP (attempt ${attempt}) به ${maskMobile(normalizedMobile)}...`)
+      }
+
+      const response = await axios.post(url, payload, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 15000,
+        validateStatus: () => true,
+      })
+
+      const retStatus = Number(response?.data?.RetStatus)
+      if (retStatus === 1) {
+        console.log(`[SMS] ✅ پیامک OTP توسط سرویس پذیرفته شد (${maskMobile(normalizedMobile)})`)
+        return { success: true, data: response.data }
+      }
+
+      const providerMessage = response?.data?.StrRetStatus || 'خطای نامشخص از سرویس پیامک'
+      const err = new Error(providerMessage)
+      err.code = 'SMS_PROVIDER_ERROR'
+      err.statusCode = 503
+      err.details = response.data
+      throw err
+    } catch (error) {
+      lastError = error
+      if (attempt < 2 && shouldRetry(error)) {
+        await new Promise((r) => setTimeout(r, 600))
+        continue
+      }
+      break
+    }
+  }
+
+  if (lastError?.statusCode) throw lastError
+  const err = new Error(lastError?.message || 'خطا در ارسال پیامک')
+  err.code = lastError?.code || 'SMS_SEND_FAILED'
+  err.statusCode = 503
+  throw err
 }

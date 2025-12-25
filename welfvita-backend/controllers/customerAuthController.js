@@ -6,6 +6,7 @@ const User = require('../models/User')
 const OTP = require('../models/OTP')
 const Order = require('../models/Order')
 const { sendVerificationEmail, sendOtpSMS } = require('../utils/notificationService')
+const { normalizeIranMobile } = require('../utils/phone')
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET
@@ -57,21 +58,21 @@ exports.sendOtp = async (req, res) => {
 
     console.log(`[OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
-    // RESPOND IMMEDIATELY - Don't wait for SMS to send
-    res.json({ success: true, message: 'کد ارسال شد', expiresIn: 120 })
+    try {
+      await sendOtpSMS(mobile, code)
+    } catch (smsError) {
+      console.error(`[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
+      // Prevent locking user out when SMS didn't send
+      await OTP.deleteOne({ _id: otp._id }).catch(() => { })
+      return res.status(smsError.statusCode || 503).json({
+        success: false,
+        message: smsError.code === 'SMS_NOT_CONFIGURED'
+          ? 'سیستم پیامک در پنل ادمین تنظیم نشده است.'
+          : 'ارسال پیامک با مشکل مواجه شد. لطفاً چند دقیقه دیگر دوباره تلاش کنید.',
+      })
+    }
 
-    // Send SMS in background (fire-and-forget)
-    sendOtpSMS(mobile, code)
-      .then((result) => {
-        if (result.success) {
-          console.log(`[OTP] SMS sent successfully to: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
-        } else {
-          console.error(`[OTP] SMS sending failed: ${result.message}`)
-        }
-      })
-      .catch((smsError) => {
-        console.error('[OTP] SMS sending error:', smsError.message)
-      })
+    res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
 
   } catch (error) {
     console.error('Error sending OTP:', error)
@@ -661,10 +662,10 @@ exports.resetPassword = async (req, res) => {
 // ======================
 exports.sendBindOtp = async (req, res) => {
   try {
-    const { mobile } = req.body
+    const mobile = normalizeIranMobile(req.body.mobile)
     const userId = req.userId || (req.user && req.user._id)
 
-    if (!mobile || !/^09\d{9}$/.test(mobile)) {
+    if (!mobile) {
       return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
     }
 
@@ -688,8 +689,18 @@ exports.sendBindOtp = async (req, res) => {
 
     console.log(`[BIND OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
-    // Send SMS
-    await sendOtpSMS(mobile, code)
+    try {
+      await sendOtpSMS(mobile, code)
+    } catch (smsError) {
+      console.error(`[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
+      await OTP.deleteOne({ _id: otp._id }).catch(() => { })
+      return res.status(smsError.statusCode || 503).json({
+        success: false,
+        message: smsError.code === 'SMS_NOT_CONFIGURED'
+          ? 'سیستم پیامک در پنل ادمین تنظیم نشده است.'
+          : 'ارسال پیامک با مشکل مواجه شد. لطفاً چند دقیقه دیگر دوباره تلاش کنید.',
+      })
+    }
 
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
   } catch (error) {
@@ -703,7 +714,8 @@ exports.sendBindOtp = async (req, res) => {
 // ======================
 exports.verifyBindOtp = async (req, res) => {
   try {
-    const { mobile, code } = req.body
+    const mobile = normalizeIranMobile(req.body.mobile)
+    const { code } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
     if (!mobile || !code) {

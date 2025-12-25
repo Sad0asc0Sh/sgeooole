@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const Settings = require('../../models/Settings')
 const { sendOtpSMS } = require('../../utils/notificationService')
+const { normalizeIranMobile } = require('../../utils/phone')
 const { protect, authorize } = require('../../middleware/auth')
 
 /**
@@ -45,12 +46,12 @@ router.get('/sms-settings', protect, authorize('admin'), async (req, res) => {
  */
 router.post('/send-sms', protect, authorize('admin'), async (req, res) => {
     try {
-        const { mobile } = req.body
+        const mobile = normalizeIranMobile(req.body.mobile)
 
-        if (!mobile || mobile.length !== 11) {
+        if (!mobile) {
             return res.status(400).json({
                 success: false,
-                message: 'شماره موبایل معتبر نیست (باید 11 رقم باشد)',
+                message: 'شماره موبایل معتبر نیست (فرمت صحیح: 09xxxxxxxxx)',
             })
         }
 
@@ -62,27 +63,20 @@ router.post('/send-sms', protect, authorize('admin'), async (req, res) => {
         // ارسال پیامک
         const result = await sendOtpSMS(mobile, testCode)
 
-        if (result.success) {
-            res.json({
-                success: true,
-                message: `پیامک تست با موفقیت به ${mobile} ارسال شد`,
-                code: testCode,
-                details: result.data,
-            })
-        } else {
-            res.status(500).json({
-                success: false,
-                message: 'خطا در ارسال پیامک',
-                error: result.message,
-                details: result.data,
-            })
-        }
+        res.json({
+            success: true,
+            message: `پیامک تست با موفقیت به ${mobile} ارسال شد`,
+            code: testCode,
+            details: result.data,
+        })
     } catch (error) {
         console.error('[TEST API] خطا در ارسال پیامک:', error)
         res.status(500).json({
             success: false,
             message: 'خطا در ارسال پیامک',
             error: error.message,
+            code: error.code,
+            details: error.details,
         })
     }
 })

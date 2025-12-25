@@ -32,6 +32,48 @@ const GoogleIcon = () => (
 type LoginMethod = "otp" | "password";
 type RecoveryMethod = "mobile" | "email";
 
+const persianDigitsMap: Record<string, string> = {
+    "۰": "0",
+    "۱": "1",
+    "۲": "2",
+    "۳": "3",
+    "۴": "4",
+    "۵": "5",
+    "۶": "6",
+    "۷": "7",
+    "۸": "8",
+    "۹": "9",
+    "٠": "0",
+    "١": "1",
+    "٢": "2",
+    "٣": "3",
+    "٤": "4",
+    "٥": "5",
+    "٦": "6",
+    "٧": "7",
+    "٨": "8",
+    "٩": "9",
+};
+
+const toEnglishDigits = (value: string) =>
+    value.replace(/[۰-۹٠-٩]/g, (d) => persianDigitsMap[d] ?? d);
+
+const normalizeIranMobile = (value: string) => {
+    const digitsOnly = toEnglishDigits(value).replace(/\D/g, "");
+    if (!digitsOnly) return null;
+
+    let normalized = digitsOnly;
+
+    if (normalized.startsWith("0098")) normalized = normalized.slice(4);
+    else if (normalized.startsWith("098")) normalized = normalized.slice(3);
+    else if (normalized.startsWith("98")) normalized = normalized.slice(2);
+
+    if (normalized.length === 10 && normalized.startsWith("9")) normalized = "0" + normalized;
+
+    if (!/^09\d{9}$/.test(normalized)) return null;
+    return normalized;
+};
+
 export default function LoginPage() {
     const [loginMethod, setLoginMethod] = useState<LoginMethod>("otp");
     const [step, setStep] = useState<"phone" | "otp" | "recovery-input" | "recovery-otp" | "recovery-password" | "recovery-email-sent">("phone");
@@ -62,18 +104,9 @@ export default function LoginPage() {
     }, [step, timer]);
 
     const handlePhoneSubmit = async (isRecoveryFlow = false) => {
-        // Normalize phone number to match backend pattern 09xxxxxxxxx
-        const digitsOnly = phone.replace(/\D/g, "");
-        let normalized = digitsOnly;
+        const normalized = normalizeIranMobile(phone);
 
-        // Handle common Iranian formats: 9891..., 9xxxxxxxxx
-        if (normalized.startsWith("98") && normalized.length === 12) {
-            normalized = "0" + normalized.slice(2);
-        } else if (normalized.length === 10 && normalized.startsWith("9")) {
-            normalized = "0" + normalized;
-        }
-
-        if (!/^09\d{9}$/.test(normalized)) {
+        if (!normalized) {
             setError("شماره موبایل نامعتبر است. فرمت صحیح: 09xxxxxxxxx");
             return;
         }

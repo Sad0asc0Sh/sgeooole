@@ -6,6 +6,7 @@
  */
 
 const Joi = require('joi');
+const { normalizeIranMobile } = require('../../utils/phone');
 
 // ============================================
 // Common Validation Patterns
@@ -23,6 +24,14 @@ const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 // ============================================
 // Authentication Schemas
 // ============================================
+
+const normalizeIranMobileForJoi = (value, helpers) => {
+    const normalized = normalizeIranMobile(value);
+    if (!normalized) {
+        return helpers.message('شماره موبایل معتبر نیست (فرمت درست: 09xxxxxxxxx)');
+    }
+    return normalized;
+};
 
 /**
  * Register new user/admin schema
@@ -199,11 +208,11 @@ const updateProfileSchema = Joi.object({
  */
 const sendOtpSchema = Joi.object({
     mobile: Joi.string()
-        .pattern(iranMobilePattern)
         .required()
+        .custom(normalizeIranMobileForJoi, 'iran mobile normalizer')
         .messages({
-            'string.pattern.base': 'شماره موبایل باید در فرمت 09xxxxxxxxx باشد',
             'any.required': 'شماره موبایل الزامی است',
+            'string.empty': 'شماره موبایل الزامی است',
         }),
 });
 
@@ -212,11 +221,11 @@ const sendOtpSchema = Joi.object({
  */
 const verifyOtpSchema = Joi.object({
     mobile: Joi.string()
-        .pattern(iranMobilePattern)
         .required()
+        .custom(normalizeIranMobileForJoi, 'iran mobile normalizer')
         .messages({
-            'string.pattern.base': 'شماره موبایل باید در فرمت 09xxxxxxxxx باشد',
             'any.required': 'شماره موبایل الزامی است',
+            'string.empty': 'شماره موبایل الزامی است',
         }),
 
     code: Joi.string()
@@ -224,7 +233,7 @@ const verifyOtpSchema = Joi.object({
         .pattern(/^\d{4}$/)
         .required()
         .messages({
-            'string.length': 'کد تأیید باید ۶ رقم باشد',
+            'string.length': 'کد تأیید باید ۴ رقم باشد',
             'string.pattern.base': 'کد تأیید باید فقط شامل اعداد باشد',
             'any.required': 'کد تأیید الزامی است',
         }),
