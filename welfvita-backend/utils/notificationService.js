@@ -96,6 +96,8 @@ const getSmsHttpsAgent = () => {
   return smsHttpsAgent
 }
 
+exports.getSmsHttpsAgent = getSmsHttpsAgent
+
 // ============================================
 // Email Transporter Configuration (Fallback SMTP)
 // ============================================
@@ -593,11 +595,39 @@ exports.sendOtpSMS = async (mobile, code) => {
     proxy: false,
   }
 
+  const summarizeSmsErrorDetails = (details) => {
+    if (!details) return undefined
+    if (typeof details === 'string') return details.slice(0, 300)
+    if (typeof details !== 'object') return undefined
+
+    const safe = {}
+    if (details.RetStatus !== undefined) safe.RetStatus = details.RetStatus
+    if (details.StrRetStatus !== undefined) safe.StrRetStatus = details.StrRetStatus
+    if (details.status !== undefined) safe.status = details.status
+    if (details.message !== undefined) safe.message = details.message
+
+    return Object.keys(safe).length ? safe : undefined
+  }
+
+  const summarizeSmsError = (error) => {
+    const httpStatus = error?.response?.status ?? error?.httpStatus
+    const responseData = error?.response?.data
+
+    return {
+      code: error?.code,
+      message: error?.message,
+      httpStatus: typeof httpStatus === 'number' ? httpStatus : undefined,
+      providerStatusCode: typeof error?.statusCode === 'number' ? error.statusCode : undefined,
+      details: summarizeSmsErrorDetails(error?.details) || summarizeSmsErrorDetails(responseData),
+    }
+  }
+
   const shouldRetry = (error) => {
     const retryableCodes = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND', 'EAI_AGAIN'])
     if (retryableCodes.has(error?.code)) return true
-    const status = error?.response?.status
-    if (typeof status === 'number' && status >= 500) return true
+    const httpStatus = error?.response?.status ?? error?.httpStatus
+    if (typeof httpStatus === 'number' && httpStatus >= 500) return true
+    if (error?.retryable === true) return true
     return false
   }
 
@@ -613,6 +643,17 @@ exports.sendOtpSMS = async (mobile, code) => {
     }
 
     const response = await axios.post(url, payload, axiosConfig)
+    const httpStatus = response?.status
+
+    if (typeof httpStatus === 'number' && httpStatus >= 500) {
+      const err = new Error(`SMS provider HTTP error (${httpStatus})`)
+      err.code = 'SMS_PROVIDER_HTTP_ERROR'
+      err.statusCode = 503
+      err.httpStatus = httpStatus
+      err.retryable = true
+      err.details = response?.data
+      throw err
+    }
     const retStatus = Number(response?.data?.RetStatus)
 
     if (retStatus === 1) {
@@ -623,18 +664,44 @@ exports.sendOtpSMS = async (mobile, code) => {
     const err = new Error(providerMessage)
     err.code = 'SMS_PROVIDER_ERROR'
     err.statusCode = 503
+    err.httpStatus = typeof httpStatus === 'number' ? httpStatus : undefined
     err.details = response.data
     throw err
   }
 
   const sendViaMelipayamakConsole = async () => {
-    const url = `https://console.melipayamak.com/api/send/simple/${smsApiKey}`
     const payload = { from: senderLine, to: normalizedMobile, text }
 
+    // Some accounts accept API key via header, some via URL parameter.
+    try {
+      const headerResponse = await axios.post(
+        'https://console.melipayamak.com/api/send/simple',
+        payload,
+        { ...axiosConfig, headers: { ...axiosConfig.headers, Authorization: smsApiKey } }
+      )
+
+      if (headerResponse.status >= 200 && headerResponse.status < 300) {
+        return { success: true, data: headerResponse.data, provider: 'melipayamak-console' }
+      }
+    } catch (headerError) {
+      // Ignore and try URL auth below
+    }
+
+    const url = `https://console.melipayamak.com/api/send/simple/${smsApiKey}`
     const response = await axios.post(url, payload, axiosConfig)
 
     if (response.status >= 200 && response.status < 300) {
       return { success: true, data: response.data, provider: 'melipayamak-console' }
+    }
+
+    if (response.status >= 500) {
+      const err = new Error(`SMS provider HTTP error (${response.status})`)
+      err.code = 'SMS_PROVIDER_HTTP_ERROR'
+      err.statusCode = 503
+      err.httpStatus = response.status
+      err.retryable = true
+      err.details = response?.data
+      throw err
     }
 
     const providerMessage =
@@ -645,6 +712,7 @@ exports.sendOtpSMS = async (mobile, code) => {
     const err = new Error(providerMessage)
     err.code = 'SMS_PROVIDER_ERROR'
     err.statusCode = 503
+    err.httpStatus = response.status
     err.details = response.data
     throw err
   }
@@ -666,7 +734,14 @@ exports.sendOtpSMS = async (mobile, code) => {
         return await provider.send()
       } catch (error) {
         lastError = error
-        if (attempt < maxAttempts && shouldRetry(error)) {
+        const willRetry = attempt < maxAttempts && shouldRetry(error)
+        const summary = summarizeSmsError(error)
+        const logFn = willRetry ? console.warn : console.error
+        logFn(
+          `[SMS] OTP send failed (attempt ${attempt}/${maxAttempts}) to ${maskMobile(normalizedMobile)} (${provider.name}) :: ${JSON.stringify(summary)}`,
+        )
+
+        if (willRetry) {
           await new Promise((r) => setTimeout(r, retryDelayMs * attempt))
           continue
         }
@@ -679,5 +754,6 @@ exports.sendOtpSMS = async (mobile, code) => {
   const err = new Error(lastError?.message || 'خطا در ارسال پیامک')
   err.code = lastError?.code || 'SMS_SEND_FAILED'
   err.statusCode = 503
+  err.details = summarizeSmsError(lastError)
   throw err
 }

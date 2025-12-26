@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const axios = require('axios')
 const Settings = require('../../models/Settings')
-const { sendOtpSMS } = require('../../utils/notificationService')
+const { sendOtpSMS, getSmsHttpsAgent } = require('../../utils/notificationService')
 const { normalizeIranMobile } = require('../../utils/phone')
 const { protect, authorize } = require('../../middleware/auth')
 
@@ -146,7 +146,12 @@ router.get('/sms-ping', protect, authorize('admin'), async (req, res) => {
     const ping = async (url) => {
         const startedAt = Date.now()
         try {
-            const r = await axios.get(url, { timeout: 7000, validateStatus: () => true })
+            const r = await axios.get(url, {
+                timeout: 7000,
+                validateStatus: () => true,
+                httpsAgent: getSmsHttpsAgent(),
+                proxy: false,
+            })
             return { url, ok: true, status: r.status, ms: Date.now() - startedAt }
         } catch (e) {
             return { url, ok: false, error: e.code || e.message, ms: Date.now() - startedAt }
@@ -161,6 +166,7 @@ router.get('/sms-ping', protect, authorize('admin'), async (req, res) => {
 
         res.json({
             success: true,
+            usingProxy: Boolean(process.env.SMS_PROXY),
             rest,
             console: consoleHost,
         })
