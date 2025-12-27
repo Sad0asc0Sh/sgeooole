@@ -170,16 +170,16 @@ export default async function Home() {
         <HeroSection initialBanners={banners} />
       </Suspense>
 
+      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
+        <FlashOfferRail />
+      </Suspense>
+
       <Suspense fallback={<SkeletonRail title="دسته‌های ویژه" />}>
         <CategoryRail title="دسته‌های ویژه" variant="circle" data={featuredCats} />
       </Suspense>
 
       <Suspense fallback={<SkeletonRail title="دسته‌های محبوب" />}>
         <CategoryRail title="دسته‌های محبوب" variant="card" data={popularCats} />
-      </Suspense>
-
-      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-        <FlashOfferRail />
       </Suspense>
 
       <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
