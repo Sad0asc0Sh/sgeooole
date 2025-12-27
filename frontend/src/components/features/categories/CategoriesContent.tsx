@@ -2,10 +2,11 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, Loader2, Package, AlertCircle } from "lucide-react";
-import { categoryService, Category } from "@/services/categoryService";
+import type { Category } from "@/services/categoryService";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCategoryTree } from "@/hooks/useCategories";
 
 interface CategoriesContentProps {
     onClose?: () => void;
@@ -13,10 +14,8 @@ interface CategoriesContentProps {
 
 export default function CategoriesContent({ onClose }: CategoriesContentProps) {
     const router = useRouter();
-    const [categoryTree, setCategoryTree] = useState<Category[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const { categoryTree, isLoading, isValidating, error, refresh } = useCategoryTree();
+    const [activeId, setActiveId] = useState<string | null>(() => categoryTree[0]?._id ?? null);
     const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
     // Normalize icon/image coming from API (object or plain string, relative or absolute)
@@ -41,29 +40,13 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
         return url;
     };
 
-    // Load categories on mount
+    // Auto-select first category when data becomes available (and keep selection valid after refreshes)
     useEffect(() => {
-        loadCategories();
-    }, []);
-
-    const loadCategories = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-            const tree = await categoryService.getTree();
-            setCategoryTree(tree);
-
-            // Auto-select first category
-            if (tree.length > 0) {
-                setActiveId(tree[0]._id);
-            }
-        } catch (err: any) {
-            console.error("[CATEGORIES] Error loading categories:", err);
-            setError(err.message || "خطا در بارگذاری دسته‌بندی‌ها");
-        } finally {
-            setLoading(false);
+        if (!categoryTree.length) return;
+        if (!activeId || !categoryTree.some((c) => c._id === activeId)) {
+            setActiveId(categoryTree[0]._id);
         }
-    };
+    }, [categoryTree, activeId]);
 
     const activeCategory = categoryTree.find(c => c._id === activeId);
 
@@ -84,7 +67,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
     };
 
     // Loading State
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full bg-white">
                 <div className="flex flex-col items-center gap-3">
@@ -96,7 +79,8 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
     }
 
     // Error State
-    if (error) {
+    if (error && categoryTree.length === 0) {
+        const errorMessage = (error as any)?.message || "خطا در بارگذاری دسته‌بندی‌ها";
         return (
             <div className="flex items-center justify-center h-full bg-white p-8">
                 <div className="flex flex-col items-center gap-4 text-center max-w-sm">
@@ -104,11 +88,13 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                         <AlertCircle className="text-red-500" size={32} />
                     </div>
                     <h3 className="text-lg font-bold text-gray-800">خطا در بارگذاری</h3>
-                    <p className="text-sm text-gray-500">{error}</p>
+                    <p className="text-sm text-gray-500">{errorMessage}</p>
                     <button
-                        onClick={loadCategories}
-                        className="mt-2 px-6 py-2 bg-vita-600 text-white text-sm font-bold rounded-xl hover:bg-vita-700 transition-colors"
+                        onClick={() => refresh()}
+                        disabled={isValidating}
+                        className="mt-2 px-6 py-2 bg-vita-600 text-white text-sm font-bold rounded-xl hover:bg-vita-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                     >
+                        {isValidating && <Loader2 className="animate-spin" size={16} />}
                         تلاش مجدد
                     </button>
                 </div>

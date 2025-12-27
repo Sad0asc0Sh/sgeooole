@@ -139,16 +139,16 @@ function SpecialOfferRail() {
                   style={{ width: "148px", height: "auto" }}
                 >
                   <Link href={`/product/${product.id}`} className="block h-full">
-                    <div className="bg-white rounded-lg h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group p-3">
+                    <div className="bg-white rounded-lg h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative group p-3">
 
                       <div className="">
                         {/* Product Image */}
-                        <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                        <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md p-2">
                           <Image
                             src={product.image || "/placeholder.png"}
                             alt={product.name}
                             fill
-                            className={`object-cover group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                            className={`object-contain group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
                           />
 
                           {/* Badges - Only show if no header */}

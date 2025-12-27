@@ -5,9 +5,10 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, Menu, Loader2, Grid3X3 } from "lucide-react";
-import { categoryService, Category } from "@/services/categoryService";
+import type { Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
 import { useScrollLock } from "@/hooks/useScrollLock";
+import { useCategoryTree } from "@/hooks/useCategories";
 
 // Helper to extract icon URL from category
 const getIconUrl = (category: Category): string | null => {
@@ -80,9 +81,8 @@ const CategoryIcon = ({
 };
 
 export default function DesktopMegaMenu() {
-    const [categories, setCategories] = useState<Category[]>([]);
     const [activeCategory, setActiveCategory] = useState<Category | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const { categoryTree: categories, isLoading } = useCategoryTree();
     const [isOpen, setIsOpen] = useState(false);
     const [overlayPosition, setOverlayPosition] = useState<{ top: number; left: number; width: number } | null>(null);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,22 +99,11 @@ export default function DesktopMegaMenu() {
     }, []);
 
     useEffect(() => {
-        const fetchCategories = async () => {
-            try {
-                const data = await categoryService.getTree();
-                setCategories(data);
-                if (data.length > 0) {
-                    setActiveCategory(data[0]);
-                }
-            } catch (error) {
-                console.error("Failed to fetch categories:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchCategories();
-    }, []);
+        if (!categories.length) return;
+        if (!activeCategory || !categories.some((c) => c._id === activeCategory._id)) {
+            setActiveCategory(categories[0]);
+        }
+    }, [categories, activeCategory]);
 
     useEffect(() => {
         if (!isOpen) return;
