@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Table, Card, Tag, Input, Select, Space, Button } from 'antd'
-import { SearchOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons'
+import { SearchOutlined, ReloadOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -233,12 +233,19 @@ function OrdersList() {
         }}
       >
         <h1>مدیریت سفارشات</h1>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchOrders()}
-        >
-          بارگذاری مجدد
-        </Button>
+        <Space>
+          <Link to="/orders/create">
+            <Button type="primary" icon={<PlusOutlined />}>
+              ایجاد سفارش جدید
+            </Button>
+          </Link>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => fetchOrders()}
+          >
+            بارگذاری مجدد
+          </Button>
+        </Space>
       </div>
 
       <div

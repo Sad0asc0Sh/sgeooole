@@ -35,6 +35,7 @@ const PERMISSIONS = {
     // --- Order Permissions ---
     ORDER_READ: 'order:read',
     ORDER_READ_ALL: 'order:read_all',
+    ORDER_CREATE: 'order:create',
     ORDER_UPDATE_STATUS: 'order:update_status',
     ORDER_DELETE: 'order:delete',
 
@@ -163,6 +164,7 @@ const ROLES = {
         // Orders
         PERMISSIONS.ORDER_READ,
         PERMISSIONS.ORDER_READ_ALL,
+        PERMISSIONS.ORDER_CREATE,
         PERMISSIONS.ORDER_UPDATE_STATUS,
 
         // Users
@@ -263,9 +265,10 @@ const ROLES = {
         PERMISSIONS.BRAND_UPDATE,
         PERMISSIONS.BRAND_DELETE,
 
-        // Orders (read & update, no delete)
+        // Orders (read, create & update, no delete)
         PERMISSIONS.ORDER_READ,
         PERMISSIONS.ORDER_READ_ALL,
+        PERMISSIONS.ORDER_CREATE,
         PERMISSIONS.ORDER_UPDATE_STATUS,
 
         // Users (read only)

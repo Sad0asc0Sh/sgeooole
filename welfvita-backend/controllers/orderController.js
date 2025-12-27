@@ -701,3 +701,105 @@ exports.trackOrder = async (req, res) => {
   }
 }
 
+// ============================================
+// POST /api/orders/admin/create - ایجاد سفارش توسط ادمین (Admin-Only)
+// ============================================
+exports.createOrderForUser = async (req, res) => {
+  try {
+    const {
+      userId,
+      orderItems,
+      shippingAddress,
+      paymentMethod,
+      itemsPrice,
+      shippingPrice,
+      shippingMethod,
+      taxPrice,
+      totalPrice,
+      totalDiscount,
+      adminNotes,
+    } = req.body
+
+    // اعتبارسنجی کاربر هدف
+    if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        success: false,
+        message: 'شناسه کاربر نامعتبر است',
+      })
+    }
+
+    // اعتبارسنجی سبد خرید
+    if (!orderItems || orderItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'سبد خرید خالی است',
+      })
+    }
+
+    // اعتبارسنجی آیتم‌های سفارش
+    for (const item of orderItems) {
+      if (!item.product || !item.product.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({
+          success: false,
+          message: `شناسه محصول نامعتبر است: ${item.name || 'نامشخص'}`,
+        })
+      }
+    }
+
+    if (!shippingAddress) {
+      return res.status(400).json({
+        success: false,
+        message: 'آدرس ارسال الزامی است',
+      })
+    }
+
+    // ایجاد سفارش
+    const order = new Order({
+      user: userId,
+      orderItems,
+      shippingAddress,
+      paymentMethod: paymentMethod || 'online',
+      itemsPrice,
+      shippingPrice,
+      shippingMethod,
+      taxPrice: taxPrice || 0,
+      totalPrice,
+      totalDiscount: totalDiscount || 0,
+      orderStatus: paymentMethod === 'cod' ? 'Processing' : 'Pending',
+      adminNotes: adminNotes || '',
+      isPaid: false, // Default not paid
+    })
+
+    const createdOrder = await order.save()
+
+    // Audit Log
+    const { logAction } = require('../utils/auditLogger')
+    await logAction({
+      action: 'CREATE_ORDER_FOR_USER',
+      entity: 'Order',
+      entityId: createdOrder._id,
+      userId: req.user._id,
+      details: {
+        targetUserId: userId,
+        orderCode: createdOrder.orderCode,
+        totalPrice: createdOrder.totalPrice,
+        paymentMethod: createdOrder.paymentMethod,
+      },
+      req,
+    })
+
+    res.status(201).json({
+      success: true,
+      message: 'سفارش با موفقیت ایجاد شد',
+      data: createdOrder,
+    })
+  } catch (error) {
+    console.error('Error creating order for user:', error)
+    res.status(500).json({
+      success: false,
+      message: `خطا در ایجاد سفارش: ${error.message}`,
+      error: error.message,
+    })
+  }
+}
+

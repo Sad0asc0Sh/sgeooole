@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const {
   createOrder,
+  createOrderForUser,
   getAllOrders,
   getOrderById,
   updateOrderStatus,
@@ -48,25 +49,33 @@ router.post('/verify-payment', verifyPayment)
 // GET /api/orders/track/:orderCode - پیگیری سفارش بدون نیاز به لاگین
 router.get('/track/:orderCode', trackOrder)
 
-// POST /api/orders/:id/pay - شروع فرآیند پرداخت
-router.post('/:id/pay', protect, payOrder)
-
-// GET /api/orders/:id - دریافت جزئیات سفارش (مشتری: فقط سفارش خود، ادمین: همه)
-router.get('/:id', protect, getOrderById)
-
 // ============================================
-// Admin Routes
-// مجوزهای مورد نیاز: ORDER_READ_ALL, ORDER_UPDATE_STATUS
+// Admin Routes (MUST BE BEFORE /:id routes)
+// مجوزهای مورد نیاز: ORDER_READ_ALL, ORDER_UPDATE_STATUS, ORDER_CREATE
 // ============================================
+
+// POST /api/orders/admin/create - ایجاد سفارش توسط ادمین
+// مجوز مورد نیاز: ORDER_CREATE (Admin)
+router.post(
+  '/admin/create',
+  protect,
+  checkPermission(PERMISSIONS.ORDER_CREATE),
+  createOrderForUser,
+)
 
 // GET /api/orders - دریافت لیست تمام سفارشات
 // مجوز مورد نیاز: ORDER_READ_ALL
 router.get('/', protect, checkPermission(PERMISSIONS.ORDER_READ_ALL), getAllOrders)
 
 // ============================================
+// Routes with :id param (MUST BE LAST)
+// ============================================
+
+// POST /api/orders/:id/pay - شروع فرآیند پرداخت
+router.post('/:id/pay', protect, payOrder)
+
 // PUT /api/orders/:id/status - به‌روزرسانی وضعیت سفارش
 // مجوز مورد نیاز: ORDER_UPDATE_STATUS
-// ============================================
 router.put(
   '/:id/status',
   protect,
@@ -75,5 +84,7 @@ router.put(
   updateOrderStatus,
 )
 
-module.exports = router
+// GET /api/orders/:id - دریافت جزئیات سفارش (مشتری: فقط سفارش خود، ادمین: همه)
+router.get('/:id', protect, getOrderById)
 
+module.exports = router
