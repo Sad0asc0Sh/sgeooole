@@ -36,6 +36,9 @@ export const metadata: Metadata = {
   },
   title: "فروشگاه ولفویتا | خرید آنلاین محصولات",
   description: "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
+  other: {
+    'enamad': '46480007',
+  },
 };
 
 export default function RootLayout({
