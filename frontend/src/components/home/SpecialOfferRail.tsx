@@ -53,38 +53,41 @@ function SpecialOfferRail() {
       : "/placeholder-product.png";
 
   return (
-    <div className="py-5 bg-gray-900 relative overflow-hidden touch-pan-y">
+    <div className="py-5 bg-gradient-to-br from-red-600 via-red-500 to-rose-600 relative overflow-hidden touch-pan-y shadow-2xl">
+      {/* Decorative animated background elements */}
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} />
       <div className="container mx-auto">
         <div className="px-4 mb-3 flex items-center justify-between">
           {/* Title */}
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 border-[1.5px] border-white rounded-full flex items-center justify-center">
-              <Percent size={12} className="text-white fill-white" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-white/20 backdrop-blur-sm border-2 border-white rounded-full flex items-center justify-center animate-pulse">
+              <Percent size={14} className="text-white fill-white" />
             </div>
-            <h2 className="text-base font-bold text-yellow-400">
-              <span className="text-[11px]">پیشنهاد‌شگفت‌انگیز</span>
+            <h2 className="text-xl font-black text-white drop-shadow-lg">
+              پیشنهاد شگفت‌انگیز
             </h2>
           </div>
 
-          {/* Global Countdown Timer */}
-          <div className="flex items-center gap-1 text-white font-bold text-xs" dir="ltr">
-            <div className="bg-white text-vita-600 w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">
+          {/* Global Countdown Timer - Red Theme */}
+          <div className="flex items-center gap-1.5 text-white font-black text-sm" dir="ltr">
+            <div className="bg-red-800 text-white w-9 h-9 flex items-center justify-center rounded-lg shadow-lg border-2 border-white/30">
               {hours}
             </div>
-            <span className="mb-1">:</span>
-            <div className="bg-white text-vita-600 w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">
+            <span className="mb-1 text-white drop-shadow-md">:</span>
+            <div className="bg-red-800 text-white w-9 h-9 flex items-center justify-center rounded-lg shadow-lg border-2 border-white/30">
               {minutes}
             </div>
-            <span className="mb-1">:</span>
-            <div className="bg-white text-vita-600 w-7 h-7 flex items-center justify-center rounded-[4px] shadow-sm">
+            <span className="mb-1 text-white drop-shadow-md">:</span>
+            <div className="bg-red-800 text-white w-9 h-9 flex items-center justify-center rounded-lg shadow-lg border-2 border-white/30">
               {seconds}
             </div>
           </div>
 
           {/* View All Button */}
-          <button className="flex items-center gap-0.5 text-white text-xs font-medium hover:text-white/90 transition-colors">
+          <button className="flex items-center gap-0.5 text-white text-sm font-bold hover:text-white/90 transition-all hover:scale-105 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
             <span>مشاهده همه</span>
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} />
           </button>
         </div>
 

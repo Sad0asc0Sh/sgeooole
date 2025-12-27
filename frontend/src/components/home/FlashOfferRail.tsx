@@ -54,10 +54,10 @@ function FlashOfferRail() {
 
   return (
     <div
-      className="py-6 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-amber-500/20 shadow-inner relative overflow-hidden"
+      className="py-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-amber-500/20 shadow-inner relative overflow-hidden"
       style={{
         // CSS Mask for Zigzag (Sawtooth) Edges - Adjusted for smaller padding
-        // 20px width => 10px height zigzag. py-6 (24px) leaves 14px visual padding.
+        // 20px width => 10px height zigzag. py-4 (16px) leaves 6px visual padding.
         WebkitMask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x",
         mask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x"
       }}
@@ -67,24 +67,24 @@ function FlashOfferRail() {
       <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Header Section */}
-      <div className="px-4 mb-5 flex items-center justify-between relative z-10">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
-            <Flame className="text-amber-500 w-6 h-6 animate-pulse drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-            <h3 className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-200 via-amber-400 to-amber-500 drop-shadow-sm">
+      <div className="px-4 mb-3 flex items-center justify-between relative z-10">
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1.5">
+            <Flame className="text-amber-500 w-5 h-5 animate-pulse drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
+            <h3 className="text-base font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-200 via-amber-400 to-amber-500 drop-shadow-sm">
               پیشنهاد لحظه‌ای
             </h3>
           </div>
-          <span className="text-[11px] text-gray-400 font-medium mr-7">
+          <span className="text-[10px] text-gray-400 font-medium mr-6">
             فرصت محدود خرید با تخفیف ویژه
           </span>
         </div>
         <Link
           href="/products?sort=flash"
-          className="flex items-center gap-1 text-amber-400 text-xs font-bold hover:text-amber-300 transition-colors bg-gray-800/50 px-3 py-1.5 rounded-full border border-amber-500/20 backdrop-blur-sm"
+          className="flex items-center gap-1 text-amber-400 text-[11px] font-bold hover:text-amber-300 transition-colors bg-gray-800/50 px-2.5 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm"
         >
           <span>مشاهده همه</span>
-          <ChevronLeft size={14} />
+          <ChevronLeft size={12} />
         </Link>
       </div>
 
@@ -96,7 +96,7 @@ function FlashOfferRail() {
             nextEl: '.swiper-button-next-flash',
             prevEl: '.swiper-button-prev-flash',
           }}
-          spaceBetween={12}
+          spaceBetween={10}
           slidesPerView={2.3}
           breakpoints={{
             640: {
@@ -112,7 +112,7 @@ function FlashOfferRail() {
               slidesPerView: 6,
             },
           }}
-          className="w-full !px-4 !pb-4 relative z-10"
+          className="w-full !px-4 !pb-2 relative z-10"
           grabCursor
         >
           {activeFlashDeals.map((product) => {
@@ -147,7 +147,7 @@ function FlashOfferRail() {
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
             return (
-              <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
+              <SwiperSlide key={product.id} style={{ width: "140px", height: "auto" }}>
                 <Link href={buildProductUrl(product)} className="block h-full">
                   <div
                     className={`
@@ -157,24 +157,24 @@ function FlashOfferRail() {
                       cursor-pointer
                       hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:bg-gray-800/80
                       transition-all duration-300
-                      relative overflow-hidden group pt-4 pb-4
+                      relative overflow-hidden group pt-3 pb-3
                     `}
                     style={{
-                      clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)",
+                      clipPath: "polygon(0 0, 50% 12px, 100% 0, 100% 100%, 50% calc(100% - 12px), 0 100%)",
                       borderRadius: "0" // Remove border radius as clip-path defines shape
                     }}
                   >
 
-                    <div className="px-3 pb-1 pt-1">
+                    <div className="px-2.5 pb-1 pt-0.5">
                       {/* Header Title - Centered below the V notch */}
-                      <div className="flex justify-center mb-2">
-                        <span className="text-[10px] font-black text-amber-400 bg-amber-950/50 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      <div className="flex justify-center mb-1.5">
+                        <span className="text-[9px] font-black text-amber-400 bg-amber-950/50 px-1.5 py-0.5 rounded-full border border-amber-500/20">
                           {headerConfig.title}
                         </span>
                       </div>
 
                       {/* Image */}
-                      <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-700/30 rounded-lg overflow-hidden border border-white/5">
+                      <div className="aspect-square w-full mb-2 relative flex items-center justify-center bg-gray-700/30 rounded-lg overflow-hidden border border-white/5">
                         <Image
                           src={product.image || "/placeholder.png"}
                           alt={product.name}

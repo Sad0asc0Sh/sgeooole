@@ -94,7 +94,7 @@ export default function BrandsStrip() {
         <div
           ref={sliderRef}
           className={`
-            flex items-center justify-between px-6 overflow-x-auto gap-8 md:justify-center md:gap-12
+            flex items-center justify-between px-6 py-4 overflow-x-auto gap-8 md:justify-center md:gap-12
             no-scrollbar cursor-grab active:cursor-grabbing select-none
           `}
           onMouseDown={handleMouseDown}
@@ -108,14 +108,14 @@ export default function BrandsStrip() {
               onClick={() => handleBrandClick(brand.slug)}
               onMouseEnter={() => setHoveredBrand(brand._id)}
               onMouseLeave={() => setHoveredBrand(null)}
-              className="min-w-max transition-all duration-300 transform hover:scale-110 flex flex-col items-center gap-3 cursor-pointer"
+              className="min-w-max transition-all duration-300 transform hover:scale-110 flex flex-col items-center gap-3 cursor-pointer p-2"
               style={{
                 color: hoveredBrand === brand._id ? brand.hoverColor : brand.textColor,
               }}
             >
               {/* Show logo if available */}
               {brand.logo?.url && (
-                <div className="relative w-24 h-24 rounded overflow-hidden">
+                <div className="relative w-24 h-24 rounded">
                   <Image
                     src={brand.logo.url}
                     alt={brand.name}
