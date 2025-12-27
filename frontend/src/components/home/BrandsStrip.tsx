@@ -108,24 +108,24 @@ export default function BrandsStrip() {
               onClick={() => handleBrandClick(brand.slug)}
               onMouseEnter={() => setHoveredBrand(brand._id)}
               onMouseLeave={() => setHoveredBrand(null)}
-              className="min-w-max transition-all duration-300 transform hover:scale-110 flex items-center gap-2 cursor-pointer"
+              className="min-w-max transition-all duration-300 transform hover:scale-110 flex flex-col items-center gap-3 cursor-pointer"
               style={{
                 color: hoveredBrand === brand._id ? brand.hoverColor : brand.textColor,
               }}
             >
               {/* Show logo if available */}
               {brand.logo?.url && (
-                <div className="relative w-8 h-8 rounded overflow-hidden">
+                <div className="relative w-24 h-24 rounded overflow-hidden">
                   <Image
                     src={brand.logo.url}
                     alt={brand.name}
                     fill
                     className="object-contain"
-                    sizes="32px"
+                    sizes="96px"
                   />
                 </div>
               )}
-              <span className="text-xl font-black tracking-wider">
+              <span className="text-sm font-bold tracking-wide text-center">
                 {brand.name}
               </span>
             </div>
