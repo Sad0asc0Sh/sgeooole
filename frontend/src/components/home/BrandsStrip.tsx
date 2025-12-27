@@ -65,10 +65,14 @@ export default function BrandsStrip() {
     }
   };
 
-  const handleBrandClick = (brandSlug: string) => {
+  const handleBrandClick = (brandKey?: string) => {
     if (isDragging) return;
-    // Use Next.js router for client-side navigation
-    router.push(`/brands/${brandSlug}`);
+
+    const value = (brandKey || "").trim();
+    if (!value) return;
+
+    // Go straight to the products listing with brand filter
+    router.push(`/products?brand=${encodeURIComponent(value)}`);
   };
 
   // Don't render the section if there are no brands
@@ -105,7 +109,7 @@ export default function BrandsStrip() {
           {brands.map((brand) => (
             <div
               key={brand._id}
-              onClick={() => handleBrandClick(brand.slug)}
+              onClick={() => handleBrandClick(brand.slug || brand._id)}
               onMouseEnter={() => setHoveredBrand(brand._id)}
               onMouseLeave={() => setHoveredBrand(null)}
               className="min-w-max transition-all duration-300 transform hover:scale-110 flex flex-col items-center gap-3 cursor-pointer p-2"

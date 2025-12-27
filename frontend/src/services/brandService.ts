@@ -22,7 +22,7 @@ export interface Brand {
 export interface HomepageBrand {
     _id: string;
     name: string;
-    slug: string;
+    slug?: string;
     logo?: BrandLogo | null;
     textColor: string;
     hoverColor: string;

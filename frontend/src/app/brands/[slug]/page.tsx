@@ -9,6 +9,11 @@ type Props = {
     params: Promise<{ slug: string }>;
 };
 
+const encodeQueryValue = (value: string) => {
+    if (/%[0-9A-Fa-f]{2}/.test(value)) return value;
+    return encodeURIComponent(value);
+};
+
 // Generate static params for all brands
 export async function generateStaticParams() {
     try {
@@ -50,5 +55,5 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // Brand page - redirects to products page with brand filter
 export default async function BrandPage({ params }: Props) {
     const { slug } = await params;
-    redirect(`/products?brand=${encodeURIComponent(slug)}`);
+    redirect(`/products?brand=${encodeQueryValue(slug)}`);
 }
