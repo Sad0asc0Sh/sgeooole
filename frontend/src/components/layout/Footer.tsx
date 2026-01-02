@@ -25,6 +25,7 @@ export default function Footer() {
     const [storeInfo, setStoreInfo] = useState<StoreInfo>({});
     const { isAuthenticated } = useAuth();
     const [showBackToTop, setShowBackToTop] = useState(false);
+    const orderTrackingHref = isAuthenticated ? "/profile/orders?status=current" : "/tracking";
 
     // Newsletter state
     const [email, setEmail] = useState("");
@@ -241,7 +242,7 @@ export default function Footer() {
                                 <h3 className="font-bold text-white text-lg mb-4">خدمات مشتریان</h3>
                                 <ul className="space-y-3 text-sm text-gray-300">
                                     <li>
-                                        <Link href={isAuthenticated ? "/profile/orders" : "/tracking"} className="hover:text-vita-400 transition-colors flex items-center gap-2">
+                                        <Link href={orderTrackingHref} className="hover:text-vita-400 transition-colors flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
                                             پیگیری سفارش
                                         </Link>

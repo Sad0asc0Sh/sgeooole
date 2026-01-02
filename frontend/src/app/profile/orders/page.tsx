@@ -21,17 +21,20 @@ export default function OrdersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const statusParam = searchParams.get('status');
+    const validTabs: TabType[] = ['pending', 'current', 'delivered', 'cancelled'];
+    const getTabFromStatusParam = (value: string | null): TabType => {
+        if (!value) return 'current';
+        return validTabs.includes(value as TabType) ? (value as TabType) : 'current';
+    };
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<TabType>((statusParam as TabType) || 'current');
+    const [activeTab, setActiveTab] = useState<TabType>(() => getTabFromStatusParam(statusParam));
     const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
-        if (statusParam && ['pending', 'current', 'delivered', 'cancelled'].includes(statusParam)) {
-            setActiveTab(statusParam as TabType);
-        }
+        setActiveTab(getTabFromStatusParam(statusParam));
     }, [statusParam]);
 
     useEffect(() => {

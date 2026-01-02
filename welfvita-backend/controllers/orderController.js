@@ -639,20 +639,19 @@ exports.trackOrder = async (req, res) => {
       })
     }
 
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        message: 'شماره موبایل الزامی است',
-      })
-    }
-
-    // Normalize phone number (remove spaces, dashes, etc.)
-    const normalizedPhone = phone.replace(/[\s\-\.]/g, '')
+    const normalizedOrderCode = String(orderCode).trim().toUpperCase()
+    const phoneParam = typeof phone === 'string' ? phone.trim() : ''
+    const shouldVerifyPhone = phoneParam.length > 0
 
     // Find order by orderCode
-    const order = await Order.findOne({ orderCode: orderCode.toUpperCase() })
-      .populate('user', 'mobile')
-      .select('_id orderCode orderStatus createdAt totalPrice trackingCode shippingAddress')
+    const orderQuery = Order.findOne({ orderCode: normalizedOrderCode })
+
+    const order = await (shouldVerifyPhone
+      ? orderQuery
+        .populate('user', 'mobile')
+        .select('_id orderCode orderStatus createdAt totalPrice trackingCode shippingAddress user')
+      : orderQuery.select('_id orderCode orderStatus createdAt totalPrice trackingCode')
+    )
       .lean()
 
     if (!order) {
@@ -662,21 +661,28 @@ exports.trackOrder = async (req, res) => {
       })
     }
 
-    // Verify phone number matches either user's mobile or shipping address phone
-    const userMobile = order.user?.mobile?.replace(/[\s\-\.]/g, '') || ''
-    const shippingPhone = order.shippingAddress?.phone?.replace(/[\s\-\.]/g, '') || ''
+    if (shouldVerifyPhone) {
+      // Normalize phone number (remove spaces, dashes, etc.)
+      const normalizedPhone = phoneParam.replace(/[\s\-\.]/g, '')
 
-    const phoneMatches =
-      normalizedPhone === userMobile ||
-      normalizedPhone === shippingPhone ||
-      normalizedPhone.endsWith(userMobile.slice(-10)) || // Match last 10 digits
-      normalizedPhone.endsWith(shippingPhone.slice(-10))
+      // Verify phone number matches either user's mobile or shipping address phone
+      const userMobile = order.user?.mobile?.replace(/[\s\-\.]/g, '') || ''
+      const shippingPhone = order.shippingAddress?.phone?.replace(/[\s\-\.]/g, '') || ''
+      const last10UserMobile = userMobile.length >= 10 ? userMobile.slice(-10) : ''
+      const last10ShippingPhone = shippingPhone.length >= 10 ? shippingPhone.slice(-10) : ''
 
-    if (!phoneMatches) {
-      return res.status(403).json({
-        success: false,
-        message: 'شماره موبایل با اطلاعات سفارش مطابقت ندارد',
-      })
+      const phoneMatches =
+        (userMobile && normalizedPhone === userMobile) ||
+        (shippingPhone && normalizedPhone === shippingPhone) ||
+        (last10UserMobile && normalizedPhone.endsWith(last10UserMobile)) ||
+        (last10ShippingPhone && normalizedPhone.endsWith(last10ShippingPhone))
+
+      if (!phoneMatches) {
+        return res.status(403).json({
+          success: false,
+          message: 'شماره موبایل با اطلاعات سفارش مطابقت ندارد',
+        })
+      }
     }
 
     // Return limited order information for guest tracking

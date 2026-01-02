@@ -1,5 +1,6 @@
 const express = require('express')
 const router = express.Router()
+const rateLimit = require('express-rate-limit')
 const {
   createOrder,
   createOrderForUser,
@@ -46,8 +47,16 @@ router.post('/verify-payment', verifyPayment)
 // Guest Order Tracking (No Auth Required)
 // ============================================
 
+const trackOrderLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 60, // 60 requests per 15 minutes per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'تعداد درخواست‌های پیگیری سفارش بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.' },
+})
+
 // GET /api/orders/track/:orderCode - پیگیری سفارش بدون نیاز به لاگین
-router.get('/track/:orderCode', trackOrder)
+router.get('/track/:orderCode', trackOrderLimiter, trackOrder)
 
 // ============================================
 // Admin Routes (MUST BE BEFORE /:id routes)

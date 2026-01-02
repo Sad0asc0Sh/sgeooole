@@ -15,6 +15,7 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
     const [isExpanded, setIsExpanded] = useState(true);
     const router = useRouter();
     const { isAuthenticated } = useAuth();
+    const orderTrackingHref = isAuthenticated ? "/profile/orders?status=current" : "/tracking";
 
     // Auto-collapse on mount
     useEffect(() => {
@@ -61,11 +62,11 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-xl h-[50vh]">
                 <SheetHeader>
-                    <SheetTitle className="text-center font-bold font-sans">خدمات ویلف‌ویتا</SheetTitle>
+                <SheetTitle className="text-center font-bold font-sans">خدمات ویلف‌ویتا</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
                     <div
-                        onClick={() => handleNavigate(isAuthenticated ? "/profile/orders" : "/tracking")}
+                        onClick={() => handleNavigate(orderTrackingHref)}
                         className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
                     >
                         پیگیری سفارش

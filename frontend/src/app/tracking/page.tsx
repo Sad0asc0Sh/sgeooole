@@ -19,8 +19,8 @@ interface OrderTrackingResult {
 export default function TrackingPage() {
     const router = useRouter();
     const { isAuthenticated, loading: authLoading } = useAuth();
+    const authenticatedOrdersHref = "/profile/orders?status=current";
     const [orderCode, setOrderCode] = useState("");
-    const [phone, setPhone] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<OrderTrackingResult | null>(null);
@@ -28,9 +28,9 @@ export default function TrackingPage() {
     // If user is authenticated, redirect to orders page
     useEffect(() => {
         if (!authLoading && isAuthenticated) {
-            router.replace("/profile/orders");
+            router.replace(authenticatedOrdersHref);
         }
-    }, [isAuthenticated, authLoading, router]);
+    }, [isAuthenticated, authLoading, router, authenticatedOrdersHref]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,19 +40,12 @@ export default function TrackingPage() {
             return;
         }
 
-        if (!phone.trim()) {
-            setError("لطفاً شماره موبایل را وارد کنید");
-            return;
-        }
-
         setLoading(true);
         setError(null);
         setResult(null);
 
         try {
-            const response = await api.get(`/orders/track/${encodeURIComponent(orderCode)}`, {
-                params: { phone: phone.trim() }
-            });
+            const response = await api.get(`/orders/track/${encodeURIComponent(orderCode)}`);
 
             if (response.data.success) {
                 setResult(response.data.data);
@@ -118,7 +111,7 @@ export default function TrackingPage() {
                         <div>
                             <h2 className="font-bold text-gray-800 mb-1">پیگیری سفارش بدون ورود</h2>
                             <p className="text-sm text-gray-600 leading-relaxed">
-                                با وارد کردن کد سفارش و شماره موبایلی که هنگام ثبت سفارش وارد کرده‌اید، وضعیت سفارش خود را پیگیری کنید.
+                                با وارد کردن کد سفارش، وضعیت سفارش خود را پیگیری کنید.
                             </p>
                         </div>
                     </div>
@@ -136,21 +129,6 @@ export default function TrackingPage() {
                                 if (error) setError(null);
                             }}
                             placeholder="مثال: WV-123456"
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-vita-500 focus:border-vita-500 transition-all"
-                            dir="ltr"
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="block text-sm font-bold text-gray-700">شماره موبایل</label>
-                        <input
-                            type="tel"
-                            value={phone}
-                            onChange={(e) => {
-                                setPhone(e.target.value);
-                                if (error) setError(null);
-                            }}
-                            placeholder="09123456789"
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-vita-500 focus:border-vita-500 transition-all"
                             dir="ltr"
                         />
@@ -242,7 +220,7 @@ export default function TrackingPage() {
                         برای مشاهده تمام سفارشات خود، وارد حساب کاربری شوید
                     </p>
                     <Link
-                        href="/login?redirect=/profile/orders"
+                        href={`/login?redirect=${encodeURIComponent(authenticatedOrdersHref)}`}
                         className="inline-flex items-center gap-2 text-vita-600 font-bold text-sm hover:text-vita-700 transition-colors"
                     >
                         <span>ورود به حساب کاربری</span>
