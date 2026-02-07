@@ -11,6 +11,14 @@ const mongoSanitize = require('express-mongo-sanitize')
 const hpp = require('hpp')
 require('dotenv').config()
 
+// ============================================
+// SECURITY: Enhanced Security Middlewares
+// ============================================
+const { noSqlInjectionPrevention } = require('./middleware/noSqlInjection')
+const { securityLogger, accessLogger } = require('./middleware/securityLogger')
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler')
+const { checkProductAccess } = require('./middleware/accessControl')
+
 // SECURITY: Silence console.log/info/debug in production
 // Must be loaded AFTER dotenv to read NODE_ENV
 require('./utils/productionConsole')
@@ -285,15 +293,29 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
 // ============================================
-// 5. Data Sanitization
+// 5. Data Sanitization & Security Middleware
 // ============================================
-app.use(mongoSanitize()) // NoSQL injection prevention
+app.use(mongoSanitize()) // NoSQL injection prevention (basic)
+app.use(noSqlInjectionPrevention()) // Enhanced NoSQL injection prevention
 // SECURITY NOTE: xss-clean removed - use express-validator for input sanitization
 // XSS protection is handled by:
 // 1. Helmet CSP headers (prevents inline script execution)
 // 2. express-validator sanitization in route handlers
 // 3. React/Next.js automatic output escaping on frontend
 app.use(hpp()) // HTTP Parameter Pollution protection
+
+// ============================================
+// 6. Security Logging
+// ============================================
+// Log all requests in production for audit trail
+if (process.env.NODE_ENV === 'production') {
+  app.use(accessLogger)
+}
+// Security logging for sensitive endpoints
+app.use('/api/auth', securityLogger('auth'))
+app.use('/api/admin', securityLogger('admin'))
+app.use('/api/users', securityLogger('user'))
+app.use('/api/orders', securityLogger('order'))
 
 // Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
@@ -376,8 +398,9 @@ const brandsRoutes = require('./routes/brands')
 app.use('/api/brands', brandsRoutes)
 
 // Products Routes
+// SECURITY: checkProductAccess blocks non-admin access to admin-only filters
 const productsRoutes = require('./routes/products')
-app.use('/api/products', productsRoutes)
+app.use('/api/products', checkProductAccess, productsRoutes)
 // Admin panel create endpoint: /api/v1/admin/products -> same router
 app.use('/api/v1/admin/products', productsRoutes)
 
@@ -508,23 +531,15 @@ app.get('/', (req, res) => {
   })
 })
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Endpoint not found: ${req.method} ${req.path}`
-  })
-})
+// ============================================
+// SECURITY: Enhanced Error Handling
+// ============================================
+// 404 Handler - Using secure notFoundHandler
+app.use(notFoundHandler)
 
-// Error Handler
-app.use((err, req, res, next) => {
-  console.error('Server Error:', err)
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.stack : undefined
-  })
-})
+// Global Error Handler - Prevents information disclosure
+// Masks MongoDB errors, hides stack traces in production
+app.use(errorHandler)
 
 // ============================================
 // Database Connection & Server Start

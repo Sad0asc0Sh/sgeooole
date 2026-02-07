@@ -129,11 +129,6 @@ const formatValidationErrors = (err) => {
 
 /**
  * Main Error Handler Middleware
- * 
- * @param {Error} err - The error object
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- * @param {NextFunction} next - Express next function
  */
 const errorHandler = (err, req, res, next) => {
   // Prevent sending response if headers already sent
@@ -157,7 +152,6 @@ const errorHandler = (err, req, res, next) => {
     userAgent: req.get('user-agent'),
     errorName: err.name,
     errorCode: err.code,
-    // Only log stack in development or for 5xx errors
     stack: !isProduction || status >= 500 ? err.stack : undefined,
   }
 
@@ -186,7 +180,7 @@ const errorHandler = (err, req, res, next) => {
   const response = {
     success: false,
     message: getSafeMessage(err),
-    requestId, // Include for support reference
+    requestId,
   }
 
   // Add validation errors if present (safe to expose)
@@ -210,8 +204,6 @@ const errorHandler = (err, req, res, next) => {
 /**
  * Async Handler Wrapper
  * Wraps async route handlers to catch errors automatically
- * 
- * Usage: router.get('/route', asyncHandler(async (req, res) => { ... }))
  */
 const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next)

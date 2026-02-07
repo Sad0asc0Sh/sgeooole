@@ -7,7 +7,6 @@
  * - [MEDIUM] Strict type-checking for all inputs
  * - [MEDIUM] Whitelist validation for sort/filter fields
  * - [LOW] Length limits to prevent DoS
- * - [LOW] Sanitization of string inputs
  * 
  * OWASP Reference: A03:2021 - Injection, A04:2021 - Insecure Design
  */
@@ -16,7 +15,6 @@ const { body, query, param, validationResult } = require('express-validator')
 
 /**
  * Allowed sort fields for product queries
- * Only these fields can be used for sorting
  */
 const ALLOWED_SORT_FIELDS = [
     'name', '-name',
@@ -25,25 +23,11 @@ const ALLOWED_SORT_FIELDS = [
     'updatedAt', '-updatedAt',
     'rating', '-rating',
     'reviewCount', '-reviewCount',
-    'salesCount', '-salesCount',  // Admin only (enforced by accessControl middleware)
-]
-
-/**
- * Allowed filter fields for product queries
- */
-const ALLOWED_FILTER_FIELDS = [
-    'category',
-    'brand',
-    'minPrice',
-    'maxPrice',
-    'inStock',
-    'isFeatured',
-    'tags',
+    'salesCount', '-salesCount',
 ]
 
 /**
  * Handle validation result
- * Returns 400 with errors if validation fails
  */
 const handleValidation = (req, res, next) => {
     const errors = validationResult(req)
@@ -73,11 +57,7 @@ const nameRule = body('name')
     .withMessage('نام محصول الزامی است')
     .isLength({ min: 2, max: 200 })
     .withMessage('نام محصول باید بین ۲ تا ۲۰۰ کاراکتر باشد')
-    .escape() // Escape HTML entities
-    .customSanitizer(value => {
-        // Remove any potential XSS payloads
-        return value.replace(/<[^>]*>/g, '')
-    })
+    .escape()
 
 const priceRule = body('price')
     .notEmpty()
@@ -91,12 +71,6 @@ const discountPriceRule = body('discountPrice')
     .isFloat({ gte: 0, lt: 999999999 })
     .withMessage('قیمت تخفیف باید عددی غیرمنفی باشد')
     .toFloat()
-    .custom((value, { req }) => {
-        if (value && value >= req.body.price) {
-            throw new Error('قیمت تخفیف باید کمتر از قیمت اصلی باشد')
-        }
-        return true
-    })
 
 const stockRule = body('countInStock')
     .optional()
@@ -120,11 +94,6 @@ const descriptionRule = body('description')
     .optional()
     .isLength({ max: 10000 })
     .withMessage('توضیحات بیش از حد طولانی است')
-    .customSanitizer(value => {
-        if (!value) return value
-        // Allow basic HTML but remove script tags
-        return value.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    })
 
 const shortDescriptionRule = body('shortDescription')
     .optional()
@@ -164,7 +133,6 @@ const isFeaturedRule = body('isFeatured')
     .withMessage('isFeatured باید boolean باشد')
     .toBoolean()
 
-// Image management rules
 const removeAllImagesRule = body('removeAllImages')
     .optional()
     .isBoolean()
@@ -182,7 +150,7 @@ const imagesRule = body('images')
     .withMessage('حداکثر ۲۰ تصویر مجاز است')
 
 // ============================================
-// QUERY VALIDATORS (for GET requests)
+// QUERY VALIDATORS
 // ============================================
 
 const pageRule = query('page')
@@ -258,10 +226,6 @@ const slugRule = param('slug')
 // COMBINED VALIDATORS
 // ============================================
 
-/**
- * Validator for creating a new product
- * All required fields are validated
- */
 const productCreateValidator = [
     nameRule,
     priceRule,
@@ -280,28 +244,12 @@ const productCreateValidator = [
     handleValidation,
 ]
 
-/**
- * Validator for updating a product
- * All fields are optional, but if provided must be valid
- */
 const productUpdateValidator = [
-    body('name')
-        .optional()
-        .trim()
-        .isLength({ min: 2, max: 200 })
-        .withMessage('نام محصول باید بین ۲ تا ۲۰۰ کاراکتر باشد')
-        .escape(),
-    body('price')
-        .optional()
-        .isFloat({ gt: 0, lt: 999999999 })
-        .withMessage('قیمت باید عددی مثبت و معقول باشد')
-        .toFloat(),
+    body('name').optional().trim().isLength({ min: 2, max: 200 }).withMessage('نام محصول باید بین ۲ تا ۲۰۰ کاراکتر باشد').escape(),
+    body('price').optional().isFloat({ gt: 0, lt: 999999999 }).withMessage('قیمت باید عددی مثبت و معقول باشد').toFloat(),
     discountPriceRule,
     stockRule,
-    body('category')
-        .optional()
-        .isMongoId()
-        .withMessage('شناسه دسته‌بندی نامعتبر است'),
+    body('category').optional().isMongoId().withMessage('شناسه دسته‌بندی نامعتبر است'),
     brandRule,
     descriptionRule,
     shortDescriptionRule,
@@ -316,9 +264,6 @@ const productUpdateValidator = [
     handleValidation,
 ]
 
-/**
- * Validator for product listing/search queries
- */
 const productQueryValidator = [
     pageRule,
     limitRule,
@@ -332,57 +277,26 @@ const productQueryValidator = [
     handleValidation,
 ]
 
-/**
- * Validator for product ID parameter
- */
 const productIdValidator = [
     productIdRule,
     handleValidation,
 ]
 
-/**
- * Validator for product slug parameter
- */
 const productSlugValidator = [
     slugRule,
     handleValidation,
 ]
 
-/**
- * Custom validator factory for MongoID arrays
- */
-const mongoIdArrayValidator = (field) => body(field)
-    .optional()
-    .isArray()
-    .withMessage(`${field} باید آرایه باشد`)
-    .custom((value) => {
-        if (!value) return true
-        const mongoIdRegex = /^[a-fA-F0-9]{24}$/
-        for (const id of value) {
-            if (!mongoIdRegex.test(id)) {
-                throw new Error(`شناسه نامعتبر در ${field}`)
-            }
-        }
-        return true
-    })
-
 module.exports = {
-    // Combined validators
     productCreateValidator,
     productUpdateValidator,
     productQueryValidator,
     productIdValidator,
     productSlugValidator,
-
-    // Individual rules for reuse
     handleValidation,
     pageRule,
     limitRule,
     sortRule,
     searchRule,
-    mongoIdArrayValidator,
-
-    // Constants
     ALLOWED_SORT_FIELDS,
-    ALLOWED_FILTER_FIELDS,
 }

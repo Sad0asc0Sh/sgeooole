@@ -7,13 +7,8 @@
  * - [HIGH] Logs all sensitive access attempts
  * - [HIGH] Redacts sensitive data (passwords, tokens, cards)
  * - [MEDIUM] Request fingerprinting for threat detection
- * - [MEDIUM] Audit trail for compliance
  * 
  * OWASP Reference: A09:2021 - Security Logging and Monitoring Failures
- * 
- * USAGE:
- * app.use('/api/auth', securityLogger('auth'))
- * app.use('/api/admin', securityLogger('admin'))
  */
 
 const logger = require('../utils/logger')
@@ -21,58 +16,26 @@ const crypto = require('crypto')
 
 /**
  * Fields that should NEVER be logged
- * These are completely removed from log output
  */
 const REDACTED_FIELDS = [
-    // Authentication
-    'password',
-    'newPassword',
-    'currentPassword',
-    'confirmPassword',
-    'passwordConfirm',
-    'token',
-    'accessToken',
-    'refreshToken',
-    'apiKey',
-    'secret',
-    'otp',
-    'pin',
-    'verificationCode',
-
-    // Payment
-    'cardNumber',
-    'cardPan',
-    'cvv',
-    'cvc',
-    'cardHash',
-    'accountNumber',
-    'shebaNumber',
-    'iban',
-
-    // Personal
-    'nationalCode',
-    'ssn',
-    'dateOfBirth',
-
-    // Session
-    'cookie',
-    'sessionId',
-    'jwt',
+    'password', 'newPassword', 'currentPassword', 'confirmPassword',
+    'token', 'accessToken', 'refreshToken', 'apiKey', 'secret',
+    'otp', 'pin', 'verificationCode',
+    'cardNumber', 'cardPan', 'cvv', 'cvc', 'cardHash',
+    'accountNumber', 'shebaNumber', 'iban',
+    'nationalCode', 'ssn', 'dateOfBirth',
+    'cookie', 'sessionId', 'jwt',
 ]
 
 /**
  * Headers that should be redacted
  */
 const REDACTED_HEADERS = [
-    'authorization',
-    'cookie',
-    'x-api-key',
-    'x-auth-token',
+    'authorization', 'cookie', 'x-api-key', 'x-auth-token',
 ]
 
 /**
  * Deep redact sensitive fields from an object
- * Returns a new object with sensitive fields replaced by [REDACTED]
  */
 const deepRedact = (obj, maxDepth = 5) => {
     if (!obj || typeof obj !== 'object' || maxDepth <= 0) {
@@ -88,17 +51,14 @@ const deepRedact = (obj, maxDepth = 5) => {
     for (const [key, value] of Object.entries(obj)) {
         const lowerKey = key.toLowerCase()
 
-        // Check if key should be redacted
         if (REDACTED_FIELDS.some(field => lowerKey.includes(field.toLowerCase()))) {
             redacted[key] = '[REDACTED]'
             continue
         }
 
-        // Recursively redact nested objects
         if (typeof value === 'object' && value !== null) {
             redacted[key] = deepRedact(value, maxDepth - 1)
         } else if (typeof value === 'string') {
-            // Redact values that look like tokens (long random strings)
             if (value.length > 50 && /^[A-Za-z0-9._-]+$/.test(value)) {
                 redacted[key] = `${value.substring(0, 10)}...[REDACTED]`
             } else {
@@ -157,10 +117,6 @@ const generateFingerprint = (req) => {
 
 /**
  * Main Security Logger Middleware Factory
- * 
- * @param {string} category - Log category (e.g., 'auth', 'admin', 'payment')
- * @param {Object} options - Configuration options
- * @returns {Function} Express middleware
  */
 const securityLogger = (category = 'general', options = {}) => {
     const {
@@ -168,7 +124,7 @@ const securityLogger = (category = 'general', options = {}) => {
         logHeaders = false,
         logQuery = true,
         logResponse = false,
-        sensitiveOperations = [], // Additional operations to always log
+        sensitiveOperations = [],
     } = options
 
     return (req, res, next) => {
@@ -176,10 +132,8 @@ const securityLogger = (category = 'general', options = {}) => {
         const requestId = req.headers['x-request-id'] || crypto.randomUUID()
         const fingerprint = generateFingerprint(req)
 
-        // Attach request ID for correlation
         req.requestId = requestId
 
-        // Build log context
         const logContext = {
             requestId,
             fingerprint,
@@ -193,22 +147,18 @@ const securityLogger = (category = 'general', options = {}) => {
             userRole: req.user?.role || 'guest',
         }
 
-        // Add query params (redacted)
         if (logQuery && req.query && Object.keys(req.query).length > 0) {
             logContext.query = deepRedact(req.query)
         }
 
-        // Add body (redacted) - only for non-GET requests
         if (logBody && req.body && Object.keys(req.body).length > 0 && req.method !== 'GET') {
             logContext.body = deepRedact(req.body)
         }
 
-        // Add headers (redacted) - only if explicitly enabled
         if (logHeaders) {
             logContext.headers = redactHeaders(req.headers)
         }
 
-        // Log request (for sensitive categories or operations)
         const isSensitiveOperation = sensitiveOperations.some(op =>
             req.path.includes(op) || req.originalUrl.includes(op)
         )
@@ -220,31 +170,9 @@ const securityLogger = (category = 'general', options = {}) => {
             logger.security(`[REQUEST] ${req.method} ${req.path}`, logContext)
         }
 
-        // Capture response
-        if (logResponse) {
-            const originalJson = res.json.bind(res)
-
-            res.json = (body) => {
-                const duration = Date.now() - startTime
-
-                logger.security(`[RESPONSE] ${req.method} ${req.path}`, {
-                    requestId,
-                    fingerprint,
-                    statusCode: res.statusCode,
-                    duration: `${duration}ms`,
-                    // Only log response success/failure, not full body
-                    success: body?.success,
-                })
-
-                return originalJson(body)
-            }
-        }
-
-        // Log failed auth attempts
         res.on('finish', () => {
             const duration = Date.now() - startTime
 
-            // Log authentication failures
             if (res.statusCode === 401 || res.statusCode === 403) {
                 logger.security(`[AUTH_FAILURE] ${req.method} ${req.path}`, {
                     requestId,
@@ -256,7 +184,6 @@ const securityLogger = (category = 'general', options = {}) => {
                 })
             }
 
-            // Log rate limit hits
             if (res.statusCode === 429) {
                 logger.security(`[RATE_LIMITED] ${req.method} ${req.path}`, {
                     requestId,
@@ -265,7 +192,6 @@ const securityLogger = (category = 'general', options = {}) => {
                 })
             }
 
-            // Log server errors
             if (res.statusCode >= 500) {
                 logger.error(`[SERVER_ERROR] ${req.method} ${req.path}`, {
                     requestId,
@@ -282,10 +208,6 @@ const securityLogger = (category = 'general', options = {}) => {
 
 /**
  * Audit Logger for specific actions
- * Use for logging critical business operations
- * 
- * Usage:
- * auditLog(req, 'ORDER_CREATED', { orderId: order._id, amount: order.total })
  */
 const auditLog = (req, action, details = {}) => {
     const logContext = {
@@ -304,9 +226,6 @@ const auditLog = (req, action, details = {}) => {
 
 /**
  * Threat Logger for suspicious activity
- * 
- * Usage:
- * threatLog(req, 'BRUTE_FORCE_SUSPECTED', { attempts: 10, timeframe: '5min' })
  */
 const threatLog = (req, threatType, details = {}) => {
     const logContext = {
@@ -326,7 +245,6 @@ const threatLog = (req, threatType, details = {}) => {
 
 /**
  * Access Log Middleware
- * Lightweight logging for all requests (not just security-sensitive)
  */
 const accessLogger = (req, res, next) => {
     const startTime = Date.now()
@@ -334,7 +252,6 @@ const accessLogger = (req, res, next) => {
     res.on('finish', () => {
         const duration = Date.now() - startTime
 
-        // Only log non-200 responses or slow requests
         if (res.statusCode !== 200 || duration > 1000) {
             logger.info(`[ACCESS] ${req.method} ${req.path} ${res.statusCode} ${duration}ms`, {
                 ip: req.ip,

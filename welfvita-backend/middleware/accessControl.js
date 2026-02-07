@@ -20,7 +20,6 @@ const logger = require('../utils/logger')
 
 /**
  * List of query parameters that require admin privileges
- * These parameters can expose sensitive data if allowed for public users
  */
 const ADMIN_ONLY_FILTERS = [
     'isActive',
@@ -39,36 +38,25 @@ const ADMIN_ONLY_FILTERS = [
 
 /**
  * Whitelist of allowed sort fields for public users
- * Any sort field not in this list requires admin privileges
  */
 const PUBLIC_ALLOWED_SORT_FIELDS = [
-    'name',
-    'price',
-    '-price',
-    'createdAt',
-    '-createdAt',
-    'updatedAt',
-    '-updatedAt',
-    'rating',
-    '-rating',
-    'reviewCount',
-    '-reviewCount',
+    'name', '-name',
+    'price', '-price',
+    'createdAt', '-createdAt',
+    'updatedAt', '-updatedAt',
+    'rating', '-rating',
+    'reviewCount', '-reviewCount',
 ]
 
 /**
  * Admin-only sort fields
  */
 const ADMIN_ONLY_SORT_FIELDS = [
-    'salesCount',
-    '-salesCount',
-    'viewCount',
-    '-viewCount',
-    'costPrice',
-    '-costPrice',
-    'profitMargin',
-    '-profitMargin',
-    'stock',
-    '-stock',
+    'salesCount', '-salesCount',
+    'viewCount', '-viewCount',
+    'costPrice', '-costPrice',
+    'profitMargin', '-profitMargin',
+    'stock', '-stock',
 ]
 
 /**
@@ -91,10 +79,8 @@ const hasPermission = (user, permission) => {
 
 /**
  * Sanitize query parameters to prevent type coercion attacks
- * MongoDB is vulnerable to type coercion: {password: {$gt: ""}} always matches
  */
 const sanitizeQueryValue = (value) => {
-    // If value is an object (potential injection), convert to string
     if (typeof value === 'object' && value !== null) {
         logger.security('Query injection attempt blocked', { value })
         return String(value)
@@ -106,31 +92,22 @@ const sanitizeQueryValue = (value) => {
  * Middleware: Check Product Access
  * 
  * Ensures that admin-only filters cannot be used by non-admin users.
- * Applied to product listing/search endpoints.
- * 
- * Usage: router.get('/products', checkProductAccess, getProducts)
  */
 const checkProductAccess = (req, res, next) => {
     const userIsAdmin = isAdmin(req.user)
     const blockedParams = []
 
-    // ============================================
-    // 1. Check for admin-only query parameters
-    // ============================================
+    // Check for admin-only query parameters
     for (const param of ADMIN_ONLY_FILTERS) {
         if (req.query[param] !== undefined) {
             if (!userIsAdmin) {
                 blockedParams.push(param)
-                // Remove the parameter instead of blocking the request
-                // This allows graceful degradation
                 delete req.query[param]
             }
         }
     }
 
-    // ============================================
-    // 2. Validate sort field
-    // ============================================
+    // Validate sort field
     if (req.query.sort) {
         const sortField = req.query.sort
         const isAdminSort = ADMIN_ONLY_SORT_FIELDS.includes(sortField)
@@ -138,32 +115,24 @@ const checkProductAccess = (req, res, next) => {
 
         if (isAdminSort && !userIsAdmin) {
             blockedParams.push(`sort=${sortField}`)
-            req.query.sort = '-createdAt' // Default safe sort
+            req.query.sort = '-createdAt'
         } else if (!isAdminSort && !isPublicSort) {
-            // Unknown sort field - use default
             req.query.sort = '-createdAt'
         }
     }
 
-    // ============================================
-    // 3. Force isActive=true for non-admin users
-    // ============================================
+    // Force isActive=true for non-admin users
     if (!userIsAdmin) {
-        // Always force active products only for public users
         req.query.isActive = 'true'
         req.query.isDeleted = 'false'
     }
 
-    // ============================================
-    // 4. Sanitize all query values
-    // ============================================
+    // Sanitize all query values
     for (const [key, value] of Object.entries(req.query)) {
         req.query[key] = sanitizeQueryValue(value)
     }
 
-    // ============================================
-    // 5. Log security event if params were blocked
-    // ============================================
+    // Log security event if params were blocked
     if (blockedParams.length > 0) {
         logger.security('Admin-only filters blocked', {
             ip: req.ip,
@@ -178,22 +147,15 @@ const checkProductAccess = (req, res, next) => {
 
 /**
  * Middleware: Check User Access
- * 
- * Ensures users can only access their own data unless admin.
- * Applied to user-specific endpoints.
- * 
- * Usage: router.get('/users/:userId', protect, checkUserAccess, getUser)
  */
 const checkUserAccess = (req, res, next) => {
     const requestedUserId = req.params.userId || req.params.id
     const currentUserId = req.user?._id?.toString()
 
-    // Admin can access any user
     if (isAdmin(req.user)) {
         return next()
     }
 
-    // User can only access their own data
     if (requestedUserId && requestedUserId !== currentUserId) {
         logger.security('Unauthorized user access attempt', {
             ip: req.ip,
@@ -213,19 +175,12 @@ const checkUserAccess = (req, res, next) => {
 
 /**
  * Middleware: Check Order Access
- * 
- * Ensures users can only access their own orders unless admin.
  */
 const checkOrderAccess = async (req, res, next) => {
-    const orderId = req.params.orderId || req.params.id
-
-    // Admin can access any order
     if (isAdmin(req.user)) {
         return next()
     }
 
-    // For user-specific order access, verify ownership in the controller
-    // Set flag for controller to verify
     req.verifyOrderOwnership = true
     req.currentUserId = req.user?._id
 
@@ -234,9 +189,6 @@ const checkOrderAccess = async (req, res, next) => {
 
 /**
  * Middleware: Sanitize Request Body
- * 
- * Removes admin-only fields from request body for non-admin users.
- * Prevents privilege escalation via body manipulation.
  */
 const sanitizeRequestBody = (adminOnlyFields = []) => {
     return (req, res, next) => {
@@ -266,14 +218,11 @@ const sanitizeRequestBody = (adminOnlyFields = []) => {
 
 /**
  * Middleware Factory: Require Permission
- * 
- * More flexible than checkPermission in auth.js
- * Supports custom error messages and fallback behavior
  */
 const requirePermission = (permission, options = {}) => {
     const {
         errorMessage = 'مجوز دسترسی ندارید',
-        fallbackBehavior = 'block', // 'block' | 'filter' | 'readonly'
+        fallbackBehavior = 'block',
     } = options
 
     return (req, res, next) => {
@@ -291,7 +240,6 @@ const requirePermission = (permission, options = {}) => {
             return next()
         }
 
-        // Default: block access
         return res.status(403).json({
             success: false,
             message: errorMessage,
