@@ -70,10 +70,9 @@ exports.handleMessage = async (req, res) => {
       }
       // ---------------------------
 
-      // Pass plain objects to service (authenticated users only)
-      if (isAuthenticated) {
-        history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
-      }
+      // Pass plain objects to service (for ALL users including guests)
+      // FIX: Previously only authenticated users got history, causing guests to "forget" context
+      history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
     }
 
     // 2. Find Context (Smart Search)
@@ -158,16 +157,15 @@ exports.handleMessage = async (req, res) => {
     // 3. Generate Answer (Pass history and store info)
     const reply = await generateExpertResponse(message, productContext, history, storeInfoContext);
 
-    // 4. Save History (authenticated users only; guests keep stateless history)
+    // 4. Save History (for ALL users including guests)
+    // FIX: Previously only authenticated users had their messages saved
     if (chatSession) {
-      if (isAuthenticated) {
-        chatSession.messages.push({ role: 'user', content: message });
-        chatSession.messages.push({ role: 'assistant', content: reply });
+      chatSession.messages.push({ role: 'user', content: message });
+      chatSession.messages.push({ role: 'assistant', content: reply });
 
-        // Keep last 50 messages to prevent document from growing too large
-        if (chatSession.messages.length > 50) {
-          chatSession.messages = chatSession.messages.slice(-50);
-        }
+      // Keep last 50 messages to prevent document from growing too large
+      if (chatSession.messages.length > 50) {
+        chatSession.messages = chatSession.messages.slice(-50);
       }
 
       chatSession.lastUpdated = new Date();
