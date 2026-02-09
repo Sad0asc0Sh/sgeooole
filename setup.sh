@@ -68,7 +68,7 @@ echo ""
 echo "🔧 Setting up Backend..."
 echo "------------------------"
 
-cd Backend || exit
+cd ekgkala-backend || exit
 
 # Install dependencies
 echo "Installing Backend dependencies..."
@@ -94,7 +94,7 @@ echo ""
 echo "🎨 Setting up Frontend..."
 echo "-------------------------"
 
-cd ../Frontend || exit
+cd ../frontend || exit
 
 # Install dependencies
 echo "Installing Frontend dependencies..."
@@ -102,8 +102,8 @@ npm install
 
 # Check if .env exists
 if [ ! -f .env ]; then
-    echo "VITE_API_URL=http://localhost:5000" > .env
-    echo "VITE_APP_NAME=EkgKala Store" >> .env
+    echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api" > .env
+    echo "NEXT_PUBLIC_SITE_NAME=EkgKala" >> .env
     print_success "Created Frontend .env file"
 else
     print_success "Frontend .env file already exists"
@@ -124,8 +124,8 @@ npm install
 
 # Check if .env.local exists
 if [ ! -f .env.local ]; then
-    echo "NEXT_PUBLIC_API_URL=http://localhost:5000" > .env.local
-    echo "NEXT_PUBLIC_APP_NAME=EkgKala Admin" >> .env.local
+    echo "VITE_API_BASE_URL=http://localhost:5000/api" > .env.local
+    echo "VITE_SITE_NAME=EkgKala Admin" >> .env.local
     print_success "Created Admin .env.local file"
 else
     print_success "Admin .env.local file already exists"
@@ -148,7 +148,7 @@ echo "   or"
 echo "   ${YELLOW}mongod${NC}"
 echo ""
 echo "2. Update Backend configuration:"
-echo "   - Edit ${YELLOW}Backend/.env${NC} file"
+echo "   - Edit ${YELLOW}ekgkala-backend/.env${NC} file"
 echo "   - Add your MongoDB URI"
 echo "   - Add JWT secrets"
 echo "   - Configure Cloudinary (optional)"
@@ -159,11 +159,11 @@ echo ""
 echo "   In separate terminals:"
 echo ""
 echo "   ${GREEN}Terminal 1 - Backend:${NC}"
-echo "   cd Backend"
+echo "   cd ekgkala-backend"
 echo "   npm run dev"
 echo ""
 echo "   ${GREEN}Terminal 2 - Frontend:${NC}"
-echo "   cd Frontend"
+echo "   cd frontend"
 echo "   npm run dev"
 echo ""
 echo "   ${GREEN}Terminal 3 - Admin Panel:${NC}"
@@ -171,8 +171,8 @@ echo "   cd admin"
 echo "   npm run dev"
 echo ""
 echo "4. Access the applications:"
-echo "   - Frontend: ${GREEN}http://localhost:5173${NC}"
-echo "   - Admin Panel: ${GREEN}http://localhost:3000${NC}"
+echo "   - Frontend: ${GREEN}http://localhost:3000${NC}"
+echo "   - Admin Panel: ${GREEN}http://localhost:3001${NC}"
 echo "   - Backend API: ${GREEN}http://localhost:5000/api${NC}"
 echo ""
 echo "5. Default Admin Credentials:"

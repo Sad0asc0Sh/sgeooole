@@ -95,9 +95,9 @@ async function createAdmin() {
 createAdmin();
 EOF
 
-# Run the script from Backend directory
-cd Backend 2>/dev/null || cd origin-main/Backend 2>/dev/null || {
-    echo -e "${RED}❌ Cannot find Backend directory${NC}"
+# Run the script from backend directory
+cd ekgkala-backend 2>/dev/null || cd origin-main/ekgkala-backend 2>/dev/null || {
+    echo -e "${RED}❌ Cannot find ekgkala-backend directory${NC}"
     echo "Please run this script from the project root"
     exit 1
 }
@@ -119,7 +119,7 @@ if [ $? -eq 0 ]; then
     echo -e "Email: ${YELLOW}$EMAIL${NC}"
     echo -e "Password: ${YELLOW}[your entered password]${NC}"
     echo ""
-    echo "Admin Panel URL: http://localhost:3000"
+    echo "Admin Panel URL: http://localhost:3001"
 else
     echo -e "${RED}❌ Failed to create admin user${NC}"
 fi
