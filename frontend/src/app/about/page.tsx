@@ -68,7 +68,7 @@ export default function AboutPage() {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/"
-                            className="flex items-center gap-2 text-gray-600 hover:text-vita-600 transition-colors"
+                            className="flex items-center gap-2 text-gray-600 hover:text-kala-600 transition-colors"
                         >
                             <ChevronLeft size={20} />
                             <span className="text-sm font-medium">بازگشت</span>
@@ -86,7 +86,7 @@ export default function AboutPage() {
                 variants={fadeInUp}
             >
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-vita-500/10 rounded-full blur-3xl"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-kala-500/10 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
 
                 <div className="container mx-auto relative z-10">
@@ -98,7 +98,7 @@ export default function AboutPage() {
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            شرکت ایکاجی کالا
+                            شرکت ای‌کا‌جی کالا
                         </h1>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             پیشرو در ارائه سیستم‌های حفاظتی و امنیتی در استان خراسان
@@ -119,9 +119,9 @@ export default function AboutPage() {
                     className="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
                     variants={cardVariant}
                 >
-                    <div className="bg-gradient-to-l from-vita-50 to-blue-50 px-6 py-4 border-b border-gray-100">
+                    <div className="bg-gradient-to-l from-kala-50 to-blue-50 px-6 py-4 border-b border-gray-100">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-vita-500 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-xl bg-kala-500 flex items-center justify-center">
                                 <Shield className="w-5 h-5 text-white" />
                             </div>
                             <h2 className="text-xl font-bold text-gray-900">معرفی شرکت</h2>
@@ -129,10 +129,10 @@ export default function AboutPage() {
                     </div>
                     <div className="p-6 space-y-4">
                         <p className="text-gray-700 leading-8 text-justify">
-                            با افتخار، شرکت <span className="font-bold text-vita-600">ایکاجی کالا</span> (گروه مهندسی کیان سابق) به عنوان یکی از پیشگامان در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی، از سال <span className="font-bold">۱۳۹۶</span> فعالیت خود را در شهر مشهد آغاز نموده است. در طول این سال‌ها، با تکیه بر تخصص، تعهد و ارائه محصولات با کیفیت، موفق به جلب رضایت و اعتماد گسترده مشتریان عزیز شده‌ایم.
+                            با افتخار، شرکت <span className="font-bold text-kala-600">ای‌کا‌جی کالا</span> (گروه مهندسی کیان سابق) به عنوان یکی از پیشگامان در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی، از سال <span className="font-bold">۱۳۹۶</span> فعالیت خود را در شهر مشهد آغاز نموده است. در طول این سال‌ها، با تکیه بر تخصص، تعهد و ارائه محصولات با کیفیت، موفق به جلب رضایت و اعتماد گسترده مشتریان عزیز شده‌ایم.
                         </p>
                         <p className="text-gray-700 leading-8 text-justify">
-                            این مجموعه با گسترش فعالیت‌های خود، هم اکنون دارای <span className="font-bold text-vita-600">سه شعبه فعال</span> در سراسر کلان‌شهر مشهد می‌باشد تا دسترسی و ارائه خدمات به شما عزیزان با سهولت و سرعت بیشتری انجام پذیرد. رمز موفقیت ما در بازار رقابتی امروز، ارائه قیمت‌های بی‌واسطه و منصفانه در کنار حفظ بالاترین سطح کیفی محصولات و خدمات بوده است.
+                            این مجموعه با گسترش فعالیت‌های خود، هم اکنون دارای <span className="font-bold text-kala-600">سه شعبه فعال</span> در سراسر کلان‌شهر مشهد می‌باشد تا دسترسی و ارائه خدمات به شما عزیزان با سهولت و سرعت بیشتری انجام پذیرد. رمز موفقیت ما در بازار رقابتی امروز، ارائه قیمت‌های بی‌واسطه و منصفانه در کنار حفظ بالاترین سطح کیفی محصولات و خدمات بوده است.
                         </p>
                     </div>
                 </motion.section>
@@ -158,12 +158,12 @@ export default function AboutPage() {
                             {brands.map((brand, index) => (
                                 <motion.div
                                     key={brand.name}
-                                    className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-l from-gray-50 to-white border border-gray-100 hover:border-vita-200 hover:shadow-md transition-all duration-300"
+                                    className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-l from-gray-50 to-white border border-gray-100 hover:border-kala-200 hover:shadow-md transition-all duration-300"
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.1 * index }}
                                 >
-                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-vita-500 to-blue-600 flex items-center justify-center text-2xl shadow-lg">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-kala-500 to-blue-600 flex items-center justify-center text-2xl shadow-lg">
                                         {brand.icon}
                                     </div>
                                     <div className="flex-1">
@@ -203,14 +203,14 @@ export default function AboutPage() {
                 >
                     {/* Decorative elements */}
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-vita-500/10 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-kala-500/10 rounded-full blur-3xl"></div>
 
                     <div className="relative z-10 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-6">
                             <Users className="w-8 h-8 text-white" />
                         </div>
                         <p className="text-lg text-white leading-8 max-w-2xl mx-auto">
-                            ما در <span className="font-bold text-vita-300">ایکاجی کالا</span>، امنیت و آرامش شما را اولویت اصلی خود می‌دانیم و همواره در تلاشیم تا با ارائه راهکارهای نوین و خدماتی متمایز، بهترین تجربه را برای شما به ارمغان آوریم.
+                            ما در <span className="font-bold text-kala-300">ای‌کا‌جی کالا</span>، امنیت و آرامش شما را اولویت اصلی خود می‌دانیم و همواره در تلاشیم تا با ارائه راهکارهای نوین و خدماتی متمایز، بهترین تجربه را برای شما به ارمغان آوریم.
                         </p>
                     </div>
                 </motion.section>
@@ -228,10 +228,10 @@ export default function AboutPage() {
                     ].map((stat, index) => (
                         <motion.div
                             key={index}
-                            className="bg-white rounded-2xl p-6 text-center shadow-lg shadow-gray-100/50 border border-gray-100 hover:border-vita-200 transition-all duration-300"
+                            className="bg-white rounded-2xl p-6 text-center shadow-lg shadow-gray-100/50 border border-gray-100 hover:border-kala-200 transition-all duration-300"
                             variants={cardVariant}
                         >
-                            <div className="text-2xl font-bold bg-gradient-to-l from-vita-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                            <div className="text-2xl font-bold bg-gradient-to-l from-kala-600 to-blue-600 bg-clip-text text-transparent mb-2">
                                 {stat.number}
                             </div>
                             <div className="text-sm text-gray-600">{stat.label}</div>
@@ -241,7 +241,7 @@ export default function AboutPage() {
 
                 {/* Contact CTA */}
                 <motion.section
-                    className="bg-gradient-to-l from-vita-50 to-blue-50 rounded-3xl p-8 text-center border border-vita-100"
+                    className="bg-gradient-to-l from-kala-50 to-blue-50 rounded-3xl p-8 text-center border border-kala-100"
                     variants={cardVariant}
                 >
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
@@ -252,7 +252,7 @@ export default function AboutPage() {
                     </p>
                     <Link
                         href="/contact"
-                        className="inline-flex items-center gap-2 bg-gradient-to-l from-vita-600 to-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-vita-500/30 transition-all duration-300"
+                        className="inline-flex items-center gap-2 bg-gradient-to-l from-kala-600 to-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-kala-500/30 transition-all duration-300"
                     >
                         تماس با ما
                         <ChevronLeft size={18} />

@@ -13,7 +13,7 @@
 ## معماری سیستم
 
 ### Backend API
-فایل: `welfvita-backend/routes/search.js`
+فایل: `ekgkala-backend/routes/search.js`
 
 **Endpoints:**
 1. `GET /api/search/trending` - دریافت محبوب‌ترین جستجوها
@@ -49,7 +49,7 @@ const ENABLE_TRENDING_SEARCHES = true;
 
 ```javascript
 // در MongoDB shell یا Compass:
-use welfvita
+use ekgkala
 
 // بررسی تعداد جستجوها
 db.search_history.countDocuments()

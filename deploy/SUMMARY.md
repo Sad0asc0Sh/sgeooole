@@ -1,5 +1,5 @@
 # 🎯 خلاصه کامل تغییرات و آماده‌سازی Deploy
-## Welfvita Production Deployment - کاملاً آماده
+## EkgKala Production Deployment - کاملاً آماده
 
 تاریخ: 2025-12-16
 وضعیت: ✅ **PRODUCTION READY**
@@ -62,7 +62,7 @@
 ## 🗂️ ساختار فایل‌های جدید
 
 ```
-welfvita/
+ekgkala/
 ├── README.md                          # ✨ NEW - خلاصه پروژه
 ├── ecosystem.config.js                # (قبلاً بود)
 ├── deploy/                            # 📁 NEW - همه فایل‌های Deploy
@@ -73,7 +73,7 @@ welfvita/
 │   ├── admin.env.template             # ✨ Template Admin
 │   └── nginx.conf                     # (قبلاً بود)
 │
-├── welfvita-backend/
+├── ekgkala-backend/
 │   ├── server.js                      # ✏️ MODIFIED - امنیت + PM2
 │   ├── .env.example                   # ✏️ MODIFIED - کامل شد
 │   ├── package.json                   # ✏️ MODIFIED - xss-clean حذف
@@ -133,7 +133,7 @@ welfvita/
 cat deploy/DEPLOYMENT_GUIDE.md
 
 # 2. تولید Secrets
-cd welfvita-backend
+cd ekgkala-backend
 node scripts/generate-env-secrets.js
 # ⚠️ خروجی را کپی و در جای امن ذخیره کن
 
@@ -168,8 +168,8 @@ node scripts/final-readiness-test.js
 2. New + → Web Service
 3. Connect GitHub Repo
 4. Settings:
-   - Name: welfvita-backend
-   - Root Directory: welfvita-backend
+   - Name: ekgkala-backend
+   - Root Directory: ekgkala-backend
    - Build: npm install
    - Start: node server.js
 5. Environment Variables (از .env.example)
@@ -202,9 +202,9 @@ node scripts/final-readiness-test.js
 #### مرحله 7: اتصال دامنه (اختیاری - 10 دقیقه)
 
 ```
-Frontend: welfvita.com
-Admin: admin.welfvita.com
-Backend: api.welfvita.com یا Vercel Rewrite
+Frontend: ekgkala.com
+Admin: admin.ekgkala.com
+Backend: api.ekgkala.com یا Vercel Rewrite
 ```
 
 #### مرحله 8: تست (5 دقیقه)
@@ -230,9 +230,9 @@ curl -I https://your-admin.vercel.app
 
 شما 3 URL خواهید داشت:
 
-1. **Backend API:** `https://welfvita-backend.onrender.com`
-2. **Frontend:** `https://welfvita.vercel.app`
-3. **Admin:** `https://welfvita-admin.vercel.app`
+1. **Backend API:** `https://ekgkala-backend.onrender.com`
+2. **Frontend:** `https://ekgkala.vercel.app`
+3. **Admin:** `https://ekgkala-admin.vercel.app`
 
 ---
 

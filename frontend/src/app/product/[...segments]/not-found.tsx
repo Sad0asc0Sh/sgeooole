@@ -20,7 +20,7 @@ export default function NotFound() {
         </Link>
         <Link
           href="/"
-          className="px-5 py-3 bg-vita-500 text-white rounded-xl text-sm font-bold hover:bg-vita-600 transition-colors"
+          className="px-5 py-3 bg-kala-500 text-white rounded-xl text-sm font-bold hover:bg-kala-600 transition-colors"
         >
           بازگشت به صفحه اصلی
         </Link>

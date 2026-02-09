@@ -98,7 +98,7 @@ if (isAuthenticated) {
   await cartService.getCart();
 } else {
   // localStorage-based cart operations
-  const localCart = localStorage.getItem("welfvita_cart");
+  const localCart = localStorage.getItem("ekgkala_cart");
 }
 ```
 
@@ -233,7 +233,7 @@ if (loading) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className="animate-spin text-vita-500" size={48} />
+        <Loader2 className="animate-spin text-kala-500" size={48} />
         <span className="text-sm text-gray-500">در حال بارگذاری سبد خرید...</span>
       </div>
     </div>
@@ -256,7 +256,7 @@ if (loading) {
    ↓
 4. isAuthenticated = false
    ↓
-5. Add to localStorage("welfvita_cart")
+5. Add to localStorage("ekgkala_cart")
    {
      id: "507f...",
      name: "محصول تستی",
@@ -314,7 +314,7 @@ if (loading) {
 
 ```
 GUEST USER:
-localStorage("welfvita_cart") = [
+localStorage("ekgkala_cart") = [
   { id: "A", qty: 2 },
   { id: "B", qty: 1 }
 ]
@@ -327,7 +327,7 @@ authService.verifyOtp() → JWT received
    ↓
 syncLocalCart() triggered
    ↓
-Read localStorage("welfvita_cart")
+Read localStorage("ekgkala_cart")
    ↓
 cartService.syncCart([
   { product: "A", quantity: 2 },
@@ -351,7 +351,7 @@ Final Cart:
   { product: "B", quantity: 1 }
 ]
    ↓
-localStorage.removeItem("welfvita_cart")
+localStorage.removeItem("ekgkala_cart")
    ↓
 Redirect to /profile
 ```
@@ -368,7 +368,7 @@ Redirect to /profile
 3. Click "افزودن به سبد خرید"
 4. Wait for success animation (green button with check icon)
 5. Open browser DevTools → Application → localStorage
-6. Verify `welfvita_cart` key exists with product data
+6. Verify `ekgkala_cart` key exists with product data
 7. Navigate to `/cart`
 
 **Expected Result:**
@@ -446,7 +446,7 @@ db.carts.findOne({ user: ObjectId("USER_ID"), status: "active" })
 **Expected Result:**
 - ✅ Console log: `[CART SYNC] Syncing 2 items with server`
 - ✅ Console log: `[CART SYNC] Cart synced and local storage cleared`
-- ✅ localStorage `welfvita_cart` removed
+- ✅ localStorage `ekgkala_cart` removed
 - ✅ Navigate to `/cart` → shows synced items from server
 
 ---

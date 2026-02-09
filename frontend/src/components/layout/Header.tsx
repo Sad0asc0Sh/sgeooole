@@ -45,7 +45,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                 className={`h-16 transition-[height] duration-300 ease-in-out ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
             />
 
-            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-welf-200 bg-white/80 backdrop-blur-md">
+            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white/80 backdrop-blur-md">
             {/* MOBILE HEADER */}
             <div className="md:hidden mobile-container flex h-16 items-center justify-between">
                 {/* Right: Brand Logo */}
@@ -63,15 +63,15 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             type="text"
                             readOnly
                             placeholder="جستجو..."
-                            className="h-9 w-40 rounded-full bg-welf-50 px-8 text-xs text-welf-900 placeholder:text-welf-500 focus:outline-none cursor-pointer pointer-events-none"
+                            className="h-9 w-40 rounded-full bg-ekg-50 px-8 text-xs text-ekg-900 placeholder:text-ekg-500 focus:outline-none cursor-pointer pointer-events-none"
                         />
-                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-welf-500" />
+                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-ekg-500" />
                     </div>
 
                     {/* AI Assistant Overlay */}
                     <button
                         onClick={() => setIsAIOpen(true)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-welf-50 text-vita-500 hover:bg-vita-50 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
                     >
                         <Sparkles className="h-5 w-5" />
                     </button>
@@ -99,7 +99,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* AI Assistant */}
                             <button
                                 onClick={() => setIsAIOpen(true)}
-                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-to-r from-vita-500 to-vita-600 text-white hover:from-vita-600 hover:to-vita-700 transition-all shadow-md hover:shadow-lg"
+                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-to-r from-kala-500 to-kala-600 text-white hover:from-kala-600 hover:to-kala-700 transition-all shadow-md hover:shadow-lg"
                             >
                                 <Sparkles className="h-5 w-5" />
                                 <span className="text-sm font-medium">دستیار هوشمند</span>
@@ -108,7 +108,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* Profile */}
                             <Link
                                 href="/profile"
-                                className={`flex items-center gap-2 h-10 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors ${user ? 'w-10 justify-center' : 'px-4'
+                                className={`flex items-center gap-2 h-10 rounded-xl bg-ekg-50 text-ekg-700 hover:bg-ekg-100 transition-colors ${user ? 'w-10 justify-center' : 'px-4'
                                     }`}
                             >
                                 <User className="h-5 w-5" />
@@ -122,7 +122,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* Cart */}
                             <Link
                                 href="/cart"
-                                className="relative flex items-center gap-2 h-10 px-4 rounded-xl bg-welf-50 text-welf-700 hover:bg-welf-100 transition-colors"
+                                className="relative flex items-center gap-2 h-10 px-4 rounded-xl bg-ekg-50 text-ekg-700 hover:bg-ekg-100 transition-colors"
                             >
                                 <ShoppingCart className="h-5 w-5" />
                                 <span className="text-sm font-medium">سبد خرید</span>
@@ -137,7 +137,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
                     {/* Bottom Row: Navigation Links */}
                     <div
-                        className={`border-t border-welf-100 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
+                        className={`border-t border-ekg-100 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
                             ? 'max-h-14 opacity-100'
                             : 'max-h-0 opacity-0'
                             }`}
@@ -148,10 +148,10 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className="text-sm font-medium text-welf-700 hover:text-vita-600 transition-colors relative group whitespace-nowrap"
+                                    className="text-sm font-medium text-ekg-700 hover:text-kala-600 transition-colors relative group whitespace-nowrap"
                                 >
                                     {link.label}
-                                    <span className="absolute bottom-0 right-0 w-0 h-0.5 bg-vita-600 group-hover:w-full transition-all duration-300"></span>
+                                    <span className="absolute bottom-0 right-0 w-0 h-0.5 bg-kala-600 group-hover:w-full transition-all duration-300"></span>
                                 </Link>
                             ))}
                         </nav>

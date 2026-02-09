@@ -8,7 +8,7 @@
 
 ### Backend (Node.js + MongoDB)
 
-**مدل دیتابیس:** `welfvita-backend/models/Category.js`
+**مدل دیتابیس:** `ekgkala-backend/models/Category.js`
 - ساختار درختی (Tree Structure) با parent-child relationship
 - پشتیبانی از چندین سطح زیرمجموعه (unlimited nesting)
 - آپلود آیکون و تصویر روی Cloudinary
@@ -65,7 +65,7 @@ DELETE /api/categories/:id     → حذف دسته‌بندی (فقط ادمین
 ### سایدبار راست (دسته‌بندی‌های اصلی)
 - نمایش آیکون + نام
 - Indicator نوار عمودی برای دسته‌بندی فعال
-- رنگ‌آمیزی با Vita Theme
+- رنگ‌آمیزی با Kala Theme
 - Hover effects
 
 ### بخش محتوا (زیرمجموعه‌ها)
@@ -208,7 +208,7 @@ const api = axios.create({
 
 ### تغییر رنگ‌ها
 رنگ‌های استفاده شده:
-- `vita-500`, `vita-600`, `vita-700` → رنگ اصلی
+- `kala-500`, `kala-600`, `kala-700` → رنگ اصلی
 - `gray-50`, `gray-100`, ... → رنگ‌های خنثی
 
 برای تغییر، `tailwind.config.js` را ویرایش کنید.
@@ -257,4 +257,4 @@ const api = axios.create({
 
 ---
 
-**ساخته شده با ❤️ برای ولف‌ویتا**
+**ساخته شده با ❤️ برای ای‌کا‌جی کالا**

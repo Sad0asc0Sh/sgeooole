@@ -185,9 +185,9 @@ export default function ProductError({ error, reset }: ProductErrorProps) {
                                 onClick={handleRetry}
                                 className={`
                   w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl
-                  bg-gradient-to-l from-vita-600 to-vita-500 text-white font-semibold
-                  hover:from-vita-700 hover:to-vita-600 transition-all duration-200
-                  shadow-lg shadow-vita-600/30
+                  bg-gradient-to-l from-kala-600 to-kala-500 text-white font-semibold
+                  hover:from-kala-700 hover:to-kala-600 transition-all duration-200
+                  shadow-lg shadow-kala-600/30
                 `}
                             >
                                 <RefreshCw className="w-5 h-5" />

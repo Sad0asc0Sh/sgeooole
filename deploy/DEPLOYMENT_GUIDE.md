@@ -1,4 +1,4 @@
-# 🚀 راهنمای کامل دیپلوی Welfvita
+# 🚀 راهنمای کامل دیپلوی EkgKala
 ## Vercel (Frontend/Admin) + Render (Backend) + MongoDB Atlas
 
 ---
@@ -45,7 +45,7 @@
    - Provider: AWS
    - Region: N. Virginia (us-east-1) - نزدیک‌ترین به Render
    - Tier: M0 Sandbox (FREE)
-5. Cluster Name: welfvita-db
+5. Cluster Name: ekgkala-db
 6. "Create Cluster" کلیک کن (5-10 دقیقه طول می‌کشد)
 ```
 
@@ -53,7 +53,7 @@
 ```
 1. Security → Database Access
 2. "Add New Database User"
-3. Username: welfvita_user
+3. Username: ekgkala_user
 4. Password: [یک پسورد قوی تولید کن و یادداشت کن]
 5. Built-in Role: Read and Write to any database
 6. "Add User"
@@ -76,14 +76,14 @@
 4. Driver: Node.js
 5. Version: 4.1 or later
 6. Connection String کپی کن:
-   mongodb+srv://welfvita_user:<password>@welfvita-db.xxxxx.mongodb.net/?retryWrites=true&w=majority
+   mongodb+srv://ekgkala_user:<password>@ekgkala-db.xxxxx.mongodb.net/?retryWrites=true&w=majority
 7. <password> را با پسورد واقعی جایگزین کن
-8. بعد از mongodb.net/ اسم دیتابیس را اضافه کن: /welfvita
+8. بعد از mongodb.net/ اسم دیتابیس را اضافه کن: /ekgkala
 ```
 
 **✅ Connection String نهایی:**
 ```
-mongodb+srv://welfvita_user:YOUR_PASSWORD@welfvita-db.xxxxx.mongodb.net/welfvita?retryWrites=true&w=majority
+mongodb+srv://ekgkala_user:YOUR_PASSWORD@ekgkala-db.xxxxx.mongodb.net/ekgkala?retryWrites=true&w=majority
 ```
 
 ---
@@ -108,7 +108,7 @@ mongodb+srv://welfvita_user:YOUR_PASSWORD@welfvita-db.xxxxx.mongodb.net/welfvita
 1. برو به: https://upstash.com/
 2. ثبت‌نام با GitHub
 3. "Create Database"
-4. Name: welfvita-cache
+4. Name: ekgkala-cache
 5. Region: US East (Virginia) - نزدیک Render
 6. Type: Regional
 7. "Create"
@@ -123,7 +123,7 @@ mongodb+srv://welfvita_user:YOUR_PASSWORD@welfvita-db.xxxxx.mongodb.net/welfvita
 
 #### ایجاد secrets برای .env
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 node scripts/generate-env-secrets.js
 ```
 
@@ -153,10 +153,10 @@ git push origin main
 3. "New +" → "Web Service"
 4. Connect Repository: frontend-now3-google یا repo شما
 5. تنظیمات:
-   - Name: welfvita-backend
+   - Name: ekgkala-backend
    - Region: Oregon (US West) یا Frankfurt (اروپا)
    - Branch: main
-   - Root Directory: welfvita-backend
+   - Root Directory: ekgkala-backend
    - Runtime: Node
    - Build Command: npm install
    - Start Command: node server.js
@@ -168,7 +168,7 @@ git push origin main
 ```
 Settings → Environment → Add Environment Variable
 
-کپی کن از welfvita-backend/.env.example و مقادیر را جایگزین کن:
+کپی کن از ekgkala-backend/.env.example و مقادیر را جایگزین کن:
 ```
 
 #### **متغیرهای حیاتی (MUST SET):**
@@ -178,13 +178,13 @@ NODE_ENV=production
 PORT=5000
 
 # Database
-MONGODB_URI=mongodb+srv://welfvita_user:YOUR_PASSWORD@welfvita-db.xxxxx.mongodb.net/welfvita?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://ekgkala_user:YOUR_PASSWORD@ekgkala-db.xxxxx.mongodb.net/ekgkala?retryWrites=true&w=majority
 
 # JWT (از خروجی generate-env-secrets.js)
 JWT_SECRET=<64_char_hex_from_script>
 JWT_EXPIRES_IN=7d
-JWT_ISSUER=welfvita-api
-JWT_AUDIENCE=welfvita-clients
+JWT_ISSUER=ekgkala-api
+JWT_AUDIENCE=ekgkala-clients
 
 # Admin Setup (از خروجی generate-env-secrets.js)
 ADMIN_SETUP_KEY=<32_char_hex_from_script>
@@ -195,9 +195,9 @@ CLOUDINARY_API_KEY=<از_dashboard>
 CLOUDINARY_API_SECRET=<از_dashboard>
 
 # URLs (فعلاً با دامنه موقت Render)
-CLIENT_URL=https://welfvita.vercel.app
-FRONTEND_URL=https://welfvita.vercel.app
-ADMIN_URL=https://welfvita-admin.vercel.app
+CLIENT_URL=https://ekgkala.vercel.app
+FRONTEND_URL=https://ekgkala.vercel.app
+ADMIN_URL=https://ekgkala-admin.vercel.app
 
 # Logging
 LOG_LEVEL=warn
@@ -213,7 +213,7 @@ EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
 EMAIL_SECURE=false
-FROM_EMAIL=noreply@welfvita.com
+FROM_EMAIL=noreply@ekgkala.com
 
 # Payment
 ZARINPAL_MERCHANT_ID=your-merchant-id
@@ -237,13 +237,13 @@ REDIS_URL=redis://default:password@endpoint:6379
    - "🚀 Server running on port 5000"
    - "✅ MongoDB Connected"
 4. بعد از موفقیت، URL می‌گیری:
-   https://welfvita-backend.onrender.com
+   https://ekgkala-backend.onrender.com
 ```
 
 ### مرحله 6: تست Backend
 
 ```bash
-curl https://welfvita-backend.onrender.com/api/health
+curl https://ekgkala-backend.onrender.com/api/health
 ```
 
 انتظار داری:
@@ -282,7 +282,7 @@ git push origin main
 2. "Import Git Repository"
 3. انتخاب کن: frontend-now3-google
 4. Configure Project:
-   - Project Name: welfvita (یا هر اسمی)
+   - Project Name: ekgkala (یا هر اسمی)
    - Framework Preset: Next.js (خودکار تشخیص می‌دهد)
    - Root Directory: frontend
    - Build Command: npm run build (پیش‌فرض)
@@ -299,9 +299,9 @@ Settings → Environment Variables
 ```
 
 ```env
-NEXT_PUBLIC_API_URL=https://welfvita-backend.onrender.com/api
+NEXT_PUBLIC_API_URL=https://ekgkala-backend.onrender.com/api
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
-NEXT_PUBLIC_SITE_NAME=Welfvita
+NEXT_PUBLIC_SITE_NAME=EkgKala
 NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
 ```
 
@@ -314,7 +314,7 @@ NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
 1. "Deploy" کلیک کن
 2. Vercel شروع به build می‌کند (3-5 دقیقه)
 3. بعد از موفقیت URL می‌گیری:
-   https://welfvita.vercel.app
+   https://ekgkala.vercel.app
 ```
 
 ---
@@ -330,18 +330,18 @@ NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
 4. Framework: Vite
 5. Environment Variables از deploy/admin.env.template
 6. Deploy
-7. URL: https://welfvita-admin.vercel.app
+7. URL: https://ekgkala-admin.vercel.app
 ```
 
 ---
 
 ## 🌍 اتصال دامنه
 
-###Frontend (welfvita.com):
+###Frontend (ekgkala.com):
 
 ```
 1. Vercel Project (frontend) → Settings → Domains
-2. Add Domain: welfvita.com
+2. Add Domain: ekgkala.com
 3. Add CNAME:
    - Type: CNAME
    - Name: @ (or www)
@@ -352,16 +352,16 @@ NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
    - Value: 76.76.21.21
 ```
 
-### Backend (api.welfvita.com):
+### Backend (api.ekgkala.com):
 
 **Option 1: ساب‌دامین مستقل**
 ```
 1. Render → Settings → Custom Domain
-2. Add: api.welfvita.com
+2. Add: api.ekgkala.com
 3. DNS Provider:
    - Type: CNAME
    - Name: api
-   - Value: welfvita-backend.onrender.com
+   - Value: ekgkala-backend.onrender.com
 ```
 
 **Option 2: Vercel Rewrite (توصیه می‌شود)**
@@ -371,18 +371,18 @@ NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://welfvita-backend.onrender.com/api/:path*"
+      "destination": "https://ekgkala-backend.onrender.com/api/:path*"
     }
   ]
 }
 ```
-این باعث می‌شود `welfvita.com/api` به backend اشاره کند.
+این باعث می‌شود `ekgkala.com/api` به backend اشاره کند.
 
-### Admin (admin.welfvita.com):
+### Admin (admin.ekgkala.com):
 
 ```
 1. Vercel Project (admin) → Settings → Domains
-2. Add: admin.welfvita.com
+2. Add: admin.ekgkala.com
 3. CNAME:
    - Name: admin
    - Value: cname.vercel-dns.com
@@ -396,19 +396,19 @@ NEXT_PUBLIC_SITE_DESCRIPTION=فروشگاه آنلاین
 
 ```bash
 # ✅ Backend Health
-curl https://api.welfvita.com/health
+curl https://api.ekgkala.com/health
 
 # ✅ Frontend Loading
-curl -I https://welfvita.com
+curl -I https://ekgkala.com
 
 # ✅ Admin Loading
-curl -I https://admin.welfvita.com
+curl -I https://admin.ekgkala.com
 
 # ✅ CORS Test
-curl -H "Origin: https://welfvita.com" https://api.welfvita.com/api/products
+curl -H "Origin: https://ekgkala.com" https://api.ekgkala.com/api/products
 
 # ✅ Security Headers
-curl -I https://welfvita.com | grep "X-Content-Type-Options"
+curl -I https://ekgkala.com | grep "X-Content-Type-Options"
 ```
 
 ### تست Functional:
@@ -477,7 +477,7 @@ curl -I https://welfvita.com | grep "X-Content-Type-Options"
 1. https://uptimerobot.com/signUp
 2. Add Monitor:
    - Type: HTTPS
-   - URL: https://api.welfvita.com/health
+   - URL: https://api.ekgkala.com/health
    - Interval: 5 minutes
 3. Email Alert فعال کن
 ```

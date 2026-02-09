@@ -111,7 +111,7 @@ export default function ReviewsPage() {
                 </div>
                 <div className="text-center py-16 px-4">
                     <p className="text-red-500 text-sm mb-4">{error}</p>
-                    <button onClick={loadReviews} className="px-6 py-2 bg-vita-500 text-white rounded-lg text-sm hover:bg-vita-600 transition">
+                    <button onClick={loadReviews} className="px-6 py-2 bg-kala-500 text-white rounded-lg text-sm hover:bg-kala-600 transition">
                         تلاش مجدد
                     </button>
                 </div>
@@ -154,7 +154,7 @@ export default function ReviewsPage() {
                     </div>
                     <p className="text-gray-400 text-sm mb-2">هنوز نظری ثبت نکرده‌اید</p>
                     <p className="text-gray-300 text-xs mb-6">نظرات شما پس از خرید و بررسی محصولات در اینجا نمایش داده می‌شود</p>
-                    <Link href="/" className="inline-block px-6 py-2.5 bg-vita-500 text-white text-sm font-bold rounded-lg hover:bg-vita-600 transition-colors">
+                    <Link href="/" className="inline-block px-6 py-2.5 bg-kala-500 text-white text-sm font-bold rounded-lg hover:bg-kala-600 transition-colors">
                         مشاهده محصولات
                     </Link>
                 </div>
@@ -176,7 +176,7 @@ export default function ReviewsPage() {
                                 </Link>
 
                                 {/* Product Name */}
-                                <Link href={`/product/${getProductSlug(review)}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-1 hover:text-vita-600 transition-colors mb-2">
+                                <Link href={`/product/${getProductSlug(review)}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-1 hover:text-kala-600 transition-colors mb-2">
                                     {getProductName(review)}
                                 </Link>
 
@@ -236,7 +236,7 @@ export default function ReviewsPage() {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`min-w-[2.5rem] h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === page
-                                            ? 'bg-vita-600 text-white'
+                                            ? 'bg-kala-600 text-white'
                                             : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >

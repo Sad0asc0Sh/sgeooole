@@ -155,13 +155,13 @@ export default function DesktopSearch() {
             <div
                 onClick={() => { setIsSearchOpen(true); inputRef.current?.focus(); }}
                 className={cn(
-                    "relative z-50 flex items-center h-12 w-full rounded-xl bg-welf-50 px-4 transition-all duration-200 border border-transparent",
-                    isSearchOpen ? "bg-white border-welf-200 shadow-sm ring-2 ring-vita-100" : "hover:bg-welf-100"
+                    "relative z-50 flex items-center h-12 w-full rounded-xl bg-ekg-50 px-4 transition-all duration-200 border border-transparent",
+                    isSearchOpen ? "bg-white border-ekg-200 shadow-sm ring-2 ring-kala-100" : "hover:bg-ekg-100"
                 )}
             >
                 <Search className={cn(
                     "w-5 h-5 transition-colors",
-                    isSearchOpen ? "text-vita-500" : "text-welf-500"
+                    isSearchOpen ? "text-kala-500" : "text-ekg-500"
                 )} />
 
                 <form onSubmit={handleSearchSubmit} className="flex-1 mx-3">
@@ -175,14 +175,14 @@ export default function DesktopSearch() {
                         }}
                         onFocus={() => setIsSearchOpen(true)}
                         placeholder="جستجو در بین هزاران محصول..."
-                        className="w-full bg-transparent text-sm text-welf-900 placeholder:text-welf-500 focus:outline-none"
+                        className="w-full bg-transparent text-sm text-ekg-900 placeholder:text-ekg-500 focus:outline-none"
                     />
                 </form>
 
                 {query && (
                     <button
                         onClick={() => { setQuery(""); inputRef.current?.focus(); }}
-                        className="p-1 rounded-full hover:bg-welf-100 text-welf-400 transition-colors"
+                        className="p-1 rounded-full hover:bg-ekg-100 text-ekg-400 transition-colors"
                     >
                         <X className="w-4 h-4" />
                     </button>
@@ -191,12 +191,12 @@ export default function DesktopSearch() {
 
             {/* Dropdown Results */}
             {isSearchOpen && (
-                <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-xl shadow-xl border border-welf-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full right-0 left-0 mt-2 bg-white rounded-xl shadow-xl border border-ekg-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
 
                     {/* State: Loading */}
                     {isLoading && (
                         <div className="flex items-center justify-center py-12">
-                            <Loader2 className="w-6 h-6 animate-spin text-vita-500" />
+                            <Loader2 className="w-6 h-6 animate-spin text-kala-500" />
                         </div>
                     )}
 
@@ -204,8 +204,8 @@ export default function DesktopSearch() {
                     {!isLoading && !query && (
                         <div className="p-4">
                             <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-bold text-welf-800 flex items-center gap-2">
-                                    <History className="w-4 h-4 text-vita-500" />
+                                <h3 className="text-sm font-bold text-ekg-800 flex items-center gap-2">
+                                    <History className="w-4 h-4 text-kala-500" />
                                     تاریخچه جستجو
                                 </h3>
                                 {history.length > 0 && (
@@ -220,7 +220,7 @@ export default function DesktopSearch() {
                             </div>
 
                             {history.length === 0 ? (
-                                <p className="text-xs text-welf-400 text-center py-4">
+                                <p className="text-xs text-ekg-400 text-center py-4">
                                     هنوز جستجویی انجام نداده‌اید
                                 </p>
                             ) : (
@@ -228,14 +228,14 @@ export default function DesktopSearch() {
                                     {history.map((term, idx) => (
                                         <div
                                             key={idx}
-                                            className="group flex items-center gap-2 px-3 py-1.5 bg-welf-50 hover:bg-white border border-transparent hover:border-vita-200 rounded-full transition-all cursor-pointer"
+                                            className="group flex items-center gap-2 px-3 py-1.5 bg-ekg-50 hover:bg-white border border-transparent hover:border-kala-200 rounded-full transition-all cursor-pointer"
                                             onClick={() => handleHistoryClick(term)}
                                         >
-                                            <Clock className="w-3 h-3 text-welf-400 group-hover:text-vita-500" />
-                                            <span className="text-xs text-welf-600 group-hover:text-welf-900">{term}</span>
+                                            <Clock className="w-3 h-3 text-ekg-400 group-hover:text-kala-500" />
+                                            <span className="text-xs text-ekg-600 group-hover:text-ekg-900">{term}</span>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); removeFromHistory(term); }}
-                                                className="p-0.5 rounded-full hover:bg-red-50 text-welf-300 hover:text-red-500 transition-colors"
+                                                className="p-0.5 rounded-full hover:bg-red-50 text-ekg-300 hover:text-red-500 transition-colors"
                                             >
                                                 <X className="w-3 h-3" />
                                             </button>
@@ -251,8 +251,8 @@ export default function DesktopSearch() {
                         <div>
                             {/* 1. Matched Categories */}
                             {matchedCategories.length > 0 && (
-                                <div className="p-4 border-b border-welf-50">
-                                    <h4 className="text-xs font-bold text-welf-500 mb-3 px-1">در دسته‌بندی‌ها</h4>
+                                <div className="p-4 border-b border-ekg-50">
+                                    <h4 className="text-xs font-bold text-ekg-500 mb-3 px-1">در دسته‌بندی‌ها</h4>
                                     <div
                                         ref={categoryScrollRef}
                                         onMouseDown={handleMouseDown}
@@ -273,15 +273,15 @@ export default function DesktopSearch() {
                                                 draggable={false}
                                                 className="flex flex-col items-center gap-2 min-w-[80px] group select-none"
                                             >
-                                                <div className="w-14 h-14 rounded-full bg-welf-50 border border-welf-100 flex items-center justify-center group-hover:border-vita-500 group-hover:shadow-md transition-all pointer-events-none">
+                                                <div className="w-14 h-14 rounded-full bg-ekg-50 border border-ekg-100 flex items-center justify-center group-hover:border-kala-500 group-hover:shadow-md transition-all pointer-events-none">
                                                     {/* Placeholder or Icon */}
                                                     {cat.icon?.url ? (
                                                         <img src={cat.icon.url} alt={cat.name} className="w-8 h-8 object-contain opacity-70 group-hover:opacity-100 pointer-events-none" />
                                                     ) : (
-                                                        <span className="text-lg font-bold text-welf-400 group-hover:text-vita-500 pointer-events-none">{cat.name.charAt(0)}</span>
+                                                        <span className="text-lg font-bold text-ekg-400 group-hover:text-kala-500 pointer-events-none">{cat.name.charAt(0)}</span>
                                                     )}
                                                 </div>
-                                                <span className="text-[11px] text-welf-700 font-medium text-center truncate w-full group-hover:text-vita-600 pointer-events-none">
+                                                <span className="text-[11px] text-ekg-700 font-medium text-center truncate w-full group-hover:text-kala-600 pointer-events-none">
                                                     {cat.name}
                                                 </span>
                                             </Link>
@@ -294,41 +294,41 @@ export default function DesktopSearch() {
                             <div className="p-2">
                                 {products.length > 0 ? (
                                     <>
-                                        <h4 className="text-xs font-bold text-welf-500 mb-2 px-3 mt-2">محصولات مرتبط</h4>
+                                        <h4 className="text-xs font-bold text-ekg-500 mb-2 px-3 mt-2">محصولات مرتبط</h4>
                                         <div className="space-y-1">
                                             {products.map((product) => (
                                                 <Link
                                                     key={product.id}
                                                     href={`/product/${product.slug || product.id}`}
                                                     onClick={() => { addToHistory(query); closeSearch(); }}
-                                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-welf-50 transition-colors group"
+                                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-ekg-50 transition-colors group"
                                                 >
-                                                    <div className="w-10 h-10 rounded-md bg-white border border-welf-100 flex-shrink-0 overflow-hidden">
+                                                    <div className="w-10 h-10 rounded-md bg-white border border-ekg-100 flex-shrink-0 overflow-hidden">
                                                         {product.image ? (
                                                             <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-welf-50">
-                                                                <Search className="w-4 h-4 text-welf-300" />
+                                                            <div className="w-full h-full flex items-center justify-center bg-ekg-50">
+                                                                <Search className="w-4 h-4 text-ekg-300" />
                                                             </div>
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h5 className="text-xs font-bold text-welf-800 truncate group-hover:text-vita-600 transition-colors">
+                                                        <h5 className="text-xs font-bold text-ekg-800 truncate group-hover:text-kala-600 transition-colors">
                                                             {product.title}
                                                         </h5>
                                                         {product.category && !/^[0-9a-fA-F]{24}$/.test(product.category) && (
-                                                            <span className="text-[10px] text-welf-500 truncate block">
+                                                            <span className="text-[10px] text-ekg-500 truncate block">
                                                                 {product.category}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <ChevronLeft className="w-4 h-4 text-welf-300 group-hover:text-vita-500 -translate-x-1 group-hover:-translate-x-2 transition-transform" />
+                                                    <ChevronLeft className="w-4 h-4 text-ekg-300 group-hover:text-kala-500 -translate-x-1 group-hover:-translate-x-2 transition-transform" />
                                                 </Link>
                                             ))}
                                         </div>
                                         <button
                                             onClick={handleSearchSubmit}
-                                            className="w-full mt-2 py-2 text-xs font-bold text-vita-600 hover:bg-vita-50 rounded-lg transition-colors flex items-center justify-center gap-1"
+                                            className="w-full mt-2 py-2 text-xs font-bold text-kala-600 hover:bg-kala-50 rounded-lg transition-colors flex items-center justify-center gap-1"
                                         >
                                             مشاهده همه نتایج
                                             <ChevronLeft className="w-3 h-3" />
@@ -337,7 +337,7 @@ export default function DesktopSearch() {
                                 ) : (
                                     !matchedCategories.length && (
                                         <div className="text-center py-8">
-                                            <p className="text-sm text-welf-500">موردی یافت نشد</p>
+                                            <p className="text-sm text-ekg-500">موردی یافت نشد</p>
                                         </div>
                                     )
                                 )}

@@ -1,4 +1,4 @@
-# 🛍️ Welfvita Store - Modern E-commerce Platform
+# 🛍️ EkgKala Store - Modern E-commerce Platform
 
 A full-stack e-commerce platform built with modern technologies including React, Next.js, Node.js, and MongoDB.
 
@@ -36,8 +36,8 @@ A full-stack e-commerce platform built with modern technologies including React,
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/welfvita-store.git
-cd welfvita-store
+git clone https://github.com/yourusername/ekgkala-store.git
+cd ekgkala-store
 
 # Run the setup script
 chmod +x setup.sh
@@ -77,7 +77,7 @@ This will start:
 ```env
 NODE_ENV=development
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/welfvita-store
+MONGO_URI=mongodb://localhost:27017/ekgkala-store
 JWT_SECRET=your-secret-key
 CLIENT_URL=http://localhost:5173,http://localhost:3000
 ```
@@ -85,13 +85,13 @@ CLIENT_URL=http://localhost:5173,http://localhost:3000
 ### Frontend Configuration (Frontend/.env)
 ```env
 VITE_API_URL=http://localhost:5000
-VITE_APP_NAME=Welfvita Store
+VITE_APP_NAME=EkgKala Store
 ```
 
 ### Admin Configuration (admin/.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_APP_NAME=Welfvita Admin
+NEXT_PUBLIC_APP_NAME=EkgKala Admin
 ```
 
 ## 👤 Creating Admin User
@@ -101,7 +101,7 @@ NEXT_PUBLIC_APP_NAME=Welfvita Admin
 
 ```bash
 mongosh
-use welfvita-store
+use ekgkala-store
 db.users.updateOne(
   {email: 'your-email@example.com'},
   {$set: {role: 'admin'}}
@@ -233,9 +233,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- 📧 Email: support@welfvita.com
+- 📧 Email: support@ekgkala.com
 - 📖 Documentation: [Technical Docs](./TECHNICAL_DOCS.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/welfvita-store/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/ekgkala-store/issues)
 
 ## 🙏 Acknowledgments
 
@@ -246,6 +246,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by Welfvita Team**
+**Made with ❤️ by EkgKala Team**
 
 ⭐ Star us on GitHub!

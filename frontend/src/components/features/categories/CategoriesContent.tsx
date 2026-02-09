@@ -71,7 +71,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
         return (
             <div className="flex items-center justify-center h-full bg-white">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="animate-spin text-vita-500" size={48} />
+                    <Loader2 className="animate-spin text-kala-500" size={48} />
                     <span className="text-sm text-gray-500">در حال بارگذاری دسته‌بندی‌ها...</span>
                 </div>
             </div>
@@ -92,7 +92,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                     <button
                         onClick={() => refresh()}
                         disabled={isValidating}
-                        className="mt-2 px-6 py-2 bg-vita-600 text-white text-sm font-bold rounded-xl hover:bg-vita-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                        className="mt-2 px-6 py-2 bg-kala-600 text-white text-sm font-bold rounded-xl hover:bg-kala-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center gap-2"
                     >
                         {isValidating && <Loader2 className="animate-spin" size={16} />}
                         تلاش مجدد
@@ -128,14 +128,14 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                         className={`
                             w-full flex flex-col items-center justify-center gap-2 py-5 px-2 transition-all duration-300 border-b border-gray-100 relative
                             ${activeId === cat._id
-                                ? "bg-white text-vita-600 font-bold"
+                                ? "bg-white text-kala-600 font-bold"
                                 : "text-gray-500 hover:bg-gray-100 font-medium"
                             }
                         `}
                     >
                         {/* Active Indicator Strip */}
                         {activeId === cat._id && (
-                            <span className="absolute right-0 top-0 h-full w-1 bg-vita-500 rounded-l-md" />
+                            <span className="absolute right-0 top-0 h-full w-1 bg-kala-500 rounded-l-md" />
                         )}
 
                         {/* Category Icon */}
@@ -152,7 +152,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                             <Package
                                 size={24}
                                 strokeWidth={1.5}
-                                className={activeId === cat._id ? "text-vita-500" : "text-gray-400"}
+                                className={activeId === cat._id ? "text-kala-500" : "text-gray-400"}
                             />
                         )}
 
@@ -172,7 +172,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                     {activeCategory && (
                         <button
                             onClick={() => handleNavigation(`/products?category=${activeCategory.slug}&includeChildren=true`)}
-                            className="text-[10px] text-vita-600 flex items-center hover:text-vita-700 transition-colors"
+                            className="text-[10px] text-kala-600 flex items-center hover:text-kala-700 transition-colors"
                         >
                             مشاهده همه <ChevronLeft size={12} />
                         </button>
@@ -207,7 +207,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                         handleNavigation(`/products?category=${subCategory.slug}&includeChildren=true`);
                                                     }
                                                 }}
-                                                className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-vita-600 transition-colors"
+                                                className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-kala-600 transition-colors"
                                             >
                                                 <span className="flex items-center gap-3">
                                                     {/* Subcategory Image/Icon - Only show if there's an actual image */}
@@ -247,7 +247,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                 onClick={() => handleNavigation(`/products?category=${item.slug}&includeChildren=true`)}
                                                                 className="flex flex-col items-center gap-2 cursor-pointer group w-full"
                                                             >
-                                                                <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-vita-200 transition-colors overflow-hidden">
+                                                                <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-kala-200 transition-colors overflow-hidden">
                                                                     {resolveCategoryImage(item) ? (
                                                                         <div className="relative w-full h-full">
                                                                             <Image
@@ -261,7 +261,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                         <Package size={24} className="text-gray-300" />
                                                                     )}
                                                                 </div>
-                                                                <span className="text-[10px] text-center text-gray-600 leading-tight group-hover:text-vita-600 transition-colors">
+                                                                <span className="text-[10px] text-center text-gray-600 leading-tight group-hover:text-kala-600 transition-colors">
                                                                     {item.name}
                                                                 </span>
                                                             </button>

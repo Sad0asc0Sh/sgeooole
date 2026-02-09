@@ -49,7 +49,7 @@ function FAQItem({ question, answer, isOpen, onClick }: {
 }) {
     return (
         <div className={`border rounded-2xl transition-all duration-300 overflow-hidden ${isOpen
-            ? "border-vita-300 bg-vita-50/50 shadow-lg shadow-vita-100/50"
+            ? "border-kala-300 bg-kala-50/50 shadow-lg shadow-kala-100/50"
             : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-md"
             }`}>
             <button
@@ -58,19 +58,19 @@ function FAQItem({ question, answer, isOpen, onClick }: {
             >
                 <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${isOpen
-                        ? "bg-vita-500 text-white"
+                        ? "bg-kala-500 text-white"
                         : "bg-gray-100 text-gray-500"
                         }`}>
                         <HelpCircle size={20} />
                     </div>
-                    <span className={`font-bold text-base md:text-lg transition-colors ${isOpen ? "text-vita-700" : "text-gray-800"
+                    <span className={`font-bold text-base md:text-lg transition-colors ${isOpen ? "text-kala-700" : "text-gray-800"
                         }`}>
                         {question}
                     </span>
                 </div>
                 <ChevronDown
                     size={22}
-                    className={`text-gray-400 transition-transform duration-300 ${isOpen ? "rotate-180 text-vita-500" : ""
+                    className={`text-gray-400 transition-transform duration-300 ${isOpen ? "rotate-180 text-kala-500" : ""
                         }`}
                 />
             </button>
@@ -129,7 +129,7 @@ export default function FAQPage() {
         return (
             <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
                 <div className="text-center">
-                    <Loader2 size={48} className="animate-spin text-vita-500 mx-auto" />
+                    <Loader2 size={48} className="animate-spin text-kala-500 mx-auto" />
                     <p className="mt-4 text-gray-500 font-medium">در حال بارگذاری...</p>
                 </div>
             </div>
@@ -141,7 +141,7 @@ export default function FAQPage() {
             <div className="max-w-4xl mx-auto">
                 {/* Breadcrumb */}
                 <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                    <Link href="/" className="hover:text-vita-500 transition-colors flex items-center gap-1">
+                    <Link href="/" className="hover:text-kala-500 transition-colors flex items-center gap-1">
                         <Home size={16} />
                         خانه
                     </Link>
@@ -150,7 +150,7 @@ export default function FAQPage() {
                 </nav>
 
                 {/* Hero Header */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-vita-500 via-vita-600 to-vita-700 rounded-3xl p-8 md:p-12 mb-8 text-white">
+                <div className="relative overflow-hidden bg-gradient-to-br from-kala-500 via-kala-600 to-kala-700 rounded-3xl p-8 md:p-12 mb-8 text-white">
                     {/* Decorative patterns */}
                     <div className="absolute inset-0 opacity-20">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-white/30 rounded-full translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
@@ -211,7 +211,7 @@ export default function FAQPage() {
                 {/* Contact Section */}
                 <div className="bg-gradient-to-br from-[#142755] to-[#1a3a7a] rounded-3xl p-8 text-white text-center">
                     <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20">
-                        <AlertCircle size={32} className="text-vita-400" />
+                        <AlertCircle size={32} className="text-kala-400" />
                     </div>
                     <h3 className="text-2xl font-bold mb-3">پاسخ سوال خود را پیدا نکردید؟</h3>
                     <p className="text-gray-300 mb-8 max-w-lg mx-auto">
@@ -220,7 +220,7 @@ export default function FAQPage() {
                     <div className="flex flex-wrap justify-center gap-4">
                         <Link
                             href="/contact"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-vita-500 text-white rounded-xl font-bold hover:bg-vita-600 transition-all shadow-lg shadow-vita-500/25"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-all shadow-lg shadow-kala-500/25"
                         >
                             <Mail size={18} />
                             تماس با ما
@@ -239,7 +239,7 @@ export default function FAQPage() {
                 <div className="mt-8 text-center">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-gray-500 hover:text-vita-500 transition-colors group"
+                        className="inline-flex items-center gap-2 text-gray-500 hover:text-kala-500 transition-colors group"
                     >
                         <Home size={18} className="group-hover:-translate-x-1 transition-transform" />
                         <span>بازگشت به صفحه اصلی</span>

@@ -81,7 +81,7 @@ export default function TrackingPage() {
     if (authLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
             </div>
         );
     }
@@ -103,9 +103,9 @@ export default function TrackingPage() {
 
             <div className="p-4 space-y-6">
                 {/* Info Card */}
-                <div className="bg-gradient-to-br from-vita-50 to-blue-50 rounded-2xl p-5 border border-vita-100">
+                <div className="bg-gradient-to-br from-kala-50 to-blue-50 rounded-2xl p-5 border border-kala-100">
                     <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-vita-600 shrink-0">
+                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-kala-600 shrink-0">
                             <Package size={24} />
                         </div>
                         <div>
@@ -129,7 +129,7 @@ export default function TrackingPage() {
                                 if (error) setError(null);
                             }}
                             placeholder="مثال: WV-123456"
-                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-vita-500 focus:border-vita-500 transition-all"
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm focus:ring-2 focus:ring-kala-500 focus:border-kala-500 transition-all"
                             dir="ltr"
                         />
                     </div>
@@ -144,7 +144,7 @@ export default function TrackingPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-3 px-6 rounded-xl hover:from-vita-600 hover:to-vita-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        className="w-full bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-3 px-6 rounded-xl hover:from-kala-600 hover:to-kala-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {loading ? (
                             <>
@@ -164,7 +164,7 @@ export default function TrackingPage() {
                 {result && (
                     <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                         <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Package size={18} className="text-vita-600" />
+                            <Package size={18} className="text-kala-600" />
                             اطلاعات سفارش
                         </h3>
 
@@ -221,7 +221,7 @@ export default function TrackingPage() {
                     </p>
                     <Link
                         href={`/login?redirect=${encodeURIComponent(authenticatedOrdersHref)}`}
-                        className="inline-flex items-center gap-2 text-vita-600 font-bold text-sm hover:text-vita-700 transition-colors"
+                        className="inline-flex items-center gap-2 text-kala-600 font-bold text-sm hover:text-kala-700 transition-colors"
                     >
                         <span>ورود به حساب کاربری</span>
                         <ChevronRight size={16} className="rotate-180" />

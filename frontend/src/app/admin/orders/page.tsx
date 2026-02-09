@@ -71,14 +71,14 @@ export default function AdminOrdersPage() {
                             placeholder="جستجو..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="bg-white border border-gray-200 rounded-xl py-2 pr-10 pl-4 text-sm focus:ring-2 focus:ring-vita-500 w-64"
+                            className="bg-white border border-gray-200 rounded-xl py-2 pr-10 pl-4 text-sm focus:ring-2 focus:ring-kala-500 w-64"
                         />
                         <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     </div>
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
-                        className="bg-white border border-gray-200 rounded-xl py-2 px-4 text-sm focus:ring-2 focus:ring-vita-500 outline-none"
+                        className="bg-white border border-gray-200 rounded-xl py-2 px-4 text-sm focus:ring-2 focus:ring-kala-500 outline-none"
                     >
                         <option value="">همه وضعیت‌ها</option>
                         <option value="Pending">ثبت سفارش</option>
@@ -130,7 +130,7 @@ export default function AdminOrdersPage() {
                                         <td className="px-6 py-4">
                                             <Link
                                                 href={`/admin/orders/${order._id}`}
-                                                className="text-vita-600 hover:bg-vita-50 p-2 rounded-lg transition-colors inline-block"
+                                                className="text-kala-600 hover:bg-kala-50 p-2 rounded-lg transition-colors inline-block"
                                             >
                                                 <ChevronLeft size={20} />
                                             </Link>

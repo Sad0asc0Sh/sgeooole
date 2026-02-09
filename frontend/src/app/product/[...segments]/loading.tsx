@@ -24,7 +24,7 @@ export default function Loading() {
           </div>
         </div>
         <div className="flex flex-col items-center justify-center mt-8 gap-3">
-          <Loader2 className="animate-spin text-vita-500" size={32} />
+          <Loader2 className="animate-spin text-kala-500" size={32} />
           <span className="text-sm text-gray-500">در حال دریافت اطلاعات محصول...</span>
         </div>
       </div>

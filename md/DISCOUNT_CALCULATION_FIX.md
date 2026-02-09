@@ -24,7 +24,7 @@
 ## 🔍 تحلیل علت مشکل
 
 ### روند باگ:
-1. **دریافت محصول برای ویرایش** ([products.js:565-677](welfvita-backend/routes/products.js#L565-L677))
+1. **دریافت محصول برای ویرایش** ([products.js:565-677](ekgkala-backend/routes/products.js#L565-L677))
    - وقتی ادمین محصولی را برای ویرایش باز می‌کرد، بک‌اند تخفیف را محاسبه و اعمال می‌کرد
    - در خطوط 647-650، قیمت اصلی با قیمت تخفیف‌خورده جایگزین می‌شد:
    ```javascript
@@ -46,7 +46,7 @@
 
 ### 1. افزودن پارامتر `skipDiscount` به API
 
-#### Backend - فایل `welfvita-backend/routes/products.js`
+#### Backend - فایل `ekgkala-backend/routes/products.js`
 
 **تغییرات در endpoint دریافت تک محصول (GET /api/products/:id):**
 
@@ -130,13 +130,13 @@ params.set('skipDiscount', 'true')
 ## 🔧 فایل‌های تغییر یافته
 
 ### Backend:
-- ✅ [welfvita-backend/routes/products.js](welfvita-backend/routes/products.js)
+- ✅ [ekgkala-backend/routes/products.js](ekgkala-backend/routes/products.js)
   - خط 567-572: افزودن پارامتر skipDiscount به GET /api/products/:id
   - خط 611-618: اعمال شرط skipDiscount
   - خط 204: افزودن پارامتر skipDiscount به GET /api/products
   - خط 437: اعمال شرط skipDiscount در لیست محصولات
 
-- ✅ [welfvita-backend/middleware/cache.js](welfvita-backend/middleware/cache.js)
+- ✅ [ekgkala-backend/middleware/cache.js](ekgkala-backend/middleware/cache.js)
   - خط 22-29: غیرفعال کردن browser & server cache برای درخواست‌های ادمین
 
 ### Frontend (Admin Panel):
@@ -194,7 +194,7 @@ Cache-Control: public, max-age=3600
 این باعث می‌شد مرورگر response را برای ۱ ساعت کش کند. حتی اگر server-side cache پاک می‌شد، مرورگر همچنان از کش محلی خود استفاده می‌کرد!
 
 ### راه حل:
-در [middleware/cache.js](welfvita-backend/middleware/cache.js#L22-L29)، برای درخواست‌های ادمین (با `skipDiscount=true`) کش را کاملاً غیرفعال کردیم:
+در [middleware/cache.js](ekgkala-backend/middleware/cache.js#L22-L29)، برای درخواست‌های ادمین (با `skipDiscount=true`) کش را کاملاً غیرفعال کردیم:
 
 ```javascript
 if (req.query.skipDiscount === 'true') {

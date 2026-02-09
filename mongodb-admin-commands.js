@@ -3,7 +3,7 @@
 // Run these commands in mongosh
 
 // 1. Switch to the database
-use welfvita-store
+use ekgkala-store
 
 // 2. Option A: Update existing user to admin
 db.users.updateOne(

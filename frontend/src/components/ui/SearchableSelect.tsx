@@ -82,8 +82,8 @@ export default function SearchableSelect({
                 disabled={disabled}
                 className={`w-full flex items-center justify-between bg-white border rounded-xl p-3 text-sm transition-all outline-none
                     ${disabled ? "bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200" : "cursor-pointer hover:border-gray-300"}
-                    ${error ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-200 focus:border-vita-500 focus:ring-1 focus:ring-vita-500"}
-                    ${isOpen ? "border-vita-500 ring-1 ring-vita-500" : ""}
+                    ${error ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500" : "border-gray-200 focus:border-kala-500 focus:ring-1 focus:ring-kala-500"}
+                    ${isOpen ? "border-kala-500 ring-1 ring-kala-500" : ""}
                 `}
             >
                 <span className={`truncate ${!selectedOption && !value ? "text-gray-400" : "text-gray-800"}`}>
@@ -103,7 +103,7 @@ export default function SearchableSelect({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder={searchPlaceholder}
-                                className="w-full bg-white border border-gray-200 rounded-lg py-2 pr-9 pl-3 text-xs focus:border-vita-500 focus:outline-none transition-colors"
+                                className="w-full bg-white border border-gray-200 rounded-lg py-2 pr-9 pl-3 text-xs focus:border-kala-500 focus:outline-none transition-colors"
                                 onClick={(e) => e.stopPropagation()}
                             />
                         </div>
@@ -123,13 +123,13 @@ export default function SearchableSelect({
                                         onClick={() => handleSelect(option.value)}
                                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-colors
                                             ${value === option.value
-                                                ? "bg-vita-50 text-vita-700 font-medium"
+                                                ? "bg-kala-50 text-kala-700 font-medium"
                                                 : "text-gray-700 hover:bg-gray-50"
                                             }
                                         `}
                                     >
                                         <span>{option.label}</span>
-                                        {value === option.value && <Check size={14} className="text-vita-600" />}
+                                        {value === option.value && <Check size={14} className="text-kala-600" />}
                                     </button>
                                 ))}
                             </div>

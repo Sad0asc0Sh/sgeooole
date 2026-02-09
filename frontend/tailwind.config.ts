@@ -11,22 +11,30 @@ const config: Config = {
             colors: {
                 border: "hsl(var(--border))",
                 background: "hsl(var(--background))",
-                foreground: "hsl(var(--foreground))", // Welf Logic
+                foreground: "hsl(var(--foreground))", // EKG Logic
                 primary: {
-                    DEFAULT: "hsl(var(--primary))", // Vita Logic (Golden-Orange)
+                    DEFAULT: "hsl(var(--primary))", // Kala Logic (Golden-Orange)
                     foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: "hsl(var(--secondary))", // Welf Logic (Gray)
+                    DEFAULT: "hsl(var(--secondary))", // EKG Logic (Gray)
                     foreground: "hsl(var(--secondary-foreground))",
                 },
                 // Custom brand specifics if needed directly
-                welf: {
+                ekg: {
                     50: '#f8fafc',
+                    100: '#f1f5f9',
+                    200: '#e2e8f0',
+                    300: '#cbd5e1',
+                    400: '#94a3b8',
                     500: '#64748b',
+                    600: '#475569',
+                    700: '#334155',
+                    800: '#1e293b',
                     900: '#0f172a',
+                    950: '#020617',
                 },
-                vita: {
+                kala: {
                     50: '#fffbeb',
                     100: '#fef3c7',
                     200: '#fde68a',

@@ -10,30 +10,30 @@ The authentication system has been **fully activated** with real backend API int
 
 ### Backend Implementation (NEW) ✨
 
-**1. Customer User Model** - `welfvita-backend/models/User.js`
+**1. Customer User Model** - `ekgkala-backend/models/User.js`
    - Mobile number as primary identifier
    - Wallet, addresses, and profile fields
    - Separate from Admin model
 
-**2. OTP Model** - `welfvita-backend/models/OTP.js`
+**2. OTP Model** - `ekgkala-backend/models/OTP.js`
    - 4-digit code storage
    - 2-minute expiration with MongoDB TTL index
    - Attempt tracking (max 3 attempts)
    - Auto-cleanup of verified/expired OTPs
 
-**3. Customer Auth Controller** - `welfvita-backend/controllers/customerAuthController.js`
+**3. Customer Auth Controller** - `ekgkala-backend/controllers/customerAuthController.js`
    - `sendOtp()` - Generate and send OTP with rate limiting
    - `verifyOtp()` - Verify code and create/login user
    - `getProfile()` - Return authenticated user data
 
-**4. Updated Routes** - `welfvita-backend/routes/auth.js`
+**4. Updated Routes** - `ekgkala-backend/routes/auth.js`
    ```javascript
    POST /api/auth/send-otp      // Send OTP to mobile
    POST /api/auth/verify-otp    // Verify OTP and login
    GET  /api/auth/profile       // Get customer profile (protected)
    ```
 
-**5. Updated Auth Middleware** - `welfvita-backend/middleware/auth.js`
+**5. Updated Auth Middleware** - `ekgkala-backend/middleware/auth.js`
    - Now supports both Admin and Customer authentication
    - Checks token type to determine User vs Admin lookup
    - Backward compatible with existing admin routes
@@ -178,7 +178,7 @@ return response.data;
 ### 1. Start Backend Server
 
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 ```
 
@@ -231,7 +231,7 @@ http://localhost:3000/login
 
 **Step 4: View Profile**
 - Profile page loads with real user data:
-  - Name: "کاربر ویلف‌ویتا" (or custom name)
+  - Name: "کاربر ای‌کا‌جی کالا" (or custom name)
   - Mobile: 09123456789
   - Wallet: 0 تومان
 
@@ -319,7 +319,7 @@ Content-Type: application/json
   "data": {
     "user": {
       "_id": "673cc2ae8f4b1234567890ab",
-      "name": "کاربر ویلف‌ویتا",
+      "name": "کاربر ای‌کا‌جی کالا",
       "mobile": "09123456789",
       "email": null,
       "wallet": 0,
@@ -350,7 +350,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   "success": true,
   "data": {
     "_id": "673cc2ae8f4b1234567890ab",
-    "name": "کاربر ویلف‌ویتا",
+    "name": "کاربر ای‌کا‌جی کالا",
     "mobile": "09123456789",
     "email": null,
     "wallet": 5400000,
@@ -473,7 +473,7 @@ ghasedak.verification({
 
 ### Environment Variables
 
-Add to `welfvita-backend/.env`:
+Add to `ekgkala-backend/.env`:
 
 ```env
 # SMS Provider (choose one)
@@ -520,7 +520,7 @@ Before deploying to production:
 
 - [PHASE_4_BACKEND_GUIDE.md](PHASE_4_BACKEND_GUIDE.md) - Original backend implementation guide
 - [authService.ts](frontend/src/services/authService.ts) - Frontend auth service
-- [customerAuthController.js](welfvita-backend/controllers/customerAuthController.js) - Backend controller
+- [customerAuthController.js](ekgkala-backend/controllers/customerAuthController.js) - Backend controller
 
 ---
 

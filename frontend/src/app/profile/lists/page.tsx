@@ -211,7 +211,7 @@ export default function ListsPage() {
                 </div>
                 <div className="text-center py-16 px-4">
                     <p className="text-red-500 text-sm mb-4">{error}</p>
-                    <button onClick={loadWishlist} className="px-6 py-2 bg-vita-500 text-white rounded-lg text-sm hover:bg-vita-600 transition">
+                    <button onClick={loadWishlist} className="px-6 py-2 bg-kala-500 text-white rounded-lg text-sm hover:bg-kala-600 transition">
                         تلاش مجدد
                     </button>
                 </div>
@@ -255,7 +255,7 @@ export default function ListsPage() {
                     <div className="text-center">
                         <p className="text-gray-800 font-medium text-sm mb-1">لیست علاقه‌مندی‌های شما خالی است</p>
                         <p className="text-gray-400 text-xs mb-6">محصولات مورد علاقه خود را با کلیک روی آیکون قلب ذخیره کنید</p>
-                        <Link href="/" className="inline-block px-6 py-2.5 bg-vita-500 text-white text-sm font-bold rounded-lg hover:bg-vita-600 transition-colors">
+                        <Link href="/" className="inline-block px-6 py-2.5 bg-kala-500 text-white text-sm font-bold rounded-lg hover:bg-kala-600 transition-colors">
                             مشاهده محصولات
                         </Link>
                     </div>
@@ -294,7 +294,7 @@ export default function ListsPage() {
                                     </Link>
 
                                     {/* Product Info */}
-                                    <Link href={`/product/${product._id}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-2 hover:text-vita-600 transition-colors mb-auto min-h-[2.5rem]">
+                                    <Link href={`/product/${product._id}`} className="text-xs font-bold text-gray-800 leading-5 line-clamp-2 hover:text-kala-600 transition-colors mb-auto min-h-[2.5rem]">
                                         {product.name}
                                     </Link>
 
@@ -317,7 +317,7 @@ export default function ListsPage() {
                                             <div className="flex-1 flex items-center justify-between bg-gray-50 rounded-lg border border-gray-100 px-1">
                                                 <button
                                                     onClick={() => handleIncrease(product)}
-                                                    className="w-8 h-full flex items-center justify-center text-vita-600 hover:bg-vita-100 rounded-md transition"
+                                                    className="w-8 h-full flex items-center justify-center text-kala-600 hover:bg-kala-100 rounded-md transition"
                                                 >
                                                     <Plus size={16} />
                                                 </button>
@@ -334,7 +334,7 @@ export default function ListsPage() {
                                             <button
                                                 onClick={() => handleIncrease(product)}
                                                 disabled={isOutOfStock}
-                                                className="flex-1 bg-vita-50 text-vita-600 text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-vita-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                                                className="flex-1 bg-kala-50 text-kala-600 text-[10px] font-bold rounded-lg flex items-center justify-center gap-1 hover:bg-kala-100 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
                                             >
                                                 <ShoppingCart size={14} />
                                                 {isOutOfStock ? "ناموجود" : "افزودن به سبد"}
@@ -376,7 +376,7 @@ export default function ListsPage() {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`min-w-[2.5rem] h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === page
-                                            ? 'bg-vita-600 text-white'
+                                            ? 'bg-kala-600 text-white'
                                             : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >

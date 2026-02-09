@@ -2,7 +2,7 @@
 
 ## 🎯 Overview
 
-This guide documents the backend API endpoints required to support the **OTP-based customer authentication** feature in the WelfVita frontend application.
+This guide documents the backend API endpoints required to support the **OTP-based customer authentication** feature in the EkgKala frontend application.
 
 **Current Status**: The frontend is fully integrated and ready. The backend needs to implement the following customer authentication endpoints.
 
@@ -194,7 +194,7 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    default: "کاربر ویلف‌ویتا"
+    default: "کاربر ای‌کا‌جی کالا"
   },
   mobile: {
     type: String,
@@ -403,7 +403,7 @@ exports.verifyOtp = async (req, res) => {
     if (!user) {
       user = new User({
         mobile,
-        name: "کاربر ویلف‌ویتا",
+        name: "کاربر ای‌کا‌جی کالا",
         wallet: 0,
         role: "user",
         isActive: true

@@ -36,8 +36,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     try {
         const brand = await brandService.getBySlug(slug);
         return {
-            title: `محصولات ${brand.name} | ولفویتا`,
-            description: brand.description || `مشاهده تمام محصولات برند ${brand.name} در فروشگاه ولفویتا`,
+            title: `محصولات ${brand.name} | ای‌کا‌جی کالا`,
+            description: brand.description || `مشاهده تمام محصولات برند ${brand.name} در فروشگاه ای‌کا‌جی کالا`,
             openGraph: {
                 title: `محصولات ${brand.name}`,
                 description: brand.description || `مشاهده تمام محصولات برند ${brand.name}`,
@@ -46,8 +46,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         };
     } catch {
         return {
-            title: "محصولات برند | ولفویتا",
-            description: "مشاهده محصولات برند در فروشگاه ولفویتا",
+            title: "محصولات برند | ای‌کا‌جی کالا",
+            description: "مشاهده محصولات برند در فروشگاه ای‌کا‌جی کالا",
         };
     }
 }

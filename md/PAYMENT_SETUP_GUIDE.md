@@ -11,7 +11,7 @@
 ### Backend
 
 ```
-welfvita-backend/
+ekgkala-backend/
 ├── models/
 │   ├── Settings.js                    ✅ (به‌روزرسانی شد - ساختار چندگانه)
 │   └── Order.js                       ✅ (به‌روزرسانی شد - فیلدهای درگاه)
@@ -52,7 +52,7 @@ frontend/src/app/
 ### 1️⃣ راه‌اندازی بک‌اند
 
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm install  # axios اضافه شده
 npm run dev
 ```
@@ -74,7 +74,7 @@ npm run dev
 
 ### 3️⃣ تنظیم متغیرهای محیطی
 
-در فایل `welfvita-backend/.env` اضافه کنید:
+در فایل `ekgkala-backend/.env` اضافه کنید:
 
 ```env
 FRONTEND_URL=http://localhost:3000

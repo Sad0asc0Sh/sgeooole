@@ -107,7 +107,7 @@ import ProductRailContainer from "@/components/home/ProductRailContainer";
 ### 1. Test Real Data Flow
 ```bash
 # Start backend
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 
 # Start frontend

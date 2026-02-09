@@ -450,7 +450,7 @@ export default function ProfilePage() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
                 <div className="text-center">
                     <p className="text-red-500 text-sm mb-4">{error || "خطا در بارگذاری اطلاعات"}</p>
-                    <button onClick={() => window.location.reload()} className="px-6 py-2 bg-vita-500 text-white rounded-lg text-sm">تلاش مجدد</button>
+                    <button onClick={() => window.location.reload()} className="px-6 py-2 bg-kala-500 text-white rounded-lg text-sm">تلاش مجدد</button>
                 </div>
             </div>
         );
@@ -470,7 +470,7 @@ export default function ProfilePage() {
                             {/* User Card - Desktop */}
                             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                                 {/* Profile Header with Gradient */}
-                                <div className="bg-gradient-to-br from-vita-500 via-vita-600 to-welf-800 p-6 relative overflow-hidden">
+                                <div className="bg-gradient-to-br from-kala-500 via-kala-600 to-ekg-800 p-6 relative overflow-hidden">
                                     <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
                                     <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-white/5 rounded-full blur-xl" />
 
@@ -516,14 +516,14 @@ export default function ProfilePage() {
                             </div>
 
                             {/* Wallet Card - Desktop */}
-                            <div className="bg-gradient-to-br from-welf-900 via-gray-800 to-gray-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden">
-                                <div className="absolute -right-8 -top-8 w-40 h-40 bg-vita-500/20 rounded-full blur-3xl" />
+                            <div className="bg-gradient-to-br from-ekg-900 via-gray-800 to-gray-900 text-white p-6 rounded-2xl shadow-xl relative overflow-hidden">
+                                <div className="absolute -right-8 -top-8 w-40 h-40 bg-kala-500/20 rounded-full blur-3xl" />
                                 <div className="absolute -left-6 bottom-0 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
 
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-2 mb-4">
                                         <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                                            <Wallet size={20} className="text-vita-400" />
+                                            <Wallet size={20} className="text-kala-400" />
                                         </div>
                                         <span className="text-sm text-gray-300 font-medium">موجودی کیف پول</span>
                                     </div>
@@ -531,7 +531,7 @@ export default function ProfilePage() {
                                         <span className="text-3xl font-black tracking-tight">{(user.wallet || 0).toLocaleString("fa-IR")}</span>
                                         <span className="text-sm text-gray-400">تومان</span>
                                     </div>
-                                    <button className="w-full bg-vita-500 hover:bg-vita-600 text-white text-sm font-bold py-3 px-5 rounded-xl transition-all shadow-lg shadow-vita-500/25 active:scale-95">
+                                    <button className="w-full bg-kala-500 hover:bg-kala-600 text-white text-sm font-bold py-3 px-5 rounded-xl transition-all shadow-lg shadow-kala-500/25 active:scale-95">
                                         افزایش موجودی
                                     </button>
                                 </div>
@@ -613,12 +613,12 @@ export default function ProfilePage() {
                         {/* MOBILE ONLY: Wallet Card */}
                         {/* ============================================ */}
                         <div className="lg:hidden px-4 -mt-6 mb-6 relative z-20">
-                            <div className="bg-gradient-to-r from-welf-900 to-gray-800 text-white p-5 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-between relative overflow-hidden">
+                            <div className="bg-gradient-to-r from-ekg-900 to-gray-800 text-white p-5 rounded-2xl shadow-xl shadow-gray-200 flex items-center justify-between relative overflow-hidden">
                                 <div className="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
 
                                 <div className="flex flex-col gap-1.5 z-10">
                                     <span className="text-xs text-gray-300 flex items-center gap-1.5 font-medium">
-                                        <Wallet size={14} className="text-vita-400" /> موجودی کیف پول
+                                        <Wallet size={14} className="text-kala-400" /> موجودی کیف پول
                                     </span>
                                     <div className="flex items-baseline gap-1.5">
                                         <span className="text-2xl font-black tracking-tight">{(user.wallet || 0).toLocaleString("fa-IR")}</span>
@@ -638,10 +638,10 @@ export default function ProfilePage() {
                         <div className="bg-white mx-4 lg:mx-0 rounded-2xl p-5 lg:p-6 shadow-sm mb-6 border border-gray-100">
                             <div className="flex justify-between items-center mb-5">
                                 <h2 className="font-bold text-sm lg:text-base text-gray-800 flex items-center gap-2">
-                                    <Box size={16} className="text-vita-600 lg:w-5 lg:h-5" />
+                                    <Box size={16} className="text-kala-600 lg:w-5 lg:h-5" />
                                     سفارش‌های من
                                 </h2>
-                                <Link href="/profile/orders" className="text-[10px] lg:text-xs text-gray-400 flex items-center gap-0.5 hover:text-vita-600 transition font-medium">
+                                <Link href="/profile/orders" className="text-[10px] lg:text-xs text-gray-400 flex items-center gap-0.5 hover:text-kala-600 transition font-medium">
                                     مشاهده همه <ChevronLeft size={12} className="lg:w-4 lg:h-4" />
                                 </Link>
                             </div>
@@ -661,9 +661,9 @@ export default function ProfilePage() {
                             <div className="hidden lg:grid lg:grid-cols-2 lg:p-4 lg:gap-3">
                                 {menuItems.map((item, idx) => (
                                     <Link key={idx} href={item.href} className="block">
-                                        <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-vita-200 hover:bg-vita-50/50 cursor-pointer transition-all group">
+                                        <div className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-kala-200 hover:bg-kala-50/50 cursor-pointer transition-all group">
                                             <div className="flex items-center gap-3.5">
-                                                <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-vita-100 group-hover:text-vita-600 transition-colors">
+                                                <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center group-hover:bg-kala-100 group-hover:text-kala-600 transition-colors">
                                                     <item.icon size={20} />
                                                 </div>
                                                 <div>
@@ -677,7 +677,7 @@ export default function ProfilePage() {
                                                 {item.badge && (
                                                     <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-sm">{item.badge}</span>
                                                 )}
-                                                <ChevronLeft size={18} className="text-gray-300 group-hover:text-vita-500 transition-colors" />
+                                                <ChevronLeft size={18} className="text-gray-300 group-hover:text-kala-500 transition-colors" />
                                             </div>
                                         </div>
                                     </Link>
@@ -690,7 +690,7 @@ export default function ProfilePage() {
                                     <Link key={idx} href={item.href} className="block">
                                         <div className="flex items-center justify-between p-4 border-b border-gray-50 last:border-none hover:bg-gray-50 cursor-pointer transition-colors group">
                                             <div className="flex items-center gap-3.5">
-                                                <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center group-hover:bg-vita-50 group-hover:text-vita-600 transition-colors">
+                                                <div className="w-8 h-8 rounded-full bg-gray-50 text-gray-500 flex items-center justify-center group-hover:bg-kala-50 group-hover:text-kala-600 transition-colors">
                                                     <item.icon size={16} />
                                                 </div>
                                                 <span className="text-sm text-gray-700 font-bold group-hover:text-gray-900 transition-colors">{item.label}</span>
@@ -702,7 +702,7 @@ export default function ProfilePage() {
                                                 {item.badge && (
                                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">{item.badge}</span>
                                                 )}
-                                                <ChevronLeft size={16} className="text-gray-300 group-hover:text-vita-500 transition-colors" />
+                                                <ChevronLeft size={16} className="text-gray-300 group-hover:text-kala-500 transition-colors" />
                                             </div>
                                         </div>
                                     </Link>
@@ -744,7 +744,7 @@ export default function ProfilePage() {
                                     type="text"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     disabled={!!user?.googleId}
                                 />
                                 <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -773,7 +773,7 @@ export default function ProfilePage() {
                                             setEditSheetOpen(false);
                                             setBindMobileSheetOpen(true);
                                         }}
-                                        className="bg-vita-500 text-white text-xs font-bold px-4 rounded-xl shadow-sm hover:bg-vita-600 transition-colors"
+                                        className="bg-kala-500 text-white text-xs font-bold px-4 rounded-xl shadow-sm hover:bg-kala-600 transition-colors"
                                     >
                                         افزودن
                                     </button>
@@ -792,7 +792,7 @@ export default function ProfilePage() {
                                     type="email"
                                     value={editEmail}
                                     onChange={(e) => setEditEmail(e.target.value)}
-                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     dir="ltr"
                                     disabled={!!user?.googleId}
                                 />
@@ -809,7 +809,7 @@ export default function ProfilePage() {
                             <button
                                 onClick={handleUpdateProfile}
                                 disabled={editLoading}
-                                className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all"
+                                className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all"
                             >
                                 {editLoading ? "در حال ذخیره..." : "ثبت تغییرات"}
                             </button>
@@ -834,7 +834,7 @@ export default function ProfilePage() {
                                             type="tel"
                                             value={bindMobile}
                                             onChange={(e) => setBindMobile(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all text-left"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all text-left"
                                             dir="ltr"
                                             placeholder="09xxxxxxxxx"
                                             maxLength={11}
@@ -848,7 +848,7 @@ export default function ProfilePage() {
                                 <button
                                     onClick={handleSendBindOtp}
                                     disabled={bindLoading || !bindMobile}
-                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {bindLoading ? "در حال ارسال..." : "ارسال کد تایید"}
                                 </button>
@@ -857,7 +857,7 @@ export default function ProfilePage() {
                             <>
                                 <div className="text-center mb-4">
                                     <p className="text-sm text-gray-600">کد تایید به شماره {bindMobile} ارسال شد.</p>
-                                    <button onClick={() => setBindOtpSent(false)} className="text-xs text-vita-500 font-bold mt-1">ویرایش شماره</button>
+                                    <button onClick={() => setBindOtpSent(false)} className="text-xs text-kala-500 font-bold mt-1">ویرایش شماره</button>
                                 </div>
                                 <div className="flex justify-center gap-3 mb-6" dir="ltr">
                                     {bindOtp.map((digit, index) => (
@@ -869,14 +869,14 @@ export default function ProfilePage() {
                                             value={digit}
                                             onChange={(e) => handleOtpChange(index, e.target.value)}
                                             onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-kala-500 focus:ring-4 focus:ring-kala-100 outline-none transition-all"
                                         />
                                     ))}
                                 </div>
                                 <button
                                     onClick={handleVerifyBindOtp}
                                     disabled={bindLoading || bindOtp.some(d => !d)}
-                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {bindLoading ? "در حال بررسی..." : "تایید و ثبت شماره"}
                                 </button>
@@ -906,7 +906,7 @@ export default function ProfilePage() {
                                 <button
                                     onClick={handleSendEmailOtp}
                                     disabled={emailLoading}
-                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50"
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all disabled:opacity-50"
                                 >
                                     {emailLoading ? "در حال ارسال..." : "ارسال کد تایید"}
                                 </button>
@@ -915,7 +915,7 @@ export default function ProfilePage() {
                             <>
                                 <div className="text-center mb-4">
                                     <p className="text-sm text-gray-600">کد تایید به ایمیل {editEmail} ارسال شد.</p>
-                                    <button onClick={() => setEmailOtpSent(false)} className="text-xs text-vita-500 font-bold mt-1">ویرایش ایمیل</button>
+                                    <button onClick={() => setEmailOtpSent(false)} className="text-xs text-kala-500 font-bold mt-1">ویرایش ایمیل</button>
                                 </div>
                                 <div className="flex justify-center gap-3 mb-6" dir="ltr">
                                     {emailOtp.map((digit, index) => (
@@ -927,14 +927,14 @@ export default function ProfilePage() {
                                             value={digit}
                                             onChange={(e) => handleEmailOtpChange(index, e.target.value)}
                                             onKeyDown={(e) => handleEmailOtpKeyDown(index, e)}
-                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-kala-500 focus:ring-4 focus:ring-kala-100 outline-none transition-all"
                                         />
                                     ))}
                                 </div>
                                 <button
                                     onClick={handleVerifyEmailOtp}
                                     disabled={emailLoading || emailOtp.some(d => !d)}
-                                    className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {emailLoading ? "در حال بررسی..." : "تایید و ثبت ایمیل"}
                                 </button>
@@ -958,7 +958,7 @@ export default function ProfilePage() {
                                     type="password"
                                     value={newPassword}
                                     onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                     dir="ltr"
                                 />
                                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -971,7 +971,7 @@ export default function ProfilePage() {
                                     type="password"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                     dir="ltr"
                                 />
                                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -983,7 +983,7 @@ export default function ProfilePage() {
                         <button
                             onClick={handleUpdatePassword}
                             disabled={passwordLoading}
-                            className="w-full bg-welf-900 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-gray-200 mt-4 active:scale-95 transition-all"
+                            className="w-full bg-ekg-900 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-gray-200 mt-4 active:scale-95 transition-all"
                         >
                             {passwordLoading ? "در حال تغییر..." : "تغییر رمز عبور"}
                         </button>
@@ -998,7 +998,7 @@ function OrderStatusItem({ icon: Icon, label, count, active = false, href }: any
     const content = (
         <div className="flex flex-col items-center gap-2 lg:gap-3 cursor-pointer group select-none">
             <div className="relative">
-                <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${active ? 'bg-vita-50 text-vita-600 shadow-sm shadow-vita-100' : 'bg-gray-50 text-gray-400 group-hover:bg-gray-100'}`}>
+                <div className={`w-12 h-12 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 ${active ? 'bg-kala-50 text-kala-600 shadow-sm shadow-kala-100' : 'bg-gray-50 text-gray-400 group-hover:bg-gray-100'}`}>
                     <Icon size={20} strokeWidth={2} className="lg:w-6 lg:h-6" />
                 </div>
                 {count > 0 && (

@@ -59,10 +59,10 @@ function PaymentResultContent() {
   // Loading State
   if (verifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-vita-50 to-purple-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-kala-50 to-purple-50">
         <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full text-center">
           <div className="flex justify-center mb-6">
-            <Loader2 className="w-16 h-16 text-vita-600 animate-spin" />
+            <Loader2 className="w-16 h-16 text-kala-600 animate-spin" />
           </div>
           <h2 className="text-2xl font-black text-gray-800 mb-3">
             در حال تایید پرداخت...
@@ -93,7 +93,7 @@ function PaymentResultContent() {
           <div className="space-y-3">
             <Link
               href="/profile/orders"
-              className="block w-full px-6 py-3 bg-vita-600 text-white rounded-xl font-bold hover:bg-vita-700 transition-colors"
+              className="block w-full px-6 py-3 bg-kala-600 text-white rounded-xl font-bold hover:bg-kala-700 transition-colors"
             >
               مشاهده سفارش‌ها
             </Link>
@@ -164,7 +164,7 @@ function PaymentResultContent() {
         <div className="space-y-3">
           <Link
             href={`/profile/orders/${result?.orderId}`}
-            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-vita-600 text-white rounded-xl font-bold hover:bg-vita-700 transition-colors shadow-sm"
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-kala-600 text-white rounded-xl font-bold hover:bg-kala-700 transition-colors shadow-sm"
           >
             مشاهده جزئیات سفارش
             <ArrowRight size={20} />
@@ -200,7 +200,7 @@ export default function PaymentResultPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-16 h-16 text-vita-600 animate-spin" />
+        <Loader2 className="w-16 h-16 text-kala-600 animate-spin" />
       </div>
     }>
       <PaymentResultContent />

@@ -176,7 +176,7 @@ export default function AdminPagesPage() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-black text-gray-800 flex items-center gap-3">
-                        <div className="w-12 h-12 bg-vita-100 rounded-2xl flex items-center justify-center text-vita-600">
+                        <div className="w-12 h-12 bg-kala-100 rounded-2xl flex items-center justify-center text-kala-600">
                             <FileText size={24} />
                         </div>
                         مدیریت صفحات
@@ -185,7 +185,7 @@ export default function AdminPagesPage() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="flex items-center gap-2 px-6 py-3 bg-vita-500 text-white rounded-xl font-bold hover:bg-vita-600 transition-all shadow-lg shadow-vita-200"
+                    className="flex items-center gap-2 px-6 py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-all shadow-lg shadow-kala-200"
                 >
                     <Plus size={20} />
                     صفحه جدید
@@ -236,7 +236,7 @@ export default function AdminPagesPage() {
                     placeholder="جستجو در صفحات..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent transition-all bg-white"
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent transition-all bg-white"
                 />
                 <Search size={20} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
@@ -244,7 +244,7 @@ export default function AdminPagesPage() {
             {/* Pages List */}
             {loading ? (
                 <div className="flex items-center justify-center h-64">
-                    <Loader2 size={40} className="animate-spin text-vita-500" />
+                    <Loader2 size={40} className="animate-spin text-kala-500" />
                 </div>
             ) : filteredPages.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
@@ -270,7 +270,7 @@ export default function AdminPagesPage() {
                                     <tr key={page._id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="py-4 px-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-vita-100 flex items-center justify-center text-vita-600">
+                                                <div className="w-10 h-10 rounded-xl bg-kala-100 flex items-center justify-center text-kala-600">
                                                     <FileText size={18} />
                                                 </div>
                                                 <span className="font-bold text-gray-800">{page.title}</span>
@@ -285,7 +285,7 @@ export default function AdminPagesPage() {
                                                     href={`/${page.slug}`}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-vita-500 hover:text-vita-600"
+                                                    className="text-kala-500 hover:text-kala-600"
                                                 >
                                                     <ExternalLink size={16} />
                                                 </a>
@@ -374,7 +374,7 @@ export default function AdminPagesPage() {
                                         required
                                         value={formData.title}
                                         onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
                                         placeholder="مثال: قوانین و مقررات"
                                     />
                                 </div>
@@ -387,7 +387,7 @@ export default function AdminPagesPage() {
                                         required
                                         value={formData.slug}
                                         onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all font-mono text-sm"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all font-mono text-sm"
                                         placeholder="مثال: terms"
                                         dir="ltr"
                                     />
@@ -403,7 +403,7 @@ export default function AdminPagesPage() {
                                 <textarea
                                     value={formData.content}
                                     onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all min-h-[200px] resize-y"
+                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all min-h-[200px] resize-y"
                                     placeholder="محتوای HTML یا متن ساده..."
                                 />
                                 <p className="text-xs text-gray-400">می‌توانید از HTML برای فرمت‌دهی استفاده کنید</p>
@@ -467,7 +467,7 @@ export default function AdminPagesPage() {
                                             type="text"
                                             value={formData.metaTitle}
                                             onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all"
                                             placeholder="عنوان برای موتورهای جستجو"
                                         />
                                     </div>
@@ -478,7 +478,7 @@ export default function AdminPagesPage() {
                                         <textarea
                                             value={formData.metaDescription}
                                             onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-vita-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all resize-none"
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all resize-none"
                                             rows={2}
                                             placeholder="توضیح کوتاه برای موتورهای جستجو"
                                         />
@@ -499,7 +499,7 @@ export default function AdminPagesPage() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={saving}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-vita-500 text-white rounded-xl font-bold hover:bg-vita-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {saving ? (
                                     <Loader2 size={18} className="animate-spin" />

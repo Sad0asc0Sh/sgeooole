@@ -25,7 +25,7 @@
 ### **Backend (Node.js/Express):**
 
 #### ۱. اضافه شدن Controller جدید
-**فایل**: `welfvita-backend/controllers/orderController.js`
+**فایل**: `ekgkala-backend/controllers/orderController.js`
 
 ```javascript
 // تابع جدید: createOrderForUser
@@ -47,7 +47,7 @@ exports.createOrderForUser = async (req, res) => {
 - ✅ وضعیت پیش‌فرض بر اساس روش پرداخت
 
 #### ۲. اضافه شدن Route جدید
-**فایل**: `welfvita-backend/routes/orders.js`
+**فایل**: `ekgkala-backend/routes/orders.js`
 
 ```javascript
 // POST /api/orders/admin/create
@@ -262,8 +262,8 @@ PERMISSIONS.ORDER_CREATE
 ## 📦 **فایل‌های تغییر یافته:**
 
 ### Backend:
-1. ✅ `welfvita-backend/controllers/orderController.js` (اضافه شدن `createOrderForUser`)
-2. ✅ `welfvita-backend/routes/orders.js` (اضافه شدن route جدید)
+1. ✅ `ekgkala-backend/controllers/orderController.js` (اضافه شدن `createOrderForUser`)
+2. ✅ `ekgkala-backend/routes/orders.js` (اضافه شدن route جدید)
 
 ### Frontend Admin:
 1. ✅ `admin/src/pages/orders/CreateOrder.jsx` (فایل جدید)

@@ -148,7 +148,7 @@ export default function OrdersPage() {
                             placeholder="جستجو در سفارش‌ها (کد سفارش، نام محصول...)"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-100 border-none rounded-xl py-3 pr-10 pl-4 text-sm focus:ring-2 focus:ring-vita-500 transition-all"
+                            className="w-full bg-gray-100 border-none rounded-xl py-3 pr-10 pl-4 text-sm focus:ring-2 focus:ring-kala-500 transition-all"
                         />
                         <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     </div>
@@ -161,12 +161,12 @@ export default function OrdersPage() {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as TabType)}
                             className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
-                                ? "border-vita-600 text-vita-600 font-bold"
+                                ? "border-kala-600 text-kala-600 font-bold"
                                 : "border-transparent text-gray-500 font-medium hover:text-gray-700"
                                 }`}
                         >
                             <span className="text-sm">{tab.label}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-vita-100 text-vita-700" : "bg-gray-100 text-gray-500"
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${activeTab === tab.id ? "bg-kala-100 text-kala-700" : "bg-gray-100 text-gray-500"
                                 }`}>
                                 {tab.count}
                             </span>
@@ -228,7 +228,7 @@ export default function OrdersPage() {
                                     <div className="flex justify-end pt-3 border-t border-gray-50">
                                         <Link
                                             href={`/profile/orders/${order._id}`}
-                                            className="text-xs bg-vita-50 text-vita-600 hover:bg-vita-100 px-4 py-2 rounded-lg font-bold flex items-center gap-1 transition-colors"
+                                            className="text-xs bg-kala-50 text-kala-600 hover:bg-kala-100 px-4 py-2 rounded-lg font-bold flex items-center gap-1 transition-colors"
                                         >
                                             مشاهده جزئیات <ChevronRight size={14} className="rotate-180" />
                                         </Link>

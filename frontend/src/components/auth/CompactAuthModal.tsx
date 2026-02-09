@@ -242,13 +242,13 @@ export default function CompactAuthModal({
                   inputMode="tel"
                   dir="ltr"
                   placeholder="09xxxxxxxxx"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-vita-500/30 focus:border-vita-400"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-kala-500/30 focus:border-kala-400"
                 />
               </div>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-vita-500 hover:bg-vita-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full rounded-xl bg-kala-500 hover:bg-kala-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "در حال ارسال..." : "ارسال کد"}
               </button>
@@ -270,7 +270,7 @@ export default function CompactAuthModal({
                 </p>
                 <button
                   type="button"
-                  className="text-xs font-bold text-vita-600 hover:text-vita-700"
+                  className="text-xs font-bold text-kala-600 hover:text-kala-700"
                   onClick={() => {
                     setStep("phone");
                     setOtp("");
@@ -292,14 +292,14 @@ export default function CompactAuthModal({
                   inputMode="numeric"
                   dir="ltr"
                   placeholder="----"
-                  className="w-full tracking-[0.5em] text-center rounded-xl border border-gray-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-vita-500/30 focus:border-vita-400"
+                  className="w-full tracking-[0.5em] text-center rounded-xl border border-gray-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-kala-500/30 focus:border-kala-400"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-vita-500 hover:bg-vita-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-full rounded-xl bg-kala-500 hover:bg-kala-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {loading ? "در حال تأیید..." : "تأیید و ادامه"}
               </button>
@@ -311,7 +311,7 @@ export default function CompactAuthModal({
                 ) : (
                   <button
                     type="button"
-                    className="font-bold text-vita-600 hover:text-vita-700"
+                    className="font-bold text-kala-600 hover:text-kala-700"
                     disabled={loading}
                     onClick={handleSendOtp}
                   >

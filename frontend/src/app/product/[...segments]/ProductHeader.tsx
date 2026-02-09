@@ -38,16 +38,16 @@ export default function ProductHeader({ product }: ProductHeaderProps) {
                     {/* AI Icon */}
                     <button
                         onClick={() => setIsAiOpen(true)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-welf-50 text-vita-500 hover:bg-vita-50 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
                     >
                         <Sparkles className="h-5 w-5" />
                     </button>
 
                     {/* Cart */}
-                    <Link href="/cart" className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-vita-600 transition-colors relative">
+                    <Link href="/cart" className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-kala-600 transition-colors relative">
                         <ShoppingCart size={22} />
                         {itemCount > 0 && (
-                            <span className="absolute top-0 right-0 w-4 h-4 bg-vita-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
+                            <span className="absolute top-0 right-0 w-4 h-4 bg-kala-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
                                 {itemCount}
                             </span>
                         )}
@@ -56,7 +56,7 @@ export default function ProductHeader({ product }: ProductHeaderProps) {
                     {/* Search */}
                     <button
                         onClick={() => setIsSearchOpen(true)}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-vita-600 transition-colors"
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-kala-600 transition-colors"
                     >
                         <Search size={22} />
                     </button>

@@ -72,32 +72,32 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             <div className="flex border-b border-gray-100 overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveTab("desc")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "desc" ? "text-vita-600" : "text-gray-500 hover:text-gray-700"
+                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "desc" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
                         }`}
                 >
                     توضیحات
                     {activeTab === "desc" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-vita-500" />
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
                     )}
                 </button>
                 <button
                     onClick={() => setActiveTab("specs")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "specs" ? "text-vita-600" : "text-gray-500 hover:text-gray-700"
+                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "specs" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
                         }`}
                 >
                     مشخصات فنی
                     {activeTab === "specs" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-vita-500" />
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
                     )}
                 </button>
                 <button
                     onClick={() => setActiveTab("reviews")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "reviews" ? "text-vita-600" : "text-gray-500 hover:text-gray-700"
+                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "reviews" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
                         }`}
                 >
                     دیدگاه‌ها ({product.reviewCount || 0})
                     {activeTab === "reviews" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-vita-500" />
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
                     )}
                 </button>
             </div>
@@ -107,7 +107,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                 {activeTab === "desc" && (
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Info size={20} className="text-vita-600" /> توضیحات محصول
+                            <Info size={20} className="text-kala-600" /> توضیحات محصول
                         </h3>
                         {product.description ? (
                             <p className="text-gray-600 leading-8 text-justify whitespace-pre-line">
@@ -122,7 +122,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                 {activeTab === "specs" && (
                     <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                         <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Info size={20} className="text-vita-600" /> مشخصات فنی
+                            <Info size={20} className="text-kala-600" /> مشخصات فنی
                         </h3>
                         {product.specs && product.specs.length > 0 ? (
                             <div className="grid gap-0 border border-gray-100 rounded-xl overflow-hidden">
@@ -155,13 +155,13 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                             {/* Reviews List */}
                             <div className="md:col-span-7 space-y-6">
                                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                    <MessageSquare size={20} className="text-vita-600" />
+                                    <MessageSquare size={20} className="text-kala-600" />
                                     نظرات کاربران
                                 </h3>
 
                                 {loadingReviews ? (
                                     <div className="flex justify-center py-12">
-                                        <Loader2 className="animate-spin text-vita-500" size={32} />
+                                        <Loader2 className="animate-spin text-kala-500" size={32} />
                                     </div>
                                 ) : reviews.length > 0 ? (
                                     <div className="space-y-4">
@@ -200,8 +200,8 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                                     {review.comment}
                                                 </p>
                                                 {review.adminReply && (
-                                                    <div className="mt-3 bg-white border-r-2 border-vita-500 p-3 rounded-l-lg text-sm">
-                                                        <span className="text-vita-600 font-bold text-xs block mb-1">پاسخ ادمین:</span>
+                                                    <div className="mt-3 bg-white border-r-2 border-kala-500 p-3 rounded-l-lg text-sm">
+                                                        <span className="text-kala-600 font-bold text-xs block mb-1">پاسخ ادمین:</span>
                                                         <p className="text-gray-600">{review.adminReply.message}</p>
                                                     </div>
                                                 )}
@@ -227,7 +227,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                             <p className="text-gray-600 text-sm mb-4">
                                                 برای ثبت نظر، لطفاً ابتدا وارد حساب کاربری خود شوید.
                                             </p>
-                                            <Link href="/login" className="inline-block px-6 py-2 bg-vita-500 text-white rounded-lg text-sm font-bold hover:bg-vita-600 transition-colors">
+                                            <Link href="/login" className="inline-block px-6 py-2 bg-kala-500 text-white rounded-lg text-sm font-bold hover:bg-kala-600 transition-colors">
                                                 ورود به حساب
                                             </Link>
                                         </div>
@@ -287,7 +287,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                                     value={comment}
                                                     onChange={(e) => setComment(e.target.value)}
                                                     rows={4}
-                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-vita-500 focus:ring-2 focus:ring-vita-100 outline-none transition-all resize-none text-sm"
+                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-kala-500 focus:ring-2 focus:ring-kala-100 outline-none transition-all resize-none text-sm"
                                                     placeholder="نقاط قوت و ضعف محصول را بنویسید..."
                                                     required
                                                 />
@@ -296,7 +296,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                             <button
                                                 type="submit"
                                                 disabled={submitting}
-                                                className="w-full py-3 bg-vita-500 text-white rounded-xl font-bold hover:bg-vita-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                                className="w-full py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                                             >
                                                 {submitting ? (
                                                     <>

@@ -36,7 +36,7 @@ const CategoryIcon = ({
     if (!iconUrl || hasError) {
         // Fallback: Beautiful gradient icon with first letter
         const colors = [
-            'from-vita-500 to-vita-600',
+            'from-kala-500 to-kala-600',
             'from-emerald-500 to-emerald-600',
             'from-amber-500 to-amber-600',
             'from-purple-500 to-purple-600',
@@ -176,7 +176,7 @@ export default function DesktopMegaMenu() {
                 ref={triggerRef}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
-                className="flex items-center gap-2 cursor-pointer py-2 px-2 text-slate-800 hover:text-vita-600 transition-colors"
+                className="flex items-center gap-2 cursor-pointer py-2 px-2 text-slate-800 hover:text-kala-600 transition-colors"
             >
                 <Menu className="w-6 h-6" />
                 <span className="font-bold text-sm">دسته‌بندی کالاها</span>
@@ -197,7 +197,7 @@ export default function DesktopMegaMenu() {
 
                     {isLoading ? (
                         <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
+                            <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
                         </div>
                     ) : (
                         <>
@@ -211,7 +211,7 @@ export default function DesktopMegaMenu() {
                                             className={cn(
                                                 "flex items-center gap-2.5 px-2.5 py-2.5 cursor-pointer transition-all duration-150 rounded-lg mb-0.5 group",
                                                 activeCategory?._id === category._id
-                                                    ? "bg-white text-vita-700 shadow-sm border border-slate-200"
+                                                    ? "bg-white text-kala-700 shadow-sm border border-slate-200"
                                                     : "text-slate-600 hover:bg-white/60 hover:text-slate-900 border border-transparent"
                                             )}
                                         >
@@ -232,7 +232,7 @@ export default function DesktopMegaMenu() {
                                                 className={cn(
                                                     "w-4 h-4 transition-all duration-200",
                                                     activeCategory?._id === category._id
-                                                        ? "text-vita-500 translate-x-1"
+                                                        ? "text-kala-500 translate-x-1"
                                                         : "text-slate-300 group-hover:text-slate-500"
                                                 )}
                                             />
@@ -251,7 +251,7 @@ export default function DesktopMegaMenu() {
                                             <div className="flex-1">
                                                 <Link
                                                     href={`/products?category=${activeCategory.slug}&includeChildren=true`}
-                                                    className="text-sm font-bold text-slate-800 hover:text-vita-600 transition-colors flex items-center gap-1"
+                                                    className="text-sm font-bold text-slate-800 hover:text-kala-600 transition-colors flex items-center gap-1"
                                                 >
                                                     همه محصولات {activeCategory.name}
                                                     <ChevronLeft className="w-3.5 h-3.5" />
@@ -281,7 +281,7 @@ export default function DesktopMegaMenu() {
                                                             /* Golden vertical line fallback */
                                                             <span className="w-0.5 h-5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 flex-shrink-0" />
                                                         )}
-                                                        <span className="font-bold text-xs text-slate-700 group-hover/link:text-vita-600 transition-colors">
+                                                        <span className="font-bold text-xs text-slate-700 group-hover/link:text-kala-600 transition-colors">
                                                             {subCategory.name}
                                                         </span>
                                                     </Link>
@@ -293,7 +293,7 @@ export default function DesktopMegaMenu() {
                                                                 <li key={child._id}>
                                                                     <Link
                                                                         href={`/products?category=${child.slug}&includeChildren=true`}
-                                                                        className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-vita-500 transition-colors py-0.5 group/child"
+                                                                        className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-kala-500 transition-colors py-0.5 group/child"
                                                                     >
                                                                         {getIconUrl(child) ? (
                                                                             <CategoryIcon
@@ -302,7 +302,7 @@ export default function DesktopMegaMenu() {
                                                                                 className="transition-transform group-hover/child:scale-105"
                                                                             />
                                                                         ) : (
-                                                                            <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/child:bg-vita-400 transition-colors" />
+                                                                            <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/child:bg-kala-400 transition-colors" />
                                                                         )}
                                                                         <span>{child.name}</span>
                                                                     </Link>
@@ -312,7 +312,7 @@ export default function DesktopMegaMenu() {
                                                                 <li>
                                                                     <Link
                                                                         href={`/products?category=${subCategory.slug}&includeChildren=true`}
-                                                                        className="flex items-center gap-1 text-[10px] text-vita-500 hover:text-vita-600 transition-colors py-0.5 font-medium"
+                                                                        className="flex items-center gap-1 text-[10px] text-kala-500 hover:text-kala-600 transition-colors py-0.5 font-medium"
                                                                     >
                                                                         <span>+{subCategory.children.length - 4} دسته دیگر</span>
                                                                     </Link>
@@ -333,7 +333,7 @@ export default function DesktopMegaMenu() {
                                                 </p>
                                                 <Link
                                                     href={`/products?category=${activeCategory.slug}&includeChildren=true`}
-                                                    className="inline-flex items-center gap-1 mt-3 text-vita-500 text-sm font-medium hover:text-vita-600 transition-colors"
+                                                    className="inline-flex items-center gap-1 mt-3 text-kala-500 text-sm font-medium hover:text-kala-600 transition-colors"
                                                 >
                                                     مشاهده محصولات
                                                     <ChevronLeft className="w-4 h-4" />

@@ -108,7 +108,7 @@
 
 ```
 Backend:
-welfvita-backend/
+ekgkala-backend/
 ├── models/
 │   ├── Settings.js          ✅ Updated
 │   └── Order.js             ✅ Updated
@@ -138,7 +138,7 @@ frontend/src/app/
         └── page.tsx        ✅ Existing
 
 Dependencies:
-welfvita-backend/
+ekgkala-backend/
 └── package.json            ✅ axios added
 ```
 

@@ -13,7 +13,7 @@ export default function Breadcrumbs({ items }: { items: Crumb[] }) {
         return (
           <span key={`${item.label}-${idx}`} className="flex items-center gap-1">
             {item.href && !isLast ? (
-              <a href={item.href} className="hover:text-vita-600 font-medium">
+              <a href={item.href} className="hover:text-kala-600 font-medium">
                 {item.label}
               </a>
             ) : (

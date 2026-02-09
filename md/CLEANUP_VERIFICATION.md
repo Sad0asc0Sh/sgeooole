@@ -221,7 +221,7 @@ These pages still have mock data but are **NOT part of the product flow** and we
 ### Test 1: Home Page with Real Data
 ```bash
 # Start backend
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 
 # Start frontend

@@ -41,7 +41,7 @@ chmod +x create-admin.sh
 mongosh
 
 # 3. Switch to database
-use welfvita-store
+use ekgkala-store
 
 # 4. Update user role to admin
 db.users.updateOne(

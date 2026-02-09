@@ -44,7 +44,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
                 href={tab.href}
                 className={`flex items-center gap-3 px-6 py-4 border-b-2 transition-all whitespace-nowrap ${
                   isActive
-                    ? "border-vita-600 text-vita-600 bg-vita-50/50 font-bold"
+                    ? "border-kala-600 text-kala-600 bg-kala-50/50 font-bold"
                     : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >

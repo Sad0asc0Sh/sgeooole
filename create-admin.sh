@@ -4,7 +4,7 @@
 # Create Admin User Script
 # ====================================
 
-echo "🔐 Creating Admin User for Welfvita Store"
+echo "🔐 Creating Admin User for EkgKala Store"
 echo "=========================================="
 
 # Colors
@@ -54,7 +54,7 @@ const User = mongoose.model('User', userSchema);
 async function createAdmin() {
   try {
     // Connect to MongoDB
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/welfvita-store');
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/ekgkala-store');
     console.log('Connected to MongoDB');
 
     // Check if user already exists

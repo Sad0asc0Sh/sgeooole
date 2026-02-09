@@ -108,7 +108,7 @@ curl -X DELETE http://localhost:5000/api/carts/admin/YOUR_CART_ID \
 **علت:** سرور Backend روشن نیست
 **راه‌حل:**
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 ```
 

@@ -70,13 +70,13 @@ export default function CartSummary({
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         placeholder="کد تخفیف"
-                        className={`flex-1 bg-gray-50 border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-vita-500 transition-all ${couponError ? "border-red-300 bg-red-50" : couponSuccess ? "border-green-300 bg-green-50" : "border-gray-200"}`}
+                        className={`flex-1 bg-gray-50 border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-kala-500 transition-all ${couponError ? "border-red-300 bg-red-50" : couponSuccess ? "border-green-300 bg-green-50" : "border-gray-200"}`}
                         disabled={couponLoading || !!couponSuccess}
                     />
                     <button
                         onClick={handleApply}
                         disabled={couponLoading || !code.trim() || !!couponSuccess}
-                        className="bg-gray-100 text-vita-600 text-xs font-bold px-4 rounded-lg hover:bg-vita-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] flex items-center justify-center"
+                        className="bg-gray-100 text-kala-600 text-xs font-bold px-4 rounded-lg hover:bg-kala-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] flex items-center justify-center"
                     >
                         {couponLoading ? <Loader2 size={14} className="animate-spin" /> : "ثبت"}
                     </button>
@@ -100,7 +100,7 @@ export default function CartSummary({
             <div className="border-t border-gray-100 my-2" />
             <div className="flex justify-between items-center">
                 <span className="font-bold text-gray-900">جمع سبد خرید</span>
-                <span className="font-black text-lg text-vita-600">{finalPrice.toLocaleString("fa-IR")} <span className="text-xs font-normal text-gray-500">تومان</span></span>
+                <span className="font-black text-lg text-kala-600">{finalPrice.toLocaleString("fa-IR")} <span className="text-xs font-normal text-gray-500">تومان</span></span>
             </div>
         </div>
     );

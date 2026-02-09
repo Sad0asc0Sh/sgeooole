@@ -102,7 +102,7 @@ export default function Footer() {
                     <div className="container mx-auto px-4 py-8">
                         <div className="grid grid-cols-4 gap-6">
                             <div className="flex items-center gap-4">
-                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-vita-400 to-vita-600 flex items-center justify-center shadow-lg">
+                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-kala-400 to-kala-600 flex items-center justify-center shadow-lg">
                                     <Truck size={24} className="text-white" />
                                 </div>
                                 <div>
@@ -153,7 +153,7 @@ export default function Footer() {
                             {/* Column 1: About / Contact */}
                             <div className="space-y-4">
                                 <h3 className="font-bold text-white text-lg mb-4">
-                                    {storeInfo.storeName || "ایکاجی کالا"}
+                                    {storeInfo.storeName || "ای‌کا‌جی کالا"}
                                 </h3>
 
                                 {storeInfo.storePhone && (
@@ -161,8 +161,8 @@ export default function Footer() {
                                         href={`tel:${storeInfo.storePhone.replace(/\s/g, '')}`}
                                         className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
                                     >
-                                        <div className="w-10 h-10 rounded-lg bg-vita-500/20 flex items-center justify-center">
-                                            <Phone size={18} className="text-vita-400" />
+                                        <div className="w-10 h-10 rounded-lg bg-kala-500/20 flex items-center justify-center">
+                                            <Phone size={18} className="text-kala-400" />
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-xs text-gray-400">تماس با ما</span>
@@ -205,32 +205,32 @@ export default function Footer() {
                                 <h3 className="font-bold text-white text-lg mb-4">دسترسی سریع</h3>
                                 <ul className="space-y-3 text-sm text-gray-300">
                                     <li>
-                                        <Link href="/products" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/products" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             محصولات
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/categories" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/categories" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             دسته‌بندی‌ها
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/blog" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/blog" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             بلاگ
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/about" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/about" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             درباره ما
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/contact" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/contact" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             تماس با ما
                                         </Link>
                                     </li>
@@ -242,32 +242,32 @@ export default function Footer() {
                                 <h3 className="font-bold text-white text-lg mb-4">خدمات مشتریان</h3>
                                 <ul className="space-y-3 text-sm text-gray-300">
                                     <li>
-                                        <Link href={orderTrackingHref} className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href={orderTrackingHref} className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             پیگیری سفارش
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/terms" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/terms" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             قوانین و مقررات
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/faq" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/faq" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             سوالات متداول
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/profile" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/profile" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             حساب کاربری
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/cart" className="hover:text-vita-400 transition-colors flex items-center gap-2">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-vita-400"></span>
+                                        <Link href="/cart" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             سبد خرید
                                         </Link>
                                     </li>
@@ -277,7 +277,7 @@ export default function Footer() {
                             {/* Column 4: Newsletter & Social */}
                             <div className="space-y-4">
                                 <div className="flex items-center gap-2 mb-4">
-                                    <Mail size={20} className="text-vita-400" />
+                                    <Mail size={20} className="text-kala-400" />
                                     <h3 className="font-bold text-white text-lg">خبرنامه</h3>
                                 </div>
                                 <p className="text-sm text-gray-400 mb-4">
@@ -302,7 +302,7 @@ export default function Footer() {
                                                 placeholder="ایمیل خود را وارد کنید"
                                                 className={`w-full rounded-xl border bg-white/5 px-4 py-3 text-sm text-white placeholder:text-gray-500 focus:outline-none transition-all ${newsletterStatus === "error"
                                                     ? "border-red-500 focus:border-red-400"
-                                                    : "border-white/10 focus:border-vita-500"
+                                                    : "border-white/10 focus:border-kala-500"
                                                     }`}
                                                 dir="ltr"
                                                 disabled={isSubmitting}
@@ -310,7 +310,7 @@ export default function Footer() {
                                             <button
                                                 type="submit"
                                                 disabled={isSubmitting || !email.trim()}
-                                                className="w-full rounded-xl bg-gradient-to-r from-vita-500 to-vita-600 px-6 py-3 text-white font-bold hover:from-vita-600 hover:to-vita-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-vita-500/25"
+                                                className="w-full rounded-xl bg-gradient-to-r from-kala-500 to-kala-600 px-6 py-3 text-white font-bold hover:from-kala-600 hover:to-kala-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-kala-500/25"
                                             >
                                                 {isSubmitting ? (
                                                     <Loader2 size={18} className="animate-spin" />
@@ -388,7 +388,7 @@ export default function Footer() {
                         <div className="border-t border-white/10 pt-6 mt-6">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <p className="text-sm text-gray-400 text-center md:text-right">
-                                    تمامی حقوق این وب‌سایت متعلق به فروشگاه ایکاجی کالا می‌باشد
+                                    تمامی حقوق این وب‌سایت متعلق به فروشگاه ای‌کا‌جی کالا می‌باشد
                                 </p>
                                 <div className="flex items-center gap-4 text-xs text-gray-500">
                                     <span>طراحی و توسعه توسط sadraSh</span>
@@ -403,7 +403,7 @@ export default function Footer() {
             {showBackToTop && (
                 <button
                     onClick={scrollToTop}
-                    className="fixed bottom-20 left-4 lg:bottom-8 lg:left-8 z-50 w-12 h-12 rounded-full bg-gradient-to-r from-vita-500 to-vita-600 text-white shadow-lg shadow-vita-500/50 flex items-center justify-center hover:scale-110 transition-transform animate-bounce"
+                    className="fixed bottom-20 left-4 lg:bottom-8 lg:left-8 z-50 w-12 h-12 rounded-full bg-gradient-to-r from-kala-500 to-kala-600 text-white shadow-lg shadow-kala-500/50 flex items-center justify-center hover:scale-110 transition-transform animate-bounce"
                     aria-label="بازگشت به بالا"
                 >
                     <ChevronUp size={24} />

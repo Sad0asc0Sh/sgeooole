@@ -91,7 +91,7 @@ export default function AdminOrderDetailsPage() {
                     {/* Items */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <Box size={20} className="text-vita-600" />
+                            <Box size={20} className="text-kala-600" />
                             اقلام سفارش
                         </h2>
                         <div className="space-y-4">
@@ -127,7 +127,7 @@ export default function AdminOrderDetailsPage() {
                     {/* Customer Info */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <User size={20} className="text-vita-600" />
+                            <User size={20} className="text-kala-600" />
                             اطلاعات مشتری
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -149,7 +149,7 @@ export default function AdminOrderDetailsPage() {
                     {/* Shipping Address */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <MapPin size={20} className="text-vita-600" />
+                            <MapPin size={20} className="text-kala-600" />
                             آدرس تحویل
                         </h2>
                         <p className="text-sm text-gray-600 leading-relaxed mb-4">
@@ -175,7 +175,7 @@ export default function AdminOrderDetailsPage() {
                     {/* Status Card */}
                     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-24">
                         <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <CreditCard size={20} className="text-vita-600" />
+                            <CreditCard size={20} className="text-kala-600" />
                             وضعیت سفارش
                         </h2>
 
@@ -184,7 +184,7 @@ export default function AdminOrderDetailsPage() {
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none"
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none"
                             >
                                 <option value="Pending">در انتظار پرداخت</option>
                                 <option value="Processing">درحال پردازش</option>
@@ -202,7 +202,7 @@ export default function AdminOrderDetailsPage() {
                                     value={trackingCode}
                                     onChange={(e) => setTrackingCode(e.target.value)}
                                     placeholder="کد ۲۴ رقمی پست"
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none font-mono text-left"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none font-mono text-left"
                                 />
                                 <p className="text-[10px] text-gray-400 mt-1">این کد برای کاربر ارسال خواهد شد.</p>
                             </div>
@@ -211,7 +211,7 @@ export default function AdminOrderDetailsPage() {
                         <button
                             onClick={handleUpdateStatus}
                             disabled={updating}
-                            className="w-full bg-vita-600 text-white py-3 rounded-xl font-bold hover:bg-vita-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-kala-600 text-white py-3 rounded-xl font-bold hover:bg-kala-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {updating ? (
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

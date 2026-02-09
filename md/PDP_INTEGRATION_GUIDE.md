@@ -88,7 +88,7 @@ export default function ProductDetailPage() {
 
                 {/* Loading Text */}
                 <div className="flex flex-col items-center justify-center mt-8 gap-3">
-                    <Loader2 className="animate-spin text-vita-500" size={32} />
+                    <Loader2 className="animate-spin text-kala-500" size={32} />
                     <span className="text-sm text-gray-500">در حال دریافت اطلاعات محصول...</span>
                 </div>
             </div>
@@ -117,7 +117,7 @@ export default function ProductDetailPage() {
                     </Link>
                     <button
                         onClick={() => window.location.reload()}
-                        className="px-6 py-3 bg-vita-500 text-white rounded-xl text-sm font-bold hover:bg-vita-600 transition-colors"
+                        className="px-6 py-3 bg-kala-500 text-white rounded-xl text-sm font-bold hover:bg-kala-600 transition-colors"
                     >
                         تلاش مجدد
                     </button>
@@ -202,7 +202,7 @@ export default function ProductDetailPage() {
                                     key={c.id}
                                     onClick={() => setSelectedColor(c)}
                                     className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                                        selectedColor.id === c.id ? "border-vita-500" : "border-gray-200"
+                                        selectedColor.id === c.id ? "border-kala-500" : "border-gray-200"
                                     }`}
                                 >
                                     <span
@@ -227,7 +227,7 @@ export default function ProductDetailPage() {
                         </>
                     )}
                     <div className="flex items-center gap-3 text-sm text-gray-600">
-                        <Store size={18} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
+                        <Store size={18} className={product.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
                         <span>
                             {product.countInStock > 0
                                 ? `موجود در انبار (${product.countInStock} عدد)`
@@ -240,7 +240,7 @@ export default function ProductDetailPage() {
                 {product.description && (
                     <div className="mb-6">
                         <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <Info size={18} className="text-vita-600" /> توضیحات محصول
+                            <Info size={18} className="text-kala-600" /> توضیحات محصول
                         </h3>
                         <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
                     </div>
@@ -250,7 +250,7 @@ export default function ProductDetailPage() {
                 {product.specs && product.specs.length > 0 ? (
                     <div className="mb-4">
                         <h3 className="font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <Info size={18} className="text-vita-600" /> مشخصات فنی
+                            <Info size={18} className="text-kala-600" /> مشخصات فنی
                         </h3>
                         <div className="space-y-2">
                             {product.specs.map((spec, i) => (
@@ -292,7 +292,7 @@ export default function ProductDetailPage() {
                     className={`flex-1 font-bold py-3.5 rounded-xl shadow-md active:scale-95 transition-transform ${
                         product.countInStock === 0
                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                            : "bg-gradient-to-r from-vita-500 to-vita-600 text-white shadow-vita-200"
+                            : "bg-gradient-to-r from-kala-500 to-kala-600 text-white shadow-kala-200"
                     }`}
                 >
                     {product.countInStock === 0 ? "ناموجود" : "افزودن به سبد خرید"}
@@ -345,7 +345,7 @@ All optional fields are handled safely:
 
 ### 1. Start Backend Server
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 # Should run on http://localhost:5000
 ```

@@ -27,7 +27,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
 
     return (
         <>
-            <nav className={`md:hidden fixed bottom-0 w-full bg-white border-t border-welf-200 pb-safe-area z-[10002] transition-transform duration-300 ease-in-out ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
+            <nav className={`md:hidden fixed bottom-0 w-full bg-white border-t border-ekg-200 pb-safe-area z-[10002] transition-transform duration-300 ease-in-out ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
                 <div className="flex justify-between items-center px-4 h-16">
                     {navItems.map((item) => {
                         const isCat = item.href === "/categories";
@@ -45,7 +45,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                 <button
                                     key={item.href}
                                     onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-vita-600" : "text-welf-500"}`}
+                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                                 >
                                     <item.icon size={20} />
                                     <span className="text-[10px] font-medium">{item.label}</span>
@@ -61,7 +61,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     setTimeout(() => setIsCategoriesOpen(false), 500);
                                     onNavClick();
                                 }}
-                                className={`flex flex-col items-center gap-1 ${isActive ? "text-vita-600" : "text-welf-500"}`}
+                                className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                             >
                                 <item.icon size={20} />
                                 <span className="text-[10px] font-medium">{item.label}</span>

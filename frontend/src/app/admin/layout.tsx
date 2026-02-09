@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin w-10 h-10 border-4 border-vita-600 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-10 h-10 border-4 border-kala-600 border-t-transparent rounded-full"></div>
             </div>
         );
     }
@@ -74,7 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     {/* Logo */}
                     <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                         <h1 className="text-2xl font-black text-gray-800">
-                            <span className="text-vita-600">Welf</span>Admin
+                            <span className="text-kala-600">EKG</span>Admin
                         </h1>
                         <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500">
                             <X size={24} />
@@ -91,7 +91,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     key={item.href}
                                     href={item.href}
                                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive
-                                        ? "bg-vita-50 text-vita-600 font-bold shadow-sm"
+                                        ? "bg-kala-50 text-kala-600 font-bold shadow-sm"
                                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                         }`}
                                 >
@@ -148,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             <input
                                 type="text"
                                 placeholder="جستجو..."
-                                className="w-full bg-gray-100 border-none rounded-lg py-2 pr-10 pl-4 text-sm focus:ring-2 focus:ring-vita-500"
+                                className="w-full bg-gray-100 border-none rounded-lg py-2 pr-10 pl-4 text-sm focus:ring-2 focus:ring-kala-500"
                             />
                             <Search size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         </div>

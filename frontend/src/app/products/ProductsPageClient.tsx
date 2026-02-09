@@ -307,7 +307,7 @@ function ProductListingContent() {
                       <button
                         key={key}
                         onClick={() => handlePropertyFilter(key, '')}
-                        className="bg-vita-100 text-vita-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-vita-200"
+                        className="bg-kala-100 text-kala-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-kala-200"
                       >
                         {key}: {value}
                         <X size={10} />
@@ -363,7 +363,7 @@ function ProductListingContent() {
                       router.push(`/products?${params.toString()}`);
                     }}
                   />
-                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-vita-500"></div>
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-kala-500"></div>
                 </label>
               </div>
 
@@ -399,7 +399,7 @@ function ProductListingContent() {
                                     className={`
                                       px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                                       ${isSelected
-                                        ? 'bg-vita-500 text-white shadow-sm'
+                                        ? 'bg-kala-500 text-white shadow-sm'
                                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                       }
                                     `}
@@ -416,7 +416,7 @@ function ProductListingContent() {
                               placeholder={`جستجو در ${prop.name}...`}
                               value={selectedProperties[prop.name] || ''}
                               onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-vita-200 focus:border-vita-400"
+                              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-kala-200 focus:border-kala-400"
                             />
                           )}
                         </div>
@@ -468,7 +468,7 @@ function ProductListingContent() {
                         <button
                           key={key}
                           onClick={() => handlePropertyFilter(key, '')}
-                          className="bg-vita-100 text-vita-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-vita-200"
+                          className="bg-kala-100 text-kala-700 text-[10px] px-2 py-1 rounded-md flex items-center gap-1 hover:bg-kala-200"
                         >
                           {key}: {value}
                           <X size={10} />
@@ -525,7 +525,7 @@ function ProductListingContent() {
                         router.push(`/products?${params.toString()}`);
                       }}
                     />
-                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-vita-500"></div>
+                    <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-kala-500"></div>
                   </label>
                 </div>
 
@@ -563,7 +563,7 @@ function ProductListingContent() {
                                       className={`
                                       px-3 py-1.5 rounded-lg text-xs font-medium transition-all
                                       ${isSelected
-                                          ? 'bg-vita-500 text-white shadow-sm'
+                                          ? 'bg-kala-500 text-white shadow-sm'
                                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }
                                     `}
@@ -580,7 +580,7 @@ function ProductListingContent() {
                                 placeholder={`جستجو در ${prop.name}...`}
                                 value={selectedProperties[prop.name] || ''}
                                 onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-vita-200 focus:border-vita-400"
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-kala-200 focus:border-kala-400"
                               />
                             )}
                           </div>
@@ -604,7 +604,7 @@ function ProductListingContent() {
                 >
                   <ArrowUpDown size={16} />
                   <span className="hidden sm:inline">مرتب‌سازی بر اساس:</span>
-                  <span className="text-vita-600">
+                  <span className="text-kala-600">
                     {{
                       newest: "جدیدترین",
                       priceAsc: "ارزان‌ترین",
@@ -633,7 +633,7 @@ function ProductListingContent() {
             {/* Products Grid */}
             {loading ? (
               <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
+                <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
               </div>
             ) : products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -706,7 +706,7 @@ function ProductListingContent() {
                       setShowSortSheet(false);
                     }}
                     className={`w-full flex items-center justify-between p-4 rounded-xl text-sm font-bold transition-colors ${sortParam === option.value
-                      ? "bg-vita-50 text-vita-600"
+                      ? "bg-kala-50 text-kala-600"
                       : "bg-gray-50 text-gray-700 hover:bg-gray-100"
                       }`}
                   >
@@ -728,7 +728,7 @@ export default function ProductsPageClient() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen">
-          <Loader2 className="w-8 h-8 animate-spin text-vita-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
         </div>
       }
     >

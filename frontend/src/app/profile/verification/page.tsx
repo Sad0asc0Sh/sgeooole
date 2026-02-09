@@ -273,7 +273,7 @@ export default function VerificationPage() {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-vita-500 border-t-transparent rounded-full animate-spin"></div></div>;
+    if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-kala-500 border-t-transparent rounded-full animate-spin"></div></div>;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-24 lg:pb-12">
@@ -527,7 +527,7 @@ export default function VerificationPage() {
                                     <div className="lg:col-span-3 mt-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <label className="block text-xs font-bold text-gray-500">آدرس ثبت شده</label>
-                                            <Link href="/profile/addresses" className="text-xs text-vita-600 font-bold hover:underline flex items-center gap-1">
+                                            <Link href="/profile/addresses" className="text-xs text-kala-600 font-bold hover:underline flex items-center gap-1">
                                                 <Edit2 size={14} />
                                                 مدیریت آدرس‌ها
                                             </Link>
@@ -637,7 +637,7 @@ export default function VerificationPage() {
                                             type="tel"
                                             value={bindMobile}
                                             onChange={(e) => setBindMobile(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all text-left"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all text-left"
                                             dir="ltr"
                                             placeholder="09xxxxxxxxx"
                                             maxLength={11}
@@ -645,7 +645,7 @@ export default function VerificationPage() {
                                         <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                     </div>
                                 </div>
-                                <button onClick={handleSendBindOtp} disabled={bindLoading || !bindMobile} className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4">
+                                <button onClick={handleSendBindOtp} disabled={bindLoading || !bindMobile} className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4">
                                     {bindLoading ? "در حال ارسال..." : "ارسال کد تایید"}
                                 </button>
                             </>
@@ -663,11 +663,11 @@ export default function VerificationPage() {
                                             maxLength={1}
                                             value={digit}
                                             onChange={(e) => handleOtpChange(index, e.target.value)}
-                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-vita-500 focus:ring-4 focus:ring-vita-100 outline-none transition-all"
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-kala-500 focus:ring-4 focus:ring-kala-100 outline-none transition-all"
                                         />
                                     ))}
                                 </div>
-                                <button onClick={handleVerifyBindOtp} disabled={bindLoading} className="w-full bg-vita-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-vita-200 mt-4">
+                                <button onClick={handleVerifyBindOtp} disabled={bindLoading} className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4">
                                     {bindLoading ? "در حال بررسی..." : "تایید و ثبت شماره"}
                                 </button>
                             </>

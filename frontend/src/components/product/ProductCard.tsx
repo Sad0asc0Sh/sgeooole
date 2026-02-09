@@ -238,7 +238,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
                 {/* Title */}
                 <Link href={buildProductUrl(product)} className="block">
-                    <h3 className="text-sm font-bold text-gray-800 leading-snug line-clamp-2 min-h-[2.5em] hover:text-vita-600 transition-colors">
+                    <h3 className="text-sm font-bold text-gray-800 leading-snug line-clamp-2 min-h-[2.5em] hover:text-kala-600 transition-colors">
                         {product.title}
                     </h3>
                 </Link>

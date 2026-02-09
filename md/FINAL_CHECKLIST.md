@@ -35,7 +35,7 @@
 ### 1. نصب Dependencies
 
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm install  # axios اضافه شده است
 ```
 
@@ -44,7 +44,7 @@ npm install  # axios اضافه شده است
 ### 2. راه‌اندازی Backend
 
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm run dev
 ```
 
@@ -61,7 +61,7 @@ npm run dev
 
 ### 4. تنظیم Environment Variables
 
-فایل: `welfvita-backend/.env`
+فایل: `ekgkala-backend/.env`
 
 ```env
 FRONTEND_URL=http://localhost:3000
@@ -128,7 +128,7 @@ FRONTEND_URL=http://localhost:3000
 
 **راه حل:**
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm install axios
 ```
 

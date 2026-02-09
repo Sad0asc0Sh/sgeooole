@@ -13,7 +13,7 @@
 ## 🔍 Investigation Results
 
 ### Backend Product Model
-File: `welfvita-backend/models/Product.js` (Lines 151-159)
+File: `ekgkala-backend/models/Product.js` (Lines 151-159)
 
 ```javascript
 stock: {
@@ -103,7 +103,7 @@ This helps verify the fix is working correctly.
 
 ```bash
 # Backend
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 
 # Frontend (new terminal)
@@ -289,7 +289,7 @@ Before deploying to production:
 
 ## 📞 Additional Resources
 
-- **Backend Model**: `welfvita-backend/models/Product.js` (Line 151)
+- **Backend Model**: `ekgkala-backend/models/Product.js` (Line 151)
 - **Frontend Service**: `frontend/src/services/productService.ts` (Line 81)
 - **Out-of-Stock UI**: [OUT_OF_STOCK_UI_IMPLEMENTATION.md](OUT_OF_STOCK_UI_IMPLEMENTATION.md)
 

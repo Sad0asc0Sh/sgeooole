@@ -13,7 +13,7 @@
 **مسیر:** `PUT /api/auth/me/update`
 
 **مشکل:**
-کنترلر `updateProfile` در [customerAuthController.js:1032-1078](welfvita-backend/controllers/customerAuthController.js#L1032-L1078) فقط سه فیلد را از بدنه درخواست دریافت می‌کرد:
+کنترلر `updateProfile` در [customerAuthController.js:1032-1078](ekgkala-backend/controllers/customerAuthController.js#L1032-L1078) فقط سه فیلد را از بدنه درخواست دریافت می‌کرد:
 - `name`
 - `email` (که کامنت شده بود)
 - `password`
@@ -48,7 +48,7 @@ companyCity
 **مسیر:** `GET /api/auth/profile`
 
 **مشکل:**
-کنترلر `getProfile` در [customerAuthController.js:148-204](welfvita-backend/controllers/customerAuthController.js#L148-L204) فقط فیلدهای پایه را برمی‌گرداند و **اطلاعات شخصی و حقوقی را شامل نمی‌شد**.
+کنترلر `getProfile` در [customerAuthController.js:148-204](ekgkala-backend/controllers/customerAuthController.js#L148-L204) فقط فیلدهای پایه را برمی‌گرداند و **اطلاعات شخصی و حقوقی را شامل نمی‌شد**.
 
 **نتیجه:**
 حتی اگر کاربر این اطلاعات را ذخیره کرده بود، هنگام بارگذاری مجدد صفحه، اطلاعات نمایش داده نمی‌شد!
@@ -57,7 +57,7 @@ companyCity
 
 ### باگ ۳: استفاده از مدل اشتباه در userController ⚠️
 
-**مسیر:** [userController.js:1](welfvita-backend/controllers/userController.js#L1)
+**مسیر:** [userController.js:1](ekgkala-backend/controllers/userController.js#L1)
 
 **مشکل:**
 ```javascript
@@ -91,7 +91,7 @@ const User = require('../models/Admin') // ❌ اشتباه!
 
 ### 1️⃣ اصلاح `updateProfile` - ذخیره تمام اطلاعات
 
-**فایل:** [welfvita-backend/controllers/customerAuthController.js](welfvita-backend/controllers/customerAuthController.js#L1030-L1132)
+**فایل:** [ekgkala-backend/controllers/customerAuthController.js](ekgkala-backend/controllers/customerAuthController.js#L1030-L1132)
 
 **تغییرات:**
 
@@ -160,7 +160,7 @@ exports.updateProfile = async (req, res) => {
 
 ### 2️⃣ اصلاح `getProfile` - بازگشت اطلاعات کامل
 
-**فایل:** [welfvita-backend/controllers/customerAuthController.js](welfvita-backend/controllers/customerAuthController.js#L148-L222)
+**فایل:** [ekgkala-backend/controllers/customerAuthController.js](ekgkala-backend/controllers/customerAuthController.js#L148-L222)
 
 **تغییرات:**
 
@@ -209,7 +209,7 @@ exports.getProfile = async (req, res) => {
 
 ### 3️⃣ اصلاح userController - استفاده از مدل صحیح
 
-**فایل:** [welfvita-backend/controllers/userController.js](welfvita-backend/controllers/userController.js#L1-L2)
+**فایل:** [ekgkala-backend/controllers/userController.js](ekgkala-backend/controllers/userController.js#L1-L2)
 
 **تغییر:**
 
@@ -337,11 +337,11 @@ const User = require('../models/User')
 ## 📁 فایل‌های تغییر یافته
 
 ### Backend:
-1. ✅ **[welfvita-backend/controllers/customerAuthController.js](welfvita-backend/controllers/customerAuthController.js)**
+1. ✅ **[ekgkala-backend/controllers/customerAuthController.js](ekgkala-backend/controllers/customerAuthController.js)**
    - خطوط 1030-1132: کامل کردن `updateProfile` برای ذخیره تمام فیلدها
    - خطوط 177-218: کامل کردن `getProfile` برای بازگشت تمام فیلدها
 
-2. ✅ **[welfvita-backend/controllers/userController.js](welfvita-backend/controllers/userController.js)**
+2. ✅ **[ekgkala-backend/controllers/userController.js](ekgkala-backend/controllers/userController.js)**
    - خط 1-2: اصلاح import برای استفاده از مدل `User` به جای `Admin`
 
 ### Frontend (Admin Panel):

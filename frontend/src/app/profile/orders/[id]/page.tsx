@@ -108,7 +108,7 @@ export default function OrderDetailsPage() {
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
                 <div className="text-center">
                     <p className="text-red-500 text-sm mb-4">{error || "سفارش یافت نشد"}</p>
-                    <button onClick={() => router.back()} className="px-6 py-2 bg-vita-500 text-white rounded-lg text-sm">بازگشت</button>
+                    <button onClick={() => router.back()} className="px-6 py-2 bg-kala-500 text-white rounded-lg text-sm">بازگشت</button>
                 </div>
             </div>
         );
@@ -145,7 +145,7 @@ export default function OrderDetailsPage() {
                             <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-100 -z-10 mx-4" />
                             {/* Active Progress Bar */}
                             <div
-                                className="absolute top-1/2 right-0 h-1 bg-vita-500 -z-10 mx-4 transition-all duration-500"
+                                className="absolute top-1/2 right-0 h-1 bg-kala-500 -z-10 mx-4 transition-all duration-500"
                                 style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
                             />
 
@@ -156,7 +156,7 @@ export default function OrderDetailsPage() {
 
                                 return (
                                     <div key={idx} className="flex flex-col items-center gap-2 bg-white px-1">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isActive ? 'bg-vita-500 border-vita-500 text-white' : 'bg-white border-gray-200 text-gray-300'}`}>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isActive ? 'bg-kala-500 border-kala-500 text-white' : 'bg-white border-gray-200 text-gray-300'}`}>
                                             <Icon size={14} />
                                         </div>
                                         <span className={`text-[10px] font-bold ${isActive ? 'text-gray-800' : 'text-gray-400'}`}>{step.label}</span>
@@ -208,7 +208,7 @@ export default function OrderDetailsPage() {
                 {/* Order Items */}
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                        <Package size={16} className="text-vita-600" />
+                        <Package size={16} className="text-kala-600" />
                         اقلام سفارش
                     </h2>
                     <div className="space-y-4">
@@ -235,7 +235,7 @@ export default function OrderDetailsPage() {
                 {/* Shipping Info */}
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                        <MapPin size={16} className="text-vita-600" />
+                        <MapPin size={16} className="text-kala-600" />
                         اطلاعات ارسال
                     </h2>
                     <div className="space-y-3 text-sm">
@@ -261,7 +261,7 @@ export default function OrderDetailsPage() {
                 {/* Payment Summary */}
                 <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
                     <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                        <CreditCard size={16} className="text-vita-600" />
+                        <CreditCard size={16} className="text-kala-600" />
                         جزئیات پرداخت
                     </h2>
                     <div className="space-y-2 text-sm">

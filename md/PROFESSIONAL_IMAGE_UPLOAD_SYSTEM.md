@@ -65,10 +65,10 @@
 ┌─────────────────────────────────────────────────────────┐
 │                   Cloudinary CDN                        │
 ├─────────────────────────────────────────────────────────┤
-│ • welfvita/products   (Product images)                  │
-│ • welfvita/avatars    (User avatars)                    │
-│ • welfvita/categories (Category icons)                  │
-│ • welfvita/brands     (Brand logos)                     │
+│ • ekgkala/products   (Product images)                  │
+│ • ekgkala/avatars    (User avatars)                    │
+│ • ekgkala/categories (Category icons)                  │
+│ • ekgkala/brands     (Brand logos)                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -78,7 +78,7 @@
 
 ### Backend (Node.js/Express)
 
-#### 1. **NEW**: `welfvita-backend/services/uploadService.js`
+#### 1. **NEW**: `ekgkala-backend/services/uploadService.js`
 سرویس اصلی برای پردازش و آپلود تصاویر
 
 **قابلیت‌ها:**
@@ -113,7 +113,7 @@ UPLOAD_CONFIG = {
 }
 ```
 
-#### 2. **MODIFIED**: `welfvita-backend/middleware/upload.js`
+#### 2. **MODIFIED**: `ekgkala-backend/middleware/upload.js`
 Middleware برای handling آپلود فایل
 
 **تغییرات:**
@@ -133,7 +133,7 @@ const { uploadAvatar, handleUploadError } = require('../middleware/upload');
 router.put('/me/avatar', protect, uploadAvatar, handleUploadError, updateAvatar);
 ```
 
-#### 3. **MODIFIED**: `welfvita-backend/controllers/customerAuthController.js`
+#### 3. **MODIFIED**: `ekgkala-backend/controllers/customerAuthController.js`
 Controller برای عملیات کاربر
 
 **تغییرات در `updateAvatar` (خطوط 1155-1229):**
@@ -156,7 +156,7 @@ user.avatar = {
 };
 ```
 
-#### 4. **MODIFIED**: `welfvita-backend/routes/auth.js`
+#### 4. **MODIFIED**: `ekgkala-backend/routes/auth.js`
 Route برای avatar upload
 
 **تغییرات (خط 118-121):**
@@ -169,7 +169,7 @@ const { uploadAvatar: uploadAvatarMiddleware, handleUploadError } = require('../
 router.put('/me/avatar', protect, uploadAvatarMiddleware, handleUploadError, updateAvatar);
 ```
 
-#### 5. **MODIFIED**: `welfvita-backend/routes/products.js`
+#### 5. **MODIFIED**: `ekgkala-backend/routes/products.js`
 Route برای product images
 
 **تغییرات (خطوط 947-1008):**
@@ -315,7 +315,7 @@ import AvatarUpload from '@/components/profile/AvatarUpload';
 
 ```bash
 # Backend
-cd welfvita-backend
+cd ekgkala-backend
 npm install sharp
 
 # sharp قبلاً نصب شده است
@@ -560,7 +560,7 @@ avatar: "https://res.cloudinary.com/..."
 // New format (object)
 avatar: {
   url: "https://res.cloudinary.com/...",
-  public_id: "welfvita/avatars/abc123"
+  public_id: "ekgkala/avatars/abc123"
 }
 ```
 
@@ -570,7 +570,7 @@ avatar: {
 images: [
   {
     url: "https://...",
-    public_id: "welfvita/products/xyz",
+    public_id: "ekgkala/products/xyz",
     sizes: {
       thumbnail: "https://.../w_150,h_150,c_fill/...",
       small: "https://.../w_300,h_300,c_fit/...",
@@ -637,11 +637,11 @@ images: [
 
 | فایل | نوع | وضعیت | توضیحات |
 |------|-----|-------|---------|
-| `welfvita-backend/services/uploadService.js` | NEW | ✅ | سرویس اصلی پردازش و آپلود |
-| `welfvita-backend/middleware/upload.js` | MODIFIED | ✅ | Middleware با validation |
-| `welfvita-backend/controllers/customerAuthController.js` | MODIFIED | ✅ | Avatar upload controller |
-| `welfvita-backend/routes/auth.js` | MODIFIED | ✅ | Avatar route |
-| `welfvita-backend/routes/products.js` | MODIFIED | ✅ | Product images route |
+| `ekgkala-backend/services/uploadService.js` | NEW | ✅ | سرویس اصلی پردازش و آپلود |
+| `ekgkala-backend/middleware/upload.js` | MODIFIED | ✅ | Middleware با validation |
+| `ekgkala-backend/controllers/customerAuthController.js` | MODIFIED | ✅ | Avatar upload controller |
+| `ekgkala-backend/routes/auth.js` | MODIFIED | ✅ | Avatar route |
+| `ekgkala-backend/routes/products.js` | MODIFIED | ✅ | Product images route |
 | `admin/src/components/ImageUpload.jsx` | NEW | ✅ | Standard upload component |
 | `admin/src/components/ImageUploadDragger.jsx` | NEW | ✅ | Drag & drop component |
 | `frontend/src/components/profile/AvatarUpload.tsx` | NEW | ✅ | Avatar upload component |

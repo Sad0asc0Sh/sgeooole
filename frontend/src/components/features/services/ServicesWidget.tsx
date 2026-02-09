@@ -62,7 +62,7 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-xl h-[50vh]">
                 <SheetHeader>
-                    <SheetTitle className="text-center font-bold font-sans">خدمات ایکاجی کالا</SheetTitle>
+                    <SheetTitle className="text-center font-bold font-sans">خدمات ای‌کا‌جی کالا</SheetTitle>
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
                     <div

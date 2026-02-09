@@ -191,7 +191,7 @@ export default function ReviewsPage() {
                     <input
                         type="text"
                         placeholder="جستجو در نظرات..."
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-vita-500 transition-all"
+                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-kala-500 transition-all"
                     />
                     <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 </div>
@@ -201,7 +201,7 @@ export default function ReviewsPage() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20">
-                        <Loader2 className="animate-spin text-vita-500 mb-4" size={40} />
+                        <Loader2 className="animate-spin text-kala-500 mb-4" size={40} />
                         <p className="text-gray-500 font-medium">در حال بارگذاری نظرات...</p>
                     </div>
                 ) : reviews.length === 0 ? (
@@ -402,21 +402,21 @@ export default function ReviewsPage() {
                                         {/* Reply Section */}
                                         <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
                                             <h4 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                                <Reply size={18} className="text-vita-500" />
+                                                <Reply size={18} className="text-kala-500" />
                                                 پاسخ ادمین
                                             </h4>
                                             <textarea
                                                 value={replyText}
                                                 onChange={(e) => setReplyText(e.target.value)}
                                                 rows={5}
-                                                className="w-full p-4 rounded-xl border border-gray-200 focus:border-vita-500 focus:ring-2 focus:ring-vita-100 outline-none resize-none text-sm bg-white"
+                                                className="w-full p-4 rounded-xl border border-gray-200 focus:border-kala-500 focus:ring-2 focus:ring-kala-100 outline-none resize-none text-sm bg-white"
                                                 placeholder="پاسخ خود را اینجا بنویسید..."
                                             />
                                             <div className="flex justify-end mt-4">
                                                 <button
                                                     onClick={handleReplySubmit}
                                                     disabled={replying || !replyText.trim()}
-                                                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-vita-500 hover:bg-vita-600 transition-colors shadow-lg shadow-vita-200 disabled:opacity-70 flex items-center gap-2"
+                                                    className="px-6 py-2.5 rounded-xl text-sm font-bold text-white bg-kala-500 hover:bg-kala-600 transition-colors shadow-lg shadow-kala-200 disabled:opacity-70 flex items-center gap-2"
                                                 >
                                                     {replying ? <Loader2 className="animate-spin" size={18} /> : <Reply size={18} />}
                                                     ثبت پاسخ
@@ -468,7 +468,7 @@ export default function ReviewsPage() {
                                             <Link
                                                 href={`/product/${(selectedReview.product as any)?.slug || (selectedReview.product as any)?._id}`}
                                                 target="_blank"
-                                                className="block w-full py-2.5 bg-vita-50 text-vita-600 rounded-xl text-sm font-bold text-center hover:bg-vita-100 transition-colors"
+                                                className="block w-full py-2.5 bg-kala-50 text-kala-600 rounded-xl text-sm font-bold text-center hover:bg-kala-100 transition-colors"
                                             >
                                                 مشاهده محصول
                                             </Link>

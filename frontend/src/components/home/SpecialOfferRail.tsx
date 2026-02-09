@@ -227,7 +227,7 @@ function SpecialOfferRail() {
             {/* See All Card */}
             <SwiperSlide style={{ width: "148px", height: "auto" }}>
               <div className="bg-white h-full rounded-lg flex flex-col items-center justify-center gap-3 cursor-pointer group border border-transparent hover:border-gray-100">
-                <div className="w-12 h-12 border border-gray-100 rounded-full flex items-center justify-center text-vita-600 group-hover:bg-gray-50 transition-colors">
+                <div className="w-12 h-12 border border-gray-100 rounded-full flex items-center justify-center text-kala-600 group-hover:bg-gray-50 transition-colors">
                   <ChevronLeft size={24} />
                 </div>
                 <span className="text-sm font-bold text-gray-700">

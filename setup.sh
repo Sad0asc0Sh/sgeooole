@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ====================================
-# Welfvita Store - Complete Setup Script
+# EkgKala Store - Complete Setup Script
 # ====================================
 
-echo "🚀 Starting Welfvita Store Setup..."
+echo "🚀 Starting EkgKala Store Setup..."
 echo "===================================="
 
 # Colors for output
@@ -103,7 +103,7 @@ npm install
 # Check if .env exists
 if [ ! -f .env ]; then
     echo "VITE_API_URL=http://localhost:5000" > .env
-    echo "VITE_APP_NAME=Welfvita Store" >> .env
+    echo "VITE_APP_NAME=EkgKala Store" >> .env
     print_success "Created Frontend .env file"
 else
     print_success "Frontend .env file already exists"
@@ -125,7 +125,7 @@ npm install
 # Check if .env.local exists
 if [ ! -f .env.local ]; then
     echo "NEXT_PUBLIC_API_URL=http://localhost:5000" > .env.local
-    echo "NEXT_PUBLIC_APP_NAME=Welfvita Admin" >> .env.local
+    echo "NEXT_PUBLIC_APP_NAME=EkgKala Admin" >> .env.local
     print_success "Created Admin .env.local file"
 else
     print_success "Admin .env.local file already exists"

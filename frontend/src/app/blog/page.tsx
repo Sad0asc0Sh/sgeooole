@@ -10,7 +10,7 @@ export default function BlogPage() {
             {/* Animated Background Elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <motion.div
-                    className="absolute top-20 left-10 w-64 h-64 bg-vita-100/30 rounded-full blur-3xl"
+                    className="absolute top-20 left-10 w-64 h-64 bg-kala-100/30 rounded-full blur-3xl"
                     animate={{
                         scale: [1, 1.2, 1],
                         opacity: [0.3, 0.5, 0.3],
@@ -51,7 +51,7 @@ export default function BlogPage() {
                 >
                     {/* Outer Ring */}
                     <motion.div
-                        className="absolute inset-0 rounded-3xl bg-gradient-to-br from-vita-400 to-vita-600 shadow-xl"
+                        className="absolute inset-0 rounded-3xl bg-gradient-to-br from-kala-400 to-kala-600 shadow-xl"
                         animate={{
                             boxShadow: [
                                 "0 10px 40px -10px rgba(34, 197, 94, 0.4)",
@@ -95,7 +95,7 @@ export default function BlogPage() {
                     transition={{ delay: 0.3 }}
                     className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4"
                 >
-                    بلاگ وِلف ویتا
+                    بلاگ ای‌کا‌جی کالا
                 </motion.h1>
 
                 {/* Coming Soon Badge */}
@@ -117,9 +117,9 @@ export default function BlogPage() {
                     className="text-gray-600 text-lg leading-relaxed mb-8 px-4"
                 >
                     ما در حال آماده‌سازی مقالات جذاب و مفید درباره
-                    <span className="text-vita-600 font-semibold"> خانه‌هوشمند</span>،
-                    <span className="text-vita-600 font-semibold"> امنیت</span> و
-                    <span className="text-vita-600 font-semibold"> حفاظت </span>
+                    <span className="text-kala-600 font-semibold"> خانه‌هوشمند</span>،
+                    <span className="text-kala-600 font-semibold"> امنیت</span> و
+                    <span className="text-kala-600 font-semibold"> حفاظت </span>
                     هستیم. به زودی می‌توانید از محتوای ارزشمند ما بهره‌مند شوید.
                 </motion.p>
 
@@ -154,7 +154,7 @@ export default function BlogPage() {
                 >
                     <Link
                         href="/"
-                        className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-vita-500 to-vita-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl hover:from-vita-600 hover:to-vita-700 transition-all duration-300"
+                        className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl hover:from-kala-600 hover:to-kala-700 transition-all duration-300"
                     >
                         <span>بازگشت به صفحه اصلی</span>
                         <ArrowRight className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
@@ -171,7 +171,7 @@ export default function BlogPage() {
                     <p className="text-sm text-gray-400 mb-3">در حال توسعه...</p>
                     <div className="w-48 h-2 mx-auto bg-gray-200 rounded-full overflow-hidden">
                         <motion.div
-                            className="h-full bg-gradient-to-r from-vita-400 to-vita-600 rounded-full"
+                            className="h-full bg-gradient-to-r from-kala-400 to-kala-600 rounded-full"
                             initial={{ width: "0%" }}
                             animate={{ width: "60%" }}
                             transition={{

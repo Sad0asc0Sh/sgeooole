@@ -19,7 +19,7 @@ export default function ShopError({ error, reset }: { error: Error; reset: () =>
       <div className="flex gap-3">
         <button
           onClick={() => reset()}
-          className="px-5 py-2.5 rounded-xl bg-vita-600 text-white font-semibold hover:bg-vita-700 transition"
+          className="px-5 py-2.5 rounded-xl bg-kala-600 text-white font-semibold hover:bg-kala-700 transition"
         >
           تلاش مجدد
         </button>

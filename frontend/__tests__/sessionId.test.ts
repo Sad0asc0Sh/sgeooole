@@ -14,7 +14,7 @@ describe("getOrCreateSessionId", () => {
   });
 
   test("returns existing session id from storage", () => {
-    localStorage.setItem("welfvita_session_id", "existing-session-id");
+    localStorage.setItem("ekgkala_session_id", "existing-session-id");
     expect(getOrCreateSessionId()).toBe("existing-session-id");
   });
 });

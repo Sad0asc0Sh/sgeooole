@@ -1,4 +1,4 @@
-# Welfvita Store - Technical Documentation
+# EkgKala Store - Technical Documentation
 
 ## 🔧 Technical Issues Fixed
 
@@ -116,7 +116,7 @@ origin-main/
 2. Access MongoDB:
    ```bash
    mongosh
-   use welfvita-store
+   use ekgkala-store
    db.users.updateOne(
      {email: 'your-email@example.com'},
      {$set: {role: 'admin'}}
@@ -290,7 +290,7 @@ origin-main/
 ```env
 NODE_ENV=development
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/welfvita-store
+MONGO_URI=mongodb://localhost:27017/ekgkala-store
 JWT_SECRET=your-secret-key
 JWT_REFRESH_SECRET=your-refresh-secret
 CLIENT_URL=http://localhost:5173,http://localhost:3000
@@ -306,13 +306,13 @@ EMAIL_PASS=optional
 ### Frontend (.env)
 ```env
 VITE_API_URL=http://localhost:5000
-VITE_APP_NAME=Welfvita Store
+VITE_APP_NAME=EkgKala Store
 ```
 
 ### Admin (.env.local)
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000
-NEXT_PUBLIC_APP_NAME=Welfvita Admin
+NEXT_PUBLIC_APP_NAME=EkgKala Admin
 ```
 
 ## 🚢 Production Deployment
@@ -339,8 +339,8 @@ NEXT_PUBLIC_APP_NAME=Welfvita Admin
 
 For issues or questions:
 - Create an issue in the repository
-- Email: support@welfvita.com
-- Documentation: https://docs.welfvita.com
+- Email: support@ekgkala.com
+- Documentation: https://docs.ekgkala.com
 
 ## 📄 License
 

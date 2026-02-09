@@ -25,7 +25,7 @@
 
 ### 1. Backend Filter Fix (routes/products.js)
 
-**File:** `welfvita-backend/routes/products.js`
+**File:** `ekgkala-backend/routes/products.js`
 **Function:** `buildProductFilter()`
 **Lines:** 70-136
 
@@ -207,7 +207,7 @@ if (field.toLowerCase().includes('time') || field.toLowerCase().includes('date')
 ## 📝 Files Modified
 
 ### 1. Backend Routes
-**Location:** `welfvita-backend/routes/products.js`
+**Location:** `ekgkala-backend/routes/products.js`
 
 **Changes:**
 - Lines 78-85: Added boolean parameter handling for `isFlashDeal` and `isSpecialOffer`
@@ -224,7 +224,7 @@ if (field.toLowerCase().includes('time') || field.toLowerCase().includes('date')
 taskkill //F //PID 37740
 
 # Start backend with fixed code
-cd welfvita-backend
+cd ekgkala-backend
 npm run dev
 ```
 

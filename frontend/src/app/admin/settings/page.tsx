@@ -42,7 +42,7 @@ export default function SettingsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center h-64">
-                <div className="animate-spin w-8 h-8 border-4 border-vita-600 border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-8 h-8 border-4 border-kala-600 border-t-transparent rounded-full"></div>
             </div>
         );
     }
@@ -52,7 +52,7 @@ export default function SettingsPage() {
             <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                 <AlertCircle size={48} className="mb-4 text-red-500" />
                 <p>خطا در دریافت تنظیمات</p>
-                <button onClick={fetchSettings} className="mt-4 text-vita-600 hover:underline">تلاش مجدد</button>
+                <button onClick={fetchSettings} className="mt-4 text-kala-600 hover:underline">تلاش مجدد</button>
             </div>
         );
     }
@@ -359,7 +359,7 @@ export default function SettingsPage() {
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="flex items-center gap-2 bg-vita-600 hover:bg-vita-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                    className="flex items-center gap-2 bg-kala-600 hover:bg-kala-700 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
                 >
                     <Save size={20} />
                     {saving ? "در حال ذخیره..." : "ذخیره تغییرات"}

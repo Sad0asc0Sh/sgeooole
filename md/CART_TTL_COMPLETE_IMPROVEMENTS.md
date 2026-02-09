@@ -193,12 +193,12 @@ admin/src/pages/orders/AbandonedCartsPage.jsx
 
 ### Backend
 ```
-welfvita-backend/models/Cart.js
+ekgkala-backend/models/Cart.js
 ├── فیلد expiresAt
 ├── فیلد expiryWarningSent
 └── متد isExpired
 
-welfvita-backend/controllers/cartController.js
+ekgkala-backend/controllers/cartController.js
 ├── deleteCart (با validation)
 ├── getAbandonedCarts
 ├── cleanupExpiredCarts

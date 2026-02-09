@@ -26,12 +26,12 @@ When editing a product in the Admin Panel and enabling "Special Offer" (شگفت
    - ✅ Form correctly loads `discount` from backend (line 113)
    - **Conclusion:** Admin form is working correctly
 
-2. **Backend Endpoint Check** ([routes/products.js:327-402](welfvita-backend/routes/products.js#L327-L402))
+2. **Backend Endpoint Check** ([routes/products.js:327-402](ekgkala-backend/routes/products.js#L327-L402))
    - ✅ PUT endpoint receives all fields from `req.body` (line 334)
    - ✅ Uses `findByIdAndUpdate` with `$set: updates` (line 384-388)
    - **Conclusion:** Backend endpoint is working correctly
 
-3. **Product Model Check** ([models/Product.js:79-227](welfvita-backend/models/Product.js#L79-L227))
+3. **Product Model Check** ([models/Product.js:79-227](ekgkala-backend/models/Product.js#L79-L227))
    - ❌ **FOUND THE BUG:** No `discount` field defined in schema!
    - Schema has `price`, `compareAtPrice`, but NO `discount`
    - **Conclusion:** MongoDB was silently ignoring the discount field
@@ -42,7 +42,7 @@ When editing a product in the Admin Panel and enabling "Special Offer" (شگفت
 
 ### Added `discount` Field to Product Schema
 
-**File:** `welfvita-backend/models/Product.js`
+**File:** `ekgkala-backend/models/Product.js`
 **Lines:** 127-133
 
 ```javascript
@@ -451,7 +451,7 @@ const oldPrice = backendProduct.compareAtPrice ||
 │  │ SpecialOfferRail.tsx                                │    │
 │  │                                                     │    │
 │  │  {product.discount > 0 && (                         │    │
-│  │    <div className="bg-vita-600">                    │    │
+│  │    <div className="bg-kala-600">                    │    │
 │  │      {product.discount}٪  ← Shows "25٪" ✅         │    │
 │  │    </div>                                           │    │
 │  │  )}                                                 │    │
@@ -485,9 +485,9 @@ const oldPrice = backendProduct.compareAtPrice ||
 
 ## 📚 Related Files
 
-1. **Backend Model:** [models/Product.js:127-133](welfvita-backend/models/Product.js#L127-L133)
+1. **Backend Model:** [models/Product.js:127-133](ekgkala-backend/models/Product.js#L127-L133)
 2. **Admin Form:** [ProductForm.jsx:113,305](admin/src/pages/products/ProductForm.jsx)
-3. **Backend Route:** [routes/products.js:327-402](welfvita-backend/routes/products.js#L327-L402)
+3. **Backend Route:** [routes/products.js:327-402](ekgkala-backend/routes/products.js#L327-L402)
 4. **Frontend Mapper:** [productService.ts:76-133](frontend/src/services/productService.ts#L76-L133)
 5. **Frontend Display:** [SpecialOfferRail.tsx:137-146](frontend/src/components/home/SpecialOfferRail.tsx#L137-L146)
 

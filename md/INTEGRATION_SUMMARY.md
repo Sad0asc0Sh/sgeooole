@@ -59,7 +59,7 @@ The file editing tools encountered technical difficulties with the complex TypeS
 ### 1. Start Servers
 ```bash
 # Terminal 1 - Backend
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 
 # Terminal 2 - Frontend

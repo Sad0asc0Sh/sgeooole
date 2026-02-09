@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # ====================================
-# Welfvita Store - Connection Test Script
+# EkgKala Store - Connection Test Script
 # ====================================
 
-echo "🔍 Testing Welfvita Store Connections..."
+echo "🔍 Testing EkgKala Store Connections..."
 echo "========================================"
 
 # Colors for output

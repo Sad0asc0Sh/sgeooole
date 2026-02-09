@@ -1,7 +1,7 @@
 /**
  * ============================================
  * PM2 Ecosystem Configuration
- * Production Process Manager for Welfvita
+ * Production Process Manager for EkgKala
  * ============================================
  * 
  * Usage:
@@ -27,8 +27,8 @@ module.exports = {
         // Backend API (Node.js/Express)
         // ============================================
         {
-            name: 'welfvita-backend',
-            script: './welfvita-backend/server.js',
+            name: 'ekgkala-backend',
+            script: './ekgkala-backend/server.js',
             cwd: __dirname,
 
             // Cluster mode for better performance
@@ -78,7 +78,7 @@ module.exports = {
         // Frontend (Next.js)
         // ============================================
         {
-            name: 'welfvita-frontend',
+            name: 'ekgkala-frontend',
             script: 'npm',
             args: 'start',
             cwd: './frontend',
@@ -123,7 +123,7 @@ module.exports = {
         // Uncomment if you have a separate admin panel server
         /*
         {
-          name: 'welfvita-admin',
+          name: 'ekgkala-admin',
           script: 'npm',
           args: 'start',
           cwd: './admin',
@@ -156,8 +156,8 @@ module.exports = {
             user: 'deploy',
             host: 'your-server-ip',
             ref: 'origin/main',
-            repo: 'git@github.com:your-username/welfvita.git',
-            path: '/var/www/welfvita',
+            repo: 'git@github.com:your-username/ekgkala.git',
+            path: '/var/www/ekgkala',
             'pre-deploy-local': '',
             'post-deploy': 'npm install && npm run build && pm2 reload ecosystem.config.js --env production',
             'pre-setup': '',

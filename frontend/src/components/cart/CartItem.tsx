@@ -88,7 +88,7 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
                     <div className="flex items-center bg-gray-50 rounded-lg border border-gray-100 h-8">
                         <button
                             onClick={onIncrease}
-                            className="w-8 h-full flex items-center justify-center text-vita-600 hover:bg-vita-100 rounded-r-lg transition"
+                            className="w-8 h-full flex items-center justify-center text-kala-600 hover:bg-kala-100 rounded-r-lg transition"
                         >
                             <Plus size={14} />
                         </button>

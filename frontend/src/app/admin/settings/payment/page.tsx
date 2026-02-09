@@ -103,7 +103,7 @@ export default function PaymentSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-4 border-vita-600 border-t-transparent rounded-full"></div>
+        <div className="animate-spin w-8 h-8 border-4 border-kala-600 border-t-transparent rounded-full"></div>
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default function PaymentSettings() {
       <div className="flex flex-col items-center justify-center h-64 text-gray-500">
         <AlertCircle size={48} className="mb-4 text-red-500" />
         <p>خطا در دریافت تنظیمات</p>
-        <button onClick={fetchSettings} className="mt-4 text-vita-600 hover:underline">
+        <button onClick={fetchSettings} className="mt-4 text-kala-600 hover:underline">
           تلاش مجدد
         </button>
       </div>
@@ -413,7 +413,7 @@ export default function PaymentSettings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-8 py-3 bg-vita-600 text-white rounded-xl font-bold hover:bg-vita-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-8 py-3 bg-kala-600 text-white rounded-xl font-bold hover:bg-kala-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {saving ? (
             <>

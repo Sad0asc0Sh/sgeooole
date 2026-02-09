@@ -1,5 +1,5 @@
 # 🚀 چک‌لیست قبل از دیپلوی Production
-## Welfvita - Vercel/Render Deployment
+## EkgKala - Vercel/Render Deployment
 
 ---
 
@@ -20,7 +20,7 @@
 
 - [ ] **Security Audit**
   ```bash
-  cd welfvita-backend
+  cd ekgkala-backend
   npm audit
   node scripts/audit-logs.js
   node scripts/pre-deploy-check.js
@@ -35,7 +35,7 @@
   - [ ] Database User ساخته شده
   - [ ] IP Whitelist: 0.0.0.0/0 (برای Render)
   - [ ] Connection String تست شد
-  - [ ] Database name: `welfvita`
+  - [ ] Database name: `ekgkala`
 
 - [ ] **Test Connection**
   ```bash
@@ -70,7 +70,7 @@
 ## ✅ مرحله 4: تولید Secrets
 
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 node scripts/generate-env-secrets.js
 ```
 
@@ -87,7 +87,7 @@ node scripts/generate-env-secrets.js
 
 - [ ] **Code Ready**
   ```bash
-  cd welfvita-backend
+  cd ekgkala-backend
   npm install
   npm audit fix
   node server.js  # تست local
@@ -103,7 +103,7 @@ node scripts/generate-env-secrets.js
 ### Render Setup:
 
 - [ ] Web Service ساخته شد
-- [ ] Root Directory: `welfvita-backend`
+- [ ] Root Directory: `ekgkala-backend`
 - [ ] Build Command: `npm install`
 - [ ] Start Command: `node server.js`
 - [ ] Plan: Free
@@ -115,8 +115,8 @@ node scripts/generate-env-secrets.js
 [ ] PORT=5000
 [ ] MONGODB_URI=mongodb+srv://...
 [ ] JWT_SECRET=...
-[ ] JWT_ISSUER=welfvita-api
-[ ] JWT_AUDIENCE=welfvita-clients
+[ ] JWT_ISSUER=ekgkala-api
+[ ] JWT_AUDIENCE=ekgkala-clients
 [ ] ADMIN_SETUP_KEY=...
 [ ] CLOUDINARY_CLOUD_NAME=...
 [ ] CLOUDINARY_API_KEY=...
@@ -162,7 +162,7 @@ node scripts/generate-env-secrets.js
 ```
 [ ] NEXT_PUBLIC_API_URL=https://[backend].onrender.com/api
 [ ] NEXT_PUBLIC_SITE_URL=https://[your-domain].vercel.app
-[ ] NEXT_PUBLIC_SITE_NAME=Welfvita
+[ ] NEXT_PUBLIC_SITE_NAME=EkgKala
 [ ] NEXT_PUBLIC_ZARINPAL_MERCHANT_ID=...
 ```
 
@@ -317,7 +317,7 @@ curl -X POST https://[backend]/api/admin/setup \
   -H "Content-Type: application/json" \
   -d '{
     "setupKey": "YOUR_ADMIN_SETUP_KEY",
-    "email": "admin@welfvita.com",
+    "email": "admin@ekgkala.com",
     "password": "AdminPassword123!",
     "name": "Admin"
   }'

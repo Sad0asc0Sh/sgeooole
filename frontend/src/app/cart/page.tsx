@@ -107,7 +107,7 @@ export default function CartPage() {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
-                    <Loader2 className="animate-spin text-vita-500" size={48} />
+                    <Loader2 className="animate-spin text-kala-500" size={48} />
                     <span className="text-sm text-gray-500">در حال بارگذاری سبد خرید...</span>
                 </div>
             </div>
@@ -121,7 +121,7 @@ export default function CartPage() {
         <div className="flex flex-col min-h-screen bg-gray-50">
             {/* Header */}
             <header className="bg-white p-4 flex items-center justify-between sticky top-0 z-10 shadow-sm md:static">
-                <h1 className="font-bold text-lg text-welf-900">سبد خرید <span className="text-xs font-normal text-gray-500">({cartItems.length} کالا)</span></h1>
+                <h1 className="font-bold text-lg text-ekg-900">سبد خرید <span className="text-xs font-normal text-gray-500">({cartItems.length} کالا)</span></h1>
                 <Link href="/" className="p-2 bg-gray-100 rounded-full"><ChevronLeft size={20} /></Link>
             </header>
 
@@ -173,7 +173,7 @@ export default function CartPage() {
                             {/* Desktop Checkout Button (Hidden on Mobile) */}
                             <button
                                 onClick={handleCheckoutProcess}
-                                className="hidden lg:flex w-full bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 hover:from-vita-600 hover:to-vita-700 hover:shadow-xl hover:shadow-vita-300 transition-all active:scale-95 items-center justify-center gap-2"
+                                className="hidden lg:flex w-full bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 hover:from-kala-600 hover:to-kala-700 hover:shadow-xl hover:shadow-kala-300 transition-all active:scale-95 items-center justify-center gap-2"
                             >
                                 <span>ادامه فرآیند خرید</span>
                                 <ChevronLeft size={20} />
@@ -197,7 +197,7 @@ export default function CartPage() {
                 {/* Checkout Button */}
                 <button
                     onClick={handleCheckoutProcess}
-                    className="flex-1 bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-3 rounded-xl shadow-md shadow-vita-200 active:scale-95 transition-transform"
+                    className="flex-1 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-3 rounded-xl shadow-md shadow-kala-200 active:scale-95 transition-transform"
                 >
                     ادامه فرآیند خرید
                 </button>
@@ -214,7 +214,7 @@ function EmptyCart() {
             </div>
             <h2 className="text-lg font-bold text-gray-800">سبد خرید شما خالی است!</h2>
             <p className="text-xs text-gray-400 max-w-xs text-center px-8">می‌توانید برای مشاهده محصولات به صفحه اصلی بازگردید.</p>
-            <Link href="/" className="mt-4 bg-welf-900 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-welf-800 transition">
+            <Link href="/" className="mt-4 bg-ekg-900 text-white px-8 py-3 rounded-xl text-sm font-bold hover:bg-ekg-800 transition">
                 بازگشت به فروشگاه
             </Link>
         </div>

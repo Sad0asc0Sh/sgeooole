@@ -31,7 +31,7 @@
 
 **Terminal 1 - Backend:**
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 npm start
 # Should start on http://localhost:5000
 ```

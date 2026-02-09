@@ -45,7 +45,7 @@ Implemented full server-side cart persistence for authenticated users, replacing
 │  │  1. User enters OTP                                │    │
 │  │  2. authService.verifyOtp()                        │    │
 │  │  3. ✅ Success → syncLocalCart()                   │    │
-│  │     - Read localStorage("welfvita_cart")           │    │
+│  │     - Read localStorage("ekgkala_cart")           │    │
 │  │     - Transform to backend format                  │    │
 │  │     - cartService.syncCart(items)                  │    │
 │  │     - Clear localStorage on success                │    │
@@ -229,7 +229,7 @@ import { cartService } from "@/services/cartService";
 ```typescript
 const syncLocalCart = async () => {
   try {
-    const localCartKey = "welfvita_cart";
+    const localCartKey = "ekgkala_cart";
     const localCartData = localStorage.getItem(localCartKey);
 
     if (!localCartData) {
@@ -280,7 +280,7 @@ if (response.success && response.data?.token) {
 
 ### 1. User Adds Item to Cart (Guest User):
 ```
-User → Add to Cart → localStorage.setItem("welfvita_cart", JSON.stringify(cart))
+User → Add to Cart → localStorage.setItem("ekgkala_cart", JSON.stringify(cart))
 ```
 
 **Local Cart Format:**
@@ -308,7 +308,7 @@ User → Add to Cart → localStorage.setItem("welfvita_cart", JSON.stringify(ca
 2. User enters OTP code
 3. authService.verifyOtp() → JWT token received
 4. syncLocalCart() triggered
-   ├── Read localStorage("welfvita_cart")
+   ├── Read localStorage("ekgkala_cart")
    ├── Transform to backend format:
    │   [{
    │     product: "507f1f77bcf86cd799439011",
@@ -317,7 +317,7 @@ User → Add to Cart → localStorage.setItem("welfvita_cart", JSON.stringify(ca
    │   }]
    ├── cartService.syncCart(items) → POST /api/cart/sync
    ├── Backend merges with existing cart (if any)
-   ├── localStorage.removeItem("welfvita_cart")
+   ├── localStorage.removeItem("ekgkala_cart")
    └── ✅ Sync complete
 5. router.push("/profile")
 ```
@@ -354,7 +354,7 @@ User → Add to Cart → localStorage.setItem("welfvita_cart", JSON.stringify(ca
 **Steps:**
 1. Open frontend as guest (not logged in)
 2. Add 2 products to cart
-3. Verify localStorage has "welfvita_cart" key
+3. Verify localStorage has "ekgkala_cart" key
 4. Navigate to `/login`
 5. Enter mobile number and OTP
 6. Successful login
@@ -362,7 +362,7 @@ User → Add to Cart → localStorage.setItem("welfvita_cart", JSON.stringify(ca
 **Expected Result:**
 - ✅ Console log: `[CART SYNC] Syncing 2 items with server`
 - ✅ Console log: `[CART SYNC] Cart synced successfully`
-- ✅ localStorage("welfvita_cart") cleared
+- ✅ localStorage("ekgkala_cart") cleared
 - ✅ Redirect to `/profile`
 - ✅ Backend cart contains the 2 items
 
@@ -673,7 +673,7 @@ export const useCart = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
 
   useEffect(() => {
-    const storedCart = localStorage.getItem("welfvita_cart");
+    const storedCart = localStorage.getItem("ekgkala_cart");
     if (storedCart) {
       setCart(JSON.parse(storedCart));
     }
@@ -682,7 +682,7 @@ export const useCart = () => {
   const addToCart = (item: CartItem) => {
     const newCart = [...cart, item];
     setCart(newCart);
-    localStorage.setItem("welfvita_cart", JSON.stringify(newCart));
+    localStorage.setItem("ekgkala_cart", JSON.stringify(newCart));
   };
 
   return { cart, addToCart, removeFromCart, clearCart };
@@ -714,7 +714,7 @@ useEffect(() => {
     });
   } else {
     // Load from localStorage
-    const localCart = localStorage.getItem("welfvita_cart");
+    const localCart = localStorage.getItem("ekgkala_cart");
     setCartItems(JSON.parse(localCart || "[]"));
   }
 }, [isAuthenticated]);

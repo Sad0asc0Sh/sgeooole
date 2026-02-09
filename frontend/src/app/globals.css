@@ -11,13 +11,29 @@
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  --color-welf-50: #f8fafc;
-  --color-welf-500: #64748b;
-  --color-welf-900: #0f172a;
+  --color-ekg-50: #f8fafc;
+  --color-ekg-100: #f1f5f9;
+  --color-ekg-200: #e2e8f0;
+  --color-ekg-300: #cbd5e1;
+  --color-ekg-400: #94a3b8;
+  --color-ekg-500: #64748b;
+  --color-ekg-600: #475569;
+  --color-ekg-700: #334155;
+  --color-ekg-800: #1e293b;
+  --color-ekg-900: #0f172a;
+  --color-ekg-950: #020617;
 
-  --color-vita-400: #fbbf24;
-  --color-vita-500: #f59e0b;
-  --color-vita-600: #d97706;
+  --color-kala-50: #fffbeb;
+  --color-kala-100: #fef3c7;
+  --color-kala-200: #fde68a;
+  --color-kala-300: #fcd34d;
+  --color-kala-400: #fbbf24;
+  --color-kala-500: #f59e0b;
+  --color-kala-600: #d97706;
+  --color-kala-700: #b45309;
+  --color-kala-800: #92400e;
+  --color-kala-900: #78350f;
+  --color-kala-950: #451a03;
 
   --font-sans: var(--font-iransans);
 }
@@ -39,18 +55,18 @@
 }
 
 :root {
-  /* Base Background (Welf Neutral) */
+  /* Base Background (EKG Neutral) */
   --background: 0 0% 100%;
   /* White */
   --foreground: 215 19% 35%;
-  /* Deep Gray (Welf Text) */
+  /* Deep Gray (EKG Text) */
 
-  /* Primary: Vita (Golden-Orange) */
+  /* Primary: Kala (Golden-Orange) */
   /* Hex equivalent approx: #EA9F12 */
   --primary: 39 85% 49%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: Welf (Slate Gray) */
+  /* Secondary: EKG (Slate Gray) */
   --secondary: 210 40% 96.1%;
   --secondary-foreground: 222.2 47.4% 11.2%;
 

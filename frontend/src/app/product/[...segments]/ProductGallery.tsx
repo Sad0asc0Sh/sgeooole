@@ -402,7 +402,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             key={index}
                             onClick={() => swiperInstance?.slideTo(index)}
                             className={`relative w-12 h-12 lg:w-14 lg:h-14 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all duration-200 bg-white shadow-sm ${activeIndex === index
-                                ? "border-vita-500 shadow-md scale-110 ring-2 ring-vita-200"
+                                ? "border-kala-500 shadow-md scale-110 ring-2 ring-kala-200"
                                 : "border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-300"
                                 }`}
                         >

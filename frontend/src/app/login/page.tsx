@@ -330,7 +330,7 @@ export default function LoginPage() {
             {/* Brand Logo */}
             <div className="mb-12 text-center">
                 <h1 className="text-3xl font-black text-gray-300 tracking-tighter">
-                    EKG<span className="text-vita-600">KALA</span>
+                    EKG<span className="text-kala-600">KALA</span>
                 </h1>
                 <p className="text-xs text-gray-400 mt-2">
                     {isRecovery ? "بازیابی رمز عبور" : "ورود | ثبت‌نام"}
@@ -348,7 +348,7 @@ export default function LoginPage() {
                                 setError(null);
                             }}
                             className={`flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all ${loginMethod === "otp"
-                                ? "bg-white text-vita-600 shadow-sm"
+                                ? "bg-white text-kala-600 shadow-sm"
                                 : "text-gray-500 hover:text-gray-700"
                                 }`}
                         >
@@ -360,7 +360,7 @@ export default function LoginPage() {
                                 setError(null);
                             }}
                             className={`flex-1 py-3 px-4 rounded-lg text-sm font-bold transition-all ${loginMethod === "password"
-                                ? "bg-white text-vita-600 shadow-sm"
+                                ? "bg-white text-kala-600 shadow-sm"
                                 : "text-gray-500 hover:text-gray-700"
                                 }`}
                         >
@@ -395,7 +395,7 @@ export default function LoginPage() {
                                             setError(null);
                                         }}
                                         className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${recoveryMethod === "mobile"
-                                            ? "bg-white text-vita-600 shadow-sm"
+                                            ? "bg-white text-kala-600 shadow-sm"
                                             : "text-gray-400 hover:text-gray-600"
                                             }`}
                                     >
@@ -407,7 +407,7 @@ export default function LoginPage() {
                                             setError(null);
                                         }}
                                         className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all ${recoveryMethod === "email"
-                                            ? "bg-white text-vita-600 shadow-sm"
+                                            ? "bg-white text-kala-600 shadow-sm"
                                             : "text-gray-400 hover:text-gray-600"
                                             }`}
                                     >
@@ -417,12 +417,12 @@ export default function LoginPage() {
 
                                 {recoveryMethod === "mobile" ? (
                                     <>
-                                        <label className="block text-sm font-bold text-welf-900 mb-2">شماره موبایل</label>
+                                        <label className="block text-sm font-bold text-ekg-900 mb-2">شماره موبایل</label>
                                         <div className="relative">
                                             <input
                                                 type="tel"
                                                 placeholder="09xxxxxxxxx"
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-lg tracking-widest focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-lg tracking-widest focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                                 maxLength={11}
                                                 value={phone}
                                                 onChange={(e) => setPhone(e.target.value)}
@@ -433,19 +433,19 @@ export default function LoginPage() {
                                         <button
                                             onClick={() => handlePhoneSubmit(true)}
                                             disabled={phone.length < 10 || loading}
-                                            className="w-full mt-6 bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                                            className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "ارسال کد بازیابی"}
                                         </button>
                                     </>
                                 ) : (
                                     <>
-                                        <label className="block text-sm font-bold text-welf-900 mb-2">ایمیل</label>
+                                        <label className="block text-sm font-bold text-ekg-900 mb-2">ایمیل</label>
                                         <div className="relative">
                                             <input
                                                 type="email"
                                                 placeholder="example@gmail.com"
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-base focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-base focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleEmailRecoverySubmit()}
@@ -455,7 +455,7 @@ export default function LoginPage() {
                                         <button
                                             onClick={handleEmailRecoverySubmit}
                                             disabled={!email || !email.includes("@") || loading}
-                                            className="w-full mt-6 bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                                            className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "ارسال لینک بازیابی"}
                                         </button>
@@ -476,7 +476,7 @@ export default function LoginPage() {
                                 <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                                     <CheckCircle size={32} />
                                 </div>
-                                <h3 className="text-lg font-bold text-welf-900 mb-2">ایمیل ارسال شد!</h3>
+                                <h3 className="text-lg font-bold text-ekg-900 mb-2">ایمیل ارسال شد!</h3>
                                 <p className="text-sm text-gray-500 mb-6 leading-6">
                                     لینک بازیابی رمز عبور به ایمیل <strong>{email}</strong> ارسال شد. لطفاً صندوق ورودی (و پوشه اسپم) خود را بررسی کنید.
                                 </p>
@@ -498,11 +498,11 @@ export default function LoginPage() {
                                     <span className="text-sm font-medium text-gray-600">{phone}</span>
                                 </div>
 
-                                <label className="block text-center text-sm font-bold text-welf-900 mb-4">کد تایید را وارد کنید</label>
+                                <label className="block text-center text-sm font-bold text-ekg-900 mb-4">کد تایید را وارد کنید</label>
 
                                 <input
                                     type="tel"
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-2xl tracking-[1em] font-bold focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-2xl tracking-[1em] font-bold focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                     maxLength={4}
                                     placeholder="- - - -"
                                     value={otp}
@@ -518,7 +518,7 @@ export default function LoginPage() {
                                 <button
                                     onClick={handleOtpSubmit}
                                     disabled={otp.length < 4 || loading}
-                                    className="w-full mt-6 bg-welf-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
+                                    className="w-full mt-6 bg-ekg-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
                                 >
                                     {loading ? "در حال بررسی..." : "تایید و ادامه"}
                                 </button>
@@ -536,12 +536,12 @@ export default function LoginPage() {
                                     </p>
                                 </div>
 
-                                <label className="block text-sm font-bold text-welf-900 mb-2">رمز عبور جدید</label>
+                                <label className="block text-sm font-bold text-ekg-900 mb-2">رمز عبور جدید</label>
                                 <div className="relative">
                                     <input
                                         type="password"
                                         placeholder="******"
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all font-mono text-lg tracking-widest"
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all font-mono text-lg tracking-widest"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSetNewPassword()}
@@ -553,7 +553,7 @@ export default function LoginPage() {
                                 <button
                                     onClick={handleSetNewPassword}
                                     disabled={newPassword.length < 6 || loading}
-                                    className="w-full mt-6 bg-welf-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
+                                    className="w-full mt-6 bg-ekg-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
                                 >
                                     {loading ? "در حال ثبت..." : "تغییر رمز عبور و ورود"}
                                 </button>
@@ -568,12 +568,12 @@ export default function LoginPage() {
                                 {step === "phone" ? (
                                     // --- Phase 1: Phone Number ---
                                     <div className="animate-in fade-in slide-in-from-right duration-500">
-                                        <label className="block text-sm font-bold text-welf-900 mb-2">شماره موبایل</label>
+                                        <label className="block text-sm font-bold text-ekg-900 mb-2">شماره موبایل</label>
                                         <div className="relative">
                                             <input
                                                 type="tel"
                                                 placeholder="09xxxxxxxxx"
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-lg tracking-widest focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-lg tracking-widest focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                                 maxLength={11}
                                                 value={phone}
                                                 onChange={(e) => setPhone(e.target.value)}
@@ -584,7 +584,7 @@ export default function LoginPage() {
                                         <button
                                             onClick={() => handlePhoneSubmit(false)}
                                             disabled={phone.length < 10 || loading}
-                                            className="w-full mt-6 bg-gradient-to-r from-vita-500 to-vita-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-vita-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                                            className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "دریافت کد تایید"}
                                         </button>
@@ -618,7 +618,7 @@ export default function LoginPage() {
 
                                         {/* UX Hints */}
                                         <p className="text-[10px] text-gray-400 text-center mt-6 leading-5">
-                                            با ورود به ایکاجی کالا، <span className="text-welf-900 underline decoration-dotted">قوانین و حریم خصوصی</span> را می‌پذیرید.
+                                            با ورود به ای‌کا‌جی کالا، <span className="text-ekg-900 underline decoration-dotted">قوانین و حریم خصوصی</span> را می‌پذیرید.
                                             <br />
                                             <span className="text-gray-500 font-medium">(ثبت‌نام به صورت خودکار انجام می‌شود)</span>
                                         </p>
@@ -633,11 +633,11 @@ export default function LoginPage() {
                                             <span className="text-sm font-medium text-gray-600">{phone}</span>
                                         </div>
 
-                                        <label className="block text-center text-sm font-bold text-welf-900 mb-4">کد تایید را وارد کنید</label>
+                                        <label className="block text-center text-sm font-bold text-ekg-900 mb-4">کد تایید را وارد کنید</label>
 
                                         <input
                                             type="tel"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-2xl tracking-[1em] font-bold focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-center text-2xl tracking-[1em] font-bold focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                             maxLength={4}
                                             placeholder="- - - -"
                                             value={otp}
@@ -653,7 +653,7 @@ export default function LoginPage() {
                                         <button
                                             onClick={handleOtpSubmit}
                                             disabled={otp.length < 4 || loading}
-                                            className="w-full mt-6 bg-welf-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
+                                            className="w-full mt-6 bg-ekg-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
                                         >
                                             {loading ? "در حال بررسی..." : "ورود به حساب"}
                                         </button>
@@ -664,12 +664,12 @@ export default function LoginPage() {
                             // --- Password Login Form ---
                             <div className="animate-in fade-in slide-in-from-right duration-500 space-y-4">
                                 <div>
-                                    <label className="block text-sm font-bold text-welf-900 mb-2">ایمیل / شماره موبایل</label>
+                                    <label className="block text-sm font-bold text-ekg-900 mb-2">ایمیل / شماره موبایل</label>
                                     <div className="relative">
                                         <input
                                             type="text"
                                             placeholder="شماره‌موبایل یا ایمیل"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all font-mono text-sm"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all font-mono text-sm"
                                             value={identifier}
                                             onChange={(e) => setIdentifier(e.target.value)}
                                             dir="ltr"
@@ -680,10 +680,10 @@ export default function LoginPage() {
 
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <label className="block text-sm font-bold text-welf-900">رمز عبور</label>
+                                        <label className="block text-sm font-bold text-ekg-900">رمز عبور</label>
                                         <button
                                             onClick={startRecovery}
-                                            className="text-xs text-vita-600 font-bold hover:underline"
+                                            className="text-xs text-kala-600 font-bold hover:underline"
                                         >
                                             فراموشی رمز عبور؟
                                         </button>
@@ -692,7 +692,7 @@ export default function LoginPage() {
                                         <input
                                             type="password"
                                             placeholder="******"
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-vita-500 focus:ring-1 focus:ring-vita-500 outline-none transition-all font-mono text-lg tracking-widest"
+                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-4 pl-12 pr-4 text-left focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all font-mono text-lg tracking-widest"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             onKeyDown={(e) => e.key === 'Enter' && handlePasswordSubmit()}
@@ -705,7 +705,7 @@ export default function LoginPage() {
                                 <button
                                     onClick={handlePasswordSubmit}
                                     disabled={!identifier || !password || loading}
-                                    className="w-full mt-6 bg-welf-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
+                                    className="w-full mt-6 bg-ekg-900 text-white font-bold py-4 rounded-xl shadow-lg shadow-gray-200 disabled:opacity-50 transition-all active:scale-95"
                                 >
                                     {loading ? "در حال ورود..." : "ورود"}
                                 </button>
@@ -720,7 +720,7 @@ export default function LoginPage() {
                                             setStep("phone");
                                             setError(null);
                                         }}
-                                        className="text-vita-600 font-bold mx-1 hover:underline"
+                                        className="text-kala-600 font-bold mx-1 hover:underline"
                                     >
                                         پیامک / گوگل
                                     </button>

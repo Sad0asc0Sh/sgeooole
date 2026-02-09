@@ -81,7 +81,7 @@ export default function RecentPage() {
                     </div>
                     <h3 className="text-gray-800 font-bold mb-2">لیست بازدیدها خالی است</h3>
                     <p className="text-gray-400 text-sm mb-6">شما هنوز از هیچ محصولی بازدید نکرده‌اید</p>
-                    <Link href="/products" className="inline-flex items-center gap-2 bg-vita-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-vita-200 hover:bg-vita-700 transition-colors">
+                    <Link href="/products" className="inline-flex items-center gap-2 bg-kala-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-kala-200 hover:bg-kala-700 transition-colors">
                         <ShoppingBag size={18} />
                         مشاهده محصولات
                     </Link>
@@ -156,7 +156,7 @@ export default function RecentPage() {
                                         key={page}
                                         onClick={() => setCurrentPage(page)}
                                         className={`min-w-[2.5rem] h-10 rounded-lg font-bold text-sm transition-colors ${currentPage === page
-                                            ? 'bg-vita-600 text-white'
+                                            ? 'bg-kala-600 text-white'
                                             : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >

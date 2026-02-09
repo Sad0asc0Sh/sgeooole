@@ -84,10 +84,10 @@ export default function GlobalError({ error, reset }: ErrorPageProps) {
         <button
           onClick={handleRetry}
           disabled={isRetrying}
-          className="px-6 py-3 rounded-xl bg-gradient-to-l from-vita-600 to-vita-500 text-white font-semibold 
-            hover:from-vita-700 hover:to-vita-600 transition-all duration-200
+          className="px-6 py-3 rounded-xl bg-gradient-to-l from-kala-600 to-kala-500 text-white font-semibold 
+            hover:from-kala-700 hover:to-kala-600 transition-all duration-200
             disabled:opacity-50 disabled:cursor-not-allowed
-            shadow-lg shadow-vita-600/30 flex items-center gap-2"
+            shadow-lg shadow-kala-600/30 flex items-center gap-2"
         >
           <RefreshCw className={`w-5 h-5 ${isRetrying ? 'animate-spin' : ''}`} />
           <span>{isRetrying ? "در حال تلاش..." : "تلاش مجدد"}</span>

@@ -29,11 +29,11 @@ export default function ForgotPasswordPage() {
         <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
           <Mail size={32} />
         </div>
-        <h2 className="text-xl font-bold text-welf-900 mb-2">ایمیل ارسال شد</h2>
+        <h2 className="text-xl font-bold text-ekg-900 mb-2">ایمیل ارسال شد</h2>
         <p className="text-sm text-gray-500 text-center mb-8 max-w-sm">
           لطفاً صندوق ورودی ایمیل خود را برای لینک بازیابی رمز عبور بررسی کنید.
         </p>
-        <Link href="/login" className="text-vita-600 font-bold text-sm hover:text-vita-700 transition">
+        <Link href="/login" className="text-kala-600 font-bold text-sm hover:text-kala-700 transition">
           بازگشت به صفحه ورود
         </Link>
       </div>
@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
           بازگشت
         </Link>
 
-        <h1 className="text-2xl font-black text-welf-900 mb-2">بازیابی رمز عبور</h1>
+        <h1 className="text-2xl font-black text-ekg-900 mb-2">بازیابی رمز عبور</h1>
         <p className="text-sm text-gray-500 mb-8">
           ایمیل خود را وارد کنید تا لینک تغییر رمز عبور برای شما ارسال شود.
         </p>
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
             <input
               type="email"
               required
-              className="w-full border border-gray-200 rounded-xl p-4 text-left dir-ltr focus:border-vita-500 outline-none transition-all"
+              className="w-full border border-gray-200 rounded-xl p-4 text-left dir-ltr focus:border-kala-500 outline-none transition-all"
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
           <button
             type="submit"
             disabled={status === "loading"}
-            className="w-full bg-welf-900 text-white py-4 rounded-xl font-bold hover:bg-welf-800 transition disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-ekg-900 text-white py-4 rounded-xl font-bold hover:bg-ekg-800 transition disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {status === "loading" ? "در حال ارسال..." : "ارسال لینک بازیابی"}
           </button>

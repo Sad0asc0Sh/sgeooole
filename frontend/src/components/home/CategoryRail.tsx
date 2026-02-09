@@ -159,7 +159,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                             {/* --- VARIANT: CIRCLE (FEATURED) --- */}
                             {variant === 'circle' && (
                                 <div className="flex flex-col items-center gap-2 cursor-pointer group select-none">
-                                    <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-vita-400 to-welf-300 transition-transform duration-300 group-hover:scale-105">
+                                    <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-kala-400 to-ekg-300 transition-transform duration-300 group-hover:scale-105">
                                         <div className="w-full h-full bg-white rounded-full p-2 flex items-center justify-center overflow-hidden relative">
                                             {category.image?.url || category.icon?.url ? (
                                                 <img
@@ -172,7 +172,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                             )}
                                         </div>
                                     </div>
-                                    <span className="text-[11px] text-gray-700 font-medium text-center line-clamp-2 w-full group-hover:text-vita-600 transition-colors duration-200 leading-tight">
+                                    <span className="text-[11px] text-gray-700 font-medium text-center line-clamp-2 w-full group-hover:text-kala-600 transition-colors duration-200 leading-tight">
                                         {category.name}
                                     </span>
                                 </div>
@@ -180,7 +180,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
 
                             {/* --- VARIANT: CARD (POPULAR) --- */}
                             {variant === 'card' && (
-                                <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 hover:border-vita-200 hover:shadow-md transition-all duration-300">
+                                <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 hover:border-kala-200 hover:shadow-md transition-all duration-300">
                                     <div className="w-16 h-16 mb-2 relative flex items-center justify-center transition-transform duration-300 hover:scale-105">
                                         {category.image?.url || category.icon?.url ? (
                                             <img

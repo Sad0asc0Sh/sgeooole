@@ -37,9 +37,9 @@ const branches = [
         name: "شعبه ۱",
         address: "بلوار پیروزی نبش پیروزی ۷۸ (کنار املاک) پلاک 78",
         phones: ["05135021720"],
-        color: "from-vita-500 to-blue-600",
-        bgColor: "from-vita-50 to-blue-50",
-        borderColor: "border-vita-200"
+        color: "from-kala-500 to-blue-600",
+        bgColor: "from-kala-50 to-blue-50",
+        borderColor: "border-kala-200"
     },
     {
         id: 2,
@@ -70,7 +70,7 @@ export default function ContactPage() {
                     <div className="flex items-center gap-4">
                         <Link
                             href="/"
-                            className="flex items-center gap-2 text-gray-600 hover:text-vita-600 transition-colors"
+                            className="flex items-center gap-2 text-gray-600 hover:text-kala-600 transition-colors"
                         >
                             <ChevronLeft size={20} />
                             <span className="text-sm font-medium">بازگشت</span>
@@ -88,7 +88,7 @@ export default function ContactPage() {
                 variants={fadeInUp}
             >
                 {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-vita-500/10 rounded-full blur-3xl"></div>
+                <div className="absolute top-0 right-0 w-64 h-64 bg-kala-500/10 rounded-full blur-3xl"></div>
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
 
                 <div className="container mx-auto relative z-10">
@@ -100,13 +100,13 @@ export default function ContactPage() {
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            ایکاجی کالا
+                            ای‌کا‌جی کالا
                         </h1>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             فروش و پخش انواع سیستم‌های حفاظتی امنیتی
                         </p>
                         <div className="mt-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-                            <MapPin className="w-5 h-5 text-vita-300" />
+                            <MapPin className="w-5 h-5 text-kala-300" />
                             <span className="text-white font-medium">مشهد</span>
                         </div>
                     </motion.div>
@@ -214,7 +214,7 @@ export default function ContactPage() {
                 >
                     {/* Decorative elements */}
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-vita-500/10 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-kala-500/10 rounded-full blur-3xl"></div>
 
                     <div className="relative z-10 text-center">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-6">
@@ -254,7 +254,7 @@ export default function ContactPage() {
                 >
                     <Link
                         href="/about"
-                        className="inline-flex items-center gap-2 text-vita-600 hover:text-vita-700 font-medium transition-colors"
+                        className="inline-flex items-center gap-2 text-kala-600 hover:text-kala-700 font-medium transition-colors"
                     >
                         <span>درباره ما بیشتر بدانید</span>
                         <ChevronLeft size={18} />

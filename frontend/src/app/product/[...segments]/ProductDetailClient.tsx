@@ -99,9 +99,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
                                     <Link
                                         href="/"
-                                        className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
+                                        className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
                                     >
-                                        ایکاجی کالا
+                                        ای‌کا‌جی کالا
                                     </Link>
                                     {product.categoryPath.map((cat, index) => (
                                         <span key={cat.id} className="flex items-center">
@@ -110,7 +110,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                                 href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
                                                 className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
                                                     ? 'text-red-500 hover:text-red-600'
-                                                    : 'text-gray-600 hover:text-vita-700'
+                                                    : 'text-gray-600 hover:text-kala-700'
                                                     }`}
                                             >
                                                 {cat.name}
@@ -124,7 +124,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
                                     <Link
                                         href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                        className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
+                                        className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
                                     >
                                         {product.brand}
                                     </Link>
@@ -242,7 +242,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 </>
                             )}
                             <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <Store size={20} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
+                                <Store size={20} className={product.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
                                 <span>
                                     {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
                                 </span>
@@ -294,9 +294,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 {/* Site Name as first breadcrumb item */}
                                 <Link
                                     href="/"
-                                    className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
+                                    className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
                                 >
-                                    ایکاجی کالا
+                                    ای‌کا‌جی کالا
                                 </Link>
                                 {product.categoryPath.map((cat, index) => (
                                     <span key={cat.id} className="flex items-center">
@@ -305,7 +305,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                             href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
                                             className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
                                                 ? 'text-red-500 hover:text-red-600'
-                                                : 'text-gray-600 hover:text-vita-700'
+                                                : 'text-gray-600 hover:text-kala-700'
                                                 }`}
                                         >
                                             {cat.name}
@@ -320,7 +320,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                             <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
                                 <Link
                                     href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                    className="text-gray-600 hover:underline hover:text-vita-700 transition-colors"
+                                    className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
                                 >
                                     {product.brand}
                                 </Link>
@@ -445,7 +445,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                             </>
                         )}
                         <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Store size={18} className={product.countInStock > 0 ? "text-vita-500" : "text-red-500"} />
+                            <Store size={18} className={product.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
                             <span>
                                 {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
                             </span>
