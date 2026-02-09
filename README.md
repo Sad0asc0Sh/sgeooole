@@ -1,4 +1,4 @@
-# 🚀 Welfvita E-Commerce Platform
+# 🚀 EkgKala E-Commerce Platform
 ## Production Deployment: Vercel + Render + MongoDB Atlas
 
 ---
@@ -6,8 +6,8 @@
 ## 📦 ساختار پروژه
 
 ```
-welfvita/
-├── welfvita-backend/     # Express.js API (→ Render)
+ekgkala/
+├── ekgkala-backend/     # Express.js API (→ Render)
 ├── frontend/             # Next.js 15 App (→ Vercel)
 ├── admin/                # Vite React Admin Panel (→ Vercel)
 └── deploy/               # 📋 تمام فایل‌های Deploy
@@ -24,7 +24,7 @@ cat deploy/DEPLOYMENT_GUIDE.md
 
 ### 2️⃣ آماده‌سازی Secrets (2 دقیقه)
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 node scripts/generate-env-secrets.js
 ```
 
@@ -110,7 +110,7 @@ cat deploy/PRE_DEPLOY_CHECKLIST.md
 | `deploy/env.production.template` | Template ENV برای Backend |
 | `deploy/frontend.env.template` | Template ENV برای Frontend |
 | `deploy/admin.env.template` | Template ENV برای Admin |
-| `welfvita-backend/.env.example` | نمونه کامل ENV Backend |
+| `ekgkala-backend/.env.example` | نمونه کامل ENV Backend |
 
 ---
 
@@ -118,7 +118,7 @@ cat deploy/PRE_DEPLOY_CHECKLIST.md
 
 ### Backend:
 ```bash
-cd welfvita-backend
+cd ekgkala-backend
 
 # تولید Secrets امن
 node scripts/generate-env-secrets.js
@@ -166,9 +166,9 @@ npm run preview
 - **Backend API:** `https://your-backend.onrender.com`
 
 با دامنه شخصی:
-- **Frontend:** `https://welfvita.com`
-- **Admin:** `https://admin.welfvita.com`
-- **API:** `https://welfvita.com/api` (via Vercel rewrite)
+- **Frontend:** `https://ekgkala.com`
+- **Admin:** `https://admin.ekgkala.com`
+- **API:** `https://ekgkala.com/api` (via Vercel rewrite)
 
 ---
 

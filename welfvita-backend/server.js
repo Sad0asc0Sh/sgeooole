@@ -521,7 +521,7 @@ app.use('/api/newsletter', newsletterRoutes)
 // Root
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welfvita Backend API',
+    message: 'EkgKala Backend API',
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
@@ -554,7 +554,7 @@ const connectDB = async () => {
     try {
       console.log(`Connecting to MongoDB... (attempt ${retries + 1}/${maxRetries})`)
 
-      const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/welfvita', {
+      const conn = await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ekgkala', {
         serverSelectionTimeoutMS: 30000, // 30 seconds for Atlas
         socketTimeoutMS: 45000,
         maxPoolSize: 10,

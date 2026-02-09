@@ -1021,7 +1021,7 @@ function SettingsPage() {
       key: 'ai',
       label: (
         <span>
-          <RobotOutlined /> دستیار هوشمند (welfvita)
+          <RobotOutlined /> دستیار هوشمند (ekgkala)
         </span>
       ),
       children: (

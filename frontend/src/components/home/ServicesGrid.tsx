@@ -14,7 +14,7 @@ export default function ServicesGrid() {
 
     return (
         <div className="py-6 px-4 bg-white">
-            <h3 className="mb-4 text-welf-900 font-bold text-lg">خدمات اختصاصی ویلف‌ویتا</h3>
+            <h3 className="mb-4 text-welf-900 font-bold text-lg">خدمات اختصاصی ایکاجی کالا</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                 {SERVICES.map((service) => (
                     <div key={service.id} className="flex items-start gap-4 p-4 rounded-xl border border-welf-100 bg-welf-50 hover:bg-white hover:shadow-md hover:border-vita-200 transition-all duration-300 cursor-default group">

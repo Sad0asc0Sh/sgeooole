@@ -724,7 +724,7 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="text-center mt-4 mb-24 lg:mb-8 text-[10px] lg:text-xs text-gray-300 font-mono">
-                            WelfVita App v1.0.0
+                            EkgKala App v1.0.0
                         </div>
                     </main>
                 </div>

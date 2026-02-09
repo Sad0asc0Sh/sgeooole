@@ -52,7 +52,7 @@ export interface LocalCartItem {
     }>;
 }
 
-const LOCAL_CART_KEY = "welfvita_cart";
+const LOCAL_CART_KEY = "ekgkala_cart";
 
 // Helper to save local cart with admin settings (expiration)
 const saveLocalCart = (cartItems: LocalCartItem[], cartConfig: { persistCart: boolean; cartExpirationDays: number }) => {

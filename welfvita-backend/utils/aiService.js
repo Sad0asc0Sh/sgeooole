@@ -2,7 +2,7 @@ const axios = require('axios');
 const Settings = require('../models/Settings');
 
 /**
- * AI Service for WelfVita Chat Assistant
+ * AI Service for EkgKala Chat Assistant
  * Handles communication with OpenRouter/OpenAI compatible APIs
  * Prioritizes database configuration over .env settings
  */
@@ -187,7 +187,7 @@ exports.generateResponse = async (userMessage, contextData = {}) => {
   // System prompt - Define AI persona
   // Use custom prompt if provided, otherwise use default
   const defaultSystemPrompt = `
-شما "دستیار هوشمند ولف‌ویتا" هستید، یک فروشنده و مشاور خرید حرفه‌ای برای فروشگاه الکترونیک ولف‌ویتا.
+شما "دستیار هوشمند ایکاجی کالا" هستید، یک فروشنده و مشاور خرید حرفه‌ای برای فروشگاه الکترونیک ایکاجی کالا.
 
 **قوانین پاسخ‌دهی:**
 1. **زبان:** تمام پاسخ‌ها باید به فارسی و با لحنی دوستانه و حرفه‌ای باشد
@@ -230,7 +230,7 @@ ${contextString || 'هیچ اطلاعات خاصی در دسترس نیست.'}
           'Authorization': `Bearer ${config.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': process.env.API_URL || 'http://localhost:5000',
-          'X-Title': 'WelfVita Chat Assistant'
+          'X-Title': 'EkgKala Chat Assistant'
         },
         timeout: 30000 // 30 seconds timeout
       }
@@ -263,7 +263,7 @@ function getFallbackResponse(userMessage, contextData) {
 
   // Greeting
   if (msg.includes('سلام') || msg.includes('درود') || msg.includes('hello')) {
-    return 'سلام! 👋 من دستیار هوشمند ولف‌ویتا هستم. چطور می‌توانم کمکتان کنم؟';
+    return 'سلام! 👋 من دستیار هوشمند ایکاجی کالا هستم. چطور می‌توانم کمکتان کنم؟';
   }
 
   // Products found

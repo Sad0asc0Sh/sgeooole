@@ -15,7 +15,7 @@ export default function ValueProposition() {
             <div className="max-w-7xl mx-auto">
                 <div className="mb-6 md:mb-10 text-center">
                     <h3 className="text-xl md:text-2xl lg:text-3xl font-bold mb-2 md:mb-3">
-                        چرا ویلف‌ویتا را انتخاب کنید؟
+                        چرا ایکاجی کالا را انتخاب کنید؟
                     </h3>
                     <p className="text-welf-300 text-sm md:text-base">
                         ما فقط فروشنده نیستیم...

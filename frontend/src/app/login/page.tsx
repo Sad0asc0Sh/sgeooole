@@ -156,7 +156,7 @@ export default function LoginPage() {
     // Helper function to sync local cart with server
     const syncLocalCart = async () => {
         try {
-            const localCartKey = "welfvita_cart";
+            const localCartKey = "ekgkala_cart";
             const localCartData = localStorage.getItem(localCartKey);
 
             if (!localCartData) {
@@ -330,7 +330,7 @@ export default function LoginPage() {
             {/* Brand Logo */}
             <div className="mb-12 text-center">
                 <h1 className="text-3xl font-black text-gray-300 tracking-tighter">
-                    WELF<span className="text-vita-600">VITA</span>
+                    EKG<span className="text-vita-600">KALA</span>
                 </h1>
                 <p className="text-xs text-gray-400 mt-2">
                     {isRecovery ? "بازیابی رمز عبور" : "ورود | ثبت‌نام"}
@@ -618,7 +618,7 @@ export default function LoginPage() {
 
                                         {/* UX Hints */}
                                         <p className="text-[10px] text-gray-400 text-center mt-6 leading-5">
-                                            با ورود به ولف‌ویتا، <span className="text-welf-900 underline decoration-dotted">قوانین و حریم خصوصی</span> را می‌پذیرید.
+                                            با ورود به ایکاجی کالا، <span className="text-welf-900 underline decoration-dotted">قوانین و حریم خصوصی</span> را می‌پذیرید.
                                             <br />
                                             <span className="text-gray-500 font-medium">(ثبت‌نام به صورت خودکار انجام می‌شود)</span>
                                         </p>

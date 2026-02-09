@@ -3,8 +3,8 @@ const User = require('../models/User')
 const redis = require('../utils/redis')
 
 const JWT_SECRET = process.env.JWT_SECRET
-const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
+const JWT_ISSUER = process.env.JWT_ISSUER || 'ekgkala-api'
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ekgkala-clients'
 
 /**
  * Optional Authentication Middleware

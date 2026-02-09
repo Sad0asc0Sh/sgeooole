@@ -158,7 +158,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             <X className="text-gray-600" size={24} />
                         </SheetClose>
                         <div className="flex flex-col items-center">
-                            <span className="font-bold text-welf-800 text-sm">هوش مصنوعی ویلف‌ویتا</span>
+                            <span className="font-bold text-welf-800 text-sm">هوش مصنوعی ایکاجی کالا</span>
                             {usage && (
                                 <span className={`text-[10px] ${usage.remaining === 0 ? 'text-red-500 font-bold' : 'text-gray-400'}`}>
                                     {usage.remaining} پیام باقی‌مانده

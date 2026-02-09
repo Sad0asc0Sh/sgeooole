@@ -98,7 +98,7 @@ export default function AboutPage() {
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            شرکت Welfvita
+                            شرکت ایکاجی کالا
                         </h1>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             پیشرو در ارائه سیستم‌های حفاظتی و امنیتی در استان خراسان
@@ -129,7 +129,7 @@ export default function AboutPage() {
                     </div>
                     <div className="p-6 space-y-4">
                         <p className="text-gray-700 leading-8 text-justify">
-                            با افتخار، شرکت <span className="font-bold text-vita-600">Welfvita</span> (گروه مهندسی کیان سابق) به عنوان یکی از پیشگامان در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی، از سال <span className="font-bold">۱۳۹۶</span> فعالیت خود را در شهر مشهد آغاز نموده است. در طول این سال‌ها، با تکیه بر تخصص، تعهد و ارائه محصولات با کیفیت، موفق به جلب رضایت و اعتماد گسترده مشتریان عزیز شده‌ایم.
+                            با افتخار، شرکت <span className="font-bold text-vita-600">ایکاجی کالا</span> (گروه مهندسی کیان سابق) به عنوان یکی از پیشگامان در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی، از سال <span className="font-bold">۱۳۹۶</span> فعالیت خود را در شهر مشهد آغاز نموده است. در طول این سال‌ها، با تکیه بر تخصص، تعهد و ارائه محصولات با کیفیت، موفق به جلب رضایت و اعتماد گسترده مشتریان عزیز شده‌ایم.
                         </p>
                         <p className="text-gray-700 leading-8 text-justify">
                             این مجموعه با گسترش فعالیت‌های خود، هم اکنون دارای <span className="font-bold text-vita-600">سه شعبه فعال</span> در سراسر کلان‌شهر مشهد می‌باشد تا دسترسی و ارائه خدمات به شما عزیزان با سهولت و سرعت بیشتری انجام پذیرد. رمز موفقیت ما در بازار رقابتی امروز، ارائه قیمت‌های بی‌واسطه و منصفانه در کنار حفظ بالاترین سطح کیفی محصولات و خدمات بوده است.
@@ -210,7 +210,7 @@ export default function AboutPage() {
                             <Users className="w-8 h-8 text-white" />
                         </div>
                         <p className="text-lg text-white leading-8 max-w-2xl mx-auto">
-                            ما در <span className="font-bold text-vita-300">Welfvita</span>، امنیت و آرامش شما را اولویت اصلی خود می‌دانیم و همواره در تلاشیم تا با ارائه راهکارهای نوین و خدماتی متمایز، بهترین تجربه را برای شما به ارمغان آوریم.
+                            ما در <span className="font-bold text-vita-300">ایکاجی کالا</span>، امنیت و آرامش شما را اولویت اصلی خود می‌دانیم و همواره در تلاشیم تا با ارائه راهکارهای نوین و خدماتی متمایز، بهترین تجربه را برای شما به ارمغان آوریم.
                         </p>
                     </div>
                 </motion.section>

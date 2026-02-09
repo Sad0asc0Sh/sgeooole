@@ -1,6 +1,6 @@
-# 🚀 Welfvita Backend API
+# 🚀 EkgKala Backend API
 
-Backend API برای پنل مدیریت فروشگاه اینترنتی Welfvita
+Backend API برای پنل مدیریت فروشگاه اینترنتی EkgKala
 
 ## 📋 ویژگی‌ها
 
@@ -132,7 +132,7 @@ DELETE /api/categories/:id
 ## 📁 ساختار پروژه
 
 ```
-welfvita-backend/
+ekgkala-backend/
 ├── models/
 │   └── Category.js          # مدل Mongoose
 ├── routes/
@@ -206,15 +206,15 @@ chmod 755 uploads/
 ### با PM2
 ```bash
 npm install -g pm2
-pm2 start server.js --name welfvita-backend
+pm2 start server.js --name ekgkala-backend
 pm2 save
 pm2 startup
 ```
 
 ### با Docker
 ```bash
-docker build -t welfvita-backend .
-docker run -d -p 5000:5000 welfvita-backend
+docker build -t ekgkala-backend .
+docker run -d -p 5000:5000 ekgkala-backend
 ```
 
 ## 📄 License
@@ -223,4 +223,4 @@ ISC
 
 ## 👤 Author
 
-Welfvita Team
+EkgKala Team

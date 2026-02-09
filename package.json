@@ -1,7 +1,7 @@
 {
-  "name": "welfvita-store-monorepo",
+  "name": "ekgkala-store-monorepo",
   "version": "1.0.0",
-  "description": "Welfvita Store - E-commerce Platform",
+  "description": "EkgKala Store - E-commerce Platform",
   "private": true,
   "scripts": {
     "install:all": "npm run install:backend && npm run install:frontend && npm run install:admin",
@@ -35,7 +35,7 @@
     "mongodb",
     "typescript"
   ],
-  "author": "Welfvita Team",
+  "author": "EkgKala Team",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"

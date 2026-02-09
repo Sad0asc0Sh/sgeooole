@@ -18,7 +18,7 @@ const vazirmatn = Vazirmatn({
 export const metadata: Metadata = {
   metadataBase: (() => {
     const raw = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!raw) return new URL("https://welfvita.ir");
+    if (!raw) return new URL("https://ekgkala.ir");
 
     try {
       return new URL(raw);
@@ -28,13 +28,13 @@ export const metadata: Metadata = {
       } else {
         console.warn("[metadata] Invalid NEXT_PUBLIC_SITE_URL; falling back to default");
       }
-      return new URL("https://welfvita.ir");
+      return new URL("https://ekgkala.ir");
     }
   })(),
   alternates: {
     canonical: "./",
   },
-  title: "فروشگاه ولفویتا | خرید آنلاین محصولات",
+  title: "فروشگاه ایکاجی کالا | خرید آنلاین محصولات",
   description: "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
   other: {
     'enamad': '46480007',

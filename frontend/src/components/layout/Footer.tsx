@@ -153,7 +153,7 @@ export default function Footer() {
                             {/* Column 1: About / Contact */}
                             <div className="space-y-4">
                                 <h3 className="font-bold text-white text-lg mb-4">
-                                    {storeInfo.storeName || "ویلف‌ویتا"}
+                                    {storeInfo.storeName || "ایکاجی کالا"}
                                 </h3>
 
                                 {storeInfo.storePhone && (
@@ -388,7 +388,7 @@ export default function Footer() {
                         <div className="border-t border-white/10 pt-6 mt-6">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                                 <p className="text-sm text-gray-400 text-center md:text-right">
-                                    تمامی حقوق این وب‌سایت متعلق به فروشگاه ویلف‌ویتا می‌باشد
+                                    تمامی حقوق این وب‌سایت متعلق به فروشگاه ایکاجی کالا می‌باشد
                                 </p>
                                 <div className="flex items-center gap-4 text-xs text-gray-500">
                                     <span>طراحی و توسعه توسط sadraSh</span>

@@ -101,7 +101,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                         href="/"
                                         className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
                                     >
-                                        ویلف ویتا
+                                        ایکاجی کالا
                                     </Link>
                                     {product.categoryPath.map((cat, index) => (
                                         <span key={cat.id} className="flex items-center">
@@ -287,7 +287,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                     {/* === Digikala-style Category Navigation === */}
 
-                    {/* Row 1: Full Category Path (Welfvita > Main Category > Subcategory) */}
+                    {/* Row 1: Full Category Path (EkgKala > Main Category > Subcategory) */}
                     <div className="space-y-1.5 mb-2">
                         {product.categoryPath && product.categoryPath.length > 0 && (
                             <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
@@ -296,7 +296,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                     href="/"
                                     className="text-vita-600 hover:underline hover:text-vita-700 transition-colors"
                                 >
-                                    ویلف ویتا
+                                    ایکاجی کالا
                                 </Link>
                                 {product.categoryPath.map((cat, index) => (
                                     <span key={cat.id} className="flex items-center">

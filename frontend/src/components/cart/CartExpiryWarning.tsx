@@ -46,7 +46,7 @@ export default function CartExpiryWarning() {
         }
 
         // دریافت اطلاعات انقضا از localStorage
-        const info = getLocalStorageExpiryInfo("welfvita_cart");
+        const info = getLocalStorageExpiryInfo("ekgkala_cart");
         if (info) {
             setExpiryInfo(info);
         }
@@ -57,7 +57,7 @@ export default function CartExpiryWarning() {
         if (isAuthenticated || isEmpty) return;
 
         const interval = setInterval(() => {
-            const info = getLocalStorageExpiryInfo("welfvita_cart");
+            const info = getLocalStorageExpiryInfo("ekgkala_cart");
             if (info) {
                 setExpiryInfo(info);
             }

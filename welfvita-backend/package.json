@@ -1,7 +1,7 @@
 {
-  "name": "welfvita-backend",
+  "name": "ekgkala-backend",
   "version": "1.0.0",
-  "description": "Backend API for Welfvita E-commerce Admin Panel",
+  "description": "Backend API for EkgKala E-commerce Admin Panel",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -17,14 +17,14 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
-    "welfvita",
+    "ekgkala",
     "ecommerce",
     "backend",
     "api",
     "express",
     "mongodb"
   ],
-  "author": "Welfvita Team",
+  "author": "EkgKala Team",
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

@@ -136,7 +136,7 @@ const sendEmail = async ({ to, subject, html }) => {
   if (useResend()) {
     try {
       const resend = getResendClient()
-      const fromName = process.env.EMAIL_FROM_NAME || 'ویلف ویتا'
+      const fromName = process.env.EMAIL_FROM_NAME || 'ایکاجی کالا'
       const fromEmail = getResendFromEmail()
 
       const { data, error } = await resend.emails.send({
@@ -162,7 +162,7 @@ const sendEmail = async ({ to, subject, html }) => {
   // Fallback to SMTP (Nodemailer)
   try {
     const transporter = createTransporter()
-    const fromName = process.env.EMAIL_FROM_NAME || 'ویلف ویتا'
+    const fromName = process.env.EMAIL_FROM_NAME || 'ایکاجی کالا'
     const fromEmail = process.env.EMAIL_USER
 
     const info = await transporter.sendMail({
@@ -212,9 +212,9 @@ exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
     })
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'ایکاجی کالا'}" <${process.env.EMAIL_USER}>`,
       to: userEmail,
-      subject: 'یادآوری سبد خرید شما در ویلف ویتا',
+      subject: 'یادآوری سبد خرید شما در ایکاجی کالا',
       html: `
         <div dir="rtl" style="font-family: Tahoma, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
           <h2 style="color: #333; text-align: center;">سلام ${userName || 'کاربر گرامی'}!</h2>
@@ -244,7 +244,7 @@ exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
             </tfoot>
           </table>
           <p style="color: #555; font-size: 14px;">
-            برای تکمیل خرید خود، به سایت ویلف ویتا مراجعه کنید.
+            برای تکمیل خرید خود، به سایت ایکاجی کالا مراجعه کنید.
           </p>
           <div style="text-align: center; margin-top: 30px;">
             <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/cart"
@@ -253,7 +253,7 @@ exports.sendReminderEmail = async (userEmail, userName, cartItems) => {
             </a>
           </div>
           <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-            با تشکر، تیم ویلف ویتا
+            با تشکر، تیم ایکاجی کالا
           </p>
         </div>
       `,
@@ -288,7 +288,7 @@ exports.sendReminderSMS = async (phoneNumber, userName, itemsCount) => {
       throw new Error('تنظیمات پنل پیامک تنظیم نشده است')
     }
 
-    const message = `${userName || 'کاربر گرامی'}، شما ${itemsCount} محصول در سبد خرید ویلف ویتا دارید. برای تکمیل خرید خود به سایت مراجعه کنید.\nویلف ویتا\nلغو11`
+    const message = `${userName || 'کاربر گرامی'}، شما ${itemsCount} محصول در سبد خرید ایکاجی کالا دارید. برای تکمیل خرید خود به سایت مراجعه کنید.\nایکاجی کالا\nلغو11`
 
     // استفاده از همان خط OTP تا زمانی که خط تبلیغاتی فعال شود
     const senderLine = smsSenderNumber || smsUsername
@@ -341,7 +341,7 @@ exports.sendExpiryWarningEmail = async (userEmail, params) => {
     const { userName, itemCount, totalPrice, expiryMinutes } = params
 
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME || 'ویلف ویتا'}" <${process.env.EMAIL_USER}>`,
+      from: `"${process.env.EMAIL_FROM_NAME || 'ایکاجی کالا'}" <${process.env.EMAIL_USER}>`,
       to: userEmail,
       subject: '⏰ هشدار: سبد خرید شما در حال انقضا است!',
       html: `
@@ -376,7 +376,7 @@ exports.sendExpiryWarningEmail = async (userEmail, params) => {
             </a>
           </div>
           <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-            با تشکر، تیم ویلف ویتا
+            با تشکر، تیم ایکاجی کالا
           </p>
         </div>
       `,
@@ -414,7 +414,7 @@ exports.sendExpiryWarningSMS = async (phoneNumber, params) => {
       return { success: false, message: 'تنظیمات پیامک ناقص است' }
     }
 
-    const message = `${userName || 'کاربر گرامی'}، سبد خرید شما (${itemCount} محصول) تا ${expiryMinutes} دقیقه دیگر منقضی می‌شود. همین الان خرید را تکمیل کنید.\nویلف ویتا\nلغو11`
+    const message = `${userName || 'کاربر گرامی'}، سبد خرید شما (${itemCount} محصول) تا ${expiryMinutes} دقیقه دیگر منقضی می‌شود. همین الان خرید را تکمیل کنید.\nایکاجی کالا\nلغو11`
 
     // استفاده از همان خط OTP تا زمانی که خط تبلیغاتی فعال شود
     const senderLine = smsSenderNumber || smsUsername
@@ -488,14 +488,14 @@ exports.sendResetPasswordEmail = async (userEmail, userName, resetUrl) => {
           اگر شما درخواست بازنشانی رمز عبور نداده‌اید، این ایمیل را نادیده بگیرید.
         </p>
         <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          با تشکر، تیم ویلف ویتا
+          با تشکر، تیم ایکاجی کالا
         </p>
       </div>
     `
 
     const result = await sendEmail({
       to: userEmail,
-      subject: 'بازنشانی رمز عبور - ویلف ویتا',
+      subject: 'بازنشانی رمز عبور - ایکاجی کالا',
       html,
     })
 
@@ -533,14 +533,14 @@ exports.sendVerificationEmail = async (userEmail, code) => {
           ⚠️ این کد فقط برای <strong>2 دقیقه</strong> معتبر است.
         </p>
         <p style="color: #999; font-size: 12px; text-align: center; margin-top: 30px;">
-          با تشکر، تیم ویلف ویتا
+          با تشکر، تیم ایکاجی کالا
         </p>
       </div>
     `
 
     const result = await sendEmail({
       to: userEmail,
-      subject: 'کد تایید ایمیل - ویلف ویتا',
+      subject: 'کد تایید ایمیل - ایکاجی کالا',
       html,
     })
 
@@ -581,7 +581,7 @@ exports.sendOtpSMS = async (mobile, code) => {
   }
 
   const senderLine = smsSenderNumber || smsUsername
-  const text = `کد تایید شما: ${code}\nویلف ویتا\nلغو11`
+  const text = `کد تایید شما: ${code}\nایکاجی کالا\nلغو11`
 
   const timeoutMs = Math.max(1000, Number(process.env.SMS_TIMEOUT_MS || 25000))
   const maxAttempts = Math.max(1, Number(process.env.SMS_MAX_ATTEMPTS || 3))

@@ -8,8 +8,8 @@ if (!JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined.')
   process.exit(1)
 }
-const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
+const JWT_ISSUER = process.env.JWT_ISSUER || 'ekgkala-api'
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ekgkala-clients'
 
 // احراز هویت بر اساس توکن JWT
 // Supports both Admin (email/password) and Customer User (OTP) authentication

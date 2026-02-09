@@ -10,7 +10,7 @@ exports.getPublicSettings = async (req, res) => {
       return res.json({
         success: true,
         data: {
-          storeName: 'ویلف‌ویتا',
+          storeName: 'ایکاجی کالا',
           paymentConfig: { activeGateway: 'zarinpal' }
         }
       })

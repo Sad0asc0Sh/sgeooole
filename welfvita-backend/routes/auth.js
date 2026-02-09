@@ -48,8 +48,8 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET must be set for authentication')
 }
 const JWT_EXPIRE = process.env.JWT_EXPIRE || '5h'
-const JWT_ISSUER = process.env.JWT_ISSUER || 'welfvita-api'
-const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'welfvita-clients'
+const JWT_ISSUER = process.env.JWT_ISSUER || 'ekgkala-api'
+const JWT_AUDIENCE = process.env.JWT_AUDIENCE || 'ekgkala-clients'
 const COOKIE_MAX_AGE_MS = Number(process.env.JWT_COOKIE_MAX_AGE || 24 * 60 * 60 * 1000)
 
 // ============================================

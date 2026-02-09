@@ -100,7 +100,7 @@ export default function ContactPage() {
                             <Building2 className="w-10 h-10 text-white" />
                         </div>
                         <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            welfvita
+                            ایکاجی کالا
                         </h1>
                         <p className="text-lg text-blue-100 leading-relaxed">
                             فروش و پخش انواع سیستم‌های حفاظتی امنیتی

@@ -87,7 +87,7 @@ class CloudinaryStorageEngine {
         // Create upload stream to Cloudinary
         const uploadStream = this.cloudinary.uploader.upload_stream(
           {
-            folder: params.folder || 'welfvita/uploads',
+            folder: params.folder || 'ekgkala/uploads',
             resource_type: params.resource_type || 'image',
             public_id: params.public_id || crypto.randomUUID(),
             allowed_formats: params.allowed_formats || ['jpg', 'jpeg', 'png', 'webp', 'gif'],
@@ -138,19 +138,19 @@ class CloudinaryStorageEngine {
 const storage = new CloudinaryStorageEngine({
   cloudinary,
   params: (req, file) => {
-    let folder = 'welfvita/uploads'
+    let folder = 'ekgkala/uploads'
 
     // Determine folder based on field type
     if (file.fieldname === 'icon' || file.fieldname === 'image') {
-      folder = 'welfvita/categories'
+      folder = 'ekgkala/categories'
     } else if (file.fieldname === 'logo') {
-      folder = 'welfvita/brands'
+      folder = 'ekgkala/brands'
     } else if (file.fieldname === 'avatar') {
-      folder = 'welfvita/avatars'
+      folder = 'ekgkala/avatars'
     } else if (file.fieldname === 'images') {
-      folder = 'welfvita/products'
+      folder = 'ekgkala/products'
     } else if (file.fieldname === 'banner') {
-      folder = 'welfvita/banners'
+      folder = 'ekgkala/banners'
     }
 
     // Generate safe public_id (prevents injection attacks)

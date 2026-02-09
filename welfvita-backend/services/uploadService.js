@@ -21,7 +21,7 @@ const UPLOAD_CONFIG = {
   product: {
     maxSize: 5 * 1024 * 1024, // 5MB
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
-    folder: 'welfvita/products',
+    folder: 'ekgkala/products',
     sizes: {
       thumbnail: { width: 150, height: 150 },
       small: { width: 300, height: 300 },
@@ -34,7 +34,7 @@ const UPLOAD_CONFIG = {
   avatar: {
     maxSize: 2 * 1024 * 1024, // 2MB
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
-    folder: 'welfvita/avatars',
+    folder: 'ekgkala/avatars',
     size: { width: 300, height: 300 }, // Square avatar
   },
 
@@ -42,7 +42,7 @@ const UPLOAD_CONFIG = {
   category: {
     maxSize: 1 * 1024 * 1024, // 1MB
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
-    folder: 'welfvita/categories',
+    folder: 'ekgkala/categories',
     size: { width: 200, height: 200 },
   },
 
@@ -50,7 +50,7 @@ const UPLOAD_CONFIG = {
   brand: {
     maxSize: 1 * 1024 * 1024, // 1MB
     allowedFormats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
-    folder: 'welfvita/brands',
+    folder: 'ekgkala/brands',
     size: { width: 300, height: 150 },
   },
 };
@@ -198,7 +198,7 @@ const processImage = async (buffer, options = {}) => {
 const uploadToCloudinary = (buffer, options = {}) => {
   return new Promise((resolve, reject) => {
     const {
-      folder = 'welfvita/uploads',
+      folder = 'ekgkala/uploads',
       transformation = {},
       resource_type = 'image',
     } = options;

@@ -1,4 +1,4 @@
-const SESSION_ID_STORAGE_KEY = "welfvita_session_id";
+const SESSION_ID_STORAGE_KEY = "ekgkala_session_id";
 
 export const getOrCreateSessionId = (): string => {
   if (typeof window === "undefined") return "";

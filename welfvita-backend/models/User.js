@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
     // User info
     name: {
       type: String,
-      default: 'کاربر ویلف‌ویتا',
+      default: 'کاربر ایکاجی کالا',
       trim: true,
     },
 
