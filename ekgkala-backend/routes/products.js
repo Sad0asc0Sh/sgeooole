@@ -1545,14 +1545,6 @@ router.post(
         })
       }
 
-      // Limit bulk delete to 500 products at a time
-      if (ids.length > 500) {
-        return res.status(400).json({
-          success: false,
-          message: 'حداکثر ۵۰۰ محصول در هر درخواست قابل حذف است',
-        })
-      }
-
       // Find all products to delete (for Cloudinary cleanup)
       const products = await Product.find({ _id: { $in: ids } }).select('images')
 
