@@ -368,11 +368,23 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
     }
 
     // Text search on name or SKU (and variant SKU)
+    // Supports searchField param: 'name', 'sku', or 'all' (default)
     if (req.query.search) {
       const regex = { $regex: req.query.search, $options: 'i' }
-      conditions.push({
-        $or: [{ name: regex }, { sku: regex }, { 'variants.sku': regex }],
-      })
+      const searchField = req.query.searchField || 'all'
+
+      if (searchField === 'name') {
+        conditions.push({ name: regex })
+      } else if (searchField === 'sku') {
+        conditions.push({
+          $or: [{ sku: regex }, { 'variants.sku': regex }],
+        })
+      } else {
+        // 'all' - search in both name and sku
+        conditions.push({
+          $or: [{ name: regex }, { sku: regex }, { 'variants.sku': regex }],
+        })
+      }
     }
 
     // Smart Filters (Properties)

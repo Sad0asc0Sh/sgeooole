@@ -35,6 +35,7 @@ function ProductsList({ mode }) {
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
   const [filters, setFilters] = useState({
     search: '',
+    searchField: 'all',
     category: null,
     status: null,
     productType: '',
@@ -83,7 +84,12 @@ function ProductsList({ mode }) {
       // ✅ FIX: Get raw prices for admin panel (without discount calculation)
       params.set('skipDiscount', 'true')
 
-      if (filters.search) params.set('search', filters.search)
+      if (filters.search) {
+        params.set('search', filters.search)
+        if (filters.searchField && filters.searchField !== 'all') {
+          params.set('searchField', filters.searchField)
+        }
+      }
       if (filters.category) {
         params.set('category', filters.category)
         if (includeChildren) {
@@ -516,17 +522,34 @@ function ProductsList({ mode }) {
           flexWrap: 'wrap',
         }}
       >
-        <Input
-          placeholder="جستجو بر اساس نام یا SKU..."
-          prefix={<SearchOutlined />}
-          style={{ width: 300 }}
-          allowClear
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, search: e.target.value }))
-          }
-          onPressEnter={() => fetchProducts(1, pagination.pageSize)}
-          onBlur={() => fetchProducts(1, pagination.pageSize)}
-        />
+        <Input.Group compact style={{ display: 'flex', width: 420 }}>
+          <Select
+            value={filters.searchField}
+            onChange={(value) =>
+              setFilters((prev) => ({ ...prev, searchField: value }))
+            }
+            style={{ width: 120 }}
+          >
+            <Select.Option value="all">همه</Select.Option>
+            <Select.Option value="name">نام</Select.Option>
+            <Select.Option value="sku">SKU</Select.Option>
+          </Select>
+          <Input
+            placeholder={
+              filters.searchField === 'sku' ? 'جستجو بر اساس SKU...' :
+                filters.searchField === 'name' ? 'جستجو بر اساس نام محصول...' :
+                  'جستجو بر اساس نام یا SKU...'
+            }
+            prefix={<SearchOutlined />}
+            style={{ flex: 1 }}
+            allowClear
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, search: e.target.value }))
+            }
+            onPressEnter={() => fetchProducts(1, pagination.pageSize)}
+            onBlur={() => fetchProducts(1, pagination.pageSize)}
+          />
+        </Input.Group>
         <Select
           placeholder="دسته‌بندی"
           style={{ width: 200 }}
