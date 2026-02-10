@@ -14,6 +14,58 @@ const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, cloudinary } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
+// ============================================
+// Persian/Arabic Character Normalization for Search
+// Converts search text to regex that matches both Arabic and Persian character variants
+// ============================================
+function buildPersianSearchRegex(text) {
+  if (!text) return text
+
+  // Define character equivalence groups
+  const equivalences = [
+    ['ی', 'ي', 'ئ'],           // ی فارسی ↔ ي عربی ↔ ئ
+    ['ک', 'ك'],                // ک فارسی ↔ ك عربی
+    ['ه', 'ة'],                // ه ↔ ة
+    ['آ', 'أ', 'إ', 'ا'],         // آ ↔ أ ↔ إ ↔ ا
+    ['و', 'ؤ'],                // و ↔ ؤ
+    ['۰', '٠', '0'],           // ۰ ↔ ٠ ↔ 0
+    ['۱', '١', '1'],           // ۱ ↔ ١ ↔ 1
+    ['۲', '٢', '2'],           // ۲ ↔ ٢ ↔ 2
+    ['۳', '٣', '3'],           // ۳ ↔ ٣ ↔ 3
+    ['۴', '٤', '4'],           // ۴ ↔ ٤ ↔ 4
+    ['۵', '٥', '5'],           // ۵ ↔ ٥ ↔ 5
+    ['۶', '٦', '6'],           // ۶ ↔ ٦ ↔ 6
+    ['۷', '٧', '7'],           // ۷ ↔ ٧ ↔ 7
+    ['۸', '٨', '8'],           // ۸ ↔ ٨ ↔ 8
+    ['۹', '٩', '9'],           // ۹ ↔ ٩ ↔ 9
+  ]
+
+  // Build char-to-group map
+  const charMap = new Map()
+  for (const group of equivalences) {
+    const charClass = `[${group.join('')}]`
+    for (const ch of group) {
+      charMap.set(ch, charClass)
+    }
+  }
+
+  // Special regex characters that need escaping
+  const regexSpecial = /[.*+?^${}()|[\]\\]/g
+
+  let pattern = ''
+  for (const ch of text) {
+    if (charMap.has(ch)) {
+      pattern += charMap.get(ch)
+    } else if (regexSpecial.test(ch)) {
+      pattern += '\\' + ch
+    } else {
+      pattern += ch
+    }
+  }
+
+  return pattern
+}
+
 // Joi Validation
 const validate = require('../middleware/validate')
 const {
@@ -369,8 +421,10 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
 
     // Text search on name or SKU (and variant SKU)
     // Supports searchField param: 'name', 'sku', or 'all' (default)
+    // Uses Persian/Arabic normalization to match both character variants
     if (req.query.search) {
-      const regex = { $regex: req.query.search, $options: 'i' }
+      const normalizedPattern = buildPersianSearchRegex(req.query.search.trim())
+      const regex = { $regex: normalizedPattern, $options: 'i' }
       const searchField = req.query.searchField || 'all'
 
       if (searchField === 'name') {
@@ -821,9 +875,10 @@ router.get(
     try {
       const filter = {}
 
-      // Search filter
+      // Search filter (with Persian/Arabic normalization)
       if (req.query.search) {
-        const regex = new RegExp(req.query.search.trim(), 'i')
+        const normalizedPattern = buildPersianSearchRegex(req.query.search.trim())
+        const regex = new RegExp(normalizedPattern, 'i')
         filter.$or = [{ name: regex }, { sku: regex }]
       }
 
