@@ -1884,9 +1884,9 @@ router.post(
                   category: categoryId,
                   brand: brandId,
                   description: row.description || '',
-                  isActive: row.isActive === 'بله' || row.isActive === 'true' || row.isActive === '1',
+                  isActive: row.isActive === 'بله' || (row.isActive || '').toString().toLowerCase() === 'true' || row.isActive === '1',
                   isFeatured:
-                    row.isFeatured === 'بله' || row.isFeatured === 'true' || row.isFeatured === '1',
+                    row.isFeatured === 'بله' || (row.isFeatured || '').toString().toLowerCase() === 'true' || row.isFeatured === '1',
                 }
 
                 productsToCreate.push(productData)
