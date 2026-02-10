@@ -301,6 +301,31 @@ function ProductsList({ mode }) {
   const rowSelection = {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
+    preserveSelectedRowKeys: true,
+  }
+
+  const handleSelectAll = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (filters.search) params.set('search', filters.search)
+      if (filters.category) {
+        params.set('category', filters.category)
+        if (includeChildren) params.set('includeChildren', 'true')
+      }
+      if (filters.status) {
+        if (filters.status === 'active') params.set('isActive[eq]', 'true')
+        else if (filters.status === 'inactive') params.set('isActive[eq]', 'false')
+      }
+      if (mode === 'variable') params.set('productType', 'variable')
+      else if (filters.productType) params.set('productType', filters.productType)
+
+      const res = await api.get('/products/all-ids', { params })
+      const ids = res?.data?.ids || []
+      setSelectedRowKeys(ids)
+      message.success(`${ids.length} محصول انتخاب شد`)
+    } catch (err) {
+      message.error('خطا در انتخاب همه محصولات')
+    }
   }
 
   const onTableChange = (pag) => {
@@ -548,23 +573,34 @@ function ProductsList({ mode }) {
         </Select>
       </div>
 
-      {selectedRowKeys.length > 0 && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 16,
-            background: '#e6f7ff',
-            borderRadius: 8,
-          }}
-        >
-          <Space>
-            <span>{selectedRowKeys.length} محصول انتخاب شده است</span>
-            <Button size="small" danger onClick={handleBulkDelete}>
-              حذف گروهی
-            </Button>
-          </Space>
-        </div>
-      )}
+      <div
+        style={{
+          marginBottom: 16,
+          padding: 12,
+          background: selectedRowKeys.length > 0 ? '#e6f7ff' : '#fafafa',
+          borderRadius: 8,
+          border: selectedRowKeys.length > 0 ? '1px solid #91d5ff' : '1px solid #f0f0f0',
+        }}
+      >
+        <Space wrap>
+          <Button size="small" onClick={handleSelectAll}>
+            انتخاب همه محصولات ({pagination.total})
+          </Button>
+          {selectedRowKeys.length > 0 && (
+            <>
+              <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
+                {selectedRowKeys.length} محصول انتخاب شده
+              </span>
+              <Button size="small" onClick={() => setSelectedRowKeys([])}>
+                لغو انتخاب
+              </Button>
+              <Button size="small" danger onClick={handleBulkDelete}>
+                حذف گروهی ({selectedRowKeys.length})
+              </Button>
+            </>
+          )}
+        </Space>
+      </div>
 
       <Table
         columns={columns}
@@ -577,6 +613,7 @@ function ProductsList({ mode }) {
           pageSize: pagination.pageSize,
           total: pagination.total,
           showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `${total} محصول`,
         }}
         onChange={onTableChange}

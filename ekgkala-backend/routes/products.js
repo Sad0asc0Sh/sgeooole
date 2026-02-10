@@ -1397,6 +1397,68 @@ router.delete(
 )
 
 // ============================================
+// GET /api/products/all-ids - Get all product IDs (for bulk select)
+// Supports same filters as product list (search, category, status)
+// ============================================
+router.get(
+  '/all-ids',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  async (req, res) => {
+    try {
+      const filter = {}
+
+      // Search filter
+      if (req.query.search) {
+        const regex = new RegExp(req.query.search.trim(), 'i')
+        filter.$or = [{ name: regex }, { sku: regex }]
+      }
+
+      // Category filter
+      if (req.query.category) {
+        const mongoose = require('mongoose')
+        if (mongoose.Types.ObjectId.isValid(req.query.category)) {
+          if (req.query.includeChildren === 'true') {
+            const descendantIds = await getAllDescendantCategoryIds(req.query.category)
+            filter.category = { $in: descendantIds }
+          } else {
+            filter.category = req.query.category
+          }
+        }
+      }
+
+      // Status filter
+      if (req.query['isActive[eq]'] === 'true') {
+        filter.isActive = true
+      } else if (req.query['isActive[eq]'] === 'false') {
+        filter.isActive = false
+      }
+
+      // Product type filter
+      if (req.query.productType) {
+        filter.productType = req.query.productType
+      }
+
+      const products = await Product.find(filter).select('_id').lean()
+      const ids = products.map(p => p._id)
+
+      res.json({
+        success: true,
+        ids,
+        total: ids.length,
+      })
+    } catch (error) {
+      console.error('Error fetching all product IDs:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در دریافت شناسه محصولات',
+        error: error.message,
+      })
+    }
+  },
+)
+
+// ============================================
 // POST /api/products/bulk-delete - Bulk delete products
 // Accepts { ids: ['id1', 'id2', ...] } in request body
 // ============================================
