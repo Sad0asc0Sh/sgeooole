@@ -350,20 +350,13 @@ function ProductsList({ mode }) {
       formData.append('file', file)
 
       try {
-        const token = localStorage.getItem('token')
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/products/import/csv`, {
-          method: 'POST',
+        const response = await api.post('/products/import/csv', formData, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            'Content-Type': 'multipart/form-data',
           },
-          body: formData,
         })
 
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.message || 'خطا در آپلود فایل')
-        }
+        const data = response.data
 
         onSuccess(data)
         message.success(data.message || 'محصولات با موفقیت درون‌ریزی شدند')
@@ -371,8 +364,9 @@ function ProductsList({ mode }) {
         fetchProducts() // Refresh product list
       } catch (err) {
         console.error('Error importing products:', err)
+        const errorMessage = err?.response?.data?.message || err.message || 'خطا در درون‌ریزی محصولات'
         onError(err)
-        message.error(err.message || 'خطا در درون‌ریزی محصولات')
+        message.error(errorMessage)
       } finally {
         setUploading(false)
       }
