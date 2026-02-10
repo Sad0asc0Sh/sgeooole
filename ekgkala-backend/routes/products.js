@@ -1397,6 +1397,77 @@ router.delete(
 )
 
 // ============================================
+// POST /api/products/bulk-delete - Bulk delete products
+// Accepts { ids: ['id1', 'id2', ...] } in request body
+// ============================================
+router.post(
+  '/bulk-delete',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  async (req, res) => {
+    try {
+      const { ids } = req.body
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'لیست شناسه محصولات ارسال نشده است',
+        })
+      }
+
+      // Limit bulk delete to 500 products at a time
+      if (ids.length > 500) {
+        return res.status(400).json({
+          success: false,
+          message: 'حداکثر ۵۰۰ محصول در هر درخواست قابل حذف است',
+        })
+      }
+
+      // Find all products to delete (for Cloudinary cleanup)
+      const products = await Product.find({ _id: { $in: ids } }).select('images')
+
+      // Delete Cloudinary images for all products
+      const cloudinaryErrors = []
+      for (const product of products) {
+        if (Array.isArray(product.images)) {
+          for (const img of product.images) {
+            if (img && typeof img === 'object' && img.public_id) {
+              try {
+                await cloudinary.uploader.destroy(img.public_id)
+              } catch (err) {
+                cloudinaryErrors.push(err.message)
+                console.error('Error deleting product image from Cloudinary:', err.message)
+              }
+            }
+          }
+        }
+      }
+
+      // Bulk delete from database
+      const result = await Product.deleteMany({ _id: { $in: ids } })
+
+      // Clear caches
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      res.json({
+        success: true,
+        message: `تعداد ${result.deletedCount} محصول با موفقیت حذف شد`,
+        deletedCount: result.deletedCount,
+        requestedCount: ids.length,
+      })
+    } catch (error) {
+      console.error('Error bulk deleting products:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در حذف گروهی محصولات',
+        error: error.message,
+      })
+    }
+  },
+)
+
+// ============================================
 // DELETE /api/products/:id
 // ============================================
 router.delete(
@@ -1632,11 +1703,27 @@ router.post(
       const products = []
       const errors = []
 
-      // Read CSV file
-      fs.createReadStream(filePath)
+      // Read CSV file content, strip BOM if present, then parse
+      let fileContent = fs.readFileSync(filePath, 'utf-8')
+      // Remove BOM (Byte Order Mark) that Excel/Windows adds to UTF-8 files
+      if (fileContent.charCodeAt(0) === 0xFEFF) {
+        fileContent = fileContent.slice(1)
+      }
+
+      // Write cleaned content back to a temp file for csv-parser
+      const cleanedPath = filePath + '.cleaned.csv'
+      fs.writeFileSync(cleanedPath, fileContent, 'utf-8')
+
+      fs.createReadStream(cleanedPath)
         .pipe(csv())
         .on('data', (row) => {
-          products.push(row)
+          // Normalize keys: trim whitespace and remove any remaining BOM characters
+          const normalizedRow = {}
+          for (const [key, value] of Object.entries(row)) {
+            const cleanKey = key.replace(/\uFEFF/g, '').trim()
+            normalizedRow[cleanKey] = typeof value === 'string' ? value.trim() : value
+          }
+          products.push(normalizedRow)
         })
         .on('end', async () => {
           try {
@@ -1694,8 +1781,9 @@ router.post(
             clearCacheByPrefix('/api/products')
             clearCacheByPrefix('/api/v1/admin/products')
 
-            // Delete uploaded file
+            // Delete uploaded files
             fs.unlinkSync(filePath)
+            if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
 
             // Send response
             const message = `تعداد ${productsToCreate.length} محصول با موفقیت درون‌ریزی شد`
@@ -1706,10 +1794,9 @@ router.post(
               errors: errors.length > 0 ? errors : undefined,
             })
           } catch (error) {
-            // Delete uploaded file on error
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath)
-            }
+            // Delete uploaded files on error
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+            if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
 
             console.error('Error processing CSV:', error)
             res.status(500).json({
@@ -1720,10 +1807,9 @@ router.post(
           }
         })
         .on('error', (error) => {
-          // Delete uploaded file on error
-          if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath)
-          }
+          // Delete uploaded files on error
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
+          if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
 
           console.error('Error reading CSV:', error)
           res.status(500).json({

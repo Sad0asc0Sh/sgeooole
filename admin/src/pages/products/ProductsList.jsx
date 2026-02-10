@@ -139,14 +139,12 @@ function ProductsList({ mode }) {
       okType: 'danger',
       onOk: async () => {
         try {
-          await Promise.all(
-            selectedRowKeys.map((id) => api.delete(`/products/${id}`)),
-          )
+          const res = await api.post('/products/bulk-delete', { ids: selectedRowKeys })
           setSelectedRowKeys([])
           fetchProducts()
-          message.success('محصولات انتخاب‌شده با موفقیت حذف شدند')
+          message.success(res?.data?.message || 'محصولات انتخاب‌شده با موفقیت حذف شدند')
         } catch (err) {
-          message.error(err?.message || 'خطا در حذف گروهی محصولات')
+          message.error(err?.response?.data?.message || err?.message || 'خطا در حذف گروهی محصولات')
         }
       },
     })
