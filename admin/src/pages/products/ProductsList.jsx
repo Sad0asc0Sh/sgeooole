@@ -22,6 +22,8 @@ import {
   EditOutlined,
   InboxOutlined,
   FieldTimeOutlined,
+  CheckCircleOutlined,
+  StopOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import api from '../../api'
@@ -616,6 +618,64 @@ function ProductsList({ mode }) {
               </span>
               <Button size="small" onClick={() => setSelectedRowKeys([])}>
                 لغو انتخاب
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                icon={<CheckCircleOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'فعال‌سازی گروهی',
+                    content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را فعال کنید؟`,
+                    okText: 'بله، فعال کن',
+                    cancelText: 'انصراف',
+                    onOk: async () => {
+                      try {
+                        const res = await api.post('/products/bulk-status', {
+                          ids: selectedRowKeys,
+                          isActive: true,
+                        })
+                        message.success(res?.data?.message || 'محصولات فعال شدند')
+                        setSelectedRowKeys([])
+                        fetchProducts()
+                      } catch (err) {
+                        message.error('خطا در فعال‌سازی محصولات')
+                      }
+                    },
+                  })
+                }}
+              >
+                فعال‌سازی ({selectedRowKeys.length})
+              </Button>
+              <Button
+                size="small"
+                style={{ background: '#fa8c16', borderColor: '#fa8c16', color: '#fff' }}
+                icon={<StopOutlined />}
+                onClick={() => {
+                  Modal.confirm({
+                    title: 'غیرفعال‌سازی گروهی',
+                    content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را غیرفعال کنید؟`,
+                    okText: 'بله، غیرفعال کن',
+                    cancelText: 'انصراف',
+                    okType: 'danger',
+                    onOk: async () => {
+                      try {
+                        const res = await api.post('/products/bulk-status', {
+                          ids: selectedRowKeys,
+                          isActive: false,
+                        })
+                        message.success(res?.data?.message || 'محصولات غیرفعال شدند')
+                        setSelectedRowKeys([])
+                        fetchProducts()
+                      } catch (err) {
+                        message.error('خطا در غیرفعال‌سازی محصولات')
+                      }
+                    },
+                  })
+                }}
+              >
+                غیرفعال‌سازی ({selectedRowKeys.length})
               </Button>
               <Button size="small" danger onClick={handleBulkDelete}>
                 حذف گروهی ({selectedRowKeys.length})

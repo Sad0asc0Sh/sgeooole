@@ -1527,6 +1527,57 @@ router.delete(
 )
 
 // ============================================
+// POST /api/products/bulk-status - Bulk activate/deactivate products
+// Accepts { ids: ['id1', 'id2', ...], isActive: true/false } in request body
+// ============================================
+router.post(
+  '/bulk-status',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  async (req, res) => {
+    try {
+      const { ids, isActive } = req.body
+
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'لیست شناسه محصولات ارسال نشده است',
+        })
+      }
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          message: 'وضعیت فعال/غیرفعال مشخص نشده است',
+        })
+      }
+
+      const result = await Product.updateMany(
+        { _id: { $in: ids } },
+        { $set: { isActive } },
+      )
+
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      const statusText = isActive ? 'فعال' : 'غیرفعال'
+      res.json({
+        success: true,
+        message: `${result.modifiedCount} محصول با موفقیت ${statusText} شد`,
+        modifiedCount: result.modifiedCount,
+      })
+    } catch (error) {
+      console.error('Error bulk updating status:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در تغییر وضعیت محصولات',
+        error: error.message,
+      })
+    }
+  },
+)
+
+// ============================================
 // POST /api/products/bulk-delete - Bulk delete products
 // Accepts { ids: ['id1', 'id2', ...] } in request body
 // ============================================
