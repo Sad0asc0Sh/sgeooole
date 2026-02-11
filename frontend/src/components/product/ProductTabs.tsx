@@ -17,6 +17,20 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });
 
+    // Helper to decode HTML entities (Robust version)
+    const decodeHtml = (html: string) => {
+        if (!html) return "";
+        if (typeof window === 'undefined') return html; // Server-side fallback
+        try {
+            const txt = document.createElement("textarea");
+            txt.innerHTML = html;
+            return txt.value;
+        } catch (e) {
+            return html;
+        }
+    };
+
+
     // Form State
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
@@ -129,7 +143,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                 [&_pre]:bg-gray-50 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:text-sm [&_pre]:font-mono
                                 [&_code]:bg-gray-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-pink-500
                                 "
-                                dangerouslySetInnerHTML={{ __html: product.description }}
+                                dangerouslySetInnerHTML={{ __html: decodeHtml(product.description || "") }}
                             />
                         ) : (
                             <p className="text-gray-400 text-center py-8">توضیحاتی ثبت نشده است.</p>

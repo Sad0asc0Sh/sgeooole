@@ -168,7 +168,17 @@ function ProductForm() {
               stock: p.stock,
               category: categoryId,
               brand: brandId,
-              description: p.description,
+              brand: brandId,
+              description: (() => {
+                if (!p.description) return '';
+                try {
+                  const txt = document.createElement("textarea");
+                  txt.innerHTML = p.description;
+                  return txt.value;
+                } catch (e) {
+                  return p.description;
+                }
+              })(),
               productType: p.productType || 'simple',
             })
             setFiles(toFileList(p.images))
