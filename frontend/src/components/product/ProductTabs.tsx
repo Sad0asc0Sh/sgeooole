@@ -110,9 +110,27 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                             <Info size={20} className="text-kala-600" /> توضیحات محصول
                         </h3>
                         {product.description ? (
-                            <p className="text-gray-600 leading-8 text-justify whitespace-pre-line">
-                                {product.description}
-                            </p>
+                            <div
+                                className="text-gray-600 leading-8 text-justify 
+                                [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-gray-800 [&_h1]:mb-4 [&_h1]:mt-6
+                                [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mb-3 [&_h2]:mt-5
+                                [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-gray-800 [&_h3]:mb-2 [&_h3]:mt-4
+                                [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-gray-800 [&_h4]:mb-2
+                                [&_p]:mb-4 
+                                [&_ul]:list-disc [&_ul]:mr-6 [&_ul]:mb-4 
+                                [&_ol]:list-decimal [&_ol]:mr-6 [&_ol]:mb-4 
+                                [&_li]:mb-1 
+                                [&_img]:rounded-xl [&_img]:max-w-full [&_img]:h-auto [&_img]:my-6 [&_img]:mx-auto [&_img]:shadow-sm
+                                [&_table]:w-full [&_table]:border-collapse [&_table]:mb-4 [&_table]:text-sm
+                                [&_td]:border [&_td]:border-gray-200 [&_td]:p-3 
+                                [&_th]:border [&_th]:border-gray-200 [&_th]:p-3 [&_th]:bg-gray-50 [&_th]:font-bold [&_th]:text-right
+                                [&_a]:text-kala-600 [&_a]:underline [&_a]:font-medium hover:[&_a]:text-kala-700
+                                [&_blockquote]:border-r-4 [&_blockquote]:border-gray-200 [&_blockquote]:pr-4 [&_blockquote]:py-2 [&_blockquote]:my-4 [&_blockquote]:text-gray-500 [&_blockquote]:italic
+                                [&_pre]:bg-gray-50 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:text-sm [&_pre]:font-mono
+                                [&_code]:bg-gray-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-pink-500
+                                "
+                                dangerouslySetInnerHTML={{ __html: product.description }}
+                            />
                         ) : (
                             <p className="text-gray-400 text-center py-8">توضیحاتی ثبت نشده است.</p>
                         )}

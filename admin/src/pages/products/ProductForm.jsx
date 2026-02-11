@@ -23,10 +23,38 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from '@ant-design/icons'
+import { Editor } from '@tinymce/tinymce-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
+
+// TinyMCE API Key
+const TINYMCE_API_KEY = 'no-api-key'
+
+const RichTextEditor = ({ value, onChange }) => (
+  <Editor
+    apiKey={TINYMCE_API_KEY}
+    value={value}
+    onEditorChange={onChange}
+    init={{
+      height: 400,
+      menubar: true,
+      directionality: 'rtl',
+      language: 'fa',
+      plugins: [
+        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+        'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
+      ],
+      toolbar: 'undo redo | blocks | ' +
+        'bold italic forecolor backcolor | alignleft aligncenter ' +
+        'alignright alignjustify | bullist numlist outdent indent | ' +
+        'removeformat | image table | help',
+      content_style: 'body { font-family: Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }'
+    }}
+  />
+)
 
 function ProductForm() {
   const [form] = Form.useForm()
@@ -766,11 +794,13 @@ function ProductForm() {
                       </>
                     )}
 
-                    <Form.Item name="description" label="توضیحات">
-                      <Input.TextArea
-                        rows={5}
-                        placeholder="توضیحات کامل محصول را وارد کنید..."
-                      />
+                    <Form.Item
+                      name="description"
+                      label="توضیحات"
+                      trigger="onEditorChange"
+                      validateTrigger={['onBlur', 'onEditorChange']}
+                    >
+                      <RichTextEditor />
                     </Form.Item>
                   </>
                 ),
