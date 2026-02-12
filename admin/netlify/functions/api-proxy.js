@@ -13,15 +13,34 @@ const buildQueryString = (query) => {
   return serialized ? `?${serialized}` : ''
 }
 
+const buildCorsHeaders = (requestOrigin) => {
+  const hasOrigin = typeof requestOrigin === 'string' && requestOrigin.trim().length > 0
+  const allowOrigin = hasOrigin ? requestOrigin : '*'
+
+  const headers = {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, Cache-Control, Pragma, X-Requested-With',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Max-Age': '86400',
+  }
+
+  if (hasOrigin) {
+    headers['Access-Control-Allow-Credentials'] = 'true'
+    headers.Vary = 'Origin'
+  }
+
+  return headers
+}
+
 exports.handler = async (event) => {
+  const incomingHeaders = event.headers || {}
+  const requestOrigin = incomingHeaders.origin || incomingHeaders.Origin || ''
+  const corsHeaders = buildCorsHeaders(requestOrigin)
+
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      },
+      headers: corsHeaders,
       body: '',
     }
   }
@@ -36,13 +55,14 @@ exports.handler = async (event) => {
     }
   }
 
-  const proxyPath = (event.path || '').replace(/^\/api-proxy/, '') || '/'
+  const proxyPath = (event.path || '')
+    .replace(/^\/\.netlify\/functions\/api-proxy/, '')
+    .replace(/^\/api-proxy/, '') || '/'
   const query = event.rawQuery
     ? `?${event.rawQuery}`
     : buildQueryString(event.queryStringParameters)
   const targetUrl = `${apiBaseUrl}${proxyPath}${query}`
 
-  const incomingHeaders = event.headers || {}
   const contentType = incomingHeaders['content-type'] || incomingHeaders['Content-Type'] || 'application/json'
 
   const forwardedHeaders = {
@@ -95,9 +115,7 @@ exports.handler = async (event) => {
       statusCode: response.status,
       body: responseBody,
       headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        ...corsHeaders,
         'content-type': response.headers?.['content-type'] || 'application/json',
       },
     }
@@ -108,11 +126,7 @@ exports.handler = async (event) => {
         message: 'Error proxying request to API server',
         details: error.message,
       }),
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      },
+      headers: corsHeaders,
     }
   }
 }

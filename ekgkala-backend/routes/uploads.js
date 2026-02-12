@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
-const { upload, cloudinary } = require('../middleware/upload')
+const multer = require('multer')
+const { upload, cloudinary, MAX_UPLOAD_FILE_SIZE_MB } = require('../middleware/upload')
 const { protect, checkPermission, checkAnyPermission, PERMISSIONS } = require('../middleware/auth')
 
 const buildTransformedCloudinaryUrl = (url, transform) => {
@@ -32,6 +33,56 @@ const extractBannerImageInfo = (file) => {
     }
 }
 
+const handleSingleImageUpload = (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+        if (!err) return next()
+
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({
+                    success: false,
+                    message: `حجم فایل بیشتر از حد مجاز است (حداکثر ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت).`,
+                })
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: `خطا در آپلود فایل: ${err.message}`,
+            })
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'خطا در آپلود فایل',
+        })
+    })
+}
+
+const handleMultipleImagesUpload = (req, res, next) => {
+    upload.array('images', 10)(req, res, (err) => {
+        if (!err) return next()
+
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({
+                    success: false,
+                    message: `حجم یکی از فایل‌ها بیشتر از حد مجاز است (حداکثر ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت).`,
+                })
+            }
+
+            return res.status(400).json({
+                success: false,
+                message: `خطا در آپلود فایل‌ها: ${err.message}`,
+            })
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'خطا در آپلود فایل‌ها',
+        })
+    })
+}
+
 // ============================================
 // POST /api/uploads/image
 // Immediate image upload to Cloudinary
@@ -41,7 +92,7 @@ router.post(
     '/image',
     protect,
     checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
-    upload.single('image'),
+    handleSingleImageUpload,
     async (req, res) => {
         try {
             if (!req.file) {
@@ -93,7 +144,7 @@ router.post(
         PERMISSIONS.BANNER_UPDATE,
         PERMISSIONS.PRODUCT_MANAGE_IMAGES
     ),
-    upload.single('image'),
+    handleSingleImageUpload,
     async (req, res) => {
         try {
             if (!req.file) {
@@ -129,7 +180,7 @@ router.post(
     '/images',
     protect,
     checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
-    upload.array('images', 10),
+    handleMultipleImagesUpload,
     async (req, res) => {
         try {
             if (!req.files || req.files.length === 0) {

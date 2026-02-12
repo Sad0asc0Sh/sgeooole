@@ -18,9 +18,30 @@ const getBaseUrl = () => {
   return 'http://localhost:5000/api'           // پیش‌فرض برای سیستم خودتان
 }
 
+const shouldUseCredentials = (baseUrl) => {
+  if (!baseUrl) return false
+
+  // Relative URLs (e.g. /api-proxy) are same-origin by definition.
+  if (baseUrl.startsWith('/')) return true
+
+  // In browser runtime, allow credentials only for same-origin absolute URLs.
+  if (typeof window !== 'undefined') {
+    try {
+      return new URL(baseUrl).origin === window.location.origin
+    } catch (_) {
+      return false
+    }
+  }
+
+  return false
+}
+
+const baseURL = getBaseUrl()
+
 export const api = axios.create({
-  baseURL: getBaseUrl(),
-  withCredentials: true, // برای کوکی‌ها و CORS لازم است
+  baseURL,
+  // Prevent invalid CORS combos on cross-origin APIs (e.g. ACAO=* with credentials).
+  withCredentials: shouldUseCredentials(baseURL),
   headers: {
     'Content-Type': 'application/json',
   },
@@ -62,6 +83,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const status = error.response?.status
+
+    // Network-level errors often point to CORS/proxy/SSL issues.
+    if (!error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+      error.userMessage = 'اتصال به API برقرار نشد. تنظیمات CORS، آدرس API و پروکسی را بررسی کنید.'
+    }
 
     // اگر خطای 401 (عدم احراز هویت) گرفتیم و درخواست مربوط به لاگین نبود
     if (status === 401 && !originalRequest._retry) {

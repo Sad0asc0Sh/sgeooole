@@ -97,6 +97,34 @@ const BANNER_POSITIONS = {
 const MAX_BANNER_UPLOAD_SIZE_MB = 10
 const MAX_BANNER_UPLOAD_SIZE_BYTES = MAX_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
 
+const resolveBannerSaveErrorMessage = (err) => {
+  if (err?.userMessage) return err.userMessage
+
+  if (err?.code === 'ECONNABORTED') {
+    return 'زمان آپلود تصویر به پایان رسید. حجم تصویر را کمتر کنید یا اتصال سرور را بررسی کنید.'
+  }
+
+  const status = err?.response?.status
+  if (status === 401) {
+    return 'نشست شما منقضی شده است. دوباره وارد شوید.'
+  }
+  if (status === 403) {
+    return 'دسترسی آپلود ندارید یا دامنه فعلی در CORS بک‌اند مجاز نیست.'
+  }
+  if (status === 413) {
+    return `حجم تصویر بیشتر از حد مجاز است (حداکثر ${MAX_BANNER_UPLOAD_SIZE_MB} مگابایت).`
+  }
+  if (status === 415) {
+    return 'فرمت فایل پشتیبانی نمی‌شود. فقط JPG/PNG/WEBP/GIF مجاز هستند.'
+  }
+
+  if (!err?.response && (err?.code === 'ERR_NETWORK' || err?.message === 'Network Error')) {
+    return 'اتصال به API برقرار نشد. CORS، SSL و آدرس API/Proxy را بررسی کنید.'
+  }
+
+  return err?.response?.data?.message || 'خطا در ذخیره بنر'
+}
+
 function BannersPage() {
   const [banners, setBanners] = useState([])
   const [loading, setLoading] = useState(false)
@@ -386,11 +414,7 @@ function BannersPage() {
           api.delete(`/uploads/image/${encodedPublicId}`).catch(() => { })
         }
 
-        if (err?.code === 'ECONNABORTED') {
-          message.error('زمان آپلود تصویر به پایان رسید. حجم تصویر را کمتر کنید یا اتصال سرور را بررسی کنید.')
-        } else {
-          message.error(err?.response?.data?.message || 'خطا در ذخیره بنر')
-        }
+        message.error(resolveBannerSaveErrorMessage(err))
       }
     } finally {
       setSaving(false)

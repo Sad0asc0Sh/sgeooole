@@ -21,6 +21,16 @@ cloudinary.config({
   timeout: 180000, // 3 minutes timeout for uploads (Cloudinary servers can be slow)
 })
 
+const hasCloudinaryConfig = Boolean(
+  process.env.CLOUDINARY_CLOUD_NAME &&
+  process.env.CLOUDINARY_API_KEY &&
+  process.env.CLOUDINARY_API_SECRET
+)
+
+if (!hasCloudinaryConfig) {
+  console.warn('[CLOUDINARY] Missing credentials. Upload endpoints will fail until CLOUDINARY_* env vars are set.')
+}
+
 // ============================================
 // SECURITY: Magic Numbers for File Validation
 // These are the first bytes of each file type
@@ -84,6 +94,10 @@ class CloudinaryStorageEngine {
   }
 
   _handleFile(req, file, cb) {
+    if (!hasCloudinaryConfig) {
+      return cb(new Error('Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.'))
+    }
+
     // Determine upload parameters
     const getParams = typeof this.params === 'function'
       ? this.params(req, file)

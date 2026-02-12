@@ -37,41 +37,55 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // ============================================
-// Helper: Parse and validate URLs from environment variable
+// Helper: Parse and validate allowed origins from environment variables
 // ============================================
-const parseAllowedUrls = (envValue) => {
-  if (!envValue) return []
+const ALLOWED_ORIGIN_ENV_KEYS = [
+  'CORS_ALLOWED_ORIGINS',
+  'CLIENT_URL',
+  'FRONTEND_URL',
+  'ADMIN_URL',
+]
 
-  try {
-    return envValue
+const collectAllowedOriginInputs = () =>
+  ALLOWED_ORIGIN_ENV_KEYS.map((key) => process.env[key]).filter(Boolean)
+
+const parseAllowedOrigins = (rawInputs = []) => {
+  const normalizedOrigins = new Set()
+  const values = Array.isArray(rawInputs) ? rawInputs : [rawInputs]
+
+  for (const rawValue of values) {
+    if (!rawValue || typeof rawValue !== 'string') continue
+
+    const candidates = rawValue
       .split(',')
-      .map(url => url.trim())
-      .filter(url => {
-        // Skip empty strings and wildcards
-        if (!url || url === '*') return false
+      .map((entry) => entry.trim())
+      .filter(Boolean)
 
-        // Validate URL format
-        try {
-          new URL(url)
-          return true
-        } catch (e) {
-          console.error(`⚠️ Invalid URL in CLIENT_URL: "${url}" - skipping`)
-          return false
-        }
-      })
-  } catch (e) {
-    console.error('⚠️ Error parsing CLIENT_URL:', e.message)
-    return []
+    for (const candidate of candidates) {
+      // Wildcard is handled separately by allowAllOrigins
+      if (candidate === '*') continue
+
+      try {
+        const origin = new URL(candidate).origin
+        normalizedOrigins.add(origin)
+      } catch (e) {
+        console.error(`⚠️ Invalid CORS origin "${candidate}" - skipping`)
+      }
+    }
   }
+
+  return Array.from(normalizedOrigins)
 }
 
-// Parse CLIENT_URL once at startup (with error handling)
+const allowedOriginInputs = collectAllowedOriginInputs()
+
+// Parse all configured origins once at startup
 let clientUrls = []
 try {
-  clientUrls = parseAllowedUrls(process.env.CLIENT_URL)
-  console.log('📋 Parsed CLIENT_URLs for CSP:', clientUrls.length > 0 ? clientUrls : ['(none - using localhost)'])
+  clientUrls = parseAllowedOrigins(allowedOriginInputs)
+  console.log('📋 Parsed allowed origins:', clientUrls.length > 0 ? clientUrls : ['(none - using localhost defaults)'])
 } catch (e) {
-  console.error('⚠️ Failed to parse CLIENT_URL, using defaults:', e.message)
+  console.error('⚠️ Failed to parse allowed origins, using defaults:', e.message)
 }
 
 // CSP can be disabled via environment variable for debugging
@@ -92,7 +106,11 @@ const helmetConfig = {
       connectSrc: [
         "'self'",
         // Use parsed and validated URLs, fallback to allowing all HTTPS if none specified
-        ...(clientUrls.length > 0 ? clientUrls : ['https:', 'http://localhost:3000']),
+        ...(clientUrls.length > 0
+          ? clientUrls
+          : ['https:', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173']),
+        'https://api.cloudinary.com',
+        'https://res.cloudinary.com',
       ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
@@ -228,8 +246,11 @@ const allowedOrigins = [
   ] : []),
 ]
 
-// اگر CLIENT_URL شامل * باشد، همه مجاز هستند
-const allowAllOrigins = (process.env.CLIENT_URL || '').includes('*')
+// اگر یکی از مقادیر دقیقاً برابر "*" باشد، همه origin ها مجاز هستند
+const allowAllOrigins = allowedOriginInputs
+  .flatMap((value) => (typeof value === 'string' ? value.split(',') : []))
+  .map((value) => value.trim())
+  .some((value) => value === '*')
 
 // Vercel و Netlify Preview URL patterns
 // این اجازه می‌دهد Preview deployments بدون اضافه کردن هر URL کار کنند
@@ -253,7 +274,7 @@ console.log('🌐 CORS Config:', {
   netlifyProject: netlifyProjectName || '(not set)',
 })
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // ۱. اجازه به درخواست‌های داخلی یا ابزارهای تست (بدون origin)
     if (!origin) {
@@ -282,10 +303,32 @@ app.use(cors({
 
     // مسدود شد - لاگ می‌گیریم که چه آدرسی مسدود شده
     console.error('🔴 CORS Blocked for Origin:', origin);
-    callback(null, false);
+    const corsError = new Error('CORS_ORIGIN_DENIED')
+    corsError.origin = origin
+    callback(corsError)
   },
   credentials: true,
-}))
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'Pragma'],
+  exposedHeaders: ['Content-Type', 'Content-Length'],
+  optionsSuccessStatus: 204,
+  maxAge: 86400,
+}
+
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
+
+// Convert CORS callback errors to explicit JSON response (helps client-side debugging)
+app.use((err, req, res, next) => {
+  if (err && err.message === 'CORS_ORIGIN_DENIED') {
+    return res.status(403).json({
+      success: false,
+      message: 'CORS origin is not allowed for this API',
+      origin: err.origin || null,
+    })
+  }
+  return next(err)
+})
 
 // Body Parser with Limits
 // Keep this slightly above typical payloads to avoid false 413s on metadata-heavy requests.
