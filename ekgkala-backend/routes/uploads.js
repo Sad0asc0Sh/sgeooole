@@ -1,7 +1,36 @@
 const express = require('express')
 const router = express.Router()
 const { upload, cloudinary } = require('../middleware/upload')
-const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+const { protect, checkPermission, checkAnyPermission, PERMISSIONS } = require('../middleware/auth')
+
+const buildTransformedCloudinaryUrl = (url, transform) => {
+    if (!url || typeof url !== 'string') return url
+    if (!url.includes('/upload/')) return url
+    return url.replace('/upload/', `/upload/${transform}/`)
+}
+
+const extractImageInfo = (file) => {
+    const originalUrl = file.path || file.secure_url || file.url
+    return {
+        url: originalUrl,
+        public_id: file.filename || file.public_id,
+    }
+}
+
+const extractBannerImageInfo = (file) => {
+    const base = extractImageInfo(file)
+    const originalUrl = base.url
+    return {
+        ...base,
+        original_url: originalUrl,
+        // Optimized delivery URLs from Cloudinary CDN
+        url: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
+        variants: {
+            desktop: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
+            mobile: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_900,c_limit'),
+        },
+    }
+}
 
 // ============================================
 // POST /api/uploads/image
@@ -32,10 +61,7 @@ router.post(
                 originalname: req.file.originalname,
             })
 
-            const imageInfo = {
-                url: req.file.path || req.file.secure_url || req.file.url,
-                public_id: req.file.filename || req.file.public_id,
-            }
+            const imageInfo = extractImageInfo(req.file)
 
             console.log('[UPLOAD] Returning:', imageInfo)
 
@@ -49,6 +75,46 @@ router.post(
             res.status(500).json({
                 success: false,
                 message: 'خطا در آپلود تصویر',
+                error: error.message,
+            })
+        }
+    }
+)
+
+// ============================================
+// POST /api/uploads/banner
+// Immediate banner upload to Cloudinary with optimized delivery URLs
+// ============================================
+router.post(
+    '/banner',
+    protect,
+    checkAnyPermission(
+        PERMISSIONS.BANNER_CREATE,
+        PERMISSIONS.BANNER_UPDATE,
+        PERMISSIONS.PRODUCT_MANAGE_IMAGES
+    ),
+    upload.single('image'),
+    async (req, res) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'هیچ فایل بنری آپلود نشده است',
+                })
+            }
+
+            const imageInfo = extractBannerImageInfo(req.file)
+
+            res.json({
+                success: true,
+                message: 'تصویر بنر با موفقیت آپلود شد',
+                data: imageInfo,
+            })
+        } catch (error) {
+            console.error('Error uploading banner image:', error)
+            res.status(500).json({
+                success: false,
+                message: 'خطا در آپلود تصویر بنر',
                 error: error.message,
             })
         }
@@ -74,10 +140,7 @@ router.post(
             }
 
             // Extract image info from each uploaded file
-            const uploadedImages = req.files.map((file) => ({
-                url: file.path || file.secure_url || file.url,
-                public_id: file.filename || file.public_id,
-            }))
+            const uploadedImages = req.files.map((file) => extractImageInfo(file))
 
             res.json({
                 success: true,
@@ -103,7 +166,12 @@ router.post(
 router.delete(
     '/image/*',
     protect,
-    checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
+    checkAnyPermission(
+        PERMISSIONS.PRODUCT_MANAGE_IMAGES,
+        PERMISSIONS.BANNER_CREATE,
+        PERMISSIONS.BANNER_UPDATE,
+        PERMISSIONS.BANNER_DELETE
+    ),
     async (req, res) => {
         try {
             // Get publicId from the wildcard param (everything after /image/)

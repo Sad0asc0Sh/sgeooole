@@ -330,7 +330,20 @@ function BannersPage() {
     }
   }
 
+  const uploadBannerImage = async (file) => {
+    const formData = new FormData()
+    formData.append('image', file)
+
+    const res = await api.post('/uploads/banner', formData, {
+      timeout: 180000, // 3 minutes for slow Cloudinary uploads
+    })
+
+    return res?.data?.data
+  }
+
   const handleSave = async () => {
+    let uploadedImage = null
+
     try {
       const values = await form.validateFields()
       setSaving(true)
@@ -338,38 +351,29 @@ function BannersPage() {
       const hasNewImageFile = fileList.length > 0 && fileList[0].originFileObj
 
       if (hasNewImageFile) {
-        const formData = new FormData()
-        formData.append('title', values.title)
-        formData.append('link', values.link || '')
-        formData.append('position', values.position)
-        formData.append('isActive', String(values.isActive !== undefined ? values.isActive : true))
-        formData.append('sortOrder', String(values.sortOrder ?? 0))
-        formData.append('image', fileList[0].originFileObj)
+        uploadedImage = await uploadBannerImage(fileList[0].originFileObj)
+      }
 
-        if (editing) {
-          await api.put(`/banners/${editing._id}`, formData)
-          message.success('بنر با موفقیت ویرایش شد')
-        } else {
-          await api.post('/banners', formData)
-          message.success('بنر جدید با موفقیت ایجاد شد')
-        }
+      const payload = {
+        title: values.title,
+        link: values.link || '',
+        position: values.position,
+        isActive: values.isActive !== undefined ? values.isActive : true,
+        sortOrder: values.sortOrder ?? 0,
+      }
+
+      if (uploadedImage) {
+        payload.image = uploadedImage
+      } else if (values.imageUrl) {
+        payload.image = { url: values.imageUrl }
+      }
+
+      if (editing) {
+        await api.put(`/banners/${editing._id}`, payload)
+        message.success('بنر با موفقیت ویرایش شد')
       } else {
-        const payload = {
-          title: values.title,
-          link: values.link || '',
-          position: values.position,
-          isActive: values.isActive !== undefined ? values.isActive : true,
-          sortOrder: values.sortOrder ?? 0,
-          image: values.imageUrl ? { url: values.imageUrl } : undefined,
-        }
-
-        if (editing) {
-          await api.put(`/banners/${editing._id}`, payload)
-          message.success('بنر با موفقیت ویرایش شد')
-        } else {
-          await api.post('/banners', payload)
-          message.success('بنر جدید با موفقیت ایجاد شد')
-        }
+        await api.post('/banners', payload)
+        message.success('بنر جدید با موفقیت ایجاد شد')
       }
 
       setModalOpen(false)
@@ -377,7 +381,16 @@ function BannersPage() {
       fetchBanners()
     } catch (err) {
       if (!err?.errorFields) {
-        message.error(err?.response?.data?.message || 'خطا در ذخیره بنر')
+        if (uploadedImage?.public_id) {
+          const encodedPublicId = encodeURIComponent(uploadedImage.public_id)
+          api.delete(`/uploads/image/${encodedPublicId}`).catch(() => { })
+        }
+
+        if (err?.code === 'ECONNABORTED') {
+          message.error('زمان آپلود تصویر به پایان رسید. حجم تصویر را کمتر کنید یا اتصال سرور را بررسی کنید.')
+        } else {
+          message.error(err?.response?.data?.message || 'خطا در ذخیره بنر')
+        }
       }
     } finally {
       setSaving(false)

@@ -146,11 +146,20 @@ const storage = new CloudinaryStorageEngine({
   cloudinary,
   params: (req, file) => {
     let folder = 'ekgkala/uploads'
-    const isBannerRoute = req?.baseUrl === '/api/banners' || req?.originalUrl?.includes('/api/banners')
+    const requestPath = req?.originalUrl || ''
+    const isBannerRoute =
+      req?.baseUrl === '/api/banners' ||
+      requestPath.includes('/api/banners') ||
+      requestPath.includes('/api/uploads/banner')
+    const isProductImageUploadRoute =
+      requestPath.includes('/api/uploads/image') &&
+      !requestPath.includes('/api/uploads/banner')
 
     // Determine folder based on field type
     if (isBannerRoute && file.fieldname === 'image') {
       folder = 'ekgkala/banners'
+    } else if (isProductImageUploadRoute && file.fieldname === 'image') {
+      folder = 'ekgkala/products'
     } else if (file.fieldname === 'icon' || file.fieldname === 'image') {
       folder = 'ekgkala/categories'
     } else if (file.fieldname === 'logo') {
