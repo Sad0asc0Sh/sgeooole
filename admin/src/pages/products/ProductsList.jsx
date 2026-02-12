@@ -382,10 +382,9 @@ function ProductsList({ mode }) {
 
       try {
         const response = await api.post('/products/import/csv', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
           timeout: 600000, // 10 minutes timeout for large CSVs
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
         })
 
         const data = response.data
@@ -396,7 +395,19 @@ function ProductsList({ mode }) {
         fetchProducts() // Refresh product list
       } catch (err) {
         console.error('Error importing products:', err)
-        const errorMessage = err?.response?.data?.message || err.message || 'خطا در درون‌ریزی محصولات'
+        const status = err?.response?.status
+        const serverMessage = err?.response?.data?.message
+        const isNetworkError = !err?.response
+
+        let errorMessage = serverMessage || err.message || 'Error importing products'
+
+        if (status === 413) {
+          errorMessage = 'File is larger than the server upload limit'
+        } else if (err?.code === 'ECONNABORTED') {
+          errorMessage = 'Import request timed out before completion'
+        } else if (isNetworkError) {
+          errorMessage = 'Network connection dropped during CSV import'
+        }
         onError(err)
         message.error(errorMessage)
       } finally {

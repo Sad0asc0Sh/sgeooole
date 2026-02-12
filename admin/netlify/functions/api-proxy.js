@@ -1,51 +1,118 @@
-const axios = require('axios');
+const axios = require('axios')
 
-exports.handler = async (event, context) => {
-  const API_URL = process.env.VITE_API_BASE_URL;
-  const path = event.path.replace('/api-proxy', '');
+const buildQueryString = (query) => {
+  if (!query || typeof query !== 'object') return ''
 
-  console.log(`Proxying request to: ${API_URL}${path}`); // لاگ برای دیباگ
+  const params = new URLSearchParams()
+  Object.entries(query).forEach(([key, value]) => {
+    if (value === undefined || value === null) return
+    params.append(key, String(value))
+  })
+
+  const serialized = params.toString()
+  return serialized ? `?${serialized}` : ''
+}
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      },
+      body: '',
+    }
+  }
+
+  const apiBaseUrl = process.env.VITE_API_BASE_URL
+  if (!apiBaseUrl) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        message: 'VITE_API_BASE_URL is not configured',
+      }),
+    }
+  }
+
+  const proxyPath = (event.path || '').replace(/^\/api-proxy/, '') || '/'
+  const query = event.rawQuery
+    ? `?${event.rawQuery}`
+    : buildQueryString(event.queryStringParameters)
+  const targetUrl = `${apiBaseUrl}${proxyPath}${query}`
+
+  const incomingHeaders = event.headers || {}
+  const contentType = incomingHeaders['content-type'] || incomingHeaders['Content-Type'] || 'application/json'
+
+  const forwardedHeaders = {
+    'content-type': contentType,
+  }
+
+  if (incomingHeaders.authorization || incomingHeaders.Authorization) {
+    forwardedHeaders.authorization = incomingHeaders.authorization || incomingHeaders.Authorization
+  }
+
+  if (incomingHeaders.cookie) {
+    forwardedHeaders.cookie = incomingHeaders.cookie
+  }
+
+  let requestData
+  if (event.body != null) {
+    const isBase64 = Boolean(event.isBase64Encoded)
+    if (isBase64) {
+      requestData = Buffer.from(event.body, 'base64')
+    } else if (contentType.toLowerCase().includes('application/json')) {
+      try {
+        requestData = JSON.parse(event.body)
+      } catch (_) {
+        requestData = event.body
+      }
+    } else {
+      requestData = event.body
+    }
+  }
+
+  const timeout = Number(process.env.API_PROXY_TIMEOUT_MS || 600000)
 
   try {
-    // مدیریت امن داده‌های ورودی
-    let requestData = null;
-    if (event.body) {
-      try {
-        requestData = JSON.parse(event.body);
-      } catch (e) {
-        requestData = event.body; // اگر قبلاً پارس شده بود
-      }
-    }
-
     const response = await axios({
       method: event.httpMethod,
-      url: `${API_URL}${path}`,
+      url: targetUrl,
       data: requestData,
-      headers: {
-        "content-type": event.headers["content-type"] || "application/json",
-        // هدر Authorization برای توکن‌های ادمین حیاتی است
-        "authorization": event.headers["authorization"] || "", 
-      },
-      timeout: 10000 // ۱۰ ثانیه مهلت پاسخگویی
-    });
+      headers: forwardedHeaders,
+      timeout,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      validateStatus: () => true,
+    })
+
+    const responseBody = typeof response.data === 'string'
+      ? response.data
+      : JSON.stringify(response.data)
 
     return {
       statusCode: response.status,
-      body: JSON.stringify(response.data),
+      body: responseBody,
       headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS"
-      }
-    };
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'content-type': response.headers?.['content-type'] || 'application/json',
+      },
+    }
   } catch (error) {
-    console.error("Proxy Error Details:", error.message);
     return {
-      statusCode: error.response?.status || 500,
-      body: JSON.stringify({ 
-        message: "خطا در برقراری ارتباط با سرور اصلی",
-        details: error.message 
-      })
-    };
+      statusCode: error.response?.status || 504,
+      body: JSON.stringify({
+        message: 'Error proxying request to API server',
+        details: error.message,
+      }),
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      },
+    }
   }
-};
+}

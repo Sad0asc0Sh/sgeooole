@@ -91,14 +91,111 @@ const csvStorage = multer.diskStorage({
 
 const csvUpload = multer({
   storage: csvStorage,
+  limits: {
+    // 25MB default - override with env for larger catalogs
+    fileSize: Number(process.env.CSV_IMPORT_MAX_FILE_SIZE || 25 * 1024 * 1024),
+    files: 1,
+  },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || path.extname(file.originalname) === '.csv') {
+    const allowedMimeTypes = new Set([
+      'text/csv',
+      'application/csv',
+      'text/plain',
+      'application/vnd.ms-excel',
+      'application/octet-stream',
+    ])
+
+    if (allowedMimeTypes.has(file.mimetype) || path.extname(file.originalname).toLowerCase() === '.csv') {
       cb(null, true)
     } else {
       cb(new Error('فقط فایل‌های CSV مجاز هستند'))
     }
   },
 })
+
+const CSV_IMPORT_TIMEOUT_MS = Number(process.env.CSV_IMPORT_TIMEOUT_MS || 15 * 60 * 1000)
+const CSV_IMPORT_BATCH_SIZE = Number(process.env.CSV_IMPORT_BATCH_SIZE || 500)
+
+const safeUnlink = (targetPath) => {
+  if (!targetPath) return
+  try {
+    if (fs.existsSync(targetPath)) {
+      fs.unlinkSync(targetPath)
+    }
+  } catch (unlinkError) {
+    console.error(`Failed to clean temp file: ${targetPath}`, unlinkError.message)
+  }
+}
+
+const normalizeDigits = (value) => {
+  if (value == null) return ''
+  return String(value)
+    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1728))
+    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1584))
+}
+
+const parseCsvNumber = (value, fallback = 0) => {
+  if (value === undefined || value === null || value === '') return fallback
+  const normalized = normalizeDigits(value)
+    .replace(/,/g, '')
+    .replace(/[^\d.-]/g, '')
+  if (!normalized) return fallback
+  const parsed = Number(normalized)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const parseCsvBoolean = (value) => {
+  const normalized = normalizeDigits(value)
+    .trim()
+    .toLowerCase()
+
+  return (
+    normalized === 'true' ||
+    normalized === '1' ||
+    normalized === 'yes' ||
+    normalized === 'y' ||
+    normalized === 'on' ||
+    normalized === 'بله'
+  )
+}
+
+const parseCsvFile = (filePath) => new Promise((resolve, reject) => {
+  const rows = []
+
+  fs.createReadStream(filePath)
+    .pipe(csv({
+      mapHeaders: ({ header }) => (header || '').replace(/\uFEFF/g, '').trim(),
+      mapValues: ({ value }) => (typeof value === 'string' ? value.trim() : value),
+    }))
+    .on('data', (row) => rows.push(row))
+    .on('end', () => resolve(rows))
+    .on('error', reject)
+})
+
+const handleCsvUpload = (req, res, next) => {
+  csvUpload.single('file')(req, res, (err) => {
+    if (!err) return next()
+
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(413).json({
+          success: false,
+          message: 'حجم فایل بالاتر از حد مجاز است',
+        })
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: `خطا در آپلود فایل: ${err.message}`,
+      })
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'خطا در آپلود فایل CSV',
+    })
+  })
+}
 
 // ============================================
 // Helpers
@@ -1862,200 +1959,161 @@ router.post(
   '/import/csv',
   protect,
   checkPermission(PERMISSIONS.PRODUCT_IMPORT),
-  csvUpload.single('file'),
+  handleCsvUpload,
   async (req, res) => {
-    req.setTimeout(600000) // 10 minutes timeout for this request
+    req.setTimeout(CSV_IMPORT_TIMEOUT_MS)
+    res.setTimeout(CSV_IMPORT_TIMEOUT_MS)
+
     try {
       if (!req.file) {
         return res.status(400).json({
           success: false,
-          message: 'فایل CSV آپلود نشده است',
+          message: 'CSV file was not uploaded',
         })
       }
 
       const filePath = req.file.path
-      const products = []
+      const startedAt = Date.now()
+      const products = await parseCsvFile(filePath)
       const errors = []
 
-      // Read CSV file content, strip BOM if present, then parse
-      let fileContent = fs.readFileSync(filePath, 'utf-8')
-      // Remove BOM (Byte Order Mark) that Excel/Windows adds to UTF-8 files
-      if (fileContent.charCodeAt(0) === 0xFEFF) {
-        fileContent = fileContent.slice(1)
+      if (!products.length) {
+        safeUnlink(filePath)
+        return res.status(400).json({
+          success: false,
+          message: 'CSV file is empty or has no valid rows',
+        })
       }
 
-      // Write cleaned content back to a temp file for csv-parser
-      const cleanedPath = filePath + '.cleaned.csv'
-      fs.writeFileSync(cleanedPath, fileContent, 'utf-8')
+      const productsToCreate = []
 
-      fs.createReadStream(cleanedPath)
-        .pipe(csv())
-        .on('data', (row) => {
-          // Normalize keys: trim whitespace and remove any remaining BOM characters
-          const normalizedRow = {}
-          for (const [key, value] of Object.entries(row)) {
-            const cleanKey = key.replace(/\uFEFF/g, '').trim()
-            normalizedRow[cleanKey] = typeof value === 'string' ? value.trim() : value
+      // 1. Collect all unique category and brand names
+      const categoryNames = new Set()
+      const brandNames = new Set()
+
+      products.forEach((row) => {
+        if (row.category) categoryNames.add(String(row.category).trim())
+        if (row.brand) brandNames.add(String(row.brand).trim())
+      })
+
+      // 2. Bulk fetch categories and brands
+      const categories = await Category.find({
+        name: { $in: Array.from(categoryNames) },
+      }).select('_id name').lean()
+
+      const brands = await Brand.find({
+        name: { $in: Array.from(brandNames) },
+      }).select('_id name').lean()
+
+      // 3. Create lookup maps (Name -> ID)
+      const categoryMap = new Map(categories.map((c) => [c.name, c._id]))
+      const brandMap = new Map(brands.map((b) => [b.name, b._id]))
+
+      // 4. Build documents
+      for (let i = 0; i < products.length; i++) {
+        const row = products[i]
+
+        try {
+          // Find category by name from map
+          let categoryId = null
+          if (row.category) {
+            categoryId = categoryMap.get(String(row.category).trim())
           }
-          products.push(normalizedRow)
-        })
-        .on('end', async () => {
-          try {
-            const productsToCreate = []
 
-            // 1. Collect all unique category and brand names
-            const categoryNames = new Set()
-            const brandNames = new Set()
-
-            products.forEach(row => {
-              if (row.category) categoryNames.add(row.category.trim())
-              if (row.brand) brandNames.add(row.brand.trim())
-            })
-
-            // 2. Bulk fetch categories and brands
-            const categories = await Category.find({
-              name: { $in: Array.from(categoryNames) }
-            }).select('_id name').lean()
-
-            const brands = await Brand.find({
-              name: { $in: Array.from(brandNames) }
-            }).select('_id name').lean()
-
-            // 3. Create lookup maps (Name -> ID)
-            const categoryMap = new Map(categories.map(c => [c.name, c._id]))
-            const brandMap = new Map(brands.map(b => [b.name, b._id]))
-
-            // 4. Process rows synchronously
-            for (let i = 0; i < products.length; i++) {
-              const row = products[i]
-
-              try {
-                // Find category by name from map
-                let categoryId = null
-                if (row.category) {
-                  categoryId = categoryMap.get(row.category.trim())
-                }
-
-                // Find brand by name from map
-                let brandId = null
-                if (row.brand) {
-                  brandId = brandMap.get(row.brand.trim())
-                }
-
-                const productData = {
-                  name: row.name || `محصول ${i + 1}`,
-                  sku: row.sku || '',
-                  productType: row.productType || 'simple',
-                  price: parseFloat(row.price) || 0,
-                  compareAtPrice: row.compareAtPrice ? parseFloat(row.compareAtPrice) : undefined,
-                  stock: parseInt(row.stock) || 0,
-                  category: categoryId,
-                  brand: brandId,
-                  description: row.description || '',
-                  isActive: row.isActive === 'بله' || (row.isActive || '').toString().toLowerCase() === 'true' || row.isActive === '1' || row.isActive === true,
-                  isFeatured:
-                    row.isFeatured === 'بله' || (row.isFeatured || '').toString().toLowerCase() === 'true' || row.isFeatured === '1' || row.isFeatured === true,
-                }
-
-                // Manual Slug Generation
-                if (productData.name) {
-                  const base = productData.name.toString().trim().toLowerCase()
-                  let slug = base
-                    .replace(/\s+/g, '-')
-                    .replace(/[^\p{L}\p{N}\-]+/gu, '')
-                    .replace(/\-+/g, '-')
-                    .replace(/^-+/, '')
-                    .replace(/-+$/, '')
-
-                  if (!slug) slug = new mongoose.Types.ObjectId().toString()
-
-                  const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
-                  productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
-                }
-
-                // Manual ProductCode Generation
-                if (productData.sku) {
-                  const skuDigits = productData.sku.replace(/\D/g, '')
-                  if (skuDigits.length > 0) {
-                    productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
-                  }
-                }
-
-                if (!productData.productCode) {
-                  const uniqueNum = (Date.now() % 10000000) + i
-                  const code = (uniqueNum % 10000000).toString().padStart(7, '0')
-                  productData.productCode = `KY-${code}`
-                }
-
-                productsToCreate.push(productData)
-              } catch (rowError) {
-                errors.push(`خطا در پردازش ردیف ${i + 1}: ${rowError.message}`)
-              }
-            }
-
-            // Insert products in batches
-            const BATCH_SIZE = 500
-            let totalImported = 0
-
-            for (let i = 0; i < productsToCreate.length; i += BATCH_SIZE) {
-              const chunk = productsToCreate.slice(i, i + BATCH_SIZE)
-              try {
-                const result = await Product.insertMany(chunk, { ordered: false })
-                totalImported += result.length
-              } catch (batchError) {
-                console.error(`Error importing batch ${i / BATCH_SIZE + 1}:`, batchError.message)
-                if (batchError.insertedDocs) {
-                  totalImported += batchError.insertedDocs.length
-                }
-                errors.push(`خطا در ذخیره سازی دسته ${Math.floor(i / BATCH_SIZE) + 1}: ${batchError.message}`)
-              }
-            }
-
-            clearCacheByPrefix('/api/products')
-            clearCacheByPrefix('/api/v1/admin/products')
-
-            // Delete uploaded files
-            fs.unlinkSync(filePath)
-            if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
-
-            // Send response
-            const message = `تعداد ${totalImported} محصول با موفقیت درون‌ریزی شد`
-            res.json({
-              success: true,
-              message,
-              imported: totalImported,
-              errors: errors.length > 0 ? errors : undefined,
-            })
-          } catch (error) {
-            // Delete uploaded files on error
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-            if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
-
-            console.error('Error processing CSV:', error)
-            res.status(500).json({
-              success: false,
-              message: 'خطا در پردازش فایل CSV',
-              error: error.message,
-            })
+          // Find brand by name from map
+          let brandId = null
+          if (row.brand) {
+            brandId = brandMap.get(String(row.brand).trim())
           }
-        })
-        .on('error', (error) => {
-          // Delete uploaded files on error
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
-          if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
 
-          console.error('Error reading CSV:', error)
-          res.status(500).json({
-            success: false,
-            message: 'خطا در خواندن فایل CSV',
-            error: error.message,
-          })
-        })
+          const productData = {
+            name: row.name || `Product ${i + 1}`,
+            sku: row.sku || '',
+            productType: row.productType || 'simple',
+            price: parseCsvNumber(row.price, 0),
+            compareAtPrice: row.compareAtPrice ? parseCsvNumber(row.compareAtPrice, undefined) : undefined,
+            stock: Math.max(0, Math.floor(parseCsvNumber(row.stock, 0))),
+            category: categoryId,
+            brand: brandId,
+            description: row.description || '',
+            isActive: parseCsvBoolean(row.isActive),
+            isFeatured: parseCsvBoolean(row.isFeatured),
+          }
+
+          // Manual Slug Generation
+          if (productData.name) {
+            const base = productData.name.toString().trim().toLowerCase()
+            let slug = base
+              .replace(/\s+/g, '-')
+              .replace(/[^\p{L}\p{N}\-]+/gu, '')
+              .replace(/\-+/g, '-')
+              .replace(/^-+/, '')
+              .replace(/-+$/, '')
+
+            if (!slug) slug = new mongoose.Types.ObjectId().toString()
+
+            const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
+            productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
+          }
+
+          // Manual ProductCode Generation
+          if (productData.sku) {
+            const skuDigits = normalizeDigits(productData.sku).replace(/\D/g, '')
+            if (skuDigits.length > 0) {
+              productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
+            }
+          }
+
+          if (!productData.productCode) {
+            const uniqueNum = (Date.now() % 10000000) + i
+            const code = (uniqueNum % 10000000).toString().padStart(7, '0')
+            productData.productCode = `KY-${code}`
+          }
+
+          productsToCreate.push(productData)
+        } catch (rowError) {
+          errors.push(`Row ${i + 1} processing error: ${rowError.message}`)
+        }
+      }
+
+      // Insert products in batches
+      let totalImported = 0
+
+      for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
+        const chunk = productsToCreate.slice(i, i + CSV_IMPORT_BATCH_SIZE)
+        try {
+          const result = await Product.insertMany(chunk, { ordered: false })
+          totalImported += result.length
+        } catch (batchError) {
+          console.error(`Error importing batch ${i / CSV_IMPORT_BATCH_SIZE + 1}:`, batchError.message)
+          if (batchError.insertedDocs) {
+            totalImported += batchError.insertedDocs.length
+          }
+          errors.push(`Batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1} save error: ${batchError.message}`)
+        }
+      }
+
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      safeUnlink(filePath)
+
+      const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
+      const message = `${totalImported} products imported successfully`
+
+      return res.json({
+        success: true,
+        message,
+        imported: totalImported,
+        durationSeconds,
+        errors: errors.length > 0 ? errors : undefined,
+      })
     } catch (error) {
       console.error('Error importing products from CSV:', error)
-      res.status(500).json({
+      safeUnlink(req.file?.path)
+      return res.status(500).json({
         success: false,
-        message: 'خطا در درون‌ریزی محصولات از CSV',
+        message: 'Error importing products from CSV',
         error: error.message,
       })
     }
