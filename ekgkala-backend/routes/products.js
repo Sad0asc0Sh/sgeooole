@@ -600,11 +600,84 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
 
     console.log('[PRODUCTS] Sort param:', sort, '-> MongoDB sort:', finalSort)
 
-    const query = Product.find(mongoFilter).sort(finalSort).skip(skip).limit(limit)
+    // Use Aggregation to allow prioritizing exact matches
+    const pipeline = []
 
-    if (fields) {
-      query.select(fields)
+    // 1. Match Filter
+    if (Object.keys(mongoFilter).length > 0) {
+      pipeline.push({ $match: mongoFilter })
     }
+
+    // 2. Add Sort Priority
+    // If searching, prioritize exact matches on SKU
+    if (req.query.search) {
+      const searchTerm = req.query.search.trim()
+      pipeline.push({
+        $addFields: {
+          __sortPriority: {
+            $cond: {
+              if: {
+                $or: [
+                  { $eq: ['$sku', searchTerm] },
+                  { $in: [searchTerm, { $ifNull: ['$variants.sku', []] }] },
+                ],
+              },
+              then: 1, // Exact match gets high priority
+              else: 0,
+            },
+          },
+        },
+      })
+    }
+
+    // 3. Sort
+    const sortStage = {}
+
+    // First sort by priority (descending)
+    if (req.query.search) {
+      sortStage.__sortPriority = -1
+    }
+
+    // Then apply user sort
+    const sortParts = finalSort.split(' ')
+    sortParts.forEach((part) => {
+      if (part.startsWith('-')) {
+        sortStage[part.substring(1)] = -1
+      } else {
+        sortStage[part] = 1
+      }
+    })
+
+    pipeline.push({ $sort: sortStage })
+
+    // 4. Projection
+    if (fields) {
+      const projectStage = {}
+      fields.split(' ').forEach((f) => {
+        if (f.startsWith('-')) {
+          projectStage[f.substring(1)] = 0
+        } else {
+          projectStage[f] = 1
+        }
+      })
+      if (Object.keys(projectStage).length > 0) {
+        pipeline.push({ $project: projectStage })
+      }
+    } else {
+      // Remove internal sort field
+      if (req.query.search) {
+        pipeline.push({ $project: { __sortPriority: 0 } })
+      }
+    }
+
+    // 5. Pagination
+    pipeline.push({ $skip: skip })
+    pipeline.push({ $limit: limit })
+
+    // Execute Aggregation
+    const productQuery = Product.aggregate(pipeline)
+
+
 
     const now = new Date()
 
@@ -649,7 +722,7 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
     ])
 
     const [items, total, activeSales, priceStats] = await Promise.all([
-      query.lean(),
+      productQuery,
       Product.countDocuments(mongoFilter),
       Sale.find({
         isActive: true,
