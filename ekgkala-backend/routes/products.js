@@ -1941,7 +1941,6 @@ router.post(
                   brandId = brandMap.get(row.brand.trim())
                 }
 
-                // Create product object
                 const productData = {
                   name: row.name || `محصول ${i + 1}`,
                   sku: row.sku || '',
@@ -1957,18 +1956,58 @@ router.post(
                     row.isFeatured === 'بله' || (row.isFeatured || '').toString().toLowerCase() === 'true' || row.isFeatured === '1' || row.isFeatured === true,
                 }
 
-                // Generate slug if not present (handled by pre-save hook, but can be done here if needed)
-                // Mongoose pre-save hook will handle slug generation if not provided.
+                // Manual Slug Generation
+                if (productData.name) {
+                  const base = productData.name.toString().trim().toLowerCase()
+                  let slug = base
+                    .replace(/\s+/g, '-')
+                    .replace(/[^\p{L}\p{N}\-]+/gu, '')
+                    .replace(/\-+/g, '-')
+                    .replace(/^-+/, '')
+                    .replace(/-+$/, '')
+
+                  if (!slug) slug = new mongoose.Types.ObjectId().toString()
+
+                  const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
+                  productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
+                }
+
+                // Manual ProductCode Generation
+                if (productData.sku) {
+                  const skuDigits = productData.sku.replace(/\D/g, '')
+                  if (skuDigits.length > 0) {
+                    productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
+                  }
+                }
+
+                if (!productData.productCode) {
+                  const uniqueNum = (Date.now() % 10000000) + i
+                  const code = (uniqueNum % 10000000).toString().padStart(7, '0')
+                  productData.productCode = `KY-${code}`
+                }
 
                 productsToCreate.push(productData)
               } catch (rowError) {
-                errors.push(`خطا در ردیف ${i + 1}: ${rowError.message}`)
+                errors.push(`خطا در پردازش ردیف ${i + 1}: ${rowError.message}`)
               }
             }
 
-            // Insert products in bulk
-            if (productsToCreate.length > 0) {
-              await Product.insertMany(productsToCreate)
+            // Insert products in batches
+            const BATCH_SIZE = 500
+            let totalImported = 0
+
+            for (let i = 0; i < productsToCreate.length; i += BATCH_SIZE) {
+              const chunk = productsToCreate.slice(i, i + BATCH_SIZE)
+              try {
+                const result = await Product.insertMany(chunk, { ordered: false })
+                totalImported += result.length
+              } catch (batchError) {
+                console.error(`Error importing batch ${i / BATCH_SIZE + 1}:`, batchError.message)
+                if (batchError.insertedDocs) {
+                  totalImported += batchError.insertedDocs.length
+                }
+                errors.push(`خطا در ذخیره سازی دسته ${Math.floor(i / BATCH_SIZE) + 1}: ${batchError.message}`)
+              }
             }
 
             clearCacheByPrefix('/api/products')
@@ -1979,11 +2018,11 @@ router.post(
             if (fs.existsSync(cleanedPath)) fs.unlinkSync(cleanedPath)
 
             // Send response
-            const message = `تعداد ${productsToCreate.length} محصول با موفقیت درون‌ریزی شد`
+            const message = `تعداد ${totalImported} محصول با موفقیت درون‌ریزی شد`
             res.json({
               success: true,
               message,
-              imported: productsToCreate.length,
+              imported: totalImported,
               errors: errors.length > 0 ? errors : undefined,
             })
           } catch (error) {
