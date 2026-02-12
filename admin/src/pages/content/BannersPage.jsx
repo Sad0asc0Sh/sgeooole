@@ -94,6 +94,9 @@ const BANNER_POSITIONS = {
   },
 }
 
+const MAX_BANNER_UPLOAD_SIZE_MB = 10
+const MAX_BANNER_UPLOAD_SIZE_BYTES = MAX_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
+
 function BannersPage() {
   const [banners, setBanners] = useState([])
   const [loading, setLoading] = useState(false)
@@ -327,44 +330,46 @@ function BannersPage() {
     }
   }
 
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
   const handleSave = async () => {
     try {
       const values = await form.validateFields()
       setSaving(true)
 
-      let image = values.imageUrl ? { url: values.imageUrl } : undefined
+      const hasNewImageFile = fileList.length > 0 && fileList[0].originFileObj
 
-      if (fileList.length > 0 && fileList[0].originFileObj) {
-        const b64 = await toBase64(fileList[0].originFileObj)
-        image = { url: String(b64) }
-      }
+      if (hasNewImageFile) {
+        const formData = new FormData()
+        formData.append('title', values.title)
+        formData.append('link', values.link || '')
+        formData.append('position', values.position)
+        formData.append('isActive', String(values.isActive !== undefined ? values.isActive : true))
+        formData.append('sortOrder', String(values.sortOrder ?? 0))
+        formData.append('image', fileList[0].originFileObj)
 
-      // اطمینان از مقادیر صحیح
-      const payload = {
-        title: values.title,
-        link: values.link || '',
-        position: values.position,
-        isActive: values.isActive !== undefined ? values.isActive : true,
-        sortOrder: values.sortOrder ?? 0,
-        image,
-      }
-
-      console.log('Banner payload:', payload) // برای دیباگ
-
-      if (editing) {
-        await api.put(`/banners/${editing._id}`, payload)
-        message.success('بنر با موفقیت ویرایش شد')
+        if (editing) {
+          await api.put(`/banners/${editing._id}`, formData)
+          message.success('بنر با موفقیت ویرایش شد')
+        } else {
+          await api.post('/banners', formData)
+          message.success('بنر جدید با موفقیت ایجاد شد')
+        }
       } else {
-        await api.post('/banners', payload)
-        message.success('بنر جدید با موفقیت ایجاد شد')
+        const payload = {
+          title: values.title,
+          link: values.link || '',
+          position: values.position,
+          isActive: values.isActive !== undefined ? values.isActive : true,
+          sortOrder: values.sortOrder ?? 0,
+          image: values.imageUrl ? { url: values.imageUrl } : undefined,
+        }
+
+        if (editing) {
+          await api.put(`/banners/${editing._id}`, payload)
+          message.success('بنر با موفقیت ویرایش شد')
+        } else {
+          await api.post('/banners', payload)
+          message.success('بنر جدید با موفقیت ایجاد شد')
+        }
       }
 
       setModalOpen(false)
@@ -387,6 +392,20 @@ function BannersPage() {
       reader.onload = () => setPreviewImage(reader.result)
       reader.readAsDataURL(newFileList[0].originFileObj)
     }
+  }
+
+  const beforeUploadBanner = (file) => {
+    if (!file?.type?.startsWith('image/')) {
+      message.error('فقط فایل تصویری مجاز است')
+      return Upload.LIST_IGNORE
+    }
+
+    if (file.size > MAX_BANNER_UPLOAD_SIZE_BYTES) {
+      message.error(`حداکثر حجم فایل ${MAX_BANNER_UPLOAD_SIZE_MB} مگابایت است`)
+      return Upload.LIST_IGNORE
+    }
+
+    return false
   }
 
   // ============================================
@@ -485,7 +504,7 @@ function BannersPage() {
           description={
             <ul style={{ margin: 0, paddingRight: 20, fontSize: 12 }}>
               <li><strong>فرمت‌های مجاز:</strong> JPG, PNG, WEBP (ترجیحاً WEBP برای سرعت بارگذاری)</li>
-              <li><strong>حداکثر حجم:</strong> 2 مگابایت</li>
+              <li><strong>حداکثر حجم فنی:</strong> 10 مگابایت (پیشنهادی: زیر 2 مگابایت)</li>
               <li><strong>محتوای مهم:</strong> متن و لوگو را در 60% مرکزی تصویر قرار دهید تا در موبایل بریده نشود</li>
               <li><strong>کیفیت:</strong> تصویر با کیفیت بالا (DPI بالا) استفاده نکنید - باعث کندی سایت می‌شود</li>
             </ul>
@@ -705,7 +724,7 @@ function BannersPage() {
                 )}
 
                 <Upload.Dragger
-                  beforeUpload={() => false}
+                  beforeUpload={beforeUploadBanner}
                   fileList={fileList}
                   onChange={handleUploadChange}
                   maxCount={1}
@@ -722,7 +741,7 @@ function BannersPage() {
                     فرمت‌های مجاز: JPG, PNG, WEBP (ترجیحاً WEBP)
                   </p>
                   <p className="ant-upload-hint" style={{ fontSize: 10, color: '#888' }}>
-                    حداکثر حجم: 2 مگابایت
+                    حداکثر حجم فنی: 10 مگابایت (پیشنهادی: زیر 2 مگابایت)
                   </p>
                 </Upload.Dragger>
               </Form.Item>

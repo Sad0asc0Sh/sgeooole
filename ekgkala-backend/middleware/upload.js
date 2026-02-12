@@ -4,6 +4,13 @@ const { Readable } = require('stream')
 const crypto = require('crypto')
 const path = require('path')
 
+const DEFAULT_MAX_UPLOAD_FILE_SIZE_MB = 10
+const parsedMaxUploadFileSizeMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_MB)
+const MAX_UPLOAD_FILE_SIZE_MB = Number.isFinite(parsedMaxUploadFileSizeMb) && parsedMaxUploadFileSizeMb > 0
+  ? parsedMaxUploadFileSizeMb
+  : DEFAULT_MAX_UPLOAD_FILE_SIZE_MB
+const MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
+
 // ============================================
 // Cloudinary Configuration
 // ============================================
@@ -139,9 +146,12 @@ const storage = new CloudinaryStorageEngine({
   cloudinary,
   params: (req, file) => {
     let folder = 'ekgkala/uploads'
+    const isBannerRoute = req?.baseUrl === '/api/banners' || req?.originalUrl?.includes('/api/banners')
 
     // Determine folder based on field type
-    if (file.fieldname === 'icon' || file.fieldname === 'image') {
+    if (isBannerRoute && file.fieldname === 'image') {
+      folder = 'ekgkala/banners'
+    } else if (file.fieldname === 'icon' || file.fieldname === 'image') {
       folder = 'ekgkala/categories'
     } else if (file.fieldname === 'logo') {
       folder = 'ekgkala/brands'
@@ -265,7 +275,7 @@ const validateMagicNumbers = (req, res, next) => {
 const upload = multer({
   storage,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB max per file (increased for high-quality product images)
+    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
     files: 10, // Max 10 files per request
   },
   fileFilter: secureFileFilter,
@@ -282,5 +292,7 @@ module.exports = {
   ALLOWED_EXTENSIONS,
   BLOCKED_MIME_TYPES,
   BLOCKED_EXTENSIONS,
+  MAX_UPLOAD_FILE_SIZE_MB,
+  MAX_UPLOAD_FILE_SIZE_BYTES,
   CloudinaryStorageEngine, // Export for testing/custom usage
 }

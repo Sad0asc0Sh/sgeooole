@@ -40,6 +40,7 @@ const ERROR_MESSAGES = {
 
   // File Upload Errors
   MulterError: 'خطا در آپلود فایل',
+  PayloadTooLargeError: 'حجم داده ارسالی بیشتر از حد مجاز است',
 
   // Default
   InternalError: 'خطای داخلی سرور رخ داده است',
@@ -71,6 +72,14 @@ const isSensitiveError = (err) => {
  * Extract safe error message for client response
  */
 const getSafeMessage = (err) => {
+  if (err.name === 'MulterError' && err.code === 'LIMIT_FILE_SIZE') {
+    return 'حجم فایل بیشتر از حد مجاز است'
+  }
+
+  if (err.type === 'entity.too.large' || err.status === 413 || err.statusCode === 413) {
+    return ERROR_MESSAGES.PayloadTooLargeError
+  }
+
   // Check for known error types
   if (ERROR_MESSAGES[err.name]) {
     return ERROR_MESSAGES[err.name]
