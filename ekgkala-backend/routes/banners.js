@@ -33,11 +33,14 @@ router.get('/', cacheMiddleware(300), getBanners)
 // مجوزهای مورد نیاز: BANNER_CREATE, BANNER_UPDATE, BANNER_DELETE
 // ============================================
 
+const { upload } = require('../middleware/upload')
+
 // POST /api/banners - ایجاد بنر جدید
 router.post(
   '/',
   protect,
   checkPermission(PERMISSIONS.BANNER_CREATE),
+  upload.single('image'),
   clearBannerCache,
   createBanner
 )
@@ -47,6 +50,7 @@ router.put(
   '/:id',
   protect,
   checkPermission(PERMISSIONS.BANNER_UPDATE),
+  upload.single('image'),
   clearBannerCache,
   updateBanner
 )

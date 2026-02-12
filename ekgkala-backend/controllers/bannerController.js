@@ -57,12 +57,23 @@ exports.createBanner = async (req, res) => {
       })
     }
 
+    let imagePath = null
+
+    // 1. Check if file was uploaded
+    if (req.file) {
+      imagePath = req.file.path || req.file.secure_url
+    }
+    // 2. Check if image URL is provided in body (fallback)
+    else if (image) {
+      imagePath = image
+    }
+
     const banner = await Banner.create({
       title,
       link: link || '',
       position: position || 'homepage-slider',
       isActive: isActive !== undefined ? isActive : true,
-      image: image || null,
+      image: imagePath || null,
       sortOrder: sortOrder || 0,
     })
 
@@ -98,8 +109,14 @@ exports.updateBanner = async (req, res) => {
     if (updates.link !== undefined) banner.link = updates.link
     if (updates.position !== undefined) banner.position = updates.position
     if (updates.isActive !== undefined) banner.isActive = updates.isActive
-    if (updates.image !== undefined) banner.image = updates.image || null
     if (updates.sortOrder !== undefined) banner.sortOrder = updates.sortOrder
+
+    // Check for new image upload
+    if (req.file) {
+      banner.image = req.file.path || req.file.secure_url
+    } else if (updates.image !== undefined) {
+      banner.image = updates.image || null
+    }
 
     const saved = await banner.save()
 
