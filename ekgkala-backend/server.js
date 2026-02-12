@@ -574,7 +574,7 @@ const connectDB = async () => {
         console.log('⚠️ Redis not available - system will operate without caching')
       })
 
-      app.listen(PORT, () => {
+      const server = app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`)
         console.log(`API: http://localhost:${PORT}/api`)
         console.log(`Uploads: http://localhost:${PORT}/uploads`)
@@ -586,6 +586,12 @@ const connectDB = async () => {
           console.log('📡 PM2 ready signal sent')
         }
       })
+
+      // Increase Timeouts for Long Operations (e.g. CSV Import)
+      // Default is 120000 (2 minutes)
+      // Set to 10 minutes (600000 ms)
+      server.keepAliveTimeout = 600000
+      server.headersTimeout = 610000 // Must be greater than keepAliveTimeout
 
       // Start Jobs
       const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')

@@ -1864,6 +1864,7 @@ router.post(
   checkPermission(PERMISSIONS.PRODUCT_IMPORT),
   csvUpload.single('file'),
   async (req, res) => {
+    req.setTimeout(600000) // 10 minutes timeout for this request
     try {
       if (!req.file) {
         return res.status(400).json({
