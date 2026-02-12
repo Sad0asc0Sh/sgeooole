@@ -1902,26 +1902,43 @@ router.post(
           try {
             const productsToCreate = []
 
+            // 1. Collect all unique category and brand names
+            const categoryNames = new Set()
+            const brandNames = new Set()
+
+            products.forEach(row => {
+              if (row.category) categoryNames.add(row.category.trim())
+              if (row.brand) brandNames.add(row.brand.trim())
+            })
+
+            // 2. Bulk fetch categories and brands
+            const categories = await Category.find({
+              name: { $in: Array.from(categoryNames) }
+            }).select('_id name').lean()
+
+            const brands = await Brand.find({
+              name: { $in: Array.from(brandNames) }
+            }).select('_id name').lean()
+
+            // 3. Create lookup maps (Name -> ID)
+            const categoryMap = new Map(categories.map(c => [c.name, c._id]))
+            const brandMap = new Map(brands.map(b => [b.name, b._id]))
+
+            // 4. Process rows synchronously
             for (let i = 0; i < products.length; i++) {
               const row = products[i]
 
               try {
-                // Find category by name
+                // Find category by name from map
                 let categoryId = null
                 if (row.category) {
-                  const category = await Category.findOne({ name: row.category.trim() })
-                  if (category) {
-                    categoryId = category._id
-                  }
+                  categoryId = categoryMap.get(row.category.trim())
                 }
 
-                // Find brand by name
+                // Find brand by name from map
                 let brandId = null
                 if (row.brand) {
-                  const brand = await Brand.findOne({ name: row.brand.trim() })
-                  if (brand) {
-                    brandId = brand._id
-                  }
+                  brandId = brandMap.get(row.brand.trim())
                 }
 
                 // Create product object
@@ -1935,10 +1952,13 @@ router.post(
                   category: categoryId,
                   brand: brandId,
                   description: row.description || '',
-                  isActive: row.isActive === 'بله' || (row.isActive || '').toString().toLowerCase() === 'true' || row.isActive === '1',
+                  isActive: row.isActive === 'بله' || (row.isActive || '').toString().toLowerCase() === 'true' || row.isActive === '1' || row.isActive === true,
                   isFeatured:
-                    row.isFeatured === 'بله' || (row.isFeatured || '').toString().toLowerCase() === 'true' || row.isFeatured === '1',
+                    row.isFeatured === 'بله' || (row.isFeatured || '').toString().toLowerCase() === 'true' || row.isFeatured === '1' || row.isFeatured === true,
                 }
+
+                // Generate slug if not present (handled by pre-save hook, but can be done here if needed)
+                // Mongoose pre-save hook will handle slug generation if not provided.
 
                 productsToCreate.push(productData)
               } catch (rowError) {
