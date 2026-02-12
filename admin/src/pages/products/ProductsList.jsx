@@ -26,10 +26,54 @@ import {
   StopOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
+import Papa from 'papaparse'
 import api from '../../api'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const { Dragger } = Upload
+const CSV_DIRECT_UPLOAD_LIMIT_BYTES = 900 * 1024
+const CSV_CHUNK_MAX_BYTES = 700 * 1024
+const CSV_CHUNK_RETRY_COUNT = 3
+const CSV_IMPORT_MESSAGE_KEY = 'csv-import-progress'
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const isNonEmptyRow = (row = {}) =>
+  Object.values(row).some((value) => String(value ?? '').trim() !== '')
+
+const buildCsvChunks = (rows, headers, maxChunkBytes = CSV_CHUNK_MAX_BYTES) => {
+  const normalizedRows = rows.map((row) =>
+    headers.reduce((acc, header) => {
+      acc[header] = row?.[header] ?? ''
+      return acc
+    }, {}),
+  )
+
+  const chunks = []
+  let currentChunkRows = []
+  let currentChunkSize = 0
+
+  normalizedRows.forEach((row) => {
+    const rowCsv = Papa.unparse({ fields: headers, data: [row] }, { header: false })
+    const rowSize = new Blob([`${rowCsv}\n`]).size
+
+    if (currentChunkRows.length > 0 && currentChunkSize + rowSize > maxChunkBytes) {
+      chunks.push(currentChunkRows)
+      currentChunkRows = [row]
+      currentChunkSize = rowSize
+      return
+    }
+
+    currentChunkRows.push(row)
+    currentChunkSize += rowSize
+  })
+
+  if (currentChunkRows.length > 0) {
+    chunks.push(currentChunkRows)
+  }
+
+  return chunks
+}
 
 function ProductsList({ mode }) {
   const [products, setProducts] = useState([])
@@ -369,6 +413,98 @@ function ProductsList({ mode }) {
     }
   }
 
+  const importLargeCsvInChunks = async (file) => {
+    const fileText = await file.text()
+    const parsed = Papa.parse(fileText, {
+      header: true,
+      skipEmptyLines: 'greedy',
+      transformHeader: (header) => (header || '').replace(/\uFEFF/g, '').trim(),
+    })
+
+    const parseErrors = (parsed?.errors || []).filter((item) => item?.code !== 'UndetectableDelimiter')
+    if (parseErrors.length > 0) {
+      const firstError = parseErrors[0]
+      throw new Error(`CSV parse error at row ${firstError?.row ?? '-'}: ${firstError?.message || 'unknown error'}`)
+    }
+
+    const headers = (parsed?.meta?.fields || [])
+      .map((header) => (header || '').trim())
+      .filter(Boolean)
+
+    if (!headers.length) {
+      throw new Error('CSV header is missing or invalid')
+    }
+
+    const rows = (parsed?.data || []).filter((row) => isNonEmptyRow(row))
+    if (!rows.length) {
+      throw new Error('CSV file has no importable rows')
+    }
+
+    const chunks = buildCsvChunks(rows, headers)
+    let totalImported = 0
+    const aggregatedErrors = []
+
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      message.loading({
+        key: CSV_IMPORT_MESSAGE_KEY,
+        duration: 0,
+        content: `Processing CSV chunk ${chunkIndex + 1} of ${chunks.length}`,
+      })
+
+      const chunkCsv = Papa.unparse({
+        fields: headers,
+        data: chunks[chunkIndex],
+      })
+
+      let chunkUploaded = false
+      let lastError = null
+
+      for (let attempt = 1; attempt <= CSV_CHUNK_RETRY_COUNT; attempt++) {
+        try {
+          const chunkFormData = new FormData()
+          chunkFormData.append(
+            'file',
+            new Blob([chunkCsv], { type: 'text/csv;charset=utf-8' }),
+            `products-chunk-${chunkIndex + 1}.csv`,
+          )
+
+          const response = await api.post('/products/import/csv', chunkFormData, {
+            timeout: 600000,
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+          })
+
+          const data = response?.data || {}
+          totalImported += Number(data.imported || 0)
+
+          if (Array.isArray(data.errors) && data.errors.length > 0) {
+            aggregatedErrors.push(...data.errors.map((item) => `Chunk ${chunkIndex + 1}: ${item}`))
+          }
+
+          chunkUploaded = true
+          lastError = null
+          break
+        } catch (error) {
+          lastError = error
+          if (attempt < CSV_CHUNK_RETRY_COUNT) {
+            await wait(1000 * attempt)
+          }
+        }
+      }
+
+      if (!chunkUploaded && lastError) {
+        throw lastError
+      }
+    }
+
+    message.destroy(CSV_IMPORT_MESSAGE_KEY)
+
+    return {
+      imported: totalImported,
+      errors: aggregatedErrors,
+      totalChunks: chunks.length,
+    }
+  }
   // Upload props for CSV import
   const uploadProps = {
     name: 'file',
@@ -377,23 +513,36 @@ function ProductsList({ mode }) {
     showUploadList: false,
     customRequest: async ({ file, onSuccess, onError }) => {
       setUploading(true)
-      const formData = new FormData()
-      formData.append('file', file)
+      const shouldUseChunkImport = file.size > CSV_DIRECT_UPLOAD_LIMIT_BYTES
 
       try {
-        const response = await api.post('/products/import/csv', formData, {
-          timeout: 600000, // 10 minutes timeout for large CSVs
-          maxBodyLength: Infinity,
-          maxContentLength: Infinity,
-        })
+        let data
 
-        const data = response.data
+        if (shouldUseChunkImport) {
+          data = await importLargeCsvInChunks(file)
+        } else {
+          const formData = new FormData()
+          formData.append('file', file)
+
+          const response = await api.post('/products/import/csv', formData, {
+            timeout: 600000, // 10 minutes timeout for large CSVs
+            maxBodyLength: Infinity,
+            maxContentLength: Infinity,
+          })
+          data = response.data
+        }
 
         onSuccess(data)
-        message.success(data.message || 'محصولات با موفقیت درون‌ریزی شدند')
+        if (Array.isArray(data?.errors) && data.errors.length > 0) {
+          message.warning(`${data.imported || 0} products imported with ${data.errors.length} warnings`)
+        } else {
+          message.success(data?.message || `${data?.imported || 0} products imported successfully`)
+        }
+
         setImportModalVisible(false)
         fetchProducts() // Refresh product list
       } catch (err) {
+        message.destroy(CSV_IMPORT_MESSAGE_KEY)
         console.error('Error importing products:', err)
         const status = err?.response?.status
         const serverMessage = err?.response?.data?.message
@@ -408,9 +557,11 @@ function ProductsList({ mode }) {
         } else if (isNetworkError) {
           errorMessage = 'Network connection dropped during CSV import'
         }
+
         onError(err)
         message.error(errorMessage)
       } finally {
+        message.destroy(CSV_IMPORT_MESSAGE_KEY)
         setUploading(false)
       }
     },
