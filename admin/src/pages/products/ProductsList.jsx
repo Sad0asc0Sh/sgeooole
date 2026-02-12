@@ -26,7 +26,6 @@ import {
   StopOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import Papa from 'papaparse'
 import api from '../../api'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
@@ -41,6 +40,107 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const isNonEmptyRow = (row = {}) =>
   Object.values(row).some((value) => String(value ?? '').trim() !== '')
 
+const normalizeCsvHeader = (header) =>
+  String(header || '')
+    .replace(/\uFEFF/g, '')
+    .trim()
+
+const escapeCsvValue = (value) => {
+  const str = String(value ?? '')
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+const csvSerializeRow = (headers, row) =>
+  headers.map((header) => escapeCsvValue(row?.[header] ?? '')).join(',')
+
+const csvSerialize = (headers, rows) => {
+  const lines = [headers.map(escapeCsvValue).join(',')]
+  rows.forEach((row) => {
+    lines.push(csvSerializeRow(headers, row))
+  })
+  return lines.join('\n')
+}
+
+const parseCsvText = (text = '') => {
+  const matrix = []
+  const parseErrors = []
+
+  let row = []
+  let field = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          field += '"'
+          i++
+        } else {
+          inQuotes = false
+        }
+      } else {
+        field += char
+      }
+      continue
+    }
+
+    if (char === '"') {
+      inQuotes = true
+    } else if (char === ',') {
+      row.push(field)
+      field = ''
+    } else if (char === '\n') {
+      row.push(field)
+      matrix.push(row)
+      row = []
+      field = ''
+    } else if (char === '\r') {
+      // Ignore \r and let \n close the row.
+    } else {
+      field += char
+    }
+  }
+
+  if (inQuotes) {
+    parseErrors.push({ row: matrix.length + 1, message: 'Unclosed quoted field in CSV' })
+  }
+
+  if (field.length > 0 || row.length > 0) {
+    row.push(field)
+    matrix.push(row)
+  }
+
+  if (matrix.length === 0) {
+    return { headers: [], rows: [], parseErrors }
+  }
+
+  const headers = matrix[0].map(normalizeCsvHeader).filter(Boolean)
+  if (!headers.length) {
+    parseErrors.push({ row: 1, message: 'CSV header is missing or invalid' })
+    return { headers: [], rows: [], parseErrors }
+  }
+
+  const rows = []
+  for (let i = 1; i < matrix.length; i++) {
+    const rawRow = matrix[i]
+    const rowObject = {}
+    headers.forEach((header, idx) => {
+      rowObject[header] = String(rawRow[idx] ?? '').trim()
+    })
+
+    if (isNonEmptyRow(rowObject)) {
+      rows.push(rowObject)
+    }
+  }
+
+  return { headers, rows, parseErrors }
+}
+
 const buildCsvChunks = (rows, headers, maxChunkBytes = CSV_CHUNK_MAX_BYTES) => {
   const normalizedRows = rows.map((row) =>
     headers.reduce((acc, header) => {
@@ -54,7 +154,7 @@ const buildCsvChunks = (rows, headers, maxChunkBytes = CSV_CHUNK_MAX_BYTES) => {
   let currentChunkSize = 0
 
   normalizedRows.forEach((row) => {
-    const rowCsv = Papa.unparse({ fields: headers, data: [row] }, { header: false })
+    const rowCsv = csvSerializeRow(headers, row)
     const rowSize = new Blob([`${rowCsv}\n`]).size
 
     if (currentChunkRows.length > 0 && currentChunkSize + rowSize > maxChunkBytes) {
@@ -415,27 +515,17 @@ function ProductsList({ mode }) {
 
   const importLargeCsvInChunks = async (file) => {
     const fileText = await file.text()
-    const parsed = Papa.parse(fileText, {
-      header: true,
-      skipEmptyLines: 'greedy',
-      transformHeader: (header) => (header || '').replace(/\uFEFF/g, '').trim(),
-    })
+    const { headers, rows, parseErrors } = parseCsvText(fileText)
 
-    const parseErrors = (parsed?.errors || []).filter((item) => item?.code !== 'UndetectableDelimiter')
     if (parseErrors.length > 0) {
       const firstError = parseErrors[0]
       throw new Error(`CSV parse error at row ${firstError?.row ?? '-'}: ${firstError?.message || 'unknown error'}`)
     }
 
-    const headers = (parsed?.meta?.fields || [])
-      .map((header) => (header || '').trim())
-      .filter(Boolean)
-
     if (!headers.length) {
       throw new Error('CSV header is missing or invalid')
     }
 
-    const rows = (parsed?.data || []).filter((row) => isNonEmptyRow(row))
     if (!rows.length) {
       throw new Error('CSV file has no importable rows')
     }
@@ -451,10 +541,7 @@ function ProductsList({ mode }) {
         content: `Processing CSV chunk ${chunkIndex + 1} of ${chunks.length}`,
       })
 
-      const chunkCsv = Papa.unparse({
-        fields: headers,
-        data: chunks[chunkIndex],
-      })
+      const chunkCsv = csvSerialize(headers, chunks[chunkIndex])
 
       let chunkUploaded = false
       let lastError = null
