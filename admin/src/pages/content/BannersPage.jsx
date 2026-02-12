@@ -21,6 +21,7 @@ import {
   Tooltip,
   Divider,
   Alert,
+  Progress,
 } from 'antd'
 import {
   InboxOutlined,
@@ -125,6 +126,56 @@ const resolveBannerSaveErrorMessage = (err) => {
   return err?.response?.data?.message || 'خطا در ذخیره بنر'
 }
 
+const normalizeBaseUrl = (value) => {
+  if (!value || typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  if (trimmed.startsWith('/')) {
+    return trimmed.replace(/\/$/, '')
+  }
+
+  try {
+    return new URL(trimmed).toString().replace(/\/$/, '')
+  } catch (_) {
+    return null
+  }
+}
+
+const buildUploadApiBaseCandidates = (currentBaseUrl) => {
+  const candidates = []
+  const push = (value) => {
+    const normalized = normalizeBaseUrl(value)
+    if (normalized && !candidates.includes(normalized)) {
+      candidates.push(normalized)
+    }
+  }
+
+  // 1) Current configured base
+  push(currentBaseUrl)
+
+  // 2) Runtime same-origin fallbacks
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin
+    push(`${origin}/api`)
+    push(`${origin}/api-proxy`)
+    push(`${origin}/.netlify/functions/api-proxy`)
+  }
+
+  // 3) Relative fallbacks (works for same-origin deployment)
+  push('/api')
+  push('/api-proxy')
+  push('/.netlify/functions/api-proxy')
+
+  return candidates
+}
+
+const shouldRetryWithAnotherBase = (err) => {
+  if (!err?.response) return true
+  const status = err.response.status
+  return status === 404 || status === 502 || status === 503 || status === 504
+}
+
 function BannersPage() {
   const [banners, setBanners] = useState([])
   const [loading, setLoading] = useState(false)
@@ -135,6 +186,8 @@ function BannersPage() {
   const [form] = Form.useForm()
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [fileList, setFileList] = useState([])
   const [previewImage, setPreviewImage] = useState(null)
   const [selectedPosition, setSelectedPosition] = useState('main-slider')
@@ -321,6 +374,8 @@ function BannersPage() {
   const handleNew = () => {
     setEditing(null)
     form.resetFields()
+    setUploadingImage(false)
+    setUploadProgress(0)
     setFileList([])
     setPreviewImage(null)
     setSelectedPosition('main-slider')
@@ -334,6 +389,8 @@ function BannersPage() {
 
   const handleEdit = (banner) => {
     setEditing(banner)
+    setUploadingImage(false)
+    setUploadProgress(0)
     setFileList([])
     setPreviewImage(banner.image?.url || null)
     setSelectedPosition(banner.position || 'main-slider')
@@ -361,12 +418,37 @@ function BannersPage() {
   const uploadBannerImage = async (file) => {
     const formData = new FormData()
     formData.append('image', file)
+    const baseCandidates = buildUploadApiBaseCandidates(api?.defaults?.baseURL)
+    let lastError = null
 
-    const res = await api.post('/uploads/banner', formData, {
-      timeout: 180000, // 3 minutes for slow Cloudinary uploads
-    })
+    for (const baseURL of baseCandidates) {
+      try {
+        const res = await api.post('/uploads/banner', formData, {
+          baseURL,
+          timeout: 180000, // 3 minutes for slow Cloudinary uploads
+          onUploadProgress: (event) => {
+            const total = event?.total || file?.size || 0
+            if (!total) return
+            const percent = Math.min(100, Math.max(1, Math.round((event.loaded * 100) / total)))
+            setUploadProgress(percent)
+          },
+        })
 
-    return res?.data?.data
+        // Keep the successful base URL for subsequent requests in this session
+        if (api?.defaults?.baseURL !== baseURL) {
+          api.defaults.baseURL = baseURL
+        }
+
+        return res?.data?.data
+      } catch (err) {
+        lastError = err
+        if (!shouldRetryWithAnotherBase(err)) {
+          throw err
+        }
+      }
+    }
+
+    throw lastError || new Error('Upload request failed on all API base URLs')
   }
 
   const handleSave = async () => {
@@ -375,11 +457,16 @@ function BannersPage() {
     try {
       const values = await form.validateFields()
       setSaving(true)
+      setUploadingImage(false)
+      setUploadProgress(0)
 
       const hasNewImageFile = fileList.length > 0 && fileList[0].originFileObj
 
       if (hasNewImageFile) {
+        setUploadingImage(true)
+        setUploadProgress(1)
         uploadedImage = await uploadBannerImage(fileList[0].originFileObj)
+        setUploadProgress(100)
       }
 
       const payload = {
@@ -406,6 +493,8 @@ function BannersPage() {
 
       setModalOpen(false)
       setEditing(null)
+      setUploadingImage(false)
+      setUploadProgress(0)
       fetchBanners()
     } catch (err) {
       if (!err?.errorFields) {
@@ -417,6 +506,7 @@ function BannersPage() {
         message.error(resolveBannerSaveErrorMessage(err))
       }
     } finally {
+      setUploadingImage(false)
       setSaving(false)
     }
   }
@@ -604,7 +694,11 @@ function BannersPage() {
       {/* ============================================ */}
       <Modal
         open={modalOpen}
-        onCancel={() => setModalOpen(false)}
+        onCancel={() => {
+          setModalOpen(false)
+          setUploadingImage(false)
+          setUploadProgress(0)
+        }}
         onOk={handleSave}
         okText={editing ? '💾 ذخیره تغییرات' : '✅ ایجاد بنر'}
         cancelText="انصراف"
@@ -766,6 +860,7 @@ function BannersPage() {
                   onChange={handleUploadChange}
                   maxCount={1}
                   accept="image/*"
+                  disabled={saving}
                   style={{ borderRadius: 8 }}
                 >
                   <p className="ant-upload-drag-icon">
@@ -781,6 +876,21 @@ function BannersPage() {
                     حداکثر حجم فنی: 10 مگابایت (پیشنهادی: زیر 2 مگابایت)
                   </p>
                 </Upload.Dragger>
+
+                {uploadingImage && (
+                  <div style={{ marginTop: 12 }}>
+                    <Progress
+                      percent={uploadProgress}
+                      size="small"
+                      status={uploadProgress < 100 ? 'active' : 'success'}
+                    />
+                    <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                      {uploadProgress < 100
+                        ? `در حال ارسال فایل به سرور: ${uploadProgress}%`
+                        : 'فایل ارسال شد، در حال پردازش روی Cloudinary...'}
+                    </div>
+                  </div>
+                )}
               </Form.Item>
 
               <Form.Item

@@ -14,7 +14,7 @@ const getBaseUrl = () => {
   const isProd = import.meta.env.PROD
 
   if (envUrl) return envUrl.replace(/\/$/, '') // اگر متغیر محیطی ست شده بود
-  if (isProd) return '/api-proxy'              // پیش‌فرض برای نِتلیفای (از طریق Rewrite)
+  if (isProd) return '/api'                    // پیش‌فرض Production (پشت reverse-proxy)
   return 'http://localhost:5000/api'           // پیش‌فرض برای سیستم خودتان
 }
 
@@ -34,6 +34,47 @@ const shouldUseCredentials = (baseUrl) => {
   }
 
   return false
+}
+
+const normalizeBaseUrl = (value) => {
+  if (!value || typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  if (trimmed.startsWith('/')) {
+    return trimmed.replace(/\/$/, '')
+  }
+
+  try {
+    return new URL(trimmed).toString().replace(/\/$/, '')
+  } catch (_) {
+    return null
+  }
+}
+
+const buildRetryBaseUrls = (currentBaseUrl) => {
+  const baseUrls = []
+  const add = (value) => {
+    const normalized = normalizeBaseUrl(value)
+    if (normalized && !baseUrls.includes(normalized)) {
+      baseUrls.push(normalized)
+    }
+  }
+
+  add(currentBaseUrl)
+
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin
+    add(`${origin}/api`)
+    add(`${origin}/api-proxy`)
+    add(`${origin}/.netlify/functions/api-proxy`)
+  }
+
+  add('/api')
+  add('/api-proxy')
+  add('/.netlify/functions/api-proxy')
+
+  return baseUrls
 }
 
 const baseURL = getBaseUrl()
@@ -86,6 +127,23 @@ api.interceptors.response.use(
 
     // Network-level errors often point to CORS/proxy/SSL issues.
     if (!error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
+      const requestBaseUrl = normalizeBaseUrl(originalRequest?.baseURL || api.defaults.baseURL)
+      const alreadyTried = Array.isArray(originalRequest?._triedBaseUrls)
+        ? originalRequest._triedBaseUrls
+        : (requestBaseUrl ? [requestBaseUrl] : [])
+      const candidateBaseUrls = buildRetryBaseUrls(requestBaseUrl)
+      const nextBaseUrl = candidateBaseUrls.find((candidate) => !alreadyTried.includes(candidate))
+
+      if (nextBaseUrl && originalRequest) {
+        originalRequest._triedBaseUrls = [...alreadyTried, nextBaseUrl]
+        originalRequest.baseURL = nextBaseUrl
+
+        // Keep successful fallback for subsequent requests in the same session.
+        api.defaults.baseURL = nextBaseUrl
+
+        return api.request(originalRequest)
+      }
+
       error.userMessage = 'اتصال به API برقرار نشد. تنظیمات CORS، آدرس API و پروکسی را بررسی کنید.'
     }
 
