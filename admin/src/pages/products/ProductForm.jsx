@@ -180,7 +180,6 @@ function ProductForm() {
               stock: p.stock,
               category: categoryId,
               brand: brandId,
-              brand: brandId,
               description: (() => {
                 if (!p.description) return '';
                 try {
