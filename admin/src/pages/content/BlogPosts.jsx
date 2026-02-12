@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import { Editor } from '@tinymce/tinymce-react'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -40,9 +41,28 @@ const formatPersianDate = (date, includeTime = false) => {
   return `${day} ${month} ${year}`
 }
 
-// TinyMCE API Key - Free tier (limited features)
-// For production, register at https://www.tiny.cloud/
-const TINYMCE_API_KEY = 'no-api-key'
+// ReactQuill Modules
+const modules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ align: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ direction: 'rtl' }],
+    [{ color: [] }, { background: [] }],
+    ['link', 'image', 'video'],
+    ['clean'],
+  ],
+}
+
+const formats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'align', 'list', 'bullet',
+  'direction',
+  'color', 'background',
+  'link', 'image', 'video',
+]
 
 function BlogPosts() {
   const [posts, setPosts] = useState([])
@@ -306,27 +326,16 @@ function BlogPosts() {
           </Form.Item>
 
           <Form.Item label="محتوا *" required>
-            <Editor
-              apiKey={TINYMCE_API_KEY}
-              value={editorContent}
-              onEditorChange={(content) => setEditorContent(content)}
-              init={{
-                height: 400,
-                menubar: false,
-                directionality: 'rtl',
-                language: 'fa',
-                plugins: [
-                  'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
-                  'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                  'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
-                ],
-                toolbar: 'undo redo | blocks | ' +
-                  'bold italic forecolor | alignleft aligncenter ' +
-                  'alignright alignjustify | bullist numlist outdent indent | ' +
-                  'removeformat | help',
-                content_style: 'body { font-family: Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }'
-              }}
-            />
+            <div style={{ direction: 'rtl' }}>
+              <ReactQuill
+                theme="snow"
+                value={editorContent}
+                onChange={setEditorContent}
+                modules={modules}
+                formats={formats}
+                style={{ height: '300px', marginBottom: '50px' }}
+              />
+            </div>
           </Form.Item>
 
           <Form.Item name="metaTitle" label="Meta Title">

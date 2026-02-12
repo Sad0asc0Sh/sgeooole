@@ -43,6 +43,7 @@ body {
   min-height: 200px;
   direction: rtl;
   text-align: right;
+  font-family: Tahoma, Arial, sans-serif;
 }
 
 /* Tree draggable */

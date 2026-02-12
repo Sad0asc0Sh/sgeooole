@@ -23,38 +23,50 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from '@ant-design/icons'
-import { Editor } from '@tinymce/tinymce-react'
+import ReactQuill from 'react-quill'
+import 'react-quill/dist/quill.snow.css'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
-// TinyMCE API Key
-const TINYMCE_API_KEY = 'no-api-key'
+const modules = {
+  toolbar: [
+    [{ header: [1, 2, 3, 4, 5, 6, false] }],
+    ['bold', 'italic', 'underline', 'strike'], // toggled buttons
+    [{ align: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    [{ indent: '-1' }, { indent: '+1' }], // outdent/indent
+    [{ direction: 'rtl' }], // text direction
+    [{ color: [] }, { background: [] }], // dropdown with defaults from theme
+    ['link', 'image', 'video'],
+    ['clean'], // remove formatting button
+  ],
+}
 
-const RichTextEditor = ({ value, onChange }) => (
-  <Editor
-    apiKey={TINYMCE_API_KEY}
-    value={value}
-    onEditorChange={onChange}
-    init={{
-      height: 400,
-      menubar: true,
-      directionality: 'rtl',
-      language: 'fa',
-      plugins: [
-        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
-        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-        'insertdatetime', 'media', 'table', 'preview', 'help', 'wordcount'
-      ],
-      toolbar: 'undo redo | blocks | ' +
-        'bold italic forecolor backcolor | alignleft aligncenter ' +
-        'alignright alignjustify | bullist numlist outdent indent | ' +
-        'removeformat | image table | help',
-      content_style: 'body { font-family: Tahoma, Arial, sans-serif; font-size: 14px; direction: rtl; }'
-    }}
-  />
-)
+const formats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'align', 'list', 'bullet', 'indent',
+  'direction',
+  'color', 'background',
+  'link', 'image', 'video',
+]
+
+const RichTextEditor = ({ value, onChange }) => {
+  return (
+    <div className="rich-text-editor-wrapper" style={{ direction: 'rtl' }}>
+      <ReactQuill
+        theme="snow"
+        value={value || ''}
+        onChange={onChange}
+        modules={modules}
+        formats={formats}
+        style={{ height: '300px', marginBottom: '50px' }}
+      />
+    </div>
+  )
+}
 
 function ProductForm() {
   const [form] = Form.useForm()
@@ -807,8 +819,6 @@ function ProductForm() {
                     <Form.Item
                       name="description"
                       label="توضیحات"
-                      trigger="onEditorChange"
-                      validateTrigger={['onBlur', 'onEditorChange']}
                     >
                       <RichTextEditor />
                     </Form.Item>
