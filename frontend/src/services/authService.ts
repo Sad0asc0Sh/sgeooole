@@ -17,7 +17,10 @@ export interface User {
   // Personal Info
   nationalCode?: string;
   birthDate?: string | Date;
+  gender?: "male" | "female" | "";
+  birthPlace?: string;
   landline?: string;
+  secondMobile?: string;
   shebaNumber?: string;
   province?: string;
   city?: string;
@@ -173,13 +176,16 @@ export const authService = {
         isActive: userData.isActive !== false,
         addresses: userData.addresses || [],
         avatar: userData.avatar,
-        // Personal Info
-        nationalCode: userData.nationalCode,
-        birthDate: userData.birthDate,
-        landline: userData.landline,
-        shebaNumber: userData.shebaNumber,
-        province: userData.province,
-        city: userData.city,
+         // Personal Info
+         nationalCode: userData.nationalCode,
+         birthDate: userData.birthDate,
+         gender: userData.gender,
+         birthPlace: userData.birthPlace,
+         landline: userData.landline,
+         secondMobile: userData.secondMobile,
+         shebaNumber: userData.shebaNumber,
+         province: userData.province,
+         city: userData.city,
         // Legal Info
         isLegal: userData.isLegal,
         companyName: userData.companyName,

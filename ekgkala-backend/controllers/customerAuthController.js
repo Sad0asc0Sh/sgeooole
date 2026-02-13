@@ -7,6 +7,7 @@ const OTP = require('../models/OTP')
 const Order = require('../models/Order')
 const { sendVerificationEmail, sendOtpSMS, getSmsSettings } = require('../utils/notificationService')
 const { normalizeIranMobile } = require('../utils/phone')
+const { isValidNationalCode, isValidSheba } = require('../utils/validators')
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET
@@ -229,13 +230,16 @@ exports.getProfile = async (req, res) => {
         googleId: user.googleId,
         avatar: user.avatar,
         username: user.username,
-        // Personal Info
-        nationalCode: user.nationalCode,
-        birthDate: user.birthDate,
-        landline: user.landline,
-        province: user.province,
-        city: user.city,
-        shebaNumber: user.shebaNumber,
+         // Personal Info
+         nationalCode: user.nationalCode,
+         birthDate: user.birthDate,
+         gender: user.gender,
+         birthPlace: user.birthPlace,
+         landline: user.landline,
+         secondMobile: user.secondMobile,
+         province: user.province,
+         city: user.city,
+         shebaNumber: user.shebaNumber,
         // Legal Entity Info
         isLegal: user.isLegal,
         companyName: user.companyName,
@@ -940,7 +944,10 @@ exports.updateProfile = async (req, res) => {
       // Personal Info
       nationalCode,
       birthDate,
+      gender,
+      birthPlace,
       landline,
+      secondMobile,
       province,
       city,
       shebaNumber,
@@ -958,6 +965,14 @@ exports.updateProfile = async (req, res) => {
     const user = await User.findById(userId).select('+password')
     if (!user) {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
+    }
+
+    // Email update must be done through OTP verification flow
+    if (email !== undefined && email !== user.email) {
+      return res.status(400).json({
+        success: false,
+        message: 'برای تغییر ایمیل باید از طریق تایید کد ایمیل اقدام کنید.',
+      })
     }
 
     // ✅ FIX: Update all profile fields
@@ -987,12 +1002,25 @@ exports.updateProfile = async (req, res) => {
     }
 
     // ✅ FIX: Update Personal Info
-    if (nationalCode !== undefined) user.nationalCode = nationalCode
-    if (birthDate !== undefined) user.birthDate = birthDate
+    if (nationalCode !== undefined) {
+      if (nationalCode && !isValidNationalCode(nationalCode)) {
+        return res.status(400).json({ success: false, message: 'کد ملی نامعتبر است.' })
+      }
+      user.nationalCode = nationalCode || undefined
+    }
+    if (birthDate !== undefined) user.birthDate = birthDate || undefined
+    if (gender !== undefined) user.gender = gender || undefined
+    if (birthPlace !== undefined) user.birthPlace = birthPlace || undefined
     if (landline !== undefined) user.landline = landline
+    if (secondMobile !== undefined) user.secondMobile = secondMobile || undefined
     if (province !== undefined) user.province = province
     if (city !== undefined) user.city = city
-    if (shebaNumber !== undefined) user.shebaNumber = shebaNumber
+    if (shebaNumber !== undefined) {
+      if (shebaNumber && !isValidSheba(shebaNumber)) {
+        return res.status(400).json({ success: false, message: 'شماره شبا نامعتبر است.' })
+      }
+      user.shebaNumber = shebaNumber || undefined
+    }
 
     // ✅ FIX: Update Legal Entity Info
     if (isLegal !== undefined) user.isLegal = isLegal
@@ -1022,13 +1050,16 @@ exports.updateProfile = async (req, res) => {
           username: user.username,
           avatar: user.avatar,
           googleId: user.googleId,
-          // Personal Info
-          nationalCode: user.nationalCode,
-          birthDate: user.birthDate,
-          landline: user.landline,
-          province: user.province,
-          city: user.city,
-          shebaNumber: user.shebaNumber,
+           // Personal Info
+           nationalCode: user.nationalCode,
+           birthDate: user.birthDate,
+           gender: user.gender,
+           birthPlace: user.birthPlace,
+           landline: user.landline,
+           secondMobile: user.secondMobile,
+           province: user.province,
+           city: user.city,
+           shebaNumber: user.shebaNumber,
           // Legal Info
           isLegal: user.isLegal,
           companyName: user.companyName,

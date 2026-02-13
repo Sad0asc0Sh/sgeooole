@@ -91,9 +91,22 @@ const userSchema = new mongoose.Schema(
     birthDate: {
       type: Date,
     },
+    gender: {
+      type: String,
+      enum: ['male', 'female'],
+    },
+    birthPlace: {
+      type: String,
+      trim: true,
+    },
     landline: {
       type: String,
       trim: true,
+    },
+    secondMobile: {
+      type: String,
+      trim: true,
+      match: [/^09\d{9}$/, 'شماره موبایل باید با 09 شروع شود و 11 رقم باشد'],
     },
     shebaNumber: {
       type: String,

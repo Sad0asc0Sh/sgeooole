@@ -6,7 +6,7 @@
  */
 
 const Joi = require('joi');
-const { normalizeIranMobile } = require('../../utils/phone');
+const { normalizeIranMobile, toEnglishDigits } = require('../../utils/phone');
 
 // ============================================
 // Common Validation Patterns
@@ -30,6 +30,48 @@ const normalizeIranMobileForJoi = (value, helpers) => {
     if (!normalized) {
         return helpers.message('شماره موبایل معتبر نیست (فرمت درست: 09xxxxxxxxx)');
     }
+    return normalized;
+};
+
+const normalizeIranMobileOptionalForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return undefined;
+    return normalizeIranMobileForJoi(value, helpers);
+};
+
+const normalizeIranMobileClearableForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return '';
+    return normalizeIranMobileForJoi(value, helpers);
+};
+
+const normalizeNationalCodeForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return '';
+
+    const normalized = toEnglishDigits(value).replace(/\D/g, '');
+    if (!/^\d{10}$/.test(normalized)) {
+        return helpers.message('کد ملی باید ۱۰ رقم باشد');
+    }
+    return normalized;
+};
+
+const normalizeShebaForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return '';
+
+    // Normalize: remove spaces, convert Persian digits, uppercase
+    let normalized = toEnglishDigits(String(value)).replace(/\s+/g, '').toUpperCase();
+
+    // Allow entering just 24 digits (without "IR")
+    if (/^\d{24}$/.test(normalized)) {
+        normalized = `IR${normalized}`;
+    }
+
+    if (!/^IR\d{24}$/.test(normalized)) {
+        return helpers.message('شماره شبا نامعتبر است (باید با IR شروع شود و ۲۶ کاراکتر باشد)');
+    }
+
     return normalized;
 };
 
@@ -165,43 +207,151 @@ const changePasswordSchema = Joi.object({
         }),
 });
 
-/**
- * Update profile schema
- */
-const updateProfileSchema = Joi.object({
-    name: Joi.string()
-        .trim()
-        .min(2)
-        .max(100)
-        .optional()
-        .messages({
-            'string.min': 'نام باید حداقل ۲ کاراکتر باشد',
-            'string.max': 'نام نباید بیشتر از ۱۰۰ کاراکتر باشد',
-        }),
+ /**
+  * Update profile schema
+  */
+ const updateProfileSchema = Joi.object({
+     name: Joi.string()
+         .trim()
+         .min(2)
+         .max(100)
+         .optional()
+         .messages({
+             'string.min': 'نام باید حداقل ۲ کاراکتر باشد',
+             'string.max': 'نام نباید بیشتر از ۱۰۰ کاراکتر باشد',
+         }),
 
-    email: Joi.string()
-        .trim()
-        .lowercase()
-        .email({ tlds: { allow: false } })
-        .max(254)
-        .optional()
-        .messages({
-            'string.email': 'فرمت ایمیل نامعتبر است',
-        }),
+     password: Joi.string()
+         .min(6)
+         .max(128)
+         .optional()
+         .allow('')
+         .messages({
+             'string.min': 'رمز عبور باید حداقل ۶ کاراکتر باشد',
+             'string.max': 'رمز عبور نباید بیشتر از ۱۲۸ کاراکتر باشد',
+         }),
 
-    mobile: Joi.string()
-        .pattern(iranMobilePattern)
-        .optional()
-        .allow('')
-        .messages({
-            'string.pattern.base': 'شماره موبایل باید در فرمت 09xxxxxxxxx باشد',
-        }),
+     email: Joi.string()
+         .trim()
+         .lowercase()
+         .empty('')
+         .email({ tlds: { allow: false } })
+         .max(254)
+         .optional()
+         .messages({
+             'string.email': 'فرمت ایمیل نامعتبر است',
+         }),
 
-    avatar: Joi.string()
-        .uri()
-        .optional()
-        .allow(''),
-});
+     mobile: Joi.any()
+         .custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer')
+         .optional(),
+
+     // Personal Info
+     nationalCode: Joi.any()
+         .custom(normalizeNationalCodeForJoi, 'national code normalizer')
+         .optional(),
+
+     birthDate: Joi.date()
+         .iso()
+         .empty('')
+         .optional()
+         .allow(null)
+         .messages({
+             'date.format': 'فرمت تاریخ تولد نامعتبر است',
+             'date.base': 'تاریخ تولد نامعتبر است',
+         }),
+
+     gender: Joi.string()
+         .valid('male', 'female')
+         .optional()
+         .allow('')
+         .messages({
+             'any.only': 'جنسیت نامعتبر است',
+         }),
+
+     birthPlace: Joi.string()
+         .trim()
+         .max(100)
+         .optional()
+         .allow('')
+         .messages({
+             'string.max': 'محل تولد نباید بیشتر از ۱۰۰ کاراکتر باشد',
+         }),
+
+     secondMobile: Joi.any()
+         .custom(normalizeIranMobileClearableForJoi, 'iran mobile normalizer')
+         .optional(),
+
+     landline: Joi.string()
+         .trim()
+         .max(30)
+         .optional()
+         .allow('')
+         .messages({
+             'string.max': 'تلفن ثابت نباید بیشتر از ۳۰ کاراکتر باشد',
+         }),
+
+     province: Joi.string()
+         .trim()
+         .max(100)
+         .optional()
+         .allow(''),
+
+     city: Joi.string()
+         .trim()
+         .max(100)
+         .optional()
+         .allow(''),
+
+     shebaNumber: Joi.any()
+         .custom(normalizeShebaForJoi, 'sheba normalizer')
+         .optional(),
+
+     // Legal Info
+     isLegal: Joi.boolean()
+         .optional(),
+
+     companyName: Joi.string()
+         .trim()
+         .max(150)
+         .optional()
+         .allow(''),
+
+     companyNationalId: Joi.string()
+         .trim()
+         .max(50)
+         .optional()
+         .allow(''),
+
+     companyRegistrationId: Joi.string()
+         .trim()
+         .max(50)
+         .optional()
+         .allow(''),
+
+     companyLandline: Joi.string()
+         .trim()
+         .max(30)
+         .optional()
+         .allow(''),
+
+     companyProvince: Joi.string()
+         .trim()
+         .max(100)
+         .optional()
+         .allow(''),
+
+     companyCity: Joi.string()
+         .trim()
+         .max(100)
+         .optional()
+         .allow(''),
+
+     avatar: Joi.string()
+         .uri()
+         .optional()
+         .allow(''),
+ });
 
 /**
  * OTP request schema

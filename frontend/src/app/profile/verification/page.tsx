@@ -28,6 +28,14 @@ export default function VerificationPage() {
     const [bindOtpSent, setBindOtpSent] = useState(false);
     const [bindLoading, setBindLoading] = useState(false);
 
+    // Change Email State
+    const [emailOtpSheetOpen, setEmailOtpSheetOpen] = useState(false);
+    const [emailToVerify, setEmailToVerify] = useState("");
+    const [emailOtp, setEmailOtp] = useState(["", "", "", ""]);
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [emailSending, setEmailSending] = useState(false);
+    const [emailVerifying, setEmailVerifying] = useState(false);
+
     // Form State
     const [formData, setFormData] = useState({
         name: "",
@@ -89,16 +97,16 @@ export default function VerificationPage() {
                 setFormData({
                     name: firstName,
                     surname: lastName,
-                    gender: (userData as any).gender || "",
+                    gender: userData.gender || "",
                     nationalCode: userData.nationalCode || "",
                     birthDate: userData.birthDate
                         ? (typeof userData.birthDate === 'string'
                             ? userData.birthDate
                             : userData.birthDate.toISOString())
                         : "",
-                    birthPlace: (userData as any).birthPlace || "",
+                    birthPlace: userData.birthPlace || "",
                     landline: userData.landline || "",
-                    secondMobile: (userData as any).secondMobile || "",
+                    secondMobile: userData.secondMobile || "",
                     email: userData.email || "",
                     shebaNumber: userData.shebaNumber || "",
                     bankName: "",
@@ -195,9 +203,12 @@ export default function VerificationPage() {
         try {
             setBindLoading(true);
             const response = await authService.verifyBindOtp(bindMobile, code);
-            if (response.success && response.data?.user) {
-                setUser(response.data.user);
+            if (response.success) {
+                const updatedUser = await authService.getProfile();
+                setUser(updatedUser);
                 setBindMobileSheetOpen(false);
+                setBindOtpSent(false);
+                setBindOtp(["", "", "", ""]);
                 setSuccess("شماره موبایل با موفقیت ثبت شد");
             }
         } catch (err: any) {
@@ -218,6 +229,70 @@ export default function VerificationPage() {
         }
     };
 
+    // Email OTP Handlers
+    const startEmailVerification = async (email: string) => {
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (user?.googleId) {
+            alert("کاربران گوگل امکان تغییر ایمیل را ندارند");
+            return;
+        }
+
+        if (!normalizedEmail || !/\S+@\S+\.\S+/.test(normalizedEmail)) {
+            alert("لطفا ایمیل معتبر وارد کنید");
+            return;
+        }
+
+        try {
+            setEmailSending(true);
+            setEmailToVerify(normalizedEmail);
+            setEmailOtp(["", "", "", ""]);
+            setEmailOtpSent(false);
+            setEmailOtpSheetOpen(true);
+            await authService.sendEmailOtp(normalizedEmail);
+            setEmailOtpSent(true);
+        } catch (err: any) {
+            alert(err.message || "خطا در ارسال کد تایید");
+        } finally {
+            setEmailSending(false);
+        }
+    };
+
+    const handleVerifyEmailOtp = async () => {
+        const code = emailOtp.join("");
+        if (code.length !== 4) {
+            alert("لطفا کد تایید ۴ رقمی را وارد کنید");
+            return;
+        }
+        try {
+            setEmailVerifying(true);
+            const response = await authService.verifyEmailOtp(emailToVerify, code);
+            if (response.success) {
+                const updatedUser = await authService.getProfile();
+                setUser(updatedUser);
+                setEmailOtpSheetOpen(false);
+                setEmailOtpSent(false);
+                setEmailOtp(["", "", "", ""]);
+                setSuccess("ایمیل با موفقیت ثبت شد");
+            }
+        } catch (err: any) {
+            alert(err.message || "کد تایید نامعتبر است");
+        } finally {
+            setEmailVerifying(false);
+        }
+    };
+
+    const handleEmailOtpChange = (index: number, value: string) => {
+        if (isNaN(Number(value))) return;
+        const newOtp = [...emailOtp];
+        newOtp[index] = value;
+        setEmailOtp(newOtp);
+        if (value && index < 3) {
+            const nextInput = document.getElementById(`email-otp-${index + 1}`);
+            nextInput?.focus();
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
@@ -225,12 +300,28 @@ export default function VerificationPage() {
         setSuccess(null);
 
         const combinedName = `${formData.name} ${formData.surname}`.trim();
+        const nextEmail = formData.email.trim().toLowerCase();
+        const currentEmail = (user?.email || "").trim().toLowerCase();
+        const shouldVerifyEmail = !!nextEmail && nextEmail !== currentEmail && !user?.googleId;
 
         try {
             // 1. Update Profile
             await authService.updateProfile({
-                ...formData,
                 name: combinedName,
+                gender: formData.gender as UserType["gender"],
+                nationalCode: formData.nationalCode,
+                birthDate: formData.birthDate,
+                birthPlace: formData.birthPlace,
+                landline: formData.landline,
+                secondMobile: formData.secondMobile,
+                shebaNumber: formData.shebaNumber,
+                isLegal: formData.isLegal,
+                companyName: formData.companyName,
+                companyNationalId: formData.companyNationalId,
+                companyRegistrationId: formData.companyRegistrationId,
+                companyLandline: formData.companyLandline,
+                companyProvince: formData.companyProvince,
+                companyCity: formData.companyCity,
             });
 
             // 2. Sync to Address (if exists)
@@ -253,7 +344,12 @@ export default function VerificationPage() {
                 }
             }
 
-            setSuccess("اطلاعات با موفقیت ذخیره شد");
+            if (shouldVerifyEmail) {
+                setSuccess("اطلاعات ذخیره شد. برای ثبت ایمیل، کد تایید را وارد کنید.");
+                await startEmailVerification(nextEmail);
+            } else {
+                setSuccess("اطلاعات با موفقیت ذخیره شد");
+            }
 
             // Reload user to get fresh state
             const updatedUser = await authService.getProfile();
@@ -343,7 +439,9 @@ export default function VerificationPage() {
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-gray-700">ایمیل تایید شد</span>
-                                {formData.email ? <CheckCircle2 className="text-green-500" size={20} /> : <XCircle className="text-gray-300" size={20} />}
+                                {user?.email && user.email.trim().toLowerCase() === formData.email.trim().toLowerCase()
+                                    ? <CheckCircle2 className="text-green-500" size={20} />
+                                    : <XCircle className="text-gray-300" size={20} />}
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-gray-700">موبایل تایید شد</span>
@@ -351,7 +449,7 @@ export default function VerificationPage() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-sm font-bold text-gray-700">هویت تایید شد</span>
-                                {formData.nationalCode ? <CheckCircle2 className="text-green-500" size={20} /> : <XCircle className="text-gray-300" size={20} />}
+                                {user?.nationalCode ? <CheckCircle2 className="text-green-500" size={20} /> : <XCircle className="text-gray-300" size={20} />}
                             </div>
                         </div>
                     </aside>
@@ -519,7 +617,16 @@ export default function VerificationPage() {
                                     اطلاعات تماس
                                 </h2>
                                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    <Input label="ایمیل" name="email" value={formData.email} onChange={handleChange} dir="ltr" placeholder="example@mail.com" />
+                                    <Input
+                                        label="ایمیل"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        dir="ltr"
+                                        placeholder="example@mail.com"
+                                        disabled={!!user?.googleId}
+                                        className={user?.googleId ? "bg-gray-100 text-gray-500 cursor-not-allowed" : ""}
+                                    />
                                     <Input label="تلفن ثابت" name="landline" value={formData.landline} onChange={handleChange} placeholder="با پیش‌شماره" />
                                     <Input label="شماره موبایل دوم" name="secondMobile" value={formData.secondMobile} onChange={handleChange} placeholder="اختیاری" />
 
@@ -669,6 +776,88 @@ export default function VerificationPage() {
                                 </div>
                                 <button onClick={handleVerifyBindOtp} disabled={bindLoading} className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4">
                                     {bindLoading ? "در حال بررسی..." : "تایید و ثبت شماره"}
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Email OTP Sheet */}
+            <Sheet
+                open={emailOtpSheetOpen}
+                onOpenChange={(open) => {
+                    setEmailOtpSheetOpen(open);
+                    if (!open) {
+                        setEmailOtpSent(false);
+                        setEmailOtp(["", "", "", ""]);
+                        setEmailToVerify("");
+                    }
+                }}
+            >
+                <SheetContent side="bottom" className="rounded-t-[2rem] p-6 pb-24">
+                    <SheetHeader className="mb-6">
+                        <SheetTitle className="text-center text-lg font-bold text-gray-800">تایید ایمیل</SheetTitle>
+                    </SheetHeader>
+
+                    <div className="space-y-4">
+                        {!emailOtpSent ? (
+                            <>
+                                <div className="text-center">
+                                    <p className="text-sm text-gray-600">برای تایید ایمیل، کد را ارسال کنید.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1.5">ایمیل</label>
+                                    <input
+                                        type="email"
+                                        value={emailToVerify || formData.email}
+                                        disabled
+                                        dir="ltr"
+                                        className="w-full bg-gray-100 border border-gray-200 rounded-xl p-3 text-sm text-gray-500 cursor-not-allowed text-left"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => startEmailVerification(emailToVerify || formData.email)}
+                                    disabled={emailSending || !(emailToVerify || formData.email)}
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4"
+                                >
+                                    {emailSending ? "در حال ارسال..." : "ارسال کد تایید"}
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="text-center mb-4">
+                                    <p className="text-sm text-gray-600">کد تایید به ایمیل {emailToVerify} ارسال شد.</p>
+                                </div>
+                                <div className="flex justify-center gap-3 mb-6" dir="ltr">
+                                    {emailOtp.map((digit, index) => (
+                                        <input
+                                            key={index}
+                                            id={`email-otp-${index}`}
+                                            type="text"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleEmailOtpChange(index, e.target.value)}
+                                            className="w-12 h-12 border-2 border-gray-200 rounded-xl text-center text-xl font-bold focus:border-kala-500 focus:ring-4 focus:ring-kala-100 outline-none transition-all"
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleVerifyEmailOtp}
+                                    disabled={emailVerifying}
+                                    className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4"
+                                >
+                                    {emailVerifying ? "در حال بررسی..." : "تایید و ثبت ایمیل"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => startEmailVerification(emailToVerify)}
+                                    disabled={emailSending}
+                                    className="w-full bg-white border border-gray-300 text-gray-700 font-bold py-3.5 rounded-xl mt-3"
+                                >
+                                    {emailSending ? "در حال ارسال..." : "ارسال مجدد کد"}
                                 </button>
                             </>
                         )}
