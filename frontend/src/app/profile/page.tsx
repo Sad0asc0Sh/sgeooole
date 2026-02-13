@@ -744,8 +744,7 @@ export default function ProfilePage() {
                                     type="text"
                                     value={editName}
                                     onChange={(e) => setEditName(e.target.value)}
-                                    className={`w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all ${user?.googleId ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    disabled={!!user?.googleId}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                 />
                                 <UserIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             </div>
@@ -799,21 +798,19 @@ export default function ProfilePage() {
                                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                             </div>
                             {user?.googleId ? (
-                                <p className="text-[10px] text-amber-500 mt-1">اطلاعات حساب گوگل قابل تغییر نیست.</p>
+                                <p className="text-[10px] text-amber-500 mt-1">ایمیل حساب گوگل قابل تغییر نیست.</p>
                             ) : (
                                 <p className="text-[10px] text-gray-400 mt-1">تغییر ایمیل نیازمند تایید کد ارسالی است.</p>
                             )}
                         </div>
 
-                        {!user?.googleId && (
-                            <button
-                                onClick={handleUpdateProfile}
-                                disabled={editLoading}
-                                className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all"
-                            >
-                                {editLoading ? "در حال ذخیره..." : "ثبت تغییرات"}
-                            </button>
-                        )}
+                        <button
+                            onClick={handleUpdateProfile}
+                            disabled={editLoading}
+                            className="w-full bg-kala-600 text-white font-bold py-3.5 rounded-xl shadow-lg shadow-kala-200 mt-4 active:scale-95 transition-all"
+                        >
+                            {editLoading ? "در حال ذخیره..." : "ثبت تغییرات"}
+                        </button>
                     </div>
                 </SheetContent>
             </Sheet>
