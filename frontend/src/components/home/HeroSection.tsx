@@ -95,7 +95,9 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
         };
     }, [initialBanners]);
 
-    const mainBanners = banners.filter(b => b.position === 'main-slider');
+    const mainBanners = banners
+        .filter(b => b.position === 'main-slider')
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     const middleBanners = banners.filter(b => b.position === 'middle-banner').slice(0, 3);
 
     if (loading) {
@@ -166,9 +168,8 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 delay: 5000,
                                 disableOnInteraction: false,
                                 pauseOnMouseEnter: true,
-                                reverseDirection: true,
                             }}
-                            dir="ltr"
+                            dir="rtl"
                             className="hero-swiper"
                         >
                             {mainBanners.map((banner) => {
