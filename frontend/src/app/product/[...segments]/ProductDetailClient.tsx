@@ -84,17 +84,14 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             {/* Desktop Two-Column Layout - With proper header clearance */}
             <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8">
                 <div className="flex flex-row-reverse gap-10">
-                    {/* Right Column - Gallery (Sticky) - Positioned below header with margin */}
+                    {/* Right Column - Gallery + Breadcrumb below */}
                     <div className="w-[45%] flex-shrink-0">
                         <div className="sticky top-36">
                             <ProductGallery product={product} />
                         </div>
-                    </div>
 
-                    {/* Left Column - Product Info */}
-                    <div className="flex-1 min-w-0">
-                        {/* Breadcrumb */}
-                        <div className="space-y-1.5 mb-4">
+                        {/* Breadcrumb - Below Gallery */}
+                        <div className="space-y-1.5 mt-5">
                             {product.categoryPath && product.categoryPath.length > 0 && (
                                 <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
                                     <Link
@@ -135,6 +132,10 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 </div>
                             )}
                         </div>
+                    </div>
+
+                    {/* Left Column - Product Info */}
+                    <div className="flex-1 min-w-0">
 
                         {/* Title & Rating */}
                         <div className="mb-4">
