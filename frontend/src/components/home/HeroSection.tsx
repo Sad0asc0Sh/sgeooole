@@ -4,7 +4,6 @@ import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/autoplay";
 import "swiper/css/pagination";
-import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { Banner, bannerService } from "@/services/bannerService";
@@ -15,6 +14,54 @@ type HeroSectionProps = {
     initialBanners?: Banner[];
 };
 
+/**
+ * ============================================================
+ *  سیستم بنر تبلیغاتی حرفه‌ای - EKGKala
+ * ============================================================
+ * 
+ *  📐 ابعاد استاندارد بنرها:
+ * 
+ *  ┌─────────────────────────────────────────────────────┐
+ *  │  🖼️  اسلایدر اصلی (main-slider)                     │
+ *  │  ──────────────────────────────────────────────────  │
+ *  │  ابعاد ایده‌آل:  1200 × 500  پیکسل                   │
+ *  │  نسبت تصویر:   12:5  (2.4:1)                        │
+ *  │  حداقل عرض:    600 پیکسل                            │
+ *  │                                                     │
+ *  │  ⚠️  ناحیه امن: محتوای مهم را در 80% مرکزی          │
+ *  │      تصویر قرار دهید                                 │
+ *  │                                                     │
+ *  │  💡 این ابعاد هم روی موبایل و هم دسکتاپ              │
+ *  │     بدون بریدگی نمایش داده می‌شود                     │
+ *  └─────────────────────────────────────────────────────┘
+ *
+ *  ┌─────────────────────────────────────────────────────┐
+ *  │  📢  بنر تبلیغاتی (middle-banner)                    │
+ *  │  ──────────────────────────────────────────────────  │
+ *  │  ابعاد ایده‌آل:  800 × 250  پیکسل                    │
+ *  │  نسبت تصویر:   16:5  (3.2:1)                        │
+ *  │  حداقل عرض:    400 پیکسل                            │
+ *  └─────────────────────────────────────────────────────┘
+ *
+ *  ┌─────────────────────────────────────────────────────┐
+ *  │  🎯  بنر کمپین (campaign-banner)                     │
+ *  │  ──────────────────────────────────────────────────  │
+ *  │  ابعاد ایده‌آل:  1200 × 400  پیکسل                   │
+ *  │  نسبت تصویر:   3:1                                  │
+ *  │  حداقل عرض:    600 پیکسل                            │
+ *  └─────────────────────────────────────────────────────┘
+ *
+ *  🔧 نکات مهم برای ادمین:
+ *  ─────────────────────────
+ *  ✅ تصاویر WebP یا JPG با کیفیت 80% استفاده کنید
+ *  ✅ حجم فایل: زیر 500KB ایده‌آل، حداکثر 2MB
+ *  ✅ متن و محتوای مهم را در مرکز تصویر قرار دهید
+ *  ✅ از پس‌زمینه ساده اطراف محتوای اصلی استفاده کنید
+ *  ❌ از تصاویر با متن در گوشه‌ها خودداری کنید
+ *  ❌ از تصاویر خیلی باریک یا خیلی بلند استفاده نکنید
+ * ============================================================
+ */
+
 export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     const [banners, setBanners] = useState<Banner[]>(initialBanners);
     const [loading, setLoading] = useState(initialBanners.length === 0);
@@ -22,7 +69,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     const router = useRouter();
 
     useEffect(() => {
-        // If we already have banners from the server, skip fetching.
         if (initialBanners.length > 0) {
             setBanners(initialBanners);
             setLoading(false);
@@ -54,12 +100,22 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
     if (loading) {
         return (
-            <section className="flex flex-col gap-2 p-4 animate-pulse">
-                <div className="w-full aspect-[2/1] bg-gray-200 rounded-2xl"></div>
-                <div className="grid grid-cols-1 gap-2">
-                    <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl"></div>
-                    <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl"></div>
-                    <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl"></div>
+            <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
+                {/* اسکلتون اسلایدر اصلی */}
+                <div className="w-full rounded-2xl overflow-hidden bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
+                    style={{ aspectRatio: '12/5' }}
+                />
+                {/* اسکلتون بنرهای میانی */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
+                        style={{ aspectRatio: '16/5' }}
+                    />
+                    <div className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse hidden sm:block"
+                        style={{ aspectRatio: '16/5' }}
+                    />
+                    <div className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse hidden lg:block"
+                        style={{ aspectRatio: '16/5' }}
+                    />
                 </div>
             </section>
         );
@@ -86,26 +142,34 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     };
 
     return (
-        <section className="flex flex-col gap-2 p-4">
+        <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
             <div className="container mx-auto">
-                {/* Main Slider - standard autoplay with 3s pause */}
+                {/* ═══════════════════════════════════════════════════
+                    اسلایدر اصلی - Main Slider
+                    ابعاد بنر: 1200×500 (نسبت 12:5)
+                    در موبایل و دسکتاپ بدون بریدگی نمایش داده می‌شود
+                   ═══════════════════════════════════════════════════ */}
                 {mainBanners.length > 0 && (
-                    <div className="w-full rounded-2xl overflow-hidden shadow-sm">
+                    <div className="w-full rounded-2xl overflow-hidden shadow-md bg-gray-50">
                         <Swiper
                             modules={[Autoplay, Pagination]}
-                            spaceBetween={10}
+                            spaceBetween={0}
                             slidesPerView={1}
-                            loop={true}
+                            loop={mainBanners.length > 1}
                             speed={800}
-                            pagination={{ clickable: true }}
+                            pagination={{
+                                clickable: true,
+                                bulletClass: 'swiper-pagination-bullet !w-2.5 !h-2.5 !bg-white/60 !opacity-100',
+                                bulletActiveClass: '!bg-white !w-7 !rounded-full !opacity-100',
+                            }}
                             autoplay={{
                                 delay: 5000,
                                 disableOnInteraction: false,
                                 pauseOnMouseEnter: true,
                                 reverseDirection: true,
                             }}
-                            className="w-full aspect-[2/1] sm:aspect-[21/9] md:aspect-[21/7] lg:aspect-[21/6]"
                             dir="ltr"
+                            className="hero-swiper"
                         >
                             {mainBanners.map((banner) => {
                                 const imageUrl = resolveImageUrl(
@@ -114,12 +178,10 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 );
 
                                 return (
-                                    <SwiperSlide
-                                        key={banner._id}
-                                        className="relative w-full h-full bg-gray-200"
-                                    >
+                                    <SwiperSlide key={banner._id}>
                                         <div
-                                            className={`w-full h-full relative ${banner.link ? "cursor-pointer" : ""}`}
+                                            className={`relative w-full ${banner.link ? "cursor-pointer" : ""}`}
+                                            style={{ aspectRatio: '12/5' }}
                                             onMouseDown={(e) => handlePointerDown(e.clientX)}
                                             onMouseMove={(e) => handlePointerMove(e.clientX)}
                                             onMouseUp={() => handlePointerUp(banner.link)}
@@ -136,7 +198,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                                 fill
                                                 className="object-cover object-center"
                                                 priority
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
+                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1200px"
                                             />
                                         </div>
                                     </SwiperSlide>
@@ -146,37 +208,80 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     </div>
                 )}
 
-                {/* Static Banners (Middle Banners) - 3:1 aspect ratio, centered */}
+                {/* ═══════════════════════════════════════════════════
+                    بنرهای تبلیغاتی میانی - Middle Banners
+                    ابعاد بنر: 800×250 (نسبت 16:5)
+                    در موبایل: تمام‌عرض - در تبلت: ۲ تا - در دسکتاپ: ۳ تا
+                   ═══════════════════════════════════════════════════ */}
                 {middleBanners.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-3 mt-3">
-                        {middleBanners.map((banner) => {
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                        {middleBanners.map((banner, index) => {
                             const imageUrl = resolveImageUrl(
                                 (banner as any).image,
                                 "/placeholder-banner.png",
                             );
 
                             return (
-                                <Link
+                                <div
                                     key={banner._id}
-                                    href={banner.link || "#"}
-                                    className={`w-full md:w-[calc(50%-6px)] lg:w-[calc(33.333%-8px)] aspect-[3/1] rounded-xl overflow-hidden bg-gray-100 relative block shadow-sm hover:shadow-md transition-shadow ${!banner.link ? "pointer-events-none" : ""
-                                        }`}
+                                    className={`
+                                        relative w-full rounded-xl overflow-hidden bg-gray-50
+                                        shadow-sm hover:shadow-lg transition-all duration-300
+                                        hover:scale-[1.02] group
+                                        ${banner.link ? "cursor-pointer" : ""}
+                                        ${middleBanners.length === 2 && index === 1 ? 'sm:col-span-1' : ''}
+                                        ${middleBanners.length === 1 ? 'sm:col-span-2 lg:col-span-3' : ''}
+                                    `}
+                                    style={{ aspectRatio: '16/5' }}
+                                    onClick={() => {
+                                        if (banner.link && banner.link !== '#') {
+                                            router.push(banner.link);
+                                        }
+                                    }}
+                                    role={banner.link ? "button" : undefined}
+                                    aria-label={banner.title || "بنر تبلیغاتی"}
                                 >
-                                    <div className="w-full h-full relative">
-                                        <Image
-                                            src={imageUrl}
-                                            alt={banner.title}
-                                            fill
-                                            className="object-cover object-center"
-                                            sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                        />
-                                    </div>
-                                </Link>
+                                    <Image
+                                        src={imageUrl}
+                                        alt={banner.title}
+                                        fill
+                                        className="object-cover object-center group-hover:brightness-105 transition-all duration-300"
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    />
+                                </div>
                             );
                         })}
                     </div>
                 )}
             </div>
+
+            {/* ═══════════════════════════════════════════════════
+                استایل‌های سفارشی Swiper
+               ═══════════════════════════════════════════════════ */}
+            <style jsx global>{`
+                .hero-swiper {
+                    border-radius: 1rem;
+                    overflow: hidden;
+                }
+                .hero-swiper .swiper-pagination {
+                    bottom: 12px !important;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .hero-swiper .swiper-pagination-bullet {
+                    transition: all 0.3s ease;
+                    border: 1px solid rgba(255,255,255,0.4);
+                }
+                .hero-swiper .swiper-pagination-bullet-active {
+                    width: 28px !important;
+                    border-radius: 9999px !important;
+                    background: white !important;
+                    border-color: transparent;
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                }
+            `}</style>
         </section>
     );
 }

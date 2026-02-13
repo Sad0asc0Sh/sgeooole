@@ -96,12 +96,12 @@ const SkeletonRail = ({ title }: { title: string }) => (
 );
 
 const SkeletonHero = () => (
-  <section className="flex flex-col gap-2 p-4 animate-pulse">
-    <div className="w-full aspect-[2/1] bg-gray-200 rounded-2xl" />
-    <div className="grid grid-cols-1 gap-2">
-      <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl" />
-      <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl" />
-      <div className="w-full aspect-[4/1] bg-gray-200 rounded-xl" />
+  <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4 animate-pulse">
+    <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-2xl" style={{ aspectRatio: '12/5' }} />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" style={{ aspectRatio: '16/5' }} />
+      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" style={{ aspectRatio: '16/5' }} />
+      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" style={{ aspectRatio: '16/5' }} />
     </div>
   </section>
 );
