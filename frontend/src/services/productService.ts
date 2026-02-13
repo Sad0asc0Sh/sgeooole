@@ -458,7 +458,7 @@ export const productService = {
     maxPrice?: number;
     properties?: Record<string, string>;
     includeChildren?: boolean;
-  }): Promise<{ products: Product[]; total: number; priceRange?: { min: number; max: number } }> => {
+  }): Promise<{ products: Product[]; total: number; totalPages: number; currentPage: number; priceRange?: { min: number; max: number } }> => {
     try {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.set("page", params.page.toString());
@@ -491,9 +491,17 @@ export const productService = {
       const data = response.data;
       const products = Array.isArray(data.data) ? data.data.map(mapBackendToFrontend) : [];
 
+      // Extract pagination from backend response
+      const pagination = data.pagination || {};
+      const total = pagination.totalItems || data.total || products.length;
+      const totalPages = pagination.totalPages || Math.ceil(total / (params.limit || 24)) || 1;
+      const currentPage = pagination.currentPage || params.page || 1;
+
       return {
         products,
-        total: data.total || products.length,
+        total,
+        totalPages,
+        currentPage,
         priceRange: data.priceRange
       };
     } catch (error) {

@@ -113,6 +113,12 @@ const getBannerTargetMaxWidth = (position) => {
   return 1920
 }
 
+const getBannerMinWidth = (position) => {
+  if (position === 'middle-banner') return 400
+  if (position === 'campaign-banner') return 800
+  return 1200
+}
+
 const canvasToBlob = (canvas, type, quality) =>
   new Promise((resolve) => {
     if (!canvas?.toBlob) return resolve(null)
@@ -155,58 +161,95 @@ const optimizeBannerImageFile = async (file, position) => {
   const shouldOptimize = file.size > RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES
   if (!shouldOptimize) return file
 
+  let bitmap = null
   try {
-    const bitmap = await createImageBitmapSafe(file)
+    bitmap = await createImageBitmapSafe(file)
     const source = bitmap || (await loadImageElementFromFile(file))
     const sourceWidth = source?.width || 0
     const sourceHeight = source?.height || 0
     if (!sourceWidth || !sourceHeight) return file
 
     const targetMaxWidth = getBannerTargetMaxWidth(position)
-    const scale = Math.min(1, targetMaxWidth / sourceWidth)
-    const outWidth = Math.max(1, Math.round(sourceWidth * scale))
-    const outHeight = Math.max(1, Math.round(sourceHeight * scale))
+    const minWidth = getBannerMinWidth(position)
+    let currentWidth = Math.max(1, Math.round(Math.min(sourceWidth, targetMaxWidth)))
 
-    const canvas = document.createElement('canvas')
-    canvas.width = outWidth
-    canvas.height = outHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return file
-    ctx.drawImage(source, 0, 0, outWidth, outHeight)
+    const qualities = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46]
+    const maxPasses = 6
 
-    if (bitmap?.close) {
-      bitmap.close()
-    }
+    let bestBlob = null
+    let bestType = null
 
-    const encodeWithTarget = async (type) => {
-      let currentQuality = 0.86
-      let blob = await canvasToBlob(canvas, type, currentQuality)
-      while (blob && blob.size > RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES && currentQuality > 0.6) {
-        currentQuality = Math.max(0.6, Math.round((currentQuality - 0.08) * 100) / 100)
-        const nextBlob = await canvasToBlob(canvas, type, currentQuality)
-        if (!nextBlob) break
-        blob = nextBlob
+    const tryEncode = async (canvas, type, fillBackground) => {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      for (const quality of qualities) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        if (fillBackground) {
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+        }
+        ctx.drawImage(source, 0, 0, canvas.width, canvas.height)
+
+        const blob = await canvasToBlob(canvas, type, quality)
+        if (!blob) continue
+
+        const isBetter = !bestBlob || blob.size < bestBlob.size
+        if (isBetter) {
+          bestBlob = blob
+          bestType = type
+        }
+
+        if (blob.size <= RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES) {
+          return true
+        }
       }
-      return blob
+
+      return false
     }
 
-    let outType = 'image/webp'
-    let blob = await encodeWithTarget(outType)
+    for (let pass = 0; pass < maxPasses; pass += 1) {
+      const scale = currentWidth / sourceWidth
+      const outWidth = Math.max(1, Math.round(sourceWidth * scale))
+      const outHeight = Math.max(1, Math.round(sourceHeight * scale))
 
-    if (!blob) {
-      outType = 'image/jpeg'
-      blob = await encodeWithTarget(outType)
+      const canvas = document.createElement('canvas')
+      canvas.width = outWidth
+      canvas.height = outHeight
+
+      const webpOk = await tryEncode(canvas, 'image/webp', false)
+      const jpegOk = await tryEncode(canvas, 'image/jpeg', true)
+
+      if ((webpOk || jpegOk) && bestBlob && bestBlob.size < file.size) {
+        break
+      }
+
+      if (bestBlob && bestBlob.size <= RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES && bestBlob.size < file.size) {
+        break
+      }
+
+      if (currentWidth <= minWidth) {
+        break
+      }
+
+      currentWidth = Math.max(minWidth, Math.round(currentWidth * 0.85))
     }
 
-    if (!blob) return file
-    if (blob.size >= file.size) return file
+    if (!bestBlob || !bestType) return file
+    if (bestBlob.size >= file.size) return file
 
     const baseName = (file.name || 'banner').replace(/\.[^/.]+$/, '')
-    const ext = outType === 'image/webp' ? 'webp' : 'jpg'
-    return new File([blob], `${baseName}.${ext}`, { type: outType, lastModified: Date.now() })
+    const ext = bestType === 'image/webp' ? 'webp' : 'jpg'
+    return new File([bestBlob], `${baseName}.${ext}`, { type: bestType, lastModified: Date.now() })
   } catch (err) {
     console.warn('[BANNER] Image optimization failed; uploading original file instead.', err)
     return file
+  } finally {
+    if (bitmap?.close) {
+      try {
+        bitmap.close()
+      } catch (_) { }
+    }
   }
 }
 
@@ -567,6 +610,14 @@ function BannersPage() {
         return res?.data?.data
       } catch (err) {
         err._uploadBaseURL = baseURL
+        if (err?.response?.status === 413) {
+          const headers = err?.response?.headers || {}
+          const contentType = headers['content-type'] || headers['Content-Type'] || ''
+          const server = headers.server || headers.Server || ''
+          const data = err?.response?.data
+          const snippet = typeof data === 'string' ? data.slice(0, 200) : data
+          console.warn('[BANNER] Upload rejected with 413', { baseURL, server, contentType, snippet })
+        }
         lastError = err
         if (!shouldRetryWithAnotherBase(err)) {
           throw err
@@ -592,7 +643,18 @@ function BannersPage() {
       if (hasNewImageFile) {
         setUploadingImage(true)
         setUploadProgress(1)
-        uploadFile = await optimizeBannerImageFile(fileList[0].originFileObj, selectedPosition)
+        const originalFile = fileList[0].originFileObj
+        uploadFile = await optimizeBannerImageFile(originalFile, selectedPosition)
+        if (originalFile?.size && uploadFile?.size && originalFile.size !== uploadFile.size) {
+          const beforeMb = formatBytesAsMb(originalFile.size)
+          const afterMb = formatBytesAsMb(uploadFile.size)
+          console.info('[BANNER] Image optimized before upload', {
+            beforeMb,
+            afterMb,
+            beforeType: originalFile.type,
+            afterType: uploadFile.type,
+          })
+        }
         uploadedImage = await uploadBannerImage(uploadFile)
         setUploadProgress(100)
       }
@@ -650,8 +712,24 @@ function BannersPage() {
   }
 
   const beforeUploadBanner = (file) => {
-    if (!file?.type?.startsWith('image/')) {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
+    const fileType = file?.type || ''
+    const fileName = String(file?.name || '').toLowerCase()
+    const hasAllowedExtension = allowedExtensions.some((ext) => fileName.endsWith(ext))
+
+    if (!fileType.startsWith('image/')) {
       message.error('فقط فایل تصویری مجاز است')
+      return Upload.LIST_IGNORE
+    }
+
+    if (fileType && !allowedTypes.includes(fileType)) {
+      message.error('فرمت فایل پشتیبانی نمی‌شود. فقط JPG/PNG/WEBP/GIF مجاز هستند.')
+      return Upload.LIST_IGNORE
+    }
+
+    if (!fileType && !hasAllowedExtension) {
+      message.error('فرمت فایل پشتیبانی نمی‌شود. فقط JPG/PNG/WEBP/GIF مجاز هستند.')
       return Upload.LIST_IGNORE
     }
 
@@ -987,7 +1065,7 @@ function BannersPage() {
                   fileList={fileList}
                   onChange={handleUploadChange}
                   maxCount={1}
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
                   disabled={saving}
                   style={{ borderRadius: 8 }}
                 >

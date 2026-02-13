@@ -189,9 +189,10 @@ function ProductsList({ mode }) {
   const [includeChildren, setIncludeChildren] = useState(true)
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    pageSize: 50,
     total: 0,
   })
+  const [dynamicFilters, setDynamicFilters] = useState({})
   const [categories, setCategories] = useState([])
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -204,7 +205,7 @@ function ProductsList({ mode }) {
     ; (async () => {
       try {
         const res = await api.get('/categories', {
-          params: { limit: 1000, fields: 'name,slug,_id' },
+          params: { limit: 1000, fields: 'name,slug,_id,properties' },
         })
         setCategories(res?.data?.data || [])
       } catch (_) { }
@@ -229,6 +230,13 @@ function ProductsList({ mode }) {
       )
       // ✅ FIX: Get raw prices for admin panel (without discount calculation)
       params.set('skipDiscount', 'true')
+
+      // Add Dynamic Filters
+      Object.keys(dynamicFilters).forEach((key) => {
+        if (dynamicFilters[key]) {
+          params.append(`properties[${key}]`, dynamicFilters[key])
+        }
+      })
 
       if (filters.search) {
         params.set('search', filters.search)
@@ -280,7 +288,7 @@ function ProductsList({ mode }) {
   useEffect(() => {
     fetchProducts(1, pagination.pageSize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, filters.category, filters.status, filters.productType, includeChildren])
+  }, [mode, filters.category, filters.status, filters.productType, includeChildren, dynamicFilters])
 
   const handleBulkDelete = () => {
     Modal.confirm({
@@ -806,9 +814,10 @@ function ProductsList({ mode }) {
           placeholder="دسته‌بندی"
           style={{ width: 200 }}
           allowClear
-          onChange={(value) =>
+          onChange={(value) => {
             setFilters((prev) => ({ ...prev, category: value || null }))
-          }
+            setDynamicFilters({})
+          }}
         >
           {categories.map((c) => (
             <Select.Option key={c._id} value={c._id}>
@@ -846,6 +855,60 @@ function ProductsList({ mode }) {
           <Select.Option value="simple">محصول ساده</Select.Option>
           <Select.Option value="variable">محصول متغیر</Select.Option>
         </Select>
+
+        {/* Dynamic Filters based on Category */}
+        {filters.category && (() => {
+          const selectedCategory = categories.find(c => c._id === filters.category)
+          if (!selectedCategory || !selectedCategory.properties) return null
+
+          return selectedCategory.properties
+            .filter(p => p.isFilterable)
+            .map(prop => (
+              <Select
+                key={prop.name}
+                placeholder={prop.name}
+                style={{ width: 150 }}
+                allowClear
+                onChange={(value) =>
+                  setDynamicFilters(prev => ({ ...prev, [prop.name]: value }))
+                }
+                value={dynamicFilters[prop.name]}
+              >
+                {prop.type === 'select' && prop.options ? (
+                  prop.options.map(opt => (
+                    <Select.Option key={opt} value={opt}>{opt}</Select.Option>
+                  ))
+                ) : (
+                  // For text/number, we might need a different input, but Select with search/create is often used for consistency or just simple options if available.
+                  // If type is not select, we can render Input, but wrapper expects Select for style consistency.
+                  // Let's use Input for non-select types?
+                  // Providing basic Input or simple Select behavior.
+                  // Note: simple Select is better for enumerated attributes, Input is better for arbitrary ones.
+                  // Given the code in CategoriesPage, options are only for 'select'.
+                  // Let's use Input for others or just support Select for now if the user primarily uses Select.
+                  // Actually, let's use Input if not select.
+                  null
+                )}
+                {/* Fallback for non-select types if we want to support them later */}
+              </Select>
+            ).concat(
+              // Handle non-select inputs separately to avoid nesting issues or just map everything
+              selectedCategory.properties
+                .filter(p => p.isFilterable && p.type !== 'select')
+                .map(prop => (
+                  <Input
+                    key={prop.name}
+                    placeholder={prop.name}
+                    style={{ width: 150 }}
+                    allowClear
+                    onChange={(e) =>
+                      setDynamicFilters(prev => ({ ...prev, [prop.name]: e.target.value }))
+                    }
+                    value={dynamicFilters[prop.name] || ''}
+                  />
+                ))
+            ))
+        })()}
       </div>
 
       <div
@@ -946,7 +1009,7 @@ function ProductsList({ mode }) {
           pageSize: pagination.pageSize,
           total: pagination.total,
           showSizeChanger: true,
-          pageSizeOptions: ['10', '20', '50', '100'],
+          pageSizeOptions: ['20', '50', '100', '200', '500'],
           showTotal: (total) => `${total} محصول`,
         }}
         onChange={onTableChange}
