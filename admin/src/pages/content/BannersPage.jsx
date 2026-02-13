@@ -98,14 +98,136 @@ const BANNER_POSITIONS = {
 const MAX_BANNER_UPLOAD_SIZE_MB = 10
 const MAX_BANNER_UPLOAD_SIZE_BYTES = MAX_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
 
-const resolveBannerSaveErrorMessage = (err) => {
+const RECOMMENDED_BANNER_UPLOAD_SIZE_MB = 2
+const RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES = RECOMMENDED_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
+
+const formatBytesAsMb = (bytes) => {
+  const value = Number(bytes)
+  if (!Number.isFinite(value) || value <= 0) return null
+  return Math.round((value / (1024 * 1024)) * 10) / 10
+}
+
+const getBannerTargetMaxWidth = (position) => {
+  if (position === 'middle-banner') return 600
+  if (position === 'campaign-banner') return 1200
+  return 1920
+}
+
+const canvasToBlob = (canvas, type, quality) =>
+  new Promise((resolve) => {
+    if (!canvas?.toBlob) return resolve(null)
+    canvas.toBlob(resolve, type, quality)
+  })
+
+const createImageBitmapSafe = async (file) => {
+  if (typeof createImageBitmap !== 'function') return null
+  try {
+    return await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch (_) {
+    try {
+      return await createImageBitmap(file)
+    } catch (err) {
+      return null
+    }
+  }
+}
+
+const loadImageElementFromFile = (file) =>
+  new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      resolve(img)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Failed to load image'))
+    }
+    img.src = objectUrl
+  })
+
+const optimizeBannerImageFile = async (file, position) => {
+  if (!file) return file
+  if (!file?.type?.startsWith?.('image/')) return file
+  if (file.type === 'image/gif') return file
+
+  const shouldOptimize = file.size > RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES
+  if (!shouldOptimize) return file
+
+  try {
+    const bitmap = await createImageBitmapSafe(file)
+    const source = bitmap || (await loadImageElementFromFile(file))
+    const sourceWidth = source?.width || 0
+    const sourceHeight = source?.height || 0
+    if (!sourceWidth || !sourceHeight) return file
+
+    const targetMaxWidth = getBannerTargetMaxWidth(position)
+    const scale = Math.min(1, targetMaxWidth / sourceWidth)
+    const outWidth = Math.max(1, Math.round(sourceWidth * scale))
+    const outHeight = Math.max(1, Math.round(sourceHeight * scale))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = outWidth
+    canvas.height = outHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return file
+    ctx.drawImage(source, 0, 0, outWidth, outHeight)
+
+    if (bitmap?.close) {
+      bitmap.close()
+    }
+
+    const encodeWithTarget = async (type) => {
+      let currentQuality = 0.86
+      let blob = await canvasToBlob(canvas, type, currentQuality)
+      while (blob && blob.size > RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES && currentQuality > 0.6) {
+        currentQuality = Math.max(0.6, Math.round((currentQuality - 0.08) * 100) / 100)
+        const nextBlob = await canvasToBlob(canvas, type, currentQuality)
+        if (!nextBlob) break
+        blob = nextBlob
+      }
+      return blob
+    }
+
+    let outType = 'image/webp'
+    let blob = await encodeWithTarget(outType)
+
+    if (!blob) {
+      outType = 'image/jpeg'
+      blob = await encodeWithTarget(outType)
+    }
+
+    if (!blob) return file
+    if (blob.size >= file.size) return file
+
+    const baseName = (file.name || 'banner').replace(/\.[^/.]+$/, '')
+    const ext = outType === 'image/webp' ? 'webp' : 'jpg'
+    return new File([blob], `${baseName}.${ext}`, { type: outType, lastModified: Date.now() })
+  } catch (err) {
+    console.warn('[BANNER] Image optimization failed; uploading original file instead.', err)
+    return file
+  }
+}
+
+const resolveBannerSaveErrorMessage = (err, context = {}) => {
   if (err?.userMessage) return err.userMessage
+
+  const serverMessage = err?.response?.data?.message
+  const fileSizeBytes = context?.fileSizeBytes
 
   if (err?.code === 'ECONNABORTED') {
     return 'زمان آپلود تصویر به پایان رسید. حجم تصویر را کمتر کنید یا اتصال سرور را بررسی کنید.'
   }
 
   const status = err?.response?.status
+  if (status === 413) {
+    if (serverMessage) return serverMessage
+    const fileSizeMb = formatBytesAsMb(fileSizeBytes)
+    if (Number.isFinite(fileSizeMb) && fileSizeBytes <= MAX_BANNER_UPLOAD_SIZE_BYTES) {
+      return `خطای 413 (Payload Too Large) دریافت شد، اما حجم فایل شما (${fileSizeMb}MB) کمتر از ${MAX_BANNER_UPLOAD_SIZE_MB}MB است. این خطا معمولاً به‌خاطر محدودیت آپلود در پراکسی/هاستینگ مسیر آپلود رخ می‌دهد.`
+    }
+  }
   if (status === 401) {
     return 'نشست شما منقضی شده است. دوباره وارد شوید.'
   }
@@ -123,7 +245,7 @@ const resolveBannerSaveErrorMessage = (err) => {
     return 'اتصال به API برقرار نشد. CORS، SSL و آدرس API/Proxy را بررسی کنید.'
   }
 
-  return err?.response?.data?.message || 'خطا در ذخیره بنر'
+  return serverMessage || 'خطا در ذخیره بنر'
 }
 
 const normalizeBaseUrl = (value) => {
@@ -151,6 +273,9 @@ const buildUploadApiBaseCandidates = (currentBaseUrl) => {
     }
   }
 
+  // 0) Build-time configured base (Vite env), in case runtime baseURL has been changed.
+  push(import.meta?.env?.VITE_API_BASE_URL)
+
   // 1) Current configured base
   push(currentBaseUrl)
 
@@ -173,7 +298,7 @@ const buildUploadApiBaseCandidates = (currentBaseUrl) => {
 const shouldRetryWithAnotherBase = (err) => {
   if (!err?.response) return true
   const status = err.response.status
-  return status === 404 || status === 502 || status === 503 || status === 504
+  return status === 404 || status === 413 || status === 502 || status === 503 || status === 504
 }
 
 function BannersPage() {
@@ -441,6 +566,7 @@ function BannersPage() {
 
         return res?.data?.data
       } catch (err) {
+        err._uploadBaseURL = baseURL
         lastError = err
         if (!shouldRetryWithAnotherBase(err)) {
           throw err
@@ -453,6 +579,7 @@ function BannersPage() {
 
   const handleSave = async () => {
     let uploadedImage = null
+    let uploadFile = null
 
     try {
       const values = await form.validateFields()
@@ -465,7 +592,8 @@ function BannersPage() {
       if (hasNewImageFile) {
         setUploadingImage(true)
         setUploadProgress(1)
-        uploadedImage = await uploadBannerImage(fileList[0].originFileObj)
+        uploadFile = await optimizeBannerImageFile(fileList[0].originFileObj, selectedPosition)
+        uploadedImage = await uploadBannerImage(uploadFile)
         setUploadProgress(100)
       }
 
@@ -503,7 +631,7 @@ function BannersPage() {
           api.delete(`/uploads/image/${encodedPublicId}`).catch(() => { })
         }
 
-        message.error(resolveBannerSaveErrorMessage(err))
+        message.error(resolveBannerSaveErrorMessage(err, { fileSizeBytes: uploadFile?.size || fileList?.[0]?.originFileObj?.size }))
       }
     } finally {
       setUploadingImage(false)
