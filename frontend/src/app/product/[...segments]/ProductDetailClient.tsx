@@ -82,7 +82,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
 
             {/* Desktop Two-Column Layout - With proper header clearance */}
-            <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8">
+            <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8 pt-8">
                 <div className="flex flex-row-reverse gap-10">
                     {/* Right Column - Gallery + Breadcrumb below */}
                     <div className="w-[45%] flex-shrink-0">
