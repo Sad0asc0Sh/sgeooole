@@ -710,7 +710,7 @@ function ProductListingContent() {
             {/* Pagination */}
             {!loading && totalPages > 1 && (
               <div className="mt-10 mb-6">
-                <div className="flex items-center justify-center gap-1.5 flex-wrap" dir="ltr">
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
                   {/* First Page */}
                   <button
                     onClick={() => handlePageChange(1)}
