@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,6 +9,9 @@ import type { Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
 import { useScrollLock } from "@/hooks/useScrollLock";
 import { useCategoryTree } from "@/hooks/useCategories";
+
+// Fixed menu width — standard rectangular shape, consistent across all categories
+const MENU_WIDTH = 850;
 
 // Helper to extract icon URL from category
 const getIconUrl = (category: Category): string | null => {
@@ -78,37 +81,6 @@ const CategoryIcon = ({
     );
 };
 
-// Calculate smart dimensions based on active category content
-const useSmartDimensions = (activeCategory: Category | null) => {
-    return useMemo(() => {
-        if (!activeCategory) return { columns: 3, menuWidth: 850 };
-
-        const subCount = activeCategory.children?.length ?? 0;
-
-        // Determine optimal columns based on subcategory count
-        let columns: number;
-        if (subCount <= 2) {
-            columns = Math.max(1, subCount);
-        } else if (subCount <= 4) {
-            columns = 2;
-        } else {
-            columns = 3;
-        }
-
-        // Calculate width: sidebar (224px) + content columns
-        const sidebarWidth = 224; // w-56
-        const columnWidth = 200;
-        const contentPadding = 48;
-        const minContentWidth = columns * columnWidth + contentPadding;
-        const menuWidth = Math.min(
-            Math.max(sidebarWidth + minContentWidth, 600),
-            1050
-        );
-
-        return { columns, menuWidth };
-    }, [activeCategory]);
-};
-
 export default function DesktopMegaMenu() {
     const [activeCategory, setActiveCategory] = useState<Category | null>(null);
     const { categoryTree: categories, isLoading } = useCategoryTree();
@@ -117,7 +89,6 @@ export default function DesktopMegaMenu() {
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
     const { lock, unlock } = useScrollLock();
-    const { columns, menuWidth } = useSmartDimensions(activeCategory);
 
     useEffect(() => {
         return () => {
@@ -135,7 +106,7 @@ export default function DesktopMegaMenu() {
         }
     }, [categories, activeCategory]);
 
-    // Shared position calculator
+    // Position calculator with fixed width
     const calcPosition = () => {
         const triggerEl = triggerRef.current;
         if (!triggerEl || typeof window === "undefined") return null;
@@ -144,7 +115,7 @@ export default function DesktopMegaMenu() {
         const viewportPadding = 16;
         const gap = 8;
 
-        const width = Math.min(menuWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
+        const width = Math.min(MENU_WIDTH, Math.max(0, window.innerWidth - viewportPadding * 2));
         let left = rect.right - width;
         left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
 
@@ -170,15 +141,7 @@ export default function DesktopMegaMenu() {
             window.removeEventListener("scroll", updatePosition, true);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen, menuWidth]);
-
-    // Update position when active category changes (width may change)
-    useEffect(() => {
-        if (!isOpen) return;
-        const pos = calcPosition();
-        if (pos) setOverlayPosition(pos);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeCategory, menuWidth]);
+    }, [isOpen]);
 
     const handleMouseEnter = () => {
         lock();
@@ -201,13 +164,6 @@ export default function DesktopMegaMenu() {
         setActiveCategory(category);
     };
 
-    // Dynamic grid columns class
-    const gridColsClass = columns === 1
-        ? "grid-cols-1"
-        : columns === 2
-            ? "grid-cols-2"
-            : "grid-cols-2 lg:grid-cols-3";
-
     return (
         <div className="relative">
             {/* Trigger Button */}
@@ -221,7 +177,7 @@ export default function DesktopMegaMenu() {
                 <span className="font-bold text-sm">دسته‌بندی کالاها</span>
             </div>
 
-            {/* Mega Menu Overlay - Smart Resizing */}
+            {/* Mega Menu Overlay - Fixed width, adaptive height */}
             {isOpen && overlayPosition && typeof document !== "undefined" && createPortal(
                 <div
                     onMouseEnter={handleMouseEnter}
@@ -232,7 +188,7 @@ export default function DesktopMegaMenu() {
                         width: overlayPosition.width,
                         maxHeight: `calc(100vh - ${overlayPosition.top + 16}px)`,
                     }}
-                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[40] flex overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 transition-[width] ease-out"
+                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[40] flex overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                 >
 
                     {isLoading ? (
@@ -294,12 +250,12 @@ export default function DesktopMegaMenu() {
                                             </div>
                                         </div>
 
-                                        {/* Subcategories Grid - Show ALL categories */}
-                                        <div className={cn("grid gap-4", gridColsClass)}>
+                                        {/* Subcategories Grid - Show ALL, auto-flow columns */}
+                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
                                             {activeCategory.children?.map((subCategory) => (
                                                 <div
                                                     key={subCategory._id}
-                                                    className="group/sub"
+                                                    className="group/sub min-w-0"
                                                 >
                                                     {/* Subcategory Header with Icon or Gold Line */}
                                                     <Link
@@ -315,7 +271,7 @@ export default function DesktopMegaMenu() {
                                                         ) : (
                                                             <span className="w-0.5 h-5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 flex-shrink-0" />
                                                         )}
-                                                        <span className="font-bold text-xs text-slate-700 group-hover/link:text-kala-600 transition-colors">
+                                                        <span className="font-bold text-xs text-slate-700 group-hover/link:text-kala-600 transition-colors truncate">
                                                             {subCategory.name}
                                                         </span>
                                                     </Link>
@@ -338,7 +294,7 @@ export default function DesktopMegaMenu() {
                                                                         ) : (
                                                                             <span className="w-1 h-1 rounded-full bg-slate-300 group-hover/child:bg-kala-400 transition-colors" />
                                                                         )}
-                                                                        <span>{child.name}</span>
+                                                                        <span className="truncate">{child.name}</span>
                                                                     </Link>
                                                                 </li>
                                                             ))}
