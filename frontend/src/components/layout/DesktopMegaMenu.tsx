@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
@@ -34,7 +34,6 @@ const CategoryIcon = ({
     const [hasError, setHasError] = useState(false);
 
     if (!iconUrl || hasError) {
-        // Fallback: Beautiful gradient icon with first letter
         const colors = [
             'from-kala-500 to-kala-600',
             'from-emerald-500 to-emerald-600',
@@ -45,7 +44,6 @@ const CategoryIcon = ({
             'from-indigo-500 to-indigo-600',
             'from-orange-500 to-orange-600',
         ];
-        // Use category name hash to pick color
         const colorIndex = category.name.charCodeAt(0) % colors.length;
         const firstLetter = category.name.charAt(0);
 
@@ -80,6 +78,37 @@ const CategoryIcon = ({
     );
 };
 
+// Calculate smart dimensions based on active category content
+const useSmartDimensions = (activeCategory: Category | null) => {
+    return useMemo(() => {
+        if (!activeCategory) return { columns: 3, menuWidth: 850 };
+
+        const subCount = activeCategory.children?.length ?? 0;
+
+        // Determine optimal columns based on subcategory count
+        let columns: number;
+        if (subCount <= 2) {
+            columns = Math.max(1, subCount);
+        } else if (subCount <= 4) {
+            columns = 2;
+        } else {
+            columns = 3;
+        }
+
+        // Calculate width: sidebar (224px) + content columns
+        const sidebarWidth = 224; // w-56
+        const columnWidth = 200;
+        const contentPadding = 48;
+        const minContentWidth = columns * columnWidth + contentPadding;
+        const menuWidth = Math.min(
+            Math.max(sidebarWidth + minContentWidth, 600),
+            1050
+        );
+
+        return { columns, menuWidth };
+    }, [activeCategory]);
+};
+
 export default function DesktopMegaMenu() {
     const [activeCategory, setActiveCategory] = useState<Category | null>(null);
     const { categoryTree: categories, isLoading } = useCategoryTree();
@@ -88,6 +117,7 @@ export default function DesktopMegaMenu() {
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
     const { lock, unlock } = useScrollLock();
+    const { columns, menuWidth } = useSmartDimensions(activeCategory);
 
     useEffect(() => {
         return () => {
@@ -105,25 +135,30 @@ export default function DesktopMegaMenu() {
         }
     }, [categories, activeCategory]);
 
+    // Shared position calculator
+    const calcPosition = () => {
+        const triggerEl = triggerRef.current;
+        if (!triggerEl || typeof window === "undefined") return null;
+
+        const rect = triggerEl.getBoundingClientRect();
+        const viewportPadding = 16;
+        const gap = 8;
+
+        const width = Math.min(menuWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
+        let left = rect.right - width;
+        left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
+
+        const top = rect.bottom + gap;
+        return { top, left, width };
+    };
+
     useEffect(() => {
         if (!isOpen) return;
         if (typeof window === "undefined") return;
 
         const updatePosition = () => {
-            const triggerEl = triggerRef.current;
-            if (!triggerEl) return;
-
-            const rect = triggerEl.getBoundingClientRect();
-            const viewportPadding = 16;
-            const maxWidth = 800;
-            const gap = 8;
-
-            const width = Math.min(maxWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
-            let left = rect.right - width;
-            left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
-
-            const top = rect.bottom + gap;
-            setOverlayPosition({ top, left, width });
+            const pos = calcPosition();
+            if (pos) setOverlayPosition(pos);
         };
 
         updatePosition();
@@ -134,26 +169,23 @@ export default function DesktopMegaMenu() {
             window.removeEventListener("resize", updatePosition);
             window.removeEventListener("scroll", updatePosition, true);
         };
-    }, [isOpen]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen, menuWidth]);
+
+    // Update position when active category changes (width may change)
+    useEffect(() => {
+        if (!isOpen) return;
+        const pos = calcPosition();
+        if (pos) setOverlayPosition(pos);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeCategory, menuWidth]);
 
     const handleMouseEnter = () => {
         lock();
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         if (!isOpen) {
-            const triggerEl = triggerRef.current;
-            if (triggerEl && typeof window !== "undefined") {
-                const rect = triggerEl.getBoundingClientRect();
-                const viewportPadding = 16;
-                const maxWidth = 800;
-                const gap = 8;
-
-                const width = Math.min(maxWidth, Math.max(0, window.innerWidth - viewportPadding * 2));
-                let left = rect.right - width;
-                left = Math.max(viewportPadding, Math.min(left, window.innerWidth - width - viewportPadding));
-
-                const top = rect.bottom + gap;
-                setOverlayPosition({ top, left, width });
-            }
+            const pos = calcPosition();
+            if (pos) setOverlayPosition(pos);
         }
         setIsOpen(true);
     };
@@ -162,12 +194,19 @@ export default function DesktopMegaMenu() {
         timeoutRef.current = setTimeout(() => {
             setIsOpen(false);
             unlock();
-        }, 200); // Small delay for better UX
+        }, 200);
     };
 
     const handleCategoryHover = (category: Category) => {
         setActiveCategory(category);
     };
+
+    // Dynamic grid columns class
+    const gridColsClass = columns === 1
+        ? "grid-cols-1"
+        : columns === 2
+            ? "grid-cols-2"
+            : "grid-cols-2 lg:grid-cols-3";
 
     return (
         <div className="relative">
@@ -182,7 +221,7 @@ export default function DesktopMegaMenu() {
                 <span className="font-bold text-sm">دسته‌بندی کالاها</span>
             </div>
 
-            {/* Mega Menu Overlay - Compact like Digikala */}
+            {/* Mega Menu Overlay - Smart Resizing */}
             {isOpen && overlayPosition && typeof document !== "undefined" && createPortal(
                 <div
                     onMouseEnter={handleMouseEnter}
@@ -191,18 +230,19 @@ export default function DesktopMegaMenu() {
                         top: overlayPosition.top,
                         left: overlayPosition.left,
                         width: overlayPosition.width,
+                        maxHeight: `calc(100vh - ${overlayPosition.top + 16}px)`,
                     }}
-                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[40] flex max-h-[420px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                    className="fixed bg-white shadow-xl rounded-lg border border-slate-200 z-[40] flex overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 transition-[width] ease-out"
                 >
 
                     {isLoading ? (
-                        <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-full h-[300px] flex items-center justify-center">
                             <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
                         </div>
                     ) : (
                         <>
                             {/* Right Sidebar: Parent Categories with Icons */}
-                            <div className="w-56 flex-shrink-0 border-l border-slate-100 overflow-y-auto bg-slate-50/80 custom-scrollbar">
+                            <div className="w-56 flex-shrink-0 border-l border-slate-100 overflow-y-auto bg-slate-50/80 mega-menu-scrollbar">
                                 <div className="py-2 px-2">
                                     {categories.map((category) => (
                                         <div
@@ -215,19 +255,14 @@ export default function DesktopMegaMenu() {
                                                     : "text-slate-600 hover:bg-white/60 hover:text-slate-900 border border-transparent"
                                             )}
                                         >
-                                            {/* Category Icon */}
                                             <CategoryIcon
                                                 category={category}
                                                 size={28}
                                                 className="transition-transform duration-150"
                                             />
-
-                                            {/* Category Name */}
                                             <span className="font-medium text-xs flex-1 leading-snug">
                                                 {category.name}
                                             </span>
-
-                                            {/* Arrow indicator */}
                                             <ChevronLeft
                                                 className={cn(
                                                     "w-4 h-4 transition-all duration-200",
@@ -241,8 +276,8 @@ export default function DesktopMegaMenu() {
                                 </div>
                             </div>
 
-                            {/* Left Content: Subcategories with Icons */}
-                            <div className="flex-1 overflow-y-auto p-4 bg-white custom-scrollbar">
+                            {/* Left Content: Subcategories — ALL visible with scroll */}
+                            <div className="flex-1 overflow-y-auto p-4 bg-white mega-menu-scrollbar">
                                 {activeCategory && (
                                     <div className="animate-in fade-in duration-200">
                                         {/* Header with Icon */}
@@ -259,8 +294,8 @@ export default function DesktopMegaMenu() {
                                             </div>
                                         </div>
 
-                                        {/* Subcategories Grid */}
-                                        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {/* Subcategories Grid - Show ALL categories */}
+                                        <div className={cn("grid gap-4", gridColsClass)}>
                                             {activeCategory.children?.map((subCategory) => (
                                                 <div
                                                     key={subCategory._id}
@@ -278,7 +313,6 @@ export default function DesktopMegaMenu() {
                                                                 className="transition-transform group-hover/link:scale-105"
                                                             />
                                                         ) : (
-                                                            /* Golden vertical line fallback */
                                                             <span className="w-0.5 h-5 rounded-full bg-gradient-to-b from-amber-400 to-amber-500 flex-shrink-0" />
                                                         )}
                                                         <span className="font-bold text-xs text-slate-700 group-hover/link:text-kala-600 transition-colors">
@@ -286,10 +320,10 @@ export default function DesktopMegaMenu() {
                                                         </span>
                                                     </Link>
 
-                                                    {/* Child categories */}
+                                                    {/* Child categories — ALL shown, no limit */}
                                                     {subCategory.children && subCategory.children.length > 0 && (
                                                         <ul className="space-y-1 pr-1.5 border-r border-slate-200">
-                                                            {subCategory.children.slice(0, 4).map((child) => (
+                                                            {subCategory.children.map((child) => (
                                                                 <li key={child._id}>
                                                                     <Link
                                                                         href={`/products?category=${child.slug}&includeChildren=true`}
@@ -308,16 +342,6 @@ export default function DesktopMegaMenu() {
                                                                     </Link>
                                                                 </li>
                                                             ))}
-                                                            {subCategory.children.length > 4 && (
-                                                                <li>
-                                                                    <Link
-                                                                        href={`/products?category=${subCategory.slug}&includeChildren=true`}
-                                                                        className="flex items-center gap-1 text-[10px] text-kala-500 hover:text-kala-600 transition-colors py-0.5 font-medium"
-                                                                    >
-                                                                        <span>+{subCategory.children.length - 4} دسته دیگر</span>
-                                                                    </Link>
-                                                                </li>
-                                                            )}
                                                         </ul>
                                                     )}
                                                 </div>

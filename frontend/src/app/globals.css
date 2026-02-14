@@ -195,3 +195,28 @@
     content-visibility: auto;
   }
 }
+
+/* --- MEGA MENU SCROLLBAR (override global hide) --- */
+.mega-menu-scrollbar::-webkit-scrollbar {
+  display: block !important;
+  width: 5px;
+}
+
+.mega-menu-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mega-menu-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 10px;
+}
+
+.mega-menu-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.mega-menu-scrollbar {
+  -ms-overflow-style: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
+}
