@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
-import { Loader2, SlidersHorizontal, X, Search, ArrowUpDown, Check, ChevronDown } from "lucide-react";
+import { Loader2, SlidersHorizontal, X, Search, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
 import { Product, productService, CategoryProperty, CategoryDetails } from "@/services/productService";
 import { brandService, Brand } from "@/services/brandService";
@@ -20,6 +20,7 @@ function ProductListingContent() {
   const brandSlug = searchParams.get("brand");
   const searchQuery = searchParams.get("search");
   const sortParam = searchParams.get("sort") || "newest";
+  const pageParam = parseInt(searchParams.get("page") || "1", 10) || 1;
   const minPriceParam = searchParams.get("minPrice");
   const maxPriceParam = searchParams.get("maxPrice");
   const includeChildrenParam = searchParams.get("includeChildren") === "true";
@@ -28,6 +29,8 @@ function ProductListingContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [currentPage, setCurrentPage] = useState(pageParam);
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
   const [sliderValue, setSliderValue] = useState<[number, number]>([0, 0]);
   const [showFilters, setShowFilters] = useState(false);
@@ -96,16 +99,22 @@ function ProductListingContent() {
     setSelectedProperties(getPropertyFiltersFromUrl());
   }, [getPropertyFiltersFromUrl]);
 
+  // Sync currentPage with URL param
+  useEffect(() => {
+    setCurrentPage(pageParam);
+  }, [pageParam]);
+
   // Load Products
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const propertyFilters = getPropertyFiltersFromUrl();
+        const ITEMS_PER_PAGE = 24;
 
         const data = await productService.getProducts({
-          page: 1,
-          limit: 20,
+          page: pageParam,
+          limit: ITEMS_PER_PAGE,
           sort: sortParam,
           category: categorySlug || undefined,
           brand: brandSlug || undefined,
@@ -123,6 +132,8 @@ function ProductListingContent() {
 
         setProducts(finalProducts);
         setTotal(data.total);
+        setTotalPages(data.totalPages || 1);
+        setCurrentPage(data.currentPage || pageParam);
 
         if (data.priceRange) {
           setPriceRange(data.priceRange);
@@ -144,12 +155,13 @@ function ProductListingContent() {
     };
 
     fetchData();
-  }, [categorySlug, brandSlug, searchQuery, sortParam, minPriceParam, maxPriceParam, includeChildrenParam, searchParams, getPropertyFiltersFromUrl]);
+  }, [categorySlug, brandSlug, searchQuery, sortParam, pageParam, minPriceParam, maxPriceParam, includeChildrenParam, searchParams, getPropertyFiltersFromUrl]);
 
   // Handlers
   const handleSortChange = (sort: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", sort);
+    params.delete("page"); // Reset to page 1 on sort change
     router.push(`/products?${params.toString()}`);
   };
 
@@ -157,7 +169,39 @@ function ProductListingContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("minPrice", sliderValue[0].toString());
     params.set("maxPrice", sliderValue[1].toString());
+    params.delete("page"); // Reset to page 1 on filter change
     router.push(`/products?${params.toString()}`);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (page === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", page.toString());
+    }
+    router.push(`/products?${params.toString()}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Generate page numbers to display (with ellipsis)
+  const getPageNumbers = (): (number | "...")[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages: (number | "...")[] = [];
+    // Always show first page
+    pages.push(1);
+    if (currentPage > 3) pages.push("...");
+    // Show pages around current
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push("...");
+    // Always show last page
+    if (totalPages > 1) pages.push(totalPages);
+    return pages;
   };
 
   const handleClearFilters = () => {
@@ -661,6 +705,97 @@ function ProductListingContent() {
                   ))}
                 </AnimatePresence>
               </motion.div>
+            )}
+
+            {/* Pagination */}
+            {!loading && totalPages > 1 && (
+              <div className="mt-10 mb-6">
+                <div className="flex items-center justify-center gap-1.5 flex-wrap" dir="ltr">
+                  {/* First Page */}
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
+                    aria-label="صفحه اول"
+                  >
+                    <ChevronsLeft size={18} />
+                  </button>
+
+                  {/* Previous Page */}
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === 1
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
+                    aria-label="صفحه قبل"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+
+                  {/* Page Numbers */}
+                  {getPageNumbers().map((pageNum, idx) =>
+                    pageNum === "..." ? (
+                      <span
+                        key={`ellipsis-${idx}`}
+                        className="w-9 h-9 flex items-center justify-center text-gray-400 text-sm select-none"
+                      >
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm font-bold ${pageNum === currentPage
+                          ? "bg-kala-500 text-white shadow-md shadow-kala-200"
+                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          }`}
+                        aria-label={`صفحه ${pageNum}`}
+                        aria-current={pageNum === currentPage ? "page" : undefined}
+                      >
+                        {pageNum}
+                      </button>
+                    )
+                  )}
+
+                  {/* Next Page */}
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === totalPages
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
+                    aria-label="صفحه بعد"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+
+                  {/* Last Page */}
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === totalPages
+                      ? "text-gray-300 cursor-not-allowed"
+                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
+                      }`}
+                    aria-label="صفحه آخر"
+                  >
+                    <ChevronsRight size={18} />
+                  </button>
+                </div>
+
+                {/* Page Info */}
+                <div className="text-center mt-4 text-xs text-gray-400">
+                  صفحه <span className="font-bold text-gray-600">{currentPage}</span> از <span className="font-bold text-gray-600">{totalPages}</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-bold text-gray-600">{total}</span> محصول
+                </div>
+              </div>
             )}
           </main>
         </div>
