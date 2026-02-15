@@ -212,7 +212,7 @@ const settingsSchema = new mongoose.Schema(
         type: String,
         default: 'https://openrouter.ai/api/v1',
       },
-      // مدل زبانی مورد استفاده
+      // مدل زبانی مورد استفاده (OpenRouter)
       model: {
         type: String,
         default: 'meta-llama/llama-3.3-70b-instruct',
@@ -223,6 +223,16 @@ const settingsSchema = new mongoose.Schema(
           'anthropic/claude-3.5-sonnet',
           'google/gemini-2.0-flash-exp',
           'google/gemini-pro',
+        ],
+      },
+      // مدل زبانی Groq (برای دستیار چت)
+      groqModel: {
+        type: String,
+        default: 'llama-3.3-70b-versatile',
+        enum: [
+          'llama-3.3-70b-versatile',
+          'llama-3.1-8b-instant',
+          'openai/gpt-oss-120b',
         ],
       },
       // حداکثر تعداد پیام روزانه (محدودیت هزینه)

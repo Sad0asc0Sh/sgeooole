@@ -81,10 +81,13 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
         // Add Current Message
         messages.push({ role: "user", content: userMessage });
 
-        // 4. Call AI
+        // 4. Call AI - use model from admin settings or fallback to default
+        const modelName = config.groqModel || 'llama-3.3-70b-versatile';
+        console.log('[Groq Service] Using model:', modelName);
+
         const completion = await groq.chat.completions.create({
             messages: messages,
-            model: "llama-3.3-70b-versatile",
+            model: modelName,
             temperature: 0.5, // Lower temperature for more factual/strict responses
         });
 
