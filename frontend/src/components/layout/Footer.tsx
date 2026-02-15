@@ -260,7 +260,7 @@ export default function Footer() {
                                         </Link>
                                     </li>
                                     <li>
-                                        <Link href="/profile" className="hover:text-kala-400 transition-colors flex items-center gap-2">
+                                        <Link href={isAuthenticated ? "/profile" : "/login"} className="hover:text-kala-400 transition-colors flex items-center gap-2">
                                             <span className="w-1.5 h-1.5 rounded-full bg-kala-400"></span>
                                             حساب کاربری
                                         </Link>

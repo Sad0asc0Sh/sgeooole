@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Home, LayoutGrid, ShoppingCart, BookOpen, User } from "lucide-react";
 import CategoriesSheet from "@/components/features/categories/CategoriesSheet";
+import { useAuth } from "@/hooks/useAuth";
 
 interface BottomNavProps {
     onNavClick: () => void;
@@ -13,6 +14,7 @@ interface BottomNavProps {
 export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps) {
     const pathname = usePathname();
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+    const { user } = useAuth();
 
     // Hide BottomNav on Product Detail Page
     if (pathname.startsWith("/product/")) return null;
@@ -22,7 +24,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
         { href: "/categories", label: "دسته‌بندی", icon: LayoutGrid },
         { href: "/cart", label: "سبد خرید", icon: ShoppingCart },
         { href: "/blog", label: "بلاگ", icon: BookOpen },
-        { href: "/profile", label: "حساب کاربری", icon: User },
+        { href: user ? "/profile" : "/login", label: "حساب کاربری", icon: User },
     ];
 
     return (

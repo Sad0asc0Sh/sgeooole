@@ -107,7 +107,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
                             {/* Profile */}
                             <Link
-                                href="/profile"
+                                href={user ? "/profile" : "/login"}
                                 className={`flex items-center gap-2 h-10 rounded-xl bg-ekg-50 text-ekg-700 hover:bg-ekg-100 transition-colors ${user ? 'w-10 justify-center' : 'px-4'
                                     }`}
                             >
