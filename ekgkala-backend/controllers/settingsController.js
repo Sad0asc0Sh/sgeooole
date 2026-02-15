@@ -192,6 +192,7 @@ exports.updateSettings = async (req, res) => {
       if (ai.enabled !== undefined) settings.aiConfig.enabled = ai.enabled
       if (ai.baseUrl) settings.aiConfig.baseUrl = ai.baseUrl
       if (ai.model) settings.aiConfig.model = ai.model
+      if (ai.groqModel) settings.aiConfig.groqModel = ai.groqModel
       if (ai.maxDailyMessages !== undefined) settings.aiConfig.maxDailyMessages = ai.maxDailyMessages
       if (ai.userDailyLimit !== undefined) settings.aiConfig.userDailyLimit = ai.userDailyLimit
       if (ai.maxTokens !== undefined) settings.aiConfig.maxTokens = ai.maxTokens
