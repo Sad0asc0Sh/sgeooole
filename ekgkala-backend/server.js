@@ -6,6 +6,7 @@ const compression = require('compression')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 const mongoSanitize = require('express-mongo-sanitize')
+const crypto = require('crypto')
 // SECURITY: xss-clean removed - using express-validator for input validation instead
 // const xss = require('xss-clean') // DEPRECATED - removed for security
 const hpp = require('hpp')
@@ -31,6 +32,25 @@ const app = express()
 // Without this, all requests appear from proxy IP, causing false rate limits
 // ============================================
 app.set('trust proxy', 1)
+
+// ============================================
+// Request ID (Correlation ID)
+// - Uses client-provided x-request-id when present
+// - Generates one otherwise and returns it as response header
+// ============================================
+app.use((req, res, next) => {
+  const incomingId = req.headers['x-request-id']
+  const requestId =
+    typeof incomingId === 'string' && incomingId.trim()
+      ? incomingId.trim()
+      : (typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`)
+
+  req.id = requestId
+  res.setHeader('x-request-id', requestId)
+  next()
+})
 
 if (process.env.NODE_ENV === 'production') {
   console.log('Security mode: Production (stack traces hidden)')

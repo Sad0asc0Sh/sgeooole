@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { generateRequestId } from '../utils/requestId'
 import { useAuthStore } from '../stores' // مسیر استور خود را چک کنید
 
 // ----------------------------------------------------------------------
@@ -95,6 +96,14 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     try {
+      if (!config.headers) {
+        config.headers = {}
+      }
+
+      if (!config.headers['x-request-id']) {
+        config.headers['x-request-id'] = generateRequestId()
+      }
+
       const token = useAuthStore.getState()?.token
 
       // اگر توکن داریم، به هدر اضافه کن
@@ -122,8 +131,33 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
-    const status = error.response?.status
+    const originalRequest = error?.config
+    const status = error?.response?.status
+    const responseData = error?.response?.data
+
+    const requestId =
+      responseData?.requestId ||
+      error?.response?.headers?.['x-request-id'] ||
+      originalRequest?.headers?.['x-request-id'] ||
+      originalRequest?.headers?.['X-Request-Id']
+
+    if (requestId) {
+      error.requestId = requestId
+    }
+
+    const responseMessage = responseData?.message || responseData?.error
+    if (responseMessage && !error.userMessage) {
+      error.userMessage = responseMessage
+    }
+
+    if (
+      responseMessage &&
+      typeof error.message === 'string' &&
+      error.message.startsWith('Request failed with status code')
+    ) {
+      // Replace axios generic message with backend message (keeps error.response intact)
+      error.message = responseMessage
+    }
 
     // Network-level errors often point to CORS/proxy/SSL issues.
     if (!error.response && (error.code === 'ERR_NETWORK' || error.message === 'Network Error')) {
@@ -148,7 +182,7 @@ api.interceptors.response.use(
     }
 
     // اگر خطای 401 (عدم احراز هویت) گرفتیم و درخواست مربوط به لاگین نبود
-    if (status === 401 && !originalRequest._retry) {
+    if (status === 401 && originalRequest && !originalRequest._retry) {
       // جلوگیری از لوپ بی‌نهایت
       originalRequest._retry = true
 
@@ -168,6 +202,17 @@ api.interceptors.response.use(
     }
 
     // بازگرداندن متن خطا برای نمایش در کامپوننت‌ها
+    if (!error.response && error.userMessage) {
+      error.message = error.userMessage
+    }
+
+    if (status >= 500) {
+      const baseMessage = responseData?.message || 'خطای داخلی سرور'
+      const fullMessage = requestId ? `${baseMessage} (کد پیگیری: ${requestId})` : baseMessage
+      error.userMessage = fullMessage
+      error.message = fullMessage
+    }
+
     return Promise.reject(error)
   }
 )

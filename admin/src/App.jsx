@@ -4,6 +4,7 @@ import { Spin } from 'antd'
 import { useAuthStore } from './stores'
 import MainLayout from './components/layout/MainLayout'
 import AdminDataProvider from './components/AdminDataProvider'
+import AuthSessionWatcher from './components/AuthSessionWatcher'
 
 // LoginPage - not lazy (needed immediately)
 import LoginPage from './pages/LoginPage'
@@ -83,7 +84,9 @@ function App() {
   const { isAuthenticated, user } = useAuthStore()
 
   return (
-    <Routes>
+    <>
+      <AuthSessionWatcher />
+      <Routes>
       {/* Login */}
       <Route
         path="/login"
@@ -203,7 +206,8 @@ function App() {
           )
         }
       />
-    </Routes>
+      </Routes>
+    </>
   )
 }
 
