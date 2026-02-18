@@ -156,7 +156,9 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                             />
                         )}
 
-                        <span className="text-[10px] text-center leading-tight">{cat.name}</span>
+                        <span className="w-full px-1 text-[10px] text-center leading-snug break-words whitespace-normal">
+                            {cat.name}
+                        </span>
                     </button>
                 ))}
             </aside>
@@ -240,7 +242,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                     transition={{ duration: 0.3, ease: "easeInOut" }}
                                                     className="overflow-hidden"
                                                 >
-                                                    <div className="grid grid-cols-3 gap-4 py-2 pr-2">
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-2 pr-2">
                                                         {subCategory.children!.map((item) => (
                                                             <button
                                                                 key={item._id}
@@ -261,7 +263,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                         <Package size={24} className="text-gray-300" />
                                                                     )}
                                                                 </div>
-                                                                <span className="text-[10px] text-center text-gray-600 leading-tight group-hover:text-kala-600 transition-colors">
+                                                                <span className="w-full px-1 text-[11px] text-center text-gray-600 leading-snug break-words whitespace-normal group-hover:text-kala-600 transition-colors">
                                                                     {item.name}
                                                                 </span>
                                                             </button>

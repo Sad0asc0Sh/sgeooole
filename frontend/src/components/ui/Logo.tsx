@@ -1,10 +1,15 @@
-import React from 'react';
+import Image from 'next/image';
 
 export const Logo = () => {
     return (
-        <div className="font-bold text-2xl">
-            <span className="text-ekg-500">EKG</span>
-            <span className="text-kala-500">Kala</span>
+        <div className="relative h-10 w-40">
+            <Image
+                src="/ekg-logo-v2.jpg"
+                alt="EKGKala"
+                fill
+                className="object-contain"
+                priority
+            />
         </div>
     );
 };
