@@ -1,4 +1,5 @@
 const Category = require('../models/Category')
+const Product = require('../models/Product')
 const { cloudinary } = require('../middleware/upload')
 
 // Normalize Cloudinary file object to { url, public_id }
@@ -504,6 +505,12 @@ exports.deleteCategory = async (req, res) => {
         console.error('Error deleting image from Cloudinary:', err.message)
       }
     }
+
+    // Detach children to avoid orphan nodes in the category tree
+    await Category.updateMany({ parent: category._id }, { $set: { parent: null } })
+
+    // Remove product references so deleted categories won't linger in filtering
+    await Product.updateMany({ category: category._id }, { $set: { category: null } })
 
     await category.deleteOne()
 

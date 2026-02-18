@@ -440,18 +440,19 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
       console.log('Processing category filter:', req.query.category)
       let categoryId = null
 
-      // Try to find by slug first
-      const categoryDoc = await Category.findOne({ slug: req.query.category }).select('_id')
+      const mongoose = require('mongoose')
+      const isObjectId = mongoose.Types.ObjectId.isValid(req.query.category)
+
+      // Resolve category by slug OR by id (but only if it exists)
+      const categoryDoc = await Category.findOne(
+        isObjectId
+          ? { $or: [{ slug: req.query.category }, { _id: req.query.category }] }
+          : { slug: req.query.category },
+      ).select('_id')
       console.log('Category lookup result:', categoryDoc)
 
       if (categoryDoc) {
         categoryId = categoryDoc._id
-      } else {
-        // If not found by slug, check if it's a valid ObjectId
-        const mongoose = require('mongoose')
-        if (mongoose.Types.ObjectId.isValid(req.query.category)) {
-          categoryId = req.query.category
-        }
       }
 
       if (categoryId) {

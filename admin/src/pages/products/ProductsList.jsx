@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Table,
   Button,
@@ -201,16 +201,33 @@ function ProductsList({ mode }) {
   const [flashTimerModalVisible, setFlashTimerModalVisible] = useState(false)
   const [flashDealEndTime, setFlashDealEndTime] = useState('')
 
-  useEffect(() => {
-    ; (async () => {
-      try {
-        const res = await api.get('/categories', {
-          params: { limit: 1000, fields: 'name,slug,_id,properties' },
-        })
-        setCategories(res?.data?.data || [])
-      } catch (_) { }
-    })()
+  const fetchCategories = useCallback(async () => {
+    try {
+      const res = await api.get('/categories', {
+        params: { limit: 1000, fields: 'name,slug,_id,properties', nocache: 'true' },
+      })
+      setCategories(Array.isArray(res?.data?.data) ? res.data.data : [])
+    } catch (_) { }
   }, [])
+
+  useEffect(() => {
+    fetchCategories()
+  }, [fetchCategories])
+
+  useEffect(() => {
+    const onFocus = () => fetchCategories()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [fetchCategories])
+
+  useEffect(() => {
+    if (!filters.category) return
+    const stillExists = categories.some((c) => c._id === filters.category)
+    if (!stillExists) {
+      setFilters((prev) => ({ ...prev, category: null }))
+      setDynamicFilters({})
+    }
+  }, [categories, filters.category])
 
   const categoryOptions = useMemo(
     () => categories.map((c) => ({ text: c.name, value: c._id })),
@@ -814,9 +831,13 @@ function ProductsList({ mode }) {
           placeholder="دسته‌بندی"
           style={{ width: 200 }}
           allowClear
+          value={filters.category || undefined}
           onChange={(value) => {
             setFilters((prev) => ({ ...prev, category: value || null }))
             setDynamicFilters({})
+          }}
+          onDropdownVisibleChange={(open) => {
+            if (open) fetchCategories()
           }}
         >
           {categories.map((c) => (

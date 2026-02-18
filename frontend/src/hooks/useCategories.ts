@@ -4,9 +4,9 @@ import useSWR from "swr";
 import { categoryService, type Category } from "@/services/categoryService";
 
 const swrConfig = {
-  revalidateOnFocus: false,
-  revalidateOnReconnect: false,
-  revalidateIfStale: false,
+  revalidateOnFocus: true,
+  revalidateOnReconnect: true,
+  revalidateIfStale: true,
   dedupingInterval: 5 * 60 * 1000,
   errorRetryCount: 2,
   keepPreviousData: true,
@@ -27,4 +27,3 @@ export function useCategoryTree() {
     refresh: () => mutate(),
   };
 }
-
