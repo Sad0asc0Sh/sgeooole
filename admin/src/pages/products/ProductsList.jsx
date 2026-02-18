@@ -519,6 +519,7 @@ function ProductsList({ mode }) {
     try {
       const response = await api.get('/products/export/excel', {
         responseType: 'blob',
+        timeout: 0,
       })
 
       // Create a blob URL and trigger download

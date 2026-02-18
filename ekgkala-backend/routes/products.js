@@ -1957,7 +1957,13 @@ router.get(
           { category: { $exists: false } },
           { category: null },
         ],
-      }).lean()
+      })
+        .select(
+          'name sku productType price compareAtPrice stock category brand rating numReviews isFeatured isActive',
+        )
+        .populate('category', 'name')
+        .populate('brand', 'name')
+        .lean()
 
       // Create a new workbook
       const workbook = new ExcelJS.Workbook()
