@@ -55,7 +55,7 @@ const userUpdateSchema = Joi.object({
         }),
 
     role: Joi.string()
-        .valid('user', 'admin', 'manager', 'superadmin')
+        .valid('user', 'support', 'editor', 'admin', 'manager', 'superadmin')
         .optional()
         .messages({
             'any.only': 'نقش کاربر نامعتبر است',
@@ -171,7 +171,7 @@ const userListQuerySchema = Joi.object({
     limit: Joi.number().integer().min(1).max(100).default(20),
     sort: Joi.string().valid('createdAt', '-createdAt', 'name', '-name', 'email', '-email').optional(),
     search: Joi.string().trim().max(200).optional(),
-    role: Joi.string().valid('user', 'admin', 'manager', 'superadmin').optional(),
+    role: Joi.string().valid('user', 'support', 'editor', 'admin', 'manager', 'superadmin').optional(),
     isActive: Joi.boolean().optional(),
     isVerified: Joi.boolean().optional(),
 });

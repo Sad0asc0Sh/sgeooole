@@ -20,9 +20,10 @@ function LoginPage() {
         password: values.password,
       })
       const user = res?.data?.data?.user
+      const permissions = res?.data?.data?.permissions || []
       const token = res?.data?.accessToken || res?.data?.data?.token
       if (!user || !token) throw new Error('ورود ناموفق بود')
-      setAuth(user, token)
+      setAuth(user, token, permissions)
       navigate('/')
     } catch (err) {
       console.error('Login error:', err)

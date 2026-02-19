@@ -5,6 +5,8 @@ import { useAuthStore } from './stores'
 import MainLayout from './components/layout/MainLayout'
 import AdminDataProvider from './components/AdminDataProvider'
 import AuthSessionWatcher from './components/AuthSessionWatcher'
+import RequirePermission from './components/rbac/RequirePermission'
+import { PERMISSIONS } from './rbac/permissions'
 
 // LoginPage - not lazy (needed immediately)
 import LoginPage from './pages/LoginPage'
@@ -121,74 +123,280 @@ function App() {
                 <Suspense fallback={<LoadingFallback />}>
                   <Routes>
                     {/* Dashboard */}
-                    <Route path="/" element={<Dashboard />} />
+                    <Route
+                      path="/"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.DASHBOARD_VIEW}>
+                          <Dashboard />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Products */}
-                    <Route path="/products" element={<ProductsList />} />
+                    <Route
+                      path="/products"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_READ}>
+                          <ProductsList />
+                        </RequirePermission>
+                      }
+                    />
                     {/* لیست محصولات متغیر (فقط productType=variable) */}
                     <Route
                       path="/products/variable"
-                      element={<ProductsList mode="variable" />}
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_READ}>
+                          <ProductsList mode="variable" />
+                        </RequirePermission>
+                      }
                     />
-                    <Route path="/products/new" element={<ProductForm />} />
-                    <Route path="/products/edit/:id" element={<ProductForm />} />
+                    <Route
+                      path="/products/new"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_CREATE}>
+                          <ProductForm />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/products/edit/:id"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_UPDATE}>
+                          <ProductForm />
+                        </RequirePermission>
+                      }
+                    />
                     {/* صفحه جانبی (در حال حاضر فقط اطلاع‌رسانی) برای واریانت‌ها */}
                     <Route
                       path="/products/:id/variants"
-                      element={<ProductVariants />}
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_READ}>
+                          <ProductVariants />
+                        </RequirePermission>
+                      }
                     />
-                    <Route path="/categories" element={<CategoriesPage />} />
-                    <Route path="/brands" element={<BrandsPage />} />
-                    <Route path="/inventory" element={<InventoryPage />} />
-                    <Route path="/reviews" element={<ReviewsPage />} />
+                    <Route
+                      path="/categories"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.CATEGORY_READ}>
+                          <CategoriesPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/brands"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.BRAND_READ}>
+                          <BrandsPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/inventory"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PRODUCT_MANAGE_STOCK}>
+                          <InventoryPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/reviews"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.REVIEW_READ}>
+                          <ReviewsPage />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Orders */}
-                    <Route path="/orders" element={<OrdersList />} />
-                    <Route path="/orders/create" element={<CreateOrder />} />
-                    <Route path="/orders/:id" element={<OrderDetail />} />
-                    <Route path="/abandoned-carts" element={<AbandonedCartsPage />} />
+                    <Route
+                      path="/orders"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.ORDER_READ_ALL}>
+                          <OrdersList />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/orders/create"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.ORDER_CREATE}>
+                          <CreateOrder />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/orders/:id"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.ORDER_READ_ALL}>
+                          <OrderDetail />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/abandoned-carts"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.CART_READ}>
+                          <AbandonedCartsPage />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Customers */}
-                    <Route path="/customers" element={<CustomersList />} />
-                    <Route path="/customers/:id" element={<CustomerProfile />} />
+                    <Route
+                      path="/customers"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.USER_READ_ALL}>
+                          <CustomersList />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/customers/:id"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.USER_READ}>
+                          <CustomerProfile />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Finance */}
-                    <Route path="/coupons" element={<CouponsPage />} />
-                    <Route path="/sales" element={<SalesPage />} />
-                    <Route path="/shipping" element={<ShippingPage />} />
+                    <Route
+                      path="/coupons"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.COUPON_READ}>
+                          <CouponsPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/sales"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.SALE_READ}>
+                          <SalesPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/shipping"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.SHIPPING_READ}>
+                          <ShippingPage />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Content */}
-                    <Route path="/pages" element={<PagesManagement />} />
-                    <Route path="/blog/posts" element={<BlogPosts />} />
-                    <Route path="/banners" element={<BannersPage />} />
-                    <Route path="/announcements" element={<AnnouncementsPage />} />
-                    <Route path="/newsletter" element={<NewsletterPage />} />
+                    <Route
+                      path="/pages"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.PAGE_READ}>
+                          <PagesManagement />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/blog/posts"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.BLOG_READ}>
+                          <BlogPosts />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/banners"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.BANNER_READ}>
+                          <BannersPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/announcements"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.ANNOUNCEMENT_READ}>
+                          <AnnouncementsPage />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/newsletter"
+                      element={
+                        user?.role === 'admin' || user?.role === 'manager' || user?.role === 'superadmin'
+                          ? <NewsletterPage />
+                          : <Navigate to="/" />
+                      }
+                    />
 
                     {/* Tickets */}
-                    <Route path="/tickets" element={<TicketsList />} />
-                    <Route path="/tickets/:id" element={<TicketDetail />} />
+                    <Route
+                      path="/tickets"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.TICKET_READ_ALL}>
+                          <TicketsList />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/tickets/:id"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.TICKET_READ_ALL}>
+                          <TicketDetail />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Settings */}
                     <Route
                       path="/settings"
                       element={
-                        user?.role === 'manager' || user?.role === 'superadmin'
-                          ? <SettingsPage />
-                          : <Navigate to="/" />
+                        <RequirePermission permission={PERMISSIONS.SETTINGS_READ}>
+                          <SettingsPage />
+                        </RequirePermission>
                       }
                     />
 
                     {/* Reports */}
-                    <Route path="/reports/sales" element={<SalesReports />} />
-                    <Route path="/reports/products" element={<ProductsReports />} />
-                    <Route path="/reports/customers" element={<CustomersReports />} />
-                    <Route path="/reports/audit-logs" element={<AuditLogs />} />
+                    <Route
+                      path="/reports/sales"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.REPORT_READ_SALES}>
+                          <SalesReports />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/reports/products"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.REPORT_READ_PRODUCTS}>
+                          <ProductsReports />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/reports/customers"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.REPORT_READ_CUSTOMERS}>
+                          <CustomersReports />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/reports/audit-logs"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.ADMIN_READ}>
+                          <AuditLogs />
+                        </RequirePermission>
+                      }
+                    />
 
                     {/* Admins */}
                     <Route
                       path="/admins"
                       element={
-                        user?.role === 'superadmin' ? <AdminsPage /> : <Navigate to="/" />
+                        <RequirePermission permission={PERMISSIONS.ADMIN_READ}>
+                          <AdminsPage />
+                        </RequirePermission>
                       }
                     />
 

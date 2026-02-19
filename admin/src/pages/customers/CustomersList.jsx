@@ -110,9 +110,9 @@ function CustomersList() {
       ellipsis: true,
     },
     {
-      title: 'شماره تلفن',
-      dataIndex: 'phoneNumber',
-      key: 'phoneNumber',
+      title: 'شماره موبایل',
+      dataIndex: 'mobile',
+      key: 'mobile',
       render: (phone) => phone || '—',
     },
     {
@@ -265,4 +265,3 @@ function CustomersList() {
 }
 
 export default CustomersList
-

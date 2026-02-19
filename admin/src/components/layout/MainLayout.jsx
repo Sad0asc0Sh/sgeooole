@@ -20,6 +20,8 @@ import {
   useAuthStore,
   useNotificationStore,
 } from '../../stores'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { hasAnyPermission, hasPermission } from '../../rbac/access'
 import ProfileModal from './ProfileModal'
 import './MainLayout.css'
 
@@ -30,13 +32,73 @@ function MainLayout({ children }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const location = useLocation()
-  const { user, logout } = useAuthStore()
+  const { user, permissions, logout } = useAuthStore()
   const { notifications, markAllAsRead, deleteNotification } = useNotificationStore()
 
   const unreadCount = notifications.filter((n) => !n.read).length
   const role = user?.role || 'user'
   const isManagerOrSuperAdmin = role === 'manager' || role === 'superadmin'
   const isSuperAdmin = role === 'superadmin'
+  const resolvedPermissions = Array.isArray(permissions) ? permissions : []
+
+  const can = (permission) => hasPermission(resolvedPermissions, permission)
+  const canNewsletter = ['admin', 'manager', 'superadmin'].includes(role)
+
+  const menuPermissionByKey = {
+    '/': PERMISSIONS.DASHBOARD_VIEW,
+
+    '/products': PERMISSIONS.PRODUCT_READ,
+    '/products/new': PERMISSIONS.PRODUCT_CREATE,
+    '/categories': PERMISSIONS.CATEGORY_READ,
+    '/brands': PERMISSIONS.BRAND_READ,
+    '/inventory': PERMISSIONS.PRODUCT_MANAGE_STOCK,
+    '/reviews': PERMISSIONS.REVIEW_READ,
+
+    '/orders': PERMISSIONS.ORDER_READ_ALL,
+    '/abandoned-carts': PERMISSIONS.CART_READ,
+
+    '/customers': PERMISSIONS.USER_READ_ALL,
+    '/customers-list': PERMISSIONS.USER_READ_ALL,
+
+    '/coupons': PERMISSIONS.COUPON_READ,
+    '/sales': PERMISSIONS.SALE_READ,
+    '/shipping': PERMISSIONS.SHIPPING_READ,
+
+    '/pages': PERMISSIONS.PAGE_READ,
+    '/blog/posts': PERMISSIONS.BLOG_READ,
+    '/banners': PERMISSIONS.BANNER_READ,
+    '/announcements': PERMISSIONS.ANNOUNCEMENT_READ,
+
+    '/tickets': PERMISSIONS.TICKET_READ_ALL,
+
+    '/reports/sales': PERMISSIONS.REPORT_READ_SALES,
+    '/reports/products': PERMISSIONS.REPORT_READ_PRODUCTS,
+    '/reports/customers': PERMISSIONS.REPORT_READ_CUSTOMERS,
+    '/reports/audit-logs': PERMISSIONS.ADMIN_READ,
+
+    '/settings': PERMISSIONS.SETTINGS_READ,
+    '/admins': PERMISSIONS.ADMIN_READ,
+  }
+
+  const filterMenuItems = (items = []) =>
+    items
+      .map((item) => {
+        if (Array.isArray(item.children) && item.children.length > 0) {
+          const filteredChildren = filterMenuItems(item.children)
+          if (filteredChildren.length === 0) return null
+          return { ...item, children: filteredChildren }
+        }
+
+        if (item.key === '/newsletter') {
+          return canNewsletter ? item : null
+        }
+
+        const requiredPermission = menuPermissionByKey[item.key]
+        if (!requiredPermission) return item
+
+        return can(requiredPermission) ? item : null
+      })
+      .filter(Boolean)
 
   // Build menu items based on user role
   const menuItems = [
@@ -194,6 +256,7 @@ function MainLayout({ children }) {
       ]
       : []),
   ]
+  const filteredMenuItems = filterMenuItems(menuItems)
 
   const formatRelativeTime = (timestamp) => {
     if (!timestamp) return ''
@@ -323,7 +386,7 @@ function MainLayout({ children }) {
           mode="inline"
           selectedKeys={[location.pathname]}
           defaultOpenKeys={['/' + location.pathname.split('/')[1]]}
-          items={menuItems}
+          items={filteredMenuItems}
         />
       </Sider>
 
@@ -339,7 +402,7 @@ function MainLayout({ children }) {
           mode="inline"
           selectedKeys={[location.pathname]}
           defaultOpenKeys={['/' + location.pathname.split('/')[1]]}
-          items={menuItems}
+          items={filteredMenuItems}
           onClick={() => setMobileDrawerOpen(false)}
         />
       </Drawer>

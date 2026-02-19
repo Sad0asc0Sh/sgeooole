@@ -20,6 +20,7 @@ import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
 import { useAuthStore } from '../../stores'
+import { PERMISSIONS } from '../../rbac/permissions'
 
 dayjs.extend(jalaliday)
 dayjs.calendar('jalali')
@@ -69,11 +70,18 @@ function CustomerProfile() {
   const [notificationForm] = Form.useForm()
 
   const currentRole = useAuthStore((state) => state.user?.role || 'user')
+  const permissions = useAuthStore((state) => state.permissions || [])
+
+  const canUpdateUser = permissions.includes(PERMISSIONS.USER_UPDATE)
+  const canManageRoles = permissions.includes(PERMISSIONS.USER_MANAGE_ROLE)
+  const canReadOrders = permissions.includes(PERMISSIONS.ORDER_READ_ALL)
+  const canSendNotification = permissions.includes(PERMISSIONS.ANNOUNCEMENT_CREATE)
 
   // سوپرادمین می‌تواند همه نقش‌ها را تغییر دهد
   // مدیر ارشد می‌تواند نقش‌های پایین‌تر از خودش را تغییر دهد
   // سایرین فقط می‌توانند کاربر عادی را ببینند
   const getSelectableRoles = () => {
+    if (!canManageRoles) return []
     if (currentRole === 'superadmin') {
       return ROLE_ORDER
     }
@@ -133,11 +141,16 @@ function CustomerProfile() {
 
   useEffect(() => {
     fetchUser()
-    fetchOrders()
+    if (canReadOrders) fetchOrders()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   const handleSaveProfile = async () => {
+    if (!canUpdateUser) {
+      message.error('شما مجوز ویرایش این کاربر را ندارید.')
+      return
+    }
+
     try {
       const values = await form.validateFields()
       setSaving(true)
@@ -147,7 +160,7 @@ function CustomerProfile() {
         email: values.email,
         mobile: values.mobile, // ✅ FIX: تغییر از phoneNumber به mobile
         isActive: values.isActive,
-        role: values.role,
+        ...(canManageRoles ? { role: values.role } : {}),
       })
 
       message.success('اطلاعات کاربر با موفقیت به‌روزرسانی شد.')
@@ -265,6 +278,16 @@ function CustomerProfile() {
                   <Descriptions.Item label="آخرین ورود">
                     {formatPersianDate(user.lastLogin, true)}
                   </Descriptions.Item>
+                  <Descriptions.Item label="نقش">
+                    <Tag color={ROLE_COLORS[user.role] || 'default'}>
+                      {ROLE_LABELS[user.role] || user.role || '-'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="وضعیت حساب">
+                    <Tag color={user.isActive ? 'green' : 'red'}>
+                      {user.isActive ? 'فعال' : 'غیرفعال'}
+                    </Tag>
+                  </Descriptions.Item>
                   <Descriptions.Item label="شماره موبایل">
                     {user.mobile || '-'}
                   </Descriptions.Item>
@@ -332,88 +355,96 @@ function CustomerProfile() {
 
               <Divider />
 
-              <div>
-                <h3>ویرایش اطلاعات</h3>
-                <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-                  <Form.Item
-                    name="name"
-                    label="نام"
-                    rules={[
-                      { required: true, message: 'لطفاً نام را وارد کنید.' },
-                    ]}
-                  >
-                    <Input placeholder="نام کاربر" size="large" />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="email"
-                    label="ایمیل"
-                    rules={[
-                      { required: true, message: 'لطفاً ایمیل را وارد کنید.' },
-                      { type: 'email', message: 'ایمیل وارد شده معتبر نیست.' },
-                    ]}
-                  >
-                    <Input placeholder="ایمیل کاربر" size="large" />
-                  </Form.Item>
-
-                  <Form.Item
-                    name="mobile"
-                    label="شماره موبایل"
-                    rules={[
-                      {
-                        pattern: /^09\d{9}$/,
-                        message: 'شماره موبایل باید با 09 شروع شود و ۱۱ رقم باشد'
-                      }
-                    ]}
-                  >
-                    <Input
-                      placeholder="09xxxxxxxxx"
-                      size="large"
-                      maxLength={11}
-                      dir="ltr"
-                    />
-                  </Form.Item>
-
-                  <Form.Item name="role" label="نقش کاربر">
-                    <Select size="large">
-                      {selectableRoles.map((role) => (
-                        <Select.Option key={role} value={role}>
-                          {ROLE_LABELS[role] || role}
-                        </Select.Option>
-                      ))}
-                    </Select>
-                  </Form.Item>
-
-                  <Form.Item
-                    name="isActive"
-                    label="وضعیت حساب"
-                    valuePropName="checked"
-                  >
-                    <Switch
-                      checkedChildren="فعال"
-                      unCheckedChildren="غیرفعال"
-                    />
-                  </Form.Item>
-
-                  <Form.Item>
-                    <Button
-                      type="primary"
-                      size="large"
-                      icon={<SaveOutlined />}
-                      onClick={handleSaveProfile}
-                      loading={saving}
+              {canUpdateUser ? (
+                <div>
+                  <h3>ویرایش اطلاعات</h3>
+                  <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+                    <Form.Item
+                      name="name"
+                      label="نام"
+                      rules={[
+                        { required: true, message: 'لطفاً نام را وارد کنید.' },
+                      ]}
                     >
-                      ذخیره تغییرات
-                    </Button>
-                  </Form.Item>
-                </Form>
-              </div>
+                      <Input placeholder="نام کاربر" size="large" />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="email"
+                      label="ایمیل"
+                      rules={[
+                        { required: true, message: 'لطفاً ایمیل را وارد کنید.' },
+                        { type: 'email', message: 'ایمیل وارد شده معتبر نیست.' },
+                      ]}
+                    >
+                      <Input placeholder="ایمیل کاربر" size="large" />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="mobile"
+                      label="شماره موبایل"
+                      rules={[
+                        {
+                          pattern: /^09\d{9}$/,
+                          message: 'شماره موبایل باید با 09 شروع شود و ۱۱ رقم باشد'
+                        }
+                      ]}
+                    >
+                      <Input
+                        placeholder="09xxxxxxxxx"
+                        size="large"
+                        maxLength={11}
+                        dir="ltr"
+                      />
+                    </Form.Item>
+
+                    {canManageRoles && (
+                      <Form.Item name="role" label="نقش کاربر">
+                        <Select size="large">
+                          {selectableRoles.map((role) => (
+                            <Select.Option key={role} value={role}>
+                              {ROLE_LABELS[role] || role}
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      </Form.Item>
+                    )}
+
+                    <Form.Item
+                      name="isActive"
+                      label="وضعیت حساب"
+                      valuePropName="checked"
+                    >
+                      <Switch
+                        checkedChildren="فعال"
+                        unCheckedChildren="غیرفعال"
+                      />
+                    </Form.Item>
+
+                    <Form.Item>
+                      <Button
+                        type="primary"
+                        size="large"
+                        icon={<SaveOutlined />}
+                        onClick={handleSaveProfile}
+                        loading={saving}
+                      >
+                        ذخیره تغییرات
+                      </Button>
+                    </Form.Item>
+                  </Form>
+                </div>
+              ) : (
+                <div style={{ color: '#666' }}>
+                  شما مجوز ویرایش اطلاعات این کاربر را ندارید.
+                </div>
+              )}
             </>
           )}
         </div>
       ),
     },
-    {
+    canReadOrders && {
       key: 'orders',
       label: 'سفارش‌های کاربر',
       children: (
@@ -448,7 +479,7 @@ function CustomerProfile() {
         </div>
       ),
     },
-    {
+    canSendNotification && {
       key: 'notifications',
       label: 'ارسال پیام',
       children: (
@@ -499,7 +530,7 @@ function CustomerProfile() {
         </div>
       ),
     },
-  ]
+  ].filter(Boolean)
 
   return (
     <div>

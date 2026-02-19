@@ -9,14 +9,24 @@ export const useAuthStore = create(
     (set) => ({
       user: null,
       token: null,
+      permissions: [],
       isAuthenticated: false,
 
-      setAuth: (user, token) =>
-        set({ user, token, isAuthenticated: Boolean(user && token) }),
+      setAuth: (user, token, permissions = []) =>
+        set({
+          user,
+          token,
+          permissions: Array.isArray(permissions) ? permissions : [],
+          isAuthenticated: Boolean(user && token),
+        }),
 
       setUser: (user) => set({ user }),
 
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      setPermissions: (permissions) =>
+        set({ permissions: Array.isArray(permissions) ? permissions : [] }),
+
+      logout: () =>
+        set({ user: null, token: null, permissions: [], isAuthenticated: false }),
     }),
     { name: 'auth-storage' },
   ),
@@ -205,4 +215,3 @@ export const useBrandStore = create((set, get) => ({
 
   clearBrands: () => set({ brands: [] }),
 }))
-

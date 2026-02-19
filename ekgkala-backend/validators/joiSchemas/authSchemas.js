@@ -119,7 +119,7 @@ const registerSchema = Joi.object({
         }),
 
     role: Joi.string()
-        .valid('user', 'admin', 'manager', 'superadmin')
+        .valid('user', 'support', 'editor', 'admin', 'manager', 'superadmin')
         .optional()
         .messages({
             'any.only': 'نقش کاربر نامعتبر است',

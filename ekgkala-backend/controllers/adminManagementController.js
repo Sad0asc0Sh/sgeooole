@@ -1,10 +1,12 @@
 const Admin = require('../models/Admin')
 
+const STAFF_ROLES = ['support', 'editor', 'admin', 'manager', 'superadmin']
+
 // لیست تمام ادمین‌ها (admin / manager / superadmin)
 exports.getAllAdmins = async (req, res) => {
   try {
     const admins = await Admin.find({
-      role: { $in: ['admin', 'manager', 'superadmin'] },
+      role: { $in: STAFF_ROLES },
     })
       .select('-password')
       .sort({ createdAt: -1 })
@@ -36,7 +38,7 @@ exports.createAdminUser = async (req, res) => {
       })
     }
 
-    if (!['admin', 'manager'].includes(role)) {
+    if (!STAFF_ROLES.includes(role)) {
       return res.status(400).json({
         success: false,
         message: 'نقش نامعتبر است. فقط نقش‌های admin و manager مجاز هستند.',
@@ -92,7 +94,15 @@ exports.updateAdminUser = async (req, res) => {
 
     if (name !== undefined) admin.name = name
     if (email !== undefined) admin.email = email
-    if (role !== undefined) admin.role = role
+    if (role !== undefined) {
+      if (!STAFF_ROLES.includes(role)) {
+        return res.status(400).json({
+          success: false,
+          message: 'نقش ارسال‌شده معتبر نیست.',
+        })
+      }
+      admin.role = role
+    }
     if (isActive !== undefined) admin.isActive = isActive
 
     await admin.save()
@@ -157,4 +167,3 @@ exports.deleteAdminUser = async (req, res) => {
     })
   }
 }
-

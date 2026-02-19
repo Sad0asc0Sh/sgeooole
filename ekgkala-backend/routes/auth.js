@@ -5,6 +5,7 @@ const crypto = require('crypto')
 const Admin = require('../models/Admin')
 const { sendResetPasswordEmail } = require('../utils/notificationService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+const { getPermissions } = require('../config/rbac')
 const { upload } = require('../middleware/upload')
 
 // Joi Validation
@@ -213,6 +214,7 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
 
     const token = generateToken(admin._id, admin.role)
     const adminData = admin.toJSON()
+    const permissions = getPermissions(admin.role || 'guest')
 
     console.log('Admin login successful:', admin.email)
 
@@ -223,6 +225,7 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
       message: 'ورود با موفقیت انجام شد.',
       data: {
         user: adminData,
+        permissions,
         token,
       },
       accessToken: token,
@@ -243,7 +246,7 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
 // ============================================
 router.post(
   '/admin/login',
-  makeLoginHandler(['admin', 'manager', 'superadmin']),
+  makeLoginHandler(['admin', 'manager', 'superadmin', 'editor', 'support']),
 )
 
 // ============================================
@@ -277,9 +280,12 @@ router.get('/me', async (req, res) => {
       })
     }
 
+    const permissions = getPermissions(admin.role || 'guest')
+
     return res.json({
       success: true,
       data: admin,
+      permissions,
     })
   } catch (error) {
     console.error('Error in /me endpoint:', error)
@@ -330,7 +336,7 @@ router.post('/register', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), asy
       })
     }
 
-    const allowedRoles = ['admin', 'manager', 'superadmin']
+    const allowedRoles = ['admin', 'manager', 'superadmin', 'editor', 'support']
     const safeRole = allowedRoles.includes(role) ? role : 'admin'
 
     const admin = await Admin.create({
@@ -375,7 +381,7 @@ router.post('/admin/forgot-password', async (req, res) => {
     // پیدا کردن کاربر ادمین با این ایمیل
     const user = await Admin.findOne({
       email,
-      role: { $in: ['admin', 'manager', 'superadmin'] },
+      role: { $in: ['admin', 'manager', 'superadmin', 'editor', 'support'] },
     })
 
     if (!user) {
@@ -516,7 +522,7 @@ router.put('/admin/profile', async (req, res) => {
     }
 
     // بررسی نقش ادمین
-    const adminRoles = ['admin', 'manager', 'superadmin']
+    const adminRoles = ['admin', 'manager', 'superadmin', 'editor', 'support']
     if (!adminRoles.includes(admin.role)) {
       return res.status(403).json({
         success: false,
