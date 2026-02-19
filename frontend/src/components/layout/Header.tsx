@@ -47,23 +47,23 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
             <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white/80 backdrop-blur-md">
             {/* MOBILE HEADER */}
-            <div className="md:hidden mobile-container flex h-16 items-center justify-between">
+            <div className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}
-                <Link href="/">
+                <Link href="/" className="shrink-0">
                     <Logo />
                 </Link>
 
                 {/* Left: Search & AI */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
                     <div
                         onClick={() => setIsSearchOpen(true)}
-                        className="relative cursor-pointer"
+                        className="relative flex-1 min-w-0 cursor-pointer"
                     >
                         <input
                             type="text"
                             readOnly
                             placeholder="جستجو..."
-                            className="h-9 w-40 rounded-full bg-ekg-50 px-8 text-xs text-ekg-900 placeholder:text-ekg-500 focus:outline-none cursor-pointer pointer-events-none"
+                            className="h-9 w-full min-w-0 rounded-full bg-ekg-50 px-8 text-xs text-ekg-900 placeholder:text-ekg-500 focus:outline-none cursor-pointer pointer-events-none"
                         />
                         <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-ekg-500" />
                     </div>
@@ -71,7 +71,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     {/* AI Assistant Overlay */}
                     <button
                         onClick={() => setIsAIOpen(true)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
                     >
                         <Sparkles className="h-5 w-5" />
                     </button>
