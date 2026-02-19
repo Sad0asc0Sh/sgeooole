@@ -329,8 +329,8 @@ export default function LoginPage() {
 
             {/* Brand Logo */}
             <div className="mb-12 text-center">
-                <h1 className="text-3xl font-black text-gray-300 tracking-tighter">
-                    EKG<span className="text-kala-600">KALA</span>
+                <h1 className="text-3xl font-black text-kala-600 tracking-tighter">
+                    EKG<span className="text-gray-300">KALA</span>
                 </h1>
                 <p className="text-xs text-gray-400 mt-2">
                     {isRecovery ? "بازیابی رمز عبور" : "ورود | ثبت‌نام"}
