@@ -40,9 +40,9 @@ export const metadata: Metadata = {
     'enamad': '46480007',
   },
   icons: {
-    icon: '/logo-full.jpg',
-    shortcut: '/logo-full.jpg',
-    apple: '/logo-full.jpg',
+    icon: '/logo-text-high-res.jpg',
+    shortcut: '/logo-text-high-res.jpg',
+    apple: '/logo-text-high-res.jpg',
   },
 };
 
