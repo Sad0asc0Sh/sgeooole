@@ -39,6 +39,11 @@ export const metadata: Metadata = {
   other: {
     'enamad': '46480007',
   },
+  icons: {
+    icon: '/logo-full.jpg',
+    shortcut: '/logo-full.jpg',
+    apple: '/logo-full.jpg',
+  },
 };
 
 export default function RootLayout({
