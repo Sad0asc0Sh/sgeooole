@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Wrench } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/authService";
 
 interface ServicesWidgetProps {
     isOpen: boolean;
@@ -14,8 +14,6 @@ interface ServicesWidgetProps {
 export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetProps) {
     const [isExpanded, setIsExpanded] = useState(true);
     const router = useRouter();
-    const { isAuthenticated } = useAuth();
-    const orderTrackingHref = isAuthenticated ? "/profile/orders?status=current" : "/tracking";
 
     // Auto-collapse on mount
     useEffect(() => {
@@ -37,8 +35,14 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
         }
     }, [isOpen]);
 
-    const handleNavigate = (path: string) => {
+    const handleNavigate = (path: string, options?: { requireAuth?: boolean }) => {
         onOpenChange(false);
+
+        if (options?.requireAuth && !authService.isAuthenticated()) {
+            router.push("/login");
+            return;
+        }
+
         router.push(path);
     };
 
@@ -66,7 +70,11 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
                 </SheetHeader>
                 <div className="grid grid-cols-3 gap-4 p-4">
                     <div
-                        onClick={() => handleNavigate(orderTrackingHref)}
+                        onClick={() =>
+                            handleNavigate(
+                                authService.isAuthenticated() ? "/profile/orders?status=current" : "/tracking"
+                            )
+                        }
                         className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
                     >
                         پیگیری سفارش
@@ -78,7 +86,7 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
                         اسمبل هوشمند
                     </div>
                     <div
-                        onClick={() => handleNavigate("/profile/tickets")}
+                        onClick={() => handleNavigate("/profile/tickets", { requireAuth: true })}
                         className="p-4 bg-gray-50 rounded-lg text-center text-xs flex items-center justify-center h-20 hover:bg-blue-50 hover:text-blue-600 transition-colors cursor-pointer border border-gray-100"
                     >
                         پشتیبانی

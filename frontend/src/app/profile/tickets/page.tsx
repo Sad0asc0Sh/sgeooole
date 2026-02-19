@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { ticketService, Ticket } from "@/services/ticketService";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -36,7 +37,15 @@ interface ToastState {
 }
 
 // ========== PREMIUM SUPPORT MESSENGER ==========
-export default function SupportMessenger() {
+export default function SupportMessengerPage() {
+    return (
+        <ProtectedRoute>
+            <SupportMessenger />
+        </ProtectedRoute>
+    );
+}
+
+function SupportMessenger() {
     // ===== STATE MANAGEMENT =====
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [loading, setLoading] = useState(true);
