@@ -27,6 +27,9 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons'
 import api from '../../api'
+import { useAuthStore } from '../../stores'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { hasPermission } from '../../rbac/access'
 
 const { Option } = Select
 const { Panel } = Collapse
@@ -118,6 +121,19 @@ function AdminsPage() {
   const [saving, setSaving] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState(null)
   const [form] = Form.useForm()
+
+  // دریافت نقش و مجوزهای کاربر جاری
+  const { user, permissions } = useAuthStore()
+  const resolvedPermissions = Array.isArray(permissions) ? permissions : []
+  const can = (perm) => hasPermission(resolvedPermissions, perm)
+  const isSuperAdmin = user?.role === 'superadmin'
+  const isManager = user?.role === 'manager'
+
+  // نقش‌هایی که کاربر جاری مجاز به اختصاص دادنشان است
+  // manager فقط می‌تواند نقش‌های پایین‌تر از خود (admin, editor, support) بدهد
+  const assignableRoles = isSuperAdmin
+    ? ROLES_INFO.filter(r => r.key !== 'superadmin') // سوپرادمین می‌تواند همه به‌جز superadmin بدهد
+    : ROLES_INFO.filter(r => !['superadmin', 'manager'].includes(r.key)) // manager فقط admin, editor, support
 
   const fetchAdmins = async () => {
     setLoading(true)
@@ -257,32 +273,42 @@ function AdminsPage() {
     {
       title: 'عملیات',
       key: 'actions',
-      render: (_, record) => (
-        <Space>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => openEditModal(record)}
-          >
-            ویرایش
-          </Button>
-          <Popconfirm
-            title="حذف ادمین"
-            description="آیا از حذف این ادمین مطمئن هستید؟"
-            okText="حذف"
-            cancelText="انصراف"
-            onConfirm={() => handleDelete(record)}
-          >
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-            >
-              حذف
-            </Button>
-          </Popconfirm>
-        </Space>
-      ),
+      render: (_, record) => {
+        // manager نمی‌تواند superadmin یا manager دیگری را ویرایش/حذف کند
+        const canEditThis = isSuperAdmin || (isManager && !['superadmin', 'manager'].includes(record.role))
+        if (!canEditThis) return <Tag color="default">مشاهده</Tag>
+
+        return (
+          <Space>
+            {can(PERMISSIONS.ADMIN_UPDATE) && (
+              <Button
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => openEditModal(record)}
+              >
+                ویرایش
+              </Button>
+            )}
+            {can(PERMISSIONS.ADMIN_DELETE) && (
+              <Popconfirm
+                title="حذف ادمین"
+                description="آیا از حذف این ادمین مطمئن هستید؟"
+                okText="حذف"
+                cancelText="انصراف"
+                onConfirm={() => handleDelete(record)}
+              >
+                <Button
+                  size="small"
+                  danger
+                  icon={<DeleteOutlined />}
+                >
+                  حذف
+                </Button>
+              </Popconfirm>
+            )}
+          </Space>
+        )
+      },
     },
   ]
 
@@ -300,14 +326,28 @@ function AdminsPage() {
         }}
       >
         <h1>🔐 مدیریت ادمین‌ها</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={openCreateModal}
-        >
-          ایجاد ادمین جدید
-        </Button>
+        {/* دکمه ایجاد ادمین فقط برای سوپرادمین */}
+        {can(PERMISSIONS.ADMIN_CREATE) && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={openCreateModal}
+          >
+            ایجاد ادمین جدید
+          </Button>
+        )}
       </div>
+
+      {/* توضیح برای manager */}
+      {isManager && (
+        <Alert
+          type="info"
+          showIcon
+          message="دسترسی محدود"
+          description="شما به‌عنوان مدیر ارشد می‌توانید اطلاعات ادمین‌ها با سطح پایین‌تر (ادمین، ویرایشگر، پشتیبان) را مشاهده و ویرایش کنید. ایجاد یا حذف ادمین فقط توسط سوپرادمین انجام می‌شود."
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       {/* ============================================ */}
       {/* راهنمای نقش‌ها و سطوح دسترسی */}
@@ -476,7 +516,7 @@ function AdminsPage() {
             tooltip="نقش تعیین‌کننده سطح دسترسی ادمین است"
           >
             <Select placeholder="انتخاب نقش" size="large">
-              {ROLES_INFO.filter(r => r.key !== 'superadmin').map((role) => (
+              {assignableRoles.map((role) => (
                 <Option key={role.key} value={role.key}>
                   <Space>
                     <span>{role.icon}</span>

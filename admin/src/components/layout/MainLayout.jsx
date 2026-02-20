@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -245,8 +245,8 @@ function MainLayout({ children }) {
         },
       ]
       : []),
-    // Admins Management - Only for superadmin
-    ...(isSuperAdmin
+    // Admins Management - For superadmin and manager (users with admin:read permission)
+    ...(can(PERMISSIONS.ADMIN_READ)
       ? [
         {
           key: '/admins',

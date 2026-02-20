@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================
  * Permission-Based Role Access Control (RBAC)
  * Source of Truth for all system permissions
@@ -137,8 +137,11 @@ const ROLES = {
     // Superadmin: Full access (all permissions)
     superadmin: Object.values(PERMISSIONS),
 
-    // Manager: High-level operational access (almost everything except admin management)
+    // Manager: High-level operational access (almost everything except admin creation/deletion)
     manager: [
+        // Admin management (read & update only - cannot create or delete admins)
+        PERMISSIONS.ADMIN_READ,
+        PERMISSIONS.ADMIN_UPDATE,
         // Products
         PERMISSIONS.PRODUCT_READ,
         PERMISSIONS.PRODUCT_CREATE,
@@ -439,3 +442,4 @@ module.exports = {
     hasPermission,
     getPermissions,
 }
+
