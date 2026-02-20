@@ -5,14 +5,14 @@ const { upload } = require('../middleware/upload')
 const categoryController = require('../controllers/categoryController')
 const { cacheMiddleware, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
-// تعریف فیلدهای آپلود (Cloudinary)
+// ØªØ¹Ø±ÛŒÙ ÙÛŒÙ„Ø¯Ù‡Ø§ÛŒ Ø¢Ù¾Ù„ÙˆØ¯ (Cloudinary)
 const categoryUpload = upload.fields([
   { name: 'icon', maxCount: 1 },
   { name: 'image', maxCount: 1 },
 ])
 
 // ============================================
-// روت‌های عمومی (بدون نیاز به احراز هویت)
+// Ø±ÙˆØªâ€ŒÙ‡Ø§ÛŒ Ø¹Ù…ÙˆÙ…ÛŒ (Ø¨Ø¯ÙˆÙ† Ù†ÛŒØ§Ø² Ø¨Ù‡ Ø§Ø­Ø±Ø§Ø² Ù‡ÙˆÛŒØª)
 // ============================================
 
 // Tree endpoint - short cache for admin panel
@@ -24,45 +24,39 @@ router.get('/featured', cacheMiddleware(CACHE_TTL.LONG), categoryController.getF
 // Popular endpoint - long cache
 router.get('/popular', cacheMiddleware(CACHE_TTL.LONG), categoryController.getPopularCategories)
 
-router.get('/debug-fix', async (req, res) => {
-  const Category = require('../models/Category');
-  const Product = require('../models/Product');
-  try {
-    // 1. Find categories with invalid parents (parent ID not in DB)
-    const allCategories = await Category.find().lean();
-    const validIds = new Set(allCategories.map(c => c._id.toString()));
+// ============================================
+// Orphan maintenance endpoints (admin-only)
+// ============================================
+router.get(
+  '/orphans',
+  protect,
+  checkPermission(PERMISSIONS.CATEGORY_READ),
+  categoryController.getOrphanCategories,
+)
 
-    const orphanedIds = [];
-    for (const c of allCategories) {
-      if (c.parent && !validIds.has(c.parent.toString())) {
-        orphanedIds.push(c._id);
-      }
+router.post(
+  '/orphans/cleanup',
+  protect,
+  checkPermission(PERMISSIONS.CATEGORY_DELETE),
+  async (req, res, next) => {
+    try {
+      // Clear cache before running cleanup so subsequent reads are always fresh.
+      clearCacheByPrefix('/api/categories')
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+
+      await categoryController.cleanupOrphanCategories(req, res, next)
+    } catch (error) {
+      next(error)
     }
-
-    // 2. Also, find categories that were probably intended to be deleted by looking at the specific ones the user complained about
-    const badNames = ["دوربین AHD", "دوربین بی سیم", "دوربین تحت شبکه", "دوربین سیمکارتی"];
-    for (const c of allCategories) {
-      if (badNames.includes(c.name) && !orphanedIds.includes(c._id)) {
-        orphanedIds.push(c._id);
-      }
-    }
-
-    if (orphanedIds.length > 0) {
-      await Category.deleteMany({ _id: { $in: orphanedIds } });
-      await Product.updateMany({ category: { $in: orphanedIds } }, { $set: { category: null } });
-    }
-
-    res.json({ success: true, fixedOrphans: orphanedIds.length, orphanedIds });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
+  },
+)
 
 // Get category by slug (with properties for frontend filters)
 router.get('/slug/:slug', cacheMiddleware(CACHE_TTL.LONG), categoryController.getCategoryBySlug)
 
 // ============================================
-// لیست و ایجاد دسته‌بندی
+// Ù„ÛŒØ³Øª Ùˆ Ø§ÛŒØ¬Ø§Ø¯ Ø¯Ø³ØªÙ‡â€ŒØ¨Ù†Ø¯ÛŒ
 // ============================================
 router
   .route('/')
@@ -84,7 +78,7 @@ router
   )
 
 // ============================================
-// دریافت، ویرایش و حذف دسته‌بندی
+// Ø¯Ø±ÛŒØ§ÙØªØŒ ÙˆÛŒØ±Ø§ÛŒØ´ Ùˆ Ø­Ø°Ù Ø¯Ø³ØªÙ‡â€ŒØ¨Ù†Ø¯ÛŒ
 // ============================================
 router
   .route('/:id')
@@ -120,4 +114,3 @@ router
   )
 
 module.exports = router
-

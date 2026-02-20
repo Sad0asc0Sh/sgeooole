@@ -148,7 +148,7 @@ export const useCategoryStore = create((set, get) => ({
         let result = []
         nodes.forEach((n) => {
           const displayName = parentName ? `${parentName} > ${n.title}` : n.title
-          result.push({ _id: n.value, name: displayName, title: n.title })
+          result.push({ _id: n.value, name: displayName, title: n.title, properties: n.properties || [] })
           if (n.children && n.children.length > 0) {
             result = result.concat(flatten(n.children, displayName))
           }

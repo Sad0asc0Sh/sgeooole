@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Table,
   Button,
@@ -27,6 +27,7 @@ import {
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import api from '../../api'
+import { useCategoryStore } from '../../stores'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const { Dragger } = Upload
@@ -193,7 +194,6 @@ function ProductsList({ mode }) {
     total: 0,
   })
   const [dynamicFilters, setDynamicFilters] = useState({})
-  const [categories, setCategories] = useState([])
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [timerModalVisible, setTimerModalVisible] = useState(false)
@@ -201,24 +201,21 @@ function ProductsList({ mode }) {
   const [flashTimerModalVisible, setFlashTimerModalVisible] = useState(false)
   const [flashDealEndTime, setFlashDealEndTime] = useState('')
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const res = await api.get('/categories', {
-        params: { limit: 1000, fields: 'name,slug,_id,properties', nocache: 'true' },
-      })
-      setCategories(Array.isArray(res?.data?.data) ? res.data.data : [])
-    } catch (_) { }
-  }, [])
+  const categories = useCategoryStore((state) => state.categoriesFlat)
+  const categoriesLoading = useCategoryStore((state) => state.loading)
+  const fetchCategoriesTree = useCategoryStore((state) => state.fetchCategoriesTree)
 
   useEffect(() => {
-    fetchCategories()
-  }, [fetchCategories])
+    if (!categories || categories.length === 0) {
+      fetchCategoriesTree()
+    }
+  }, [categories, fetchCategoriesTree])
 
   useEffect(() => {
-    const onFocus = () => fetchCategories()
+    const onFocus = () => fetchCategoriesTree()
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [fetchCategories])
+  }, [fetchCategoriesTree])
 
   useEffect(() => {
     if (!filters.category) return
@@ -228,11 +225,6 @@ function ProductsList({ mode }) {
       setDynamicFilters({})
     }
   }, [categories, filters.category])
-
-  const categoryOptions = useMemo(
-    () => categories.map((c) => ({ text: c.name, value: c._id })),
-    [categories],
-  )
 
   const fetchProducts = async (page = pagination.current, pageSize = pagination.pageSize) => {
     setLoading(true)
@@ -832,13 +824,14 @@ function ProductsList({ mode }) {
           placeholder="دسته‌بندی"
           style={{ width: 200 }}
           allowClear
+          loading={categoriesLoading}
           value={filters.category || undefined}
           onChange={(value) => {
             setFilters((prev) => ({ ...prev, category: value || null }))
             setDynamicFilters({})
           }}
           onDropdownVisibleChange={(open) => {
-            if (open) fetchCategories()
+            if (open) fetchCategoriesTree()
           }}
         >
           {categories.map((c) => (

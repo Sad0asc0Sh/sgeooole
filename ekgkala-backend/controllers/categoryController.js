@@ -2,6 +2,51 @@ const Category = require('../models/Category')
 const Product = require('../models/Product')
 const { cloudinary } = require('../middleware/upload')
 
+const parseBooleanQueryParam = (value) =>
+  value === true || value === 'true' || value === '1' || value === 1
+
+const computeConnectedCategoryIdSet = (categories = []) => {
+  const childrenByParentId = new Map()
+  const rootIds = []
+
+  const normalizeId = (value) => (value ? value.toString() : null)
+
+  categories.forEach((cat) => {
+    const id = normalizeId(cat?._id)
+    if (!id) return
+
+    const parentId = normalizeId(cat.parent)
+
+    if (!parentId) {
+      rootIds.push(id)
+    }
+
+    const key = parentId || null
+    if (!childrenByParentId.has(key)) {
+      childrenByParentId.set(key, [])
+    }
+    childrenByParentId.get(key).push(id)
+  })
+
+  const connectedIds = new Set()
+  const stack = [...rootIds]
+
+  while (stack.length > 0) {
+    const id = stack.pop()
+    if (!id || connectedIds.has(id)) continue
+    connectedIds.add(id)
+
+    const children = childrenByParentId.get(id) || []
+    children.forEach((childId) => {
+      if (!connectedIds.has(childId)) {
+        stack.push(childId)
+      }
+    })
+  }
+
+  return connectedIds
+}
+
 // Normalize Cloudinary file object to { url, public_id }
 const extractImageInfo = (file) => {
   if (!file) return null
@@ -14,15 +59,46 @@ const extractImageInfo = (file) => {
 // GET /api/categories/tree
 exports.getCategoryTree = async (req, res) => {
   try {
-    const buildTree = (categories, parentId = null) =>
-      categories
-        .filter((cat) => {
-          const catParent = cat.parent ? cat.parent.toString() : null
-          const compareParent = parentId ? parentId.toString() : null
-          return catParent === compareParent
-        })
-        .sort((a, b) => a.order - b.order)
-        .map((cat) => ({
+    const includeOrphans = parseBooleanQueryParam(req.query.includeOrphans)
+
+    const allCategories = await Category.find({ isActive: true }).lean()
+
+    const connectedIds = computeConnectedCategoryIdSet(allCategories)
+    const allIds = allCategories.map((c) => c._id.toString())
+    const orphanIds = new Set(allIds.filter((id) => !connectedIds.has(id)))
+
+    const categoriesById = new Map(allCategories.map((c) => [c._id.toString(), c]))
+    const childrenByParentId = new Map()
+
+    allCategories.forEach((cat) => {
+      const parentId = cat.parent ? cat.parent.toString() : null
+      const key = parentId || null
+      if (!childrenByParentId.has(key)) {
+        childrenByParentId.set(key, [])
+      }
+      childrenByParentId.get(key).push(cat._id.toString())
+    })
+
+    const sortIds = (ids = []) =>
+      [...ids].sort((a, b) => {
+        const ca = categoriesById.get(a)
+        const cb = categoriesById.get(b)
+        const orderDiff = (ca?.order || 0) - (cb?.order || 0)
+        if (orderDiff !== 0) return orderDiff
+        return String(ca?.name || '').localeCompare(String(cb?.name || ''), 'fa')
+      })
+
+    const visited = new Set()
+
+    const buildNode = (id, stack = new Set()) => {
+      const cat = categoriesById.get(id)
+      if (!cat) return null
+
+      if (visited.has(id)) return null
+
+      if (stack.has(id)) {
+        visited.add(id)
+        return {
           _id: cat._id,
           name: cat.name,
           description: cat.description,
@@ -34,17 +110,90 @@ exports.getCategoryTree = async (req, res) => {
           slug: cat.slug,
           order: cat.order,
           isActive: cat.isActive,
-          properties: cat.properties || [], // Include category-specific attributes
-          children: buildTree(categories, cat._id),
-        }))
+          properties: cat.properties || [],
+          isOrphan: orphanIds.has(id),
+          children: [],
+        }
+      }
 
-    const allCategories = await Category.find({ isActive: true })
-    const tree = buildTree(allCategories, null)
+      visited.add(id)
+
+      const nextStack = new Set(stack)
+      nextStack.add(id)
+
+      const childIds = sortIds(childrenByParentId.get(id) || [])
+      const children = childIds
+        .map((childId) => buildNode(childId, nextStack))
+        .filter(Boolean)
+
+      return {
+        _id: cat._id,
+        name: cat.name,
+        description: cat.description,
+        icon: cat.icon,
+        image: cat.image,
+        isFeatured: cat.isFeatured,
+        isPopular: cat.isPopular,
+        parent: cat.parent,
+        slug: cat.slug,
+        order: cat.order,
+        isActive: cat.isActive,
+        properties: cat.properties || [], // Include category-specific attributes
+        isOrphan: orphanIds.has(id),
+        children,
+      }
+    }
+
+    const tree = []
+
+    // 1) Normal connected roots (parent=null)
+    const rootIds = sortIds(childrenByParentId.get(null) || [])
+    rootIds.forEach((rootId) => {
+      const node = buildNode(rootId)
+      if (node) {
+        tree.push(node)
+      }
+    })
+
+    // 2) Optionally include orphan components as additional roots (for debugging/cleanup)
+    if (includeOrphans) {
+      // Prefer "top-level" orphans first (orphans whose parent is not an orphan),
+      // so orphan subtrees don't get duplicated as multiple roots.
+      const orphanRootIds = sortIds(
+        allIds.filter((id) => {
+          if (!orphanIds.has(id)) return false
+          const parent = categoriesById.get(id)?.parent
+          const parentId = parent ? parent.toString() : null
+          if (!parentId) return true
+          return !orphanIds.has(parentId)
+        }),
+      )
+
+      orphanRootIds.forEach((id) => {
+        const node = buildNode(id)
+        if (node) {
+          tree.push(node)
+        }
+      })
+
+      // Fallback: include any remaining unreachable categories (e.g. cycles) as roots.
+      const remainingOrphanIds = sortIds(
+        allIds.filter((id) => orphanIds.has(id) && !visited.has(id)),
+      )
+      remainingOrphanIds.forEach((id) => {
+        const node = buildNode(id)
+        if (node) {
+          tree.push(node)
+        }
+      })
+    }
 
     res.json({
       success: true,
       data: tree,
       count: allCategories.length,
+      connectedCount: connectedIds.size,
+      orphanCount: orphanIds.size,
     })
   } catch (error) {
     console.error('Error fetching category tree:', error)
@@ -60,6 +209,9 @@ exports.getCategoryTree = async (req, res) => {
 exports.getAllCategories = async (req, res) => {
   try {
     const { limit = 1000, fields, parent, isFeatured, isPopular } = req.query
+
+    const includeOrphans = parseBooleanQueryParam(req.query.includeOrphans)
+    const onlyOrphans = parseBooleanQueryParam(req.query.onlyOrphans)
 
     const query = { isActive: true }
 
@@ -83,31 +235,186 @@ exports.getAllCategories = async (req, res) => {
       categoriesQuery = categoriesQuery.select(fields.split(',').join(' '))
     }
 
-    // Convert to simple objects for easier manipulation if possible, but actually we just await the query
-    const categoriesList = await categoriesQuery.lean ? await categoriesQuery.lean() : await categoriesQuery;
+    const categoriesList = await categoriesQuery.lean()
 
-    // Fix fundamentally: if a parent was deleted but child remained (orphaned category trace),
-    // it shouldn't show up in the complete list like dropdown filters.
-    let finalCategories = categoriesList;
-    if (parent === undefined) {
-      const validIds = new Set(categoriesList.map(c => c._id.toString()));
-      finalCategories = categoriesList.filter(c => {
-        if (!c.parent) return true; // root category
-        // Only return if its parent exists in the active categories list
-        return validIds.has(c.parent.toString());
-      });
+    let finalCategories = categoriesList
+    let meta = {
+      mode: onlyOrphans ? 'onlyOrphans' : (includeOrphans ? 'allActive' : 'connectedOnly'),
+    }
+
+    // For scoped queries (e.g. parent=...), keep the historical behavior: return what Mongo returns.
+    // Connectivity filtering is applied only for the "full list" use case (dropdown filters, etc).
+    const isScopedQuery = parent !== undefined || isFeatured !== undefined || isPopular !== undefined
+
+    if (!isScopedQuery && (onlyOrphans || !includeOrphans)) {
+      const minimalActive = await Category.find({ isActive: true }).select('_id parent').lean()
+      const connectedIds = computeConnectedCategoryIdSet(minimalActive)
+
+      const orphanIdSet = new Set()
+      minimalActive.forEach((cat) => {
+        const id = cat._id.toString()
+        if (!connectedIds.has(id)) {
+          orphanIdSet.add(id)
+        }
+      })
+
+      if (onlyOrphans) {
+        finalCategories = categoriesList.filter((c) => orphanIdSet.has(c._id.toString()))
+        meta = {
+          ...meta,
+          totalActive: minimalActive.length,
+          connectedActive: connectedIds.size,
+          orphanActive: orphanIdSet.size,
+        }
+      } else {
+        finalCategories = categoriesList.filter((c) => connectedIds.has(c._id.toString()))
+        meta = {
+          ...meta,
+          totalActive: minimalActive.length,
+          connectedActive: connectedIds.size,
+          orphanActive: orphanIdSet.size,
+        }
+      }
+    } else if (isScopedQuery) {
+      meta = {
+        mode: 'scopedQuery',
+      }
     }
 
     res.json({
       success: true,
       data: finalCategories,
       count: finalCategories.length,
+      meta,
     })
   } catch (error) {
     console.error('Error fetching categories:', error)
     res.status(500).json({
       success: false,
       message: 'خطا در دریافت دسته‌بندی‌ها',
+      error: error.message,
+    })
+  }
+}
+
+// GET /api/categories/orphans
+// Admin/maintenance: list active categories that are not reachable from a root (parent=null)
+exports.getOrphanCategories = async (req, res) => {
+  try {
+    const limit = Math.max(1, parseInt(req.query.limit, 10) || 500)
+
+    const minimalActive = await Category.find({ isActive: true }).select('_id parent').lean()
+    const connectedIds = computeConnectedCategoryIdSet(minimalActive)
+
+    const orphanIds = minimalActive
+      .map((c) => c._id.toString())
+      .filter((id) => !connectedIds.has(id))
+
+    const data = await Category.find({ isActive: true, _id: { $in: orphanIds } })
+      .sort({ order: 1, name: 1 })
+      .limit(limit)
+      .select('name parent slug order isActive isFeatured isPopular')
+      .lean()
+
+    res.json({
+      success: true,
+      data,
+      count: data.length,
+      meta: {
+        totalActive: minimalActive.length,
+        connectedActive: connectedIds.size,
+        orphanActive: orphanIds.length,
+        limit,
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching orphan categories:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت دسته‌بندی‌های یتیم',
+      error: error.message,
+    })
+  }
+}
+
+// POST /api/categories/orphans/cleanup
+// Admin/maintenance: delete or deactivate active orphan categories
+exports.cleanupOrphanCategories = async (req, res) => {
+  try {
+    const dryRun = parseBooleanQueryParam(req.query.dryRun ?? req.body?.dryRun)
+    const mode = String(req.query.mode ?? req.body?.mode ?? 'delete').toLowerCase()
+
+    const minimalActive = await Category.find({ isActive: true }).select('_id parent').lean()
+    const connectedIds = computeConnectedCategoryIdSet(minimalActive)
+
+    const orphanIds = minimalActive
+      .map((c) => c._id.toString())
+      .filter((id) => !connectedIds.has(id))
+
+    if (orphanIds.length === 0) {
+      return res.json({
+        success: true,
+        message: 'هیچ دسته‌بندی یتیمی یافت نشد.',
+        orphanCount: 0,
+        dryRun,
+        mode,
+      })
+    }
+
+    if (dryRun) {
+      return res.json({
+        success: true,
+        message: 'Dry-run: هیچ تغییری اعمال نشد.',
+        orphanCount: orphanIds.length,
+        orphanIds,
+        dryRun: true,
+        mode,
+      })
+    }
+
+    if (mode !== 'delete' && mode !== 'deactivate') {
+      return res.status(400).json({
+        success: false,
+        message: "پارامتر mode نامعتبر است. مقادیر مجاز: 'delete' یا 'deactivate'",
+      })
+    }
+
+    let productsUpdated = 0
+    let categoriesAffected = 0
+
+    if (mode === 'deactivate') {
+      const updateResult = await Category.updateMany(
+        { isActive: true, _id: { $in: orphanIds } },
+        { $set: { isActive: false } },
+      )
+      categoriesAffected = updateResult?.modifiedCount ?? updateResult?.nModified ?? 0
+    } else {
+      const productResult = await Product.updateMany(
+        { category: { $in: orphanIds } },
+        { $set: { category: null } },
+      )
+      productsUpdated = productResult?.modifiedCount ?? productResult?.nModified ?? 0
+
+      const deleteResult = await Category.deleteMany({ _id: { $in: orphanIds } })
+      categoriesAffected = deleteResult?.deletedCount ?? 0
+    }
+
+    return res.json({
+      success: true,
+      message:
+        mode === 'delete'
+          ? 'دسته‌بندی‌های یتیم حذف شدند و ارجاع محصولات پاک شد.'
+          : 'دسته‌بندی‌های یتیم غیرفعال شدند.',
+      mode,
+      orphanCount: orphanIds.length,
+      categoriesAffected,
+      productsUpdated,
+    })
+  } catch (error) {
+    console.error('Error cleaning orphan categories:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در پاکسازی دسته‌بندی‌های یتیم',
       error: error.message,
     })
   }
