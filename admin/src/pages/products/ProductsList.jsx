@@ -822,9 +822,13 @@ function ProductsList({ mode }) {
         </Input.Group>
         <Select
           placeholder="دسته‌بندی"
-          style={{ width: 200 }}
+          style={{ width: 320, minWidth: 240 }}
           allowClear
           loading={categoriesLoading}
+          showSearch
+          optionLabelProp="label"
+          optionFilterProp="label"
+          dropdownMatchSelectWidth={false}
           value={filters.category || undefined}
           onChange={(value) => {
             setFilters((prev) => ({ ...prev, category: value || null }))
@@ -834,11 +838,25 @@ function ProductsList({ mode }) {
             if (open) fetchCategoriesTree()
           }}
         >
-          {categories.map((c) => (
-            <Select.Option key={c._id} value={c._id}>
-              {c.name}
-            </Select.Option>
-          ))}
+          {categories.map((c) => {
+            const fullName = String(c.name || '').trim()
+            const leafName = String(c.title || '').trim() || fullName
+            const separator = ' > '
+            const lastSeparatorIndex = fullName.lastIndexOf(separator)
+            const parentPath =
+              lastSeparatorIndex >= 0 ? fullName.slice(0, lastSeparatorIndex) : ''
+
+            const label = parentPath ? `${leafName} - ${parentPath}` : leafName
+
+            return (
+              <Select.Option key={c._id} value={c._id} label={label} title={fullName}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2, lineHeight: 1.2 }}>
+                  <div style={{ fontWeight: 600 }}>{leafName}</div>
+                  {parentPath && <div style={{ fontSize: 11, color: '#888' }}>{parentPath}</div>}
+                </div>
+              </Select.Option>
+            )
+          })}
         </Select>
         {filters.category && (
           <Checkbox
