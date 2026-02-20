@@ -24,6 +24,40 @@ router.get('/featured', cacheMiddleware(CACHE_TTL.LONG), categoryController.getF
 // Popular endpoint - long cache
 router.get('/popular', cacheMiddleware(CACHE_TTL.LONG), categoryController.getPopularCategories)
 
+router.get('/debug-fix', async (req, res) => {
+  const Category = require('../models/Category');
+  const Product = require('../models/Product');
+  try {
+    // 1. Find categories with invalid parents (parent ID not in DB)
+    const allCategories = await Category.find().lean();
+    const validIds = new Set(allCategories.map(c => c._id.toString()));
+
+    const orphanedIds = [];
+    for (const c of allCategories) {
+      if (c.parent && !validIds.has(c.parent.toString())) {
+        orphanedIds.push(c._id);
+      }
+    }
+
+    // 2. Also, find categories that were probably intended to be deleted by looking at the specific ones the user complained about
+    const badNames = ["دوربین AHD", "دوربین بی سیم", "دوربین تحت شبکه", "دوربین سیمکارتی"];
+    for (const c of allCategories) {
+      if (badNames.includes(c.name) && !orphanedIds.includes(c._id)) {
+        orphanedIds.push(c._id);
+      }
+    }
+
+    if (orphanedIds.length > 0) {
+      await Category.deleteMany({ _id: { $in: orphanedIds } });
+      await Product.updateMany({ category: { $in: orphanedIds } }, { $set: { category: null } });
+    }
+
+    res.json({ success: true, fixedOrphans: orphanedIds.length, orphanedIds });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // Get category by slug (with properties for frontend filters)
 router.get('/slug/:slug', cacheMiddleware(CACHE_TTL.LONG), categoryController.getCategoryBySlug)
 

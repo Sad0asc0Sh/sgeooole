@@ -83,12 +83,25 @@ exports.getAllCategories = async (req, res) => {
       categoriesQuery = categoriesQuery.select(fields.split(',').join(' '))
     }
 
-    const categories = await categoriesQuery
+    // Convert to simple objects for easier manipulation if possible, but actually we just await the query
+    const categoriesList = await categoriesQuery.lean ? await categoriesQuery.lean() : await categoriesQuery;
+
+    // Fix fundamentally: if a parent was deleted but child remained (orphaned category trace),
+    // it shouldn't show up in the complete list like dropdown filters.
+    let finalCategories = categoriesList;
+    if (parent === undefined) {
+      const validIds = new Set(categoriesList.map(c => c._id.toString()));
+      finalCategories = categoriesList.filter(c => {
+        if (!c.parent) return true; // root category
+        // Only return if its parent exists in the active categories list
+        return validIds.has(c.parent.toString());
+      });
+    }
 
     res.json({
       success: true,
-      data: categories,
-      count: categories.length,
+      data: finalCategories,
+      count: finalCategories.length,
     })
   } catch (error) {
     console.error('Error fetching categories:', error)
@@ -506,17 +519,32 @@ exports.deleteCategory = async (req, res) => {
       }
     }
 
-    // Detach children to avoid orphan nodes in the category tree
-    await Category.updateMany({ parent: category._id }, { $set: { parent: null } })
+    // Fundamentally fix the issue: instead of detaching children and leaving them orphaned
+    // (which causes them to show in filters since isActive=true still), we will recursively
+    // find all descendant categories and delete them so no trace is left behind.
+    const getDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent: parentId }).select('_id isActive').lean()
+      let ids = children.map(c => c._id)
+      for (const childId of ids) {
+        const subIds = await getDescendantIds(childId)
+        ids = ids.concat(subIds)
+      }
+      return ids
+    }
 
-    // Remove product references so deleted categories won't linger in filtering
-    await Product.updateMany({ category: category._id }, { $set: { category: null } })
+    const descendantIds = await getDescendantIds(category._id)
+    const allIdsToDelete = [category._id, ...descendantIds]
 
-    await category.deleteOne()
+    // Remove product references so deleted categories won't linger in products
+    await Product.updateMany({ category: { $in: allIdsToDelete } }, { $set: { category: null } })
+
+    // Delete the category and all its descendants completely
+    await Category.deleteMany({ _id: { $in: allIdsToDelete } })
 
     res.json({
       success: true,
-      message: 'دسته‌بندی با موفقیت حذف شد',
+      message: 'دسته‌بندی و تمام زیرشاخه‌های آن با موفقیت حذف شدند',
+      deletedCount: allIdsToDelete.length
     })
   } catch (error) {
     console.error('Error deleting category:', error)
