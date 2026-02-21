@@ -11,7 +11,8 @@ const router = express.Router()
 const rateLimit = require('express-rate-limit')
 const {
     getSetupStatus,
-    setupInitialAdmin
+    setupInitialAdmin,
+    setUserRole,
 } = require('../controllers/adminSetupController')
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -84,5 +85,17 @@ router.get('/status', statusLimiter, getSetupStatus)
  *   -d '{"setupKey": "your-secret-key", "email": "admin@example.com"}'
  */
 router.post('/', setupLimiter, setupInitialAdmin)
+
+/**
+ * @route   POST /api/admin/setup/set-role
+ * @desc    تغییر نقش یک کاربر با استفاده از Setup Key
+ * @access  Protected by setupKey
+ *
+ * @example
+ * curl -X POST http://YOUR_SERVER_IP:5000/api/admin/setup/set-role \
+ *   -H "Content-Type: application/json" \
+ *   -d '{"setupKey": "YOUR_SETUP_KEY", "email": "user@example.com", "role": "superadmin"}'
+ */
+router.post('/set-role', setupLimiter, setUserRole)
 
 module.exports = router

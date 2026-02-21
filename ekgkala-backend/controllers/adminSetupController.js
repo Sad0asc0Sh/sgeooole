@@ -370,7 +370,78 @@ const setupInitialAdmin = async (req, res) => {
     }
 }
 
+/**
+ * تغییر نقش یک کاربر با استفاده از Setup Key
+ * POST /api/admin/setup/set-role
+ *
+ * @body {string} setupKey - کلید امنیتی (از .env)
+ * @body {string} email    - ایمیل کاربر
+ * @body {string} role     - نقش جدید (superadmin, manager, admin, editor, support, user)
+ */
+const setUserRole = async (req, res) => {
+    try {
+        const { setupKey, email, role } = req.body || {}
+
+        // 1. بررسی setupKey
+        const requiredSetupKey = process.env.ADMIN_SETUP_KEY
+        if (!requiredSetupKey || setupKey !== requiredSetupKey) {
+            return res.status(403).json({
+                success: false,
+                message: 'کلید امنیتی نامعتبر است'
+            })
+        }
+
+        // 2. اعتبارسنجی ورودی‌ها
+        const validRoles = ['superadmin', 'manager', 'admin', 'editor', 'support', 'user']
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'ایمیل کاربر الزامی است' })
+        }
+        if (!role || !validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: `نقش نامعتبر است. نقش‌های مجاز: ${validRoles.join(', ')}`
+            })
+        }
+
+        // 3. پیدا کردن و بروزرسانی کاربر
+        const user = await Admin.findOneAndUpdate(
+            { email: email.toLowerCase().trim() },
+            { $set: { role } },
+            { new: true, select: 'name email role isActive' }
+        )
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: `کاربری با ایمیل "${email}" یافت نشد`
+            })
+        }
+
+        console.log(`[SETUP] نقش کاربر ${email} به ${role} تغییر یافت`)
+
+        return res.json({
+            success: true,
+            message: `نقش کاربر با موفقیت به "${role}" تغییر یافت`,
+            data: {
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive
+            }
+        })
+
+    } catch (error) {
+        console.error('❌ Error in setUserRole:', error)
+        return res.status(500).json({
+            success: false,
+            message: 'خطا در تغییر نقش کاربر',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        })
+    }
+}
+
 module.exports = {
     getSetupStatus,
-    setupInitialAdmin
+    setupInitialAdmin,
+    setUserRole
 }
