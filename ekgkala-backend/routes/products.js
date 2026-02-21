@@ -246,7 +246,16 @@ const buildProductFilter = (query) => {
   const filter = {}
 
   // By default, only active products unless includeInactive=true
-  if (!query.includeInactive) {
+  const includeInactiveRaw = query.includeInactive
+  const includeInactive =
+    includeInactiveRaw === true ||
+    includeInactiveRaw === 'true' ||
+    includeInactiveRaw === 1 ||
+    includeInactiveRaw === '1' ||
+    (Array.isArray(includeInactiveRaw) &&
+      includeInactiveRaw.some((val) => val === true || val === 'true' || val === 1 || val === '1'))
+
+  if (!includeInactive) {
     filter.isActive = true
   }
 
@@ -284,14 +293,11 @@ const buildProductFilter = (query) => {
     }
   }
 
-  // Advanced filters like isActive[eq]=true, flashDealEndTime[gt]=2025-11-24T...
-  Object.keys(query).forEach((key) => {
-    const match = key.match(/^(.+)\[(.+)\]$/)
-    if (!match) return
+  const advancedOps = new Set(['eq', 'lt', 'gt', 'gte', 'lte'])
+  const normalizeAdvancedValue = (value) => (Array.isArray(value) ? value[0] : value)
 
-    const field = match[1]
-    const op = match[2]
-    const value = query[key]
+  const applyAdvancedFilter = (field, op, rawValue) => {
+    const value = normalizeAdvancedValue(rawValue)
 
     if (field === 'isActive') {
       const boolVal = value === 'true' || value === true
@@ -300,36 +306,67 @@ const buildProductFilter = (query) => {
     }
 
     // Handle date fields (flashDealEndTime, specialOfferEndTime, etc.)
-    if (field.toLowerCase().includes('time') || field.toLowerCase().includes('date')) {
+    if (String(field).toLowerCase().includes('time') || String(field).toLowerCase().includes('date')) {
       const dateValue = new Date(value)
-      if (!isNaN(dateValue.getTime())) {
-        if (op === 'eq') {
-          filter[field] = dateValue
-        } else if (op === 'lt') {
-          filter[field] = { $lt: dateValue }
-        } else if (op === 'gt') {
-          filter[field] = { $gt: dateValue }
-        } else if (op === 'gte') {
-          filter[field] = { $gte: dateValue }
-        } else if (op === 'lte') {
-          filter[field] = { $lte: dateValue }
-        }
+      if (isNaN(dateValue.getTime())) return
+
+      if (op === 'eq') {
+        filter[field] = dateValue
         return
       }
+
+      const mongoOp = op === 'lt' ? '$lt' : op === 'gt' ? '$gt' : op === 'gte' ? '$gte' : op === 'lte' ? '$lte' : null
+      if (!mongoOp) return
+
+      if (!filter[field] || typeof filter[field] !== 'object' || filter[field] instanceof Date) {
+        filter[field] = {}
+      }
+      filter[field][mongoOp] = dateValue
+      return
     }
 
     // Handle numeric fields
     if (op === 'eq') {
       filter[field] = value
-    } else if (op === 'lt') {
-      filter[field] = { $lt: Number(value) }
-    } else if (op === 'gt') {
-      filter[field] = { $gt: Number(value) }
-    } else if (op === 'gte') {
-      filter[field] = { $gte: Number(value) }
-    } else if (op === 'lte') {
-      filter[field] = { $lte: Number(value) }
+      return
     }
+
+    const numberValue = Number(value)
+    if (Number.isNaN(numberValue)) return
+
+    const mongoOp = op === 'lt' ? '$lt' : op === 'gt' ? '$gt' : op === 'gte' ? '$gte' : op === 'lte' ? '$lte' : null
+    if (!mongoOp) return
+
+    if (!filter[field] || typeof filter[field] !== 'object' || filter[field] instanceof Date) {
+      filter[field] = {}
+    }
+    filter[field][mongoOp] = numberValue
+  }
+
+  // Advanced filters (Express "extended" parser): field[op]=value -> query.field.op
+  Object.entries(query).forEach(([field, value]) => {
+    if (field === 'properties') return
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return
+
+    const ops = Object.keys(value)
+    if (!ops.some((op) => advancedOps.has(op))) return
+
+    ops.forEach((op) => {
+      if (!advancedOps.has(op)) return
+      applyAdvancedFilter(field, op, value[op])
+    })
+  })
+
+  // Advanced filters (Express "simple" parser fallback): literal keys like field[op]=value
+  Object.keys(query).forEach((key) => {
+    const match = key.match(/^(.+)\[(.+)\]$/)
+    if (!match) return
+
+    const field = match[1]
+    const op = match[2]
+    if (!advancedOps.has(op)) return
+
+    applyAdvancedFilter(field, op, query[key])
   })
 
   return filter
@@ -1067,10 +1104,18 @@ router.get(
       }
 
       // Status filter
-      if (req.query['isActive[eq]'] === 'true') {
-        filter.isActive = true
-      } else if (req.query['isActive[eq]'] === 'false') {
-        filter.isActive = false
+      const isActiveEqRaw =
+        (req.query.isActive && typeof req.query.isActive === 'object' ? req.query.isActive.eq : undefined) ??
+        req.query['isActive[eq]']
+
+      if (isActiveEqRaw !== undefined) {
+        const isTrue = isActiveEqRaw === true || isActiveEqRaw === 'true' || isActiveEqRaw === 1 || isActiveEqRaw === '1'
+        const isFalse = isActiveEqRaw === false || isActiveEqRaw === 'false' || isActiveEqRaw === 0 || isActiveEqRaw === '0'
+        if (isTrue) {
+          filter.isActive = true
+        } else if (isFalse) {
+          filter.isActive = false
+        }
       }
 
       // Product type filter
