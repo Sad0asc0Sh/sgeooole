@@ -14,6 +14,8 @@ import type { Banner } from "@/services/bannerService";
 export const revalidate = 60;
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
+const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "فروشگاه آنلاین";
 const SITE_DESCRIPTION =
@@ -35,6 +37,7 @@ const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit & { next?
 };
 
 const logBuildFetchWarning = (message: string, error?: unknown) => {
+  if (IS_BUILD_PHASE) return;
   if (process.env.NODE_ENV !== "production") {
     console.warn(message, error);
   } else {
@@ -47,7 +50,7 @@ async function fetchFeaturedCategories(): Promise<Category[]> {
     const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
       `${API_BASE}/categories/featured?_t=${Date.now()}`,
       { next: { revalidate } },
-      8000
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
@@ -61,7 +64,7 @@ async function fetchPopularCategories(): Promise<Category[]> {
     const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
       `${API_BASE}/categories/popular?_t=${Date.now()}`,
       { next: { revalidate } },
-      8000
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
@@ -75,7 +78,7 @@ async function fetchBanners(): Promise<Banner[]> {
     const json = await fetchJsonWithTimeout<ApiResponse<Banner[]>>(
       `${API_BASE}/banners?isActive=true&sort=sortOrder`,
       { next: { revalidate } },
-      8000
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {

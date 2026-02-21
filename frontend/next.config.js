@@ -16,6 +16,12 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Monorepo: Pin Next workspace root to this app to avoid lockfile ambiguity warnings.
+    turbopack: {
+        root: __dirname,
+    },
+    outputFileTracingRoot: __dirname,
+
     // Remove X-Powered-By header
     poweredByHeader: false,
 

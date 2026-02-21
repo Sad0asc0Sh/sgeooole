@@ -38,10 +38,6 @@
   "author": "EkgKala Team",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
-  },
-  "dependencies": {
-    "axios": "^1.13.2",
-    "react-quill": "^2.0.0"
+    "concurrently": "^9.2.1"
   }
 }

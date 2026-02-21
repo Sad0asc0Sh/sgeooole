@@ -1,21 +1,13 @@
 import { redirect } from "next/navigation";
 import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import ProductDetailClient from "../product/[...segments]/ProductDetailClient";
-import { fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
+import { fetchProductBySlug } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 
 // Force dynamic rendering - no caching, always fetch fresh data
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const dynamicParams = true;
-
-export async function generateStaticParams() {
-  const products = await fetchProductsForStatic(100);
-  return products.map((product) => {
-    const path = buildProductUrl(product).slice(1); // remove leading slash
-    return { slug: path.split("/") };
-  });
-}
 
 type CatchAllParams = Promise<{ slug?: string[] }>;
 

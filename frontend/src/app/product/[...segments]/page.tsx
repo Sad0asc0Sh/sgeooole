@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
 import RelatedProducts from "./RelatedProducts";
-import { fetchProductById, fetchProductByCode, fetchProductBySlug, fetchProductsForStatic } from "@/lib/productData";
+import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
 
 // Keep product pages fresh after admin edits (images/pricing)
@@ -166,13 +166,4 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
             </div>
         </>
     );
-}
-
-export async function generateStaticParams() {
-    const products = await fetchProductsForStatic(100);
-    return products.map((p) => {
-        const code = (p as any).productCode?.toLowerCase() || p.id;
-        const slug = p.slug || p.id;
-        return { segments: [code, slug] };
-    });
 }

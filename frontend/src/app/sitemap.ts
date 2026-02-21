@@ -13,6 +13,8 @@ type CategoryItem = {
 };
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
+const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").replace(/\/$/, "");
 
 const fetchJsonWithTimeout = async (url: string, init: RequestInit & { next?: any }, timeoutMs: number) => {
@@ -28,6 +30,7 @@ const fetchJsonWithTimeout = async (url: string, init: RequestInit & { next?: an
 };
 
 const logBuildFetchWarning = (message: string, error?: unknown) => {
+  if (IS_BUILD_PHASE) return;
   if (process.env.NODE_ENV !== "production") {
     console.warn(message, error);
   } else {
@@ -37,7 +40,11 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
 
 async function fetchProducts(): Promise<ProductItem[]> {
   try {
-    const json = await fetchJsonWithTimeout(`${API_BASE}/products?limit=1000&isActive=true`, { next: { revalidate: 3600 } }, 8000);
+    const json = await fetchJsonWithTimeout(
+      `${API_BASE}/products?limit=1000&isActive=true`,
+      { next: { revalidate: 3600 } },
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
+    );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
     logBuildFetchWarning("[sitemap] Failed to fetch products", error);
@@ -47,7 +54,11 @@ async function fetchProducts(): Promise<ProductItem[]> {
 
 async function fetchCategories(): Promise<CategoryItem[]> {
   try {
-    const json = await fetchJsonWithTimeout(`${API_BASE}/categories`, { next: { revalidate: 3600 } }, 8000);
+    const json = await fetchJsonWithTimeout(
+      `${API_BASE}/categories`,
+      { next: { revalidate: 3600 } },
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
+    );
     return Array.isArray(json?.data) ? json.data : [];
   } catch (error) {
     logBuildFetchWarning("[sitemap] Failed to fetch categories", error);

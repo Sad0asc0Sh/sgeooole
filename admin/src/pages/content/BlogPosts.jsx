@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import RichTextEditor from '../../components/RichTextEditor'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
@@ -327,14 +326,7 @@ function BlogPosts() {
 
           <Form.Item label="محتوا *" required>
             <div style={{ direction: 'rtl' }}>
-              <ReactQuill
-                theme="snow"
-                value={editorContent}
-                onChange={setEditorContent}
-                modules={modules}
-                formats={formats}
-                style={{ height: '300px', marginBottom: '50px' }}
-              />
+              <RichTextEditor value={editorContent} onChange={setEditorContent} modules={modules} formats={formats} />
             </div>
           </Form.Item>
 

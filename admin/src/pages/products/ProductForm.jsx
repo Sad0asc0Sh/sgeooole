@@ -23,8 +23,7 @@ import {
   PlusOutlined,
   DeleteOutlined,
 } from '@ant-design/icons'
-import ReactQuill from 'react-quill'
-import 'react-quill/dist/quill.snow.css'
+import RichTextEditor from '../../components/RichTextEditor'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
@@ -52,21 +51,6 @@ const formats = [
   'color', 'background',
   'link', 'image', 'video',
 ]
-
-const RichTextEditor = ({ value, onChange }) => {
-  return (
-    <div className="rich-text-editor-wrapper" style={{ direction: 'rtl' }}>
-      <ReactQuill
-        theme="snow"
-        value={value || ''}
-        onChange={onChange}
-        modules={modules}
-        formats={formats}
-        style={{ height: '300px', marginBottom: '50px' }}
-      />
-    </div>
-  )
-}
 
 function ProductForm() {
   const [form] = Form.useForm()
@@ -819,7 +803,7 @@ function ProductForm() {
                       name="description"
                       label="توضیحات"
                     >
-                      <RichTextEditor />
+                      <RichTextEditor modules={modules} formats={formats} />
                     </Form.Item>
                   </>
                 ),

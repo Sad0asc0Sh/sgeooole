@@ -28,7 +28,7 @@
   "license": "ISC",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.8.0",
     "compression": "^1.8.1",
@@ -60,6 +60,9 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "overrides": {
+    "minimatch": "10.2.2"
   },
   "engines": {
     "node": ">=18.0.0",
