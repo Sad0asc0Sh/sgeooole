@@ -29,6 +29,8 @@ import { Link } from 'react-router-dom'
 import api from '../../api'
 import { useCategoryStore } from '../../stores'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 const { Dragger } = Upload
 const CSV_DIRECT_UPLOAD_LIMIT_BYTES = 900 * 1024
@@ -222,6 +224,13 @@ const buildCsvChunks = (rows, headers, maxChunkBytes = CSV_CHUNK_MAX_BYTES) => {
 }
 
 function ProductsList({ mode }) {
+  const { can } = useCan()
+  const canCreate = can(PERMISSIONS.PRODUCT_CREATE)
+  const canUpdate = can(PERMISSIONS.PRODUCT_UPDATE)
+  const canDelete = can(PERMISSIONS.PRODUCT_DELETE)
+  const canImport = can(PERMISSIONS.PRODUCT_IMPORT)
+  const canExport = can(PERMISSIONS.PRODUCT_EXPORT)
+
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
   const [selectedRowKeys, setSelectedRowKeys] = useState([])
@@ -311,6 +320,16 @@ function ProductsList({ mode }) {
   }, [mode, filters.category, filters.status, filters.productType, includeChildren, dynamicFilters])
 
   const handleBulkDelete = () => {
+    if (!canDelete) {
+      message.error('شما مجوز حذف محصول را ندارید.')
+      return
+    }
+
+    if (selectedRowKeys.length === 0) {
+      message.warning('هیچ محصولی انتخاب نشده است')
+      return
+    }
+
     Modal.confirm({
       title: 'حذف گروهی محصولات',
       content: `آیا از حذف ${selectedRowKeys.length} محصول انتخاب شده مطمئن هستید؟ این عملیات قابل بازگشت نیست.`,
@@ -331,6 +350,11 @@ function ProductsList({ mode }) {
   }
 
   const handleStatusToggle = async (record) => {
+    if (!canUpdate) {
+      message.error('شما مجوز ویرایش محصول را ندارید.')
+      return
+    }
+
     const nextActive = !record.isActive
     try {
       await api.put(`/products/${record._id}`, { isActive: nextActive })
@@ -430,6 +454,7 @@ function ProductsList({ mode }) {
         <Switch
           checked={!!status}
           onChange={() => handleStatusToggle(record)}
+          disabled={!canUpdate}
           checkedChildren="فعال"
           unCheckedChildren="غیرفعال"
         />
@@ -440,12 +465,15 @@ function ProductsList({ mode }) {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Link to={`/products/edit/${record._id}`}>
+          {canUpdate && (
+            <Link to={`/products/edit/${record._id}`}>
             <Button type="primary" size="small" icon={<EditOutlined />}>
               ویرایش
             </Button>
           </Link>
-          <Button
+          )}
+          {canDelete && (
+            <Button
             danger
             size="small"
             icon={<DeleteOutlined />}
@@ -471,18 +499,24 @@ function ProductsList({ mode }) {
           >
             حذف
           </Button>
+          )}
         </Space>
       ),
     },
   ]
 
-  const rowSelection = {
+  const rowSelection = canUpdate || canDelete ? {
     selectedRowKeys,
     onChange: setSelectedRowKeys,
     preserveSelectedRowKeys: true,
-  }
+  } : undefined
 
   const handleSelectAll = async () => {
+    if (!canUpdate) {
+      message.error('شما مجوز انتخاب گروهی را ندارید.')
+      return
+    }
+
     try {
       const params = new URLSearchParams()
       applyProductsFiltersToParams(params, { filters, includeChildren, dynamicFilters, mode })
@@ -507,6 +541,11 @@ function ProductsList({ mode }) {
 
   // Handle Excel Export
   const handleExport = async () => {
+    if (!canExport) {
+      message.error('شما مجوز برون‌ریزی ندارید.')
+      return
+    }
+
     try {
       const response = await api.get('/products/export/excel', {
         responseType: 'blob',
@@ -763,23 +802,33 @@ function ProductsList({ mode }) {
       >
         <h1>لیست محصولات</h1>
         <Space>
-          <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
+          {canImport && (
+            <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
             درون‌ریزی CSV
           </Button>
-          <Button icon={<FieldTimeOutlined />} onClick={() => setTimerModalVisible(true)}>
+          )}
+          {canUpdate && (
+            <Button icon={<FieldTimeOutlined />} onClick={() => setTimerModalVisible(true)}>
             تنظیم تایمر
           </Button>
-          <Button icon={<FieldTimeOutlined />} onClick={() => setFlashTimerModalVisible(true)}>
+          )}
+          {canUpdate && (
+            <Button icon={<FieldTimeOutlined />} onClick={() => setFlashTimerModalVisible(true)}>
             Flash Deal Timer
           </Button>
-          <Button icon={<ExportOutlined />} onClick={handleExport}>
+          )}
+          {canExport && (
+            <Button icon={<ExportOutlined />} onClick={handleExport}>
             برون‌ریزی Excel
           </Button>
-          <Link to="/products/new">
+          )}
+          {canCreate && (
+            <Link to="/products/new">
             <Button type="primary" icon={<PlusOutlined />}>
               محصول جدید
             </Button>
           </Link>
+          )}
         </Space>
       </div>
 
@@ -945,6 +994,7 @@ function ProductsList({ mode }) {
         })()}
       </div>
 
+      {rowSelection && (
       <div
         style={{
           marginBottom: 16,
@@ -955,9 +1005,11 @@ function ProductsList({ mode }) {
         }}
       >
         <Space wrap>
+          {canUpdate && (
           <Button size="small" onClick={handleSelectAll}>
             انتخاب همه محصولات ({pagination.total})
           </Button>
+          )}
           {selectedRowKeys.length > 0 && (
             <>
               <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
@@ -966,71 +1018,78 @@ function ProductsList({ mode }) {
               <Button size="small" onClick={() => setSelectedRowKeys([])}>
                 لغو انتخاب
               </Button>
-              <Button
-                size="small"
-                type="primary"
-                style={{ background: '#52c41a', borderColor: '#52c41a' }}
-                icon={<CheckCircleOutlined />}
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'فعال‌سازی گروهی',
-                    content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را فعال کنید؟`,
-                    okText: 'بله، فعال کن',
-                    cancelText: 'انصراف',
-                    onOk: async () => {
-                      try {
-                        const res = await api.post('/products/bulk-status', {
-                          ids: selectedRowKeys,
-                          isActive: true,
-                        })
-                        message.success(res?.data?.message || 'محصولات فعال شدند')
-                        setSelectedRowKeys([])
-                        fetchProducts()
-                      } catch (err) {
-                        message.error('خطا در فعال‌سازی محصولات')
-                      }
-                    },
-                  })
-                }}
-              >
-                فعال‌سازی ({selectedRowKeys.length})
-              </Button>
-              <Button
-                size="small"
-                style={{ background: '#fa8c16', borderColor: '#fa8c16', color: '#fff' }}
-                icon={<StopOutlined />}
-                onClick={() => {
-                  Modal.confirm({
-                    title: 'غیرفعال‌سازی گروهی',
-                    content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را غیرفعال کنید؟`,
-                    okText: 'بله، غیرفعال کن',
-                    cancelText: 'انصراف',
-                    okType: 'danger',
-                    onOk: async () => {
-                      try {
-                        const res = await api.post('/products/bulk-status', {
-                          ids: selectedRowKeys,
-                          isActive: false,
-                        })
-                        message.success(res?.data?.message || 'محصولات غیرفعال شدند')
-                        setSelectedRowKeys([])
-                        fetchProducts()
-                      } catch (err) {
-                        message.error('خطا در غیرفعال‌سازی محصولات')
-                      }
-                    },
-                  })
-                }}
-              >
-                غیرفعال‌سازی ({selectedRowKeys.length})
-              </Button>
+              {canUpdate && (
+                <>
+                  <Button
+                    size="small"
+                    type="primary"
+                    style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'فعال‌سازی گروهی',
+                        content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را فعال کنید؟`,
+                        okText: 'بله، فعال کن',
+                        cancelText: 'انصراف',
+                        onOk: async () => {
+                          try {
+                            const res = await api.post('/products/bulk-status', {
+                              ids: selectedRowKeys,
+                              isActive: true,
+                            })
+                            message.success(res?.data?.message || 'محصولات فعال شدند')
+                            setSelectedRowKeys([])
+                            fetchProducts()
+                          } catch (err) {
+                            message.error('خطا در فعال‌سازی محصولات')
+                          }
+                        },
+                      })
+                    }}
+                  >
+                    فعال‌سازی ({selectedRowKeys.length})
+                  </Button>
+                  <Button
+                    size="small"
+                    style={{ background: '#fa8c16', borderColor: '#fa8c16', color: '#fff' }}
+                    icon={<StopOutlined />}
+                    onClick={() => {
+                      Modal.confirm({
+                        title: 'غیرفعال‌سازی گروهی',
+                        content: `آیا می‌خواهید ${selectedRowKeys.length} محصول را غیرفعال کنید؟`,
+                        okText: 'بله، غیرفعال کن',
+                        cancelText: 'انصراف',
+                        okType: 'danger',
+                        onOk: async () => {
+                          try {
+                            const res = await api.post('/products/bulk-status', {
+                              ids: selectedRowKeys,
+                              isActive: false,
+                            })
+                            message.success(res?.data?.message || 'محصولات غیرفعال شدند')
+                            setSelectedRowKeys([])
+                            fetchProducts()
+                          } catch (err) {
+                            message.error('خطا در غیرفعال‌سازی محصولات')
+                          }
+                        },
+                      })
+                    }}
+                  >
+                    غیرفعال‌سازی ({selectedRowKeys.length})
+                  </Button>
+                </>
+              )}
+              {canDelete && (
               <Button size="small" danger onClick={handleBulkDelete}>
                 حذف گروهی ({selectedRowKeys.length})
               </Button>
+              )}
             </>
           )}
         </Space>
       </div>
+      )}
 
       <Table
         columns={columns}

@@ -6,6 +6,8 @@ import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
 import Countdown from 'react-countdown'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -43,6 +45,9 @@ const formatPersianDate = (date, includeTime = false) => {
 }
 
 function OrdersList() {
+  const { can } = useCan()
+  const canCreate = can(PERMISSIONS.ORDER_CREATE)
+
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({
@@ -234,11 +239,13 @@ function OrdersList() {
       >
         <h1>مدیریت سفارشات</h1>
         <Space>
-          <Link to="/orders/create">
-            <Button type="primary" icon={<PlusOutlined />}>
-              ایجاد سفارش جدید
-            </Button>
-          </Link>
+          {canCreate && (
+            <Link to="/orders/create">
+              <Button type="primary" icon={<PlusOutlined />}>
+                ایجاد سفارش جدید
+              </Button>
+            </Link>
+          )}
           <Button
             icon={<ReloadOutlined />}
             onClick={() => fetchOrders()}

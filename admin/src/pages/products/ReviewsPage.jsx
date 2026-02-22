@@ -37,6 +37,8 @@ import {
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 dayjs.extend(jalaliday)
 dayjs.calendar('jalali')
@@ -59,6 +61,11 @@ const formatPersianDate = (date, includeTime = false) => {
 }
 
 function ReviewsPage() {
+  const { can } = useCan()
+  const canModerate = can(PERMISSIONS.REVIEW_MODERATE)
+  const canReply = can(PERMISSIONS.REVIEW_REPLY)
+  const canDelete = can(PERMISSIONS.REVIEW_DELETE)
+
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({ isApproved: null })
@@ -116,6 +123,11 @@ function ReviewsPage() {
   }, [filters.isApproved])
 
   const handleStatusUpdate = async (reviewId, isApproved) => {
+    if (!canModerate) {
+      message.error('شما مجوز تغییر وضعیت نظرات را ندارید.')
+      return
+    }
+
     setActionLoading(true)
     try {
       await api.put(`/reviews/${reviewId}/status`, { isApproved })
@@ -139,6 +151,11 @@ function ReviewsPage() {
   }
 
   const handleDelete = async (reviewId) => {
+    if (!canDelete) {
+      message.error('شما مجوز حذف نظرات را ندارید.')
+      return
+    }
+
     try {
       await api.delete(`/reviews/${reviewId}`)
       message.success('نظر حذف شد')
@@ -156,6 +173,11 @@ function ReviewsPage() {
   }
 
   const handleReplySubmit = async () => {
+    if (!canReply) {
+      message.error('شما مجوز ثبت پاسخ برای نظرات را ندارید.')
+      return
+    }
+
     if (!replyText.trim()) return message.warning('متن پاسخ نمی‌تواند خالی باشد')
 
     setReplyLoading(true)
@@ -355,31 +377,35 @@ function ReviewsPage() {
         onCancel={() => setModalVisible(false)}
         width={800}
         footer={[
-          <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => handleDelete(selectedReview._id)}>
-            حذف
-          </Button>,
-          !selectedReview?.isApproved ? (
-            <Button
-              key="approve"
-              type="primary"
-              style={{ backgroundColor: '#52c41a' }}
-              icon={<CheckOutlined />}
-              loading={actionLoading}
-              onClick={() => handleStatusUpdate(selectedReview._id, true)}
-            >
-              تأیید نظر
+          canDelete && (
+            <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => handleDelete(selectedReview._id)}>
+              حذف
             </Button>
-          ) : (
-            <Button
-              key="reject"
-              type="default"
-              danger
-              icon={<CloseOutlined />}
-              loading={actionLoading}
-              onClick={() => handleStatusUpdate(selectedReview._id, false)}
-            >
-              رد کردن
-            </Button>
+          ),
+          canModerate && (
+            !selectedReview?.isApproved ? (
+              <Button
+                key="approve"
+                type="primary"
+                style={{ backgroundColor: '#52c41a' }}
+                icon={<CheckOutlined />}
+                loading={actionLoading}
+                onClick={() => handleStatusUpdate(selectedReview._id, true)}
+              >
+                تأیید نظر
+              </Button>
+            ) : (
+              <Button
+                key="reject"
+                type="default"
+                danger
+                icon={<CloseOutlined />}
+                loading={actionLoading}
+                onClick={() => handleStatusUpdate(selectedReview._id, false)}
+              >
+                رد کردن
+              </Button>
+            )
           ),
           <Button key="close" onClick={() => setModalVisible(false)}>
             بستن
@@ -409,6 +435,7 @@ function ReviewsPage() {
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder="پاسخ خود را اینجا بنویسید..."
                   style={{ marginBottom: 12 }}
+                  disabled={!canReply}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   {selectedReview.adminReply?.repliedAt && (
@@ -421,6 +448,7 @@ function ReviewsPage() {
                     icon={<SendOutlined />}
                     onClick={handleReplySubmit}
                     loading={replyLoading}
+                    disabled={!canReply}
                   >
                     ثبت پاسخ
                   </Button>

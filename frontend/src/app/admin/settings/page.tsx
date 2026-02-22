@@ -29,6 +29,7 @@ export default function SettingsPage() {
             setSaving(true);
             setSaveSuccess(false);
             await api.put("/settings", settings);
+            window.dispatchEvent(new Event("settings:updated"));
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
         } catch (err) {

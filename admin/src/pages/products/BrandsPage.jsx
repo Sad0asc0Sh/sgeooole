@@ -26,8 +26,15 @@ import {
 } from '@ant-design/icons'
 import { useBrandStore } from '../../stores'
 import api from '../../api'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 function BrandsPage() {
+  const { can } = useCan()
+  const canCreate = can(PERMISSIONS.BRAND_CREATE)
+  const canUpdate = can(PERMISSIONS.BRAND_UPDATE)
+  const canDelete = can(PERMISSIONS.BRAND_DELETE)
+
   // Zustand Store - Single Source of Truth
   const brands = useBrandStore((state) => state.brands)
   const loading = useBrandStore((state) => state.loading)
@@ -63,6 +70,17 @@ function BrandsPage() {
 
   // Submit handler (create / update)
   const onFinish = async (values) => {
+    const isEditMode = Boolean(editingBrand && editingBrand._id)
+
+    if (isEditMode && !canUpdate) {
+      message.error('شما مجوز ویرایش برند را ندارید.')
+      return
+    }
+    if (!isEditMode && !canCreate) {
+      message.error('شما مجوز ایجاد برند را ندارید.')
+      return
+    }
+
     try {
       setSubmitting(true)
 
@@ -128,6 +146,10 @@ function BrandsPage() {
 
   // Open Modal for Create
   const handleCreate = () => {
+    if (!canCreate) {
+      message.error('شما مجوز ایجاد برند را ندارید.')
+      return
+    }
     setEditingBrand(null)
     form.resetFields()
     form.setFieldsValue({
@@ -141,6 +163,10 @@ function BrandsPage() {
 
   // Open Modal for Edit
   const handleEdit = (brand) => {
+    if (!canUpdate) {
+      message.error('شما مجوز ویرایش برند را ندارید.')
+      return
+    }
     setEditingBrand(brand)
     form.setFieldsValue({
       name: brand.name,
@@ -166,6 +192,10 @@ function BrandsPage() {
 
   // Delete Brand
   const handleDelete = async (brandId) => {
+    if (!canDelete) {
+      message.error('شما مجوز حذف برند را ندارید.')
+      return
+    }
     try {
       await api.delete(`/brands/${brandId}`)
       message.success('برند با موفقیت حذف شد')
@@ -177,6 +207,10 @@ function BrandsPage() {
 
   // Toggle showOnHomepage directly from table
   const handleToggleHomepage = async (brand) => {
+    if (!canUpdate) {
+      message.error('شما مجوز ویرایش برند را ندارید.')
+      return
+    }
     try {
       const formData = new FormData()
       formData.append('showOnHomepage', !brand.showOnHomepage ? 'true' : 'false')
@@ -266,6 +300,7 @@ function BrandsPage() {
           <Switch
             checked={showOnHomepage}
             onChange={() => handleToggleHomepage(record)}
+            disabled={!canUpdate}
             checkedChildren={<HomeOutlined />}
             unCheckedChildren={<HomeOutlined />}
             style={{
@@ -332,25 +367,30 @@ function BrandsPage() {
       width: 150,
       render: (_, record) => (
         <Space size="small">
-          <Button
-            type="text"
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            ویرایش
-          </Button>
-          <Popconfirm
-            title="حذف این برند؟"
-            onConfirm={() => handleDelete(record._id)}
-            okText="حذف"
-            cancelText="انصراف"
-            okButtonProps={{ danger: true }}
-          >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />}>
-              حذف
+          {canUpdate && (
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+            >
+              ویرایش
             </Button>
-          </Popconfirm>
+          )}
+          {canDelete && (
+            <Popconfirm
+              title="حذف این برند؟"
+              onConfirm={() => handleDelete(record._id)}
+              okText="حذف"
+              cancelText="انصراف"
+              okButtonProps={{ danger: true }}
+            >
+              <Button type="text" size="small" danger icon={<DeleteOutlined />}>
+                حذف
+              </Button>
+            </Popconfirm>
+          )}
+          {!canUpdate && !canDelete && <span style={{ color: '#999' }}>—</span>}
         </Space>
       ),
     },
@@ -367,9 +407,11 @@ function BrandsPage() {
         }}
       >
         <h1>مدیریت برندها</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          افزودن برند جدید
-        </Button>
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            افزودن برند جدید
+          </Button>
+        )}
       </div>
 
       <Card>

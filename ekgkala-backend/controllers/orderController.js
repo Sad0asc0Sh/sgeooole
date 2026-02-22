@@ -1,6 +1,25 @@
 const Order = require('../models/Order')
 const Cart = require('../models/Cart')
 const paymentService = require('../utils/paymentService')
+const { ROLES, PERMISSIONS } = require('../config/rbac')
+
+const sanitizeOrderForCustomer = (order) => {
+  if (!order) return order
+  const sanitized = { ...order }
+
+  delete sanitized.adminNotes
+  delete sanitized.paymentGateway
+  delete sanitized.paymentResult
+
+  delete sanitized.zarinpalAuthority
+  delete sanitized.zarinpalRefId
+
+  delete sanitized.sadadToken
+  delete sanitized.sadadOrderId
+  delete sanitized.sadadTraceNumber
+
+  return sanitized
+}
 
 // ============================================
 // POST /api/orders - ایجاد سفارش جدید (Customer-Facing)
@@ -172,6 +191,10 @@ exports.getAllOrders = async (req, res) => {
 // ============================================
 exports.getOrderById = async (req, res) => {
   try {
+    const userRole = req.user?.role || 'guest'
+    const userPermissions = ROLES[userRole] || []
+    const canReadAllOrders = userPermissions.includes(PERMISSIONS.ORDER_READ_ALL)
+
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email mobile')
       .populate('orderItems.product', 'name images sku')
@@ -185,10 +208,10 @@ exports.getOrderById = async (req, res) => {
     }
 
     // بررسی دسترسی: فقط صاحب سفارش یا ادمین
-    const isAdmin = req.user.role === 'admin' || req.user.role === 'manager' || req.user.role === 'superadmin'
-    const isOwner = order.user._id.toString() === req.user._id.toString()
+    const orderUserId = order.user?._id ? order.user._id.toString() : order.user?.toString()
+    const isOwner = Boolean(orderUserId && req.user?._id && orderUserId === req.user._id.toString())
 
-    if (!isAdmin && !isOwner) {
+    if (!canReadAllOrders && !isOwner) {
       return res.status(403).json({
         success: false,
         message: 'شما اجازه دسترسی به این سفارش را ندارید',
@@ -197,7 +220,7 @@ exports.getOrderById = async (req, res) => {
 
     res.json({
       success: true,
-      data: order,
+      data: canReadAllOrders ? order : sanitizeOrderForCustomer(order),
     })
   } catch (error) {
     console.error('Error fetching order:', error)

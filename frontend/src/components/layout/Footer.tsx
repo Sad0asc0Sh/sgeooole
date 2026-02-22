@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface StoreInfo {
     storeName?: string;
+    storeEmail?: string;
     storePhone?: string;
     storeAddress?: string;
     socialLinks?: {
@@ -36,22 +37,29 @@ export default function Footer() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await settingsService.getPublicSettings();
-                const settings = (response as any).settings || (response as any).data?.settings;
-
-                if (settings) {
-                    setStoreInfo({
-                        storeName: settings.storeName,
-                        storePhone: settings.storePhone,
-                        storeAddress: settings.storeAddress,
-                        socialLinks: settings.socialLinks,
-                    });
-                }
+                const { data } = await settingsService.getPublicSettings();
+                setStoreInfo({
+                    storeName: data.storeName,
+                    storeEmail: data.storeEmail,
+                    storePhone: data.storePhone,
+                    storeAddress: data.storeAddress,
+                    socialLinks: data.socialLinks,
+                });
             } catch (error) {
                 console.error("Error fetching store info:", error);
             }
         };
         fetchSettings();
+
+        const handleSettingsUpdated = () => fetchSettings();
+        window.addEventListener("settings:updated", handleSettingsUpdated);
+        const handleFocus = () => fetchSettings();
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            window.removeEventListener("settings:updated", handleSettingsUpdated);
+            window.removeEventListener("focus", handleFocus);
+        };
     }, []);
 
     // Back to top button visibility
@@ -168,6 +176,23 @@ export default function Footer() {
                                             <span className="text-xs text-gray-400">تماس با ما</span>
                                             <span className="text-white font-bold text-sm ltr" dir="ltr">
                                                 {storeInfo.storePhone}
+                                            </span>
+                                        </div>
+                                    </a>
+                                )}
+
+                                {storeInfo.storeEmail && (
+                                    <a
+                                        href={`mailto:${storeInfo.storeEmail}`}
+                                        className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+                                    >
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                                            <Mail size={18} className="text-emerald-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-gray-400">ایمیل</span>
+                                            <span className="text-white font-bold text-sm ltr" dir="ltr">
+                                                {storeInfo.storeEmail}
                                             </span>
                                         </div>
                                     </a>
@@ -372,14 +397,16 @@ export default function Footer() {
                                     </div>
                                 </div>
 
-                                {/* Trust Seals - Desktop */}
-                                <div className="hidden lg:flex gap-3 pt-4">
-                                    <div className="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-xs text-gray-400 hover:shadow-lg transition-shadow">
-                                        eNamad
-                                    </div>
-                                    <div className="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-xs text-gray-400 hover:shadow-lg transition-shadow">
-                                        Samandehi
-                                    </div>
+                                {/* Trust Seals - نماد اعتماد الکترونیکی */}
+                                <div className="flex gap-3 pt-4 flex-wrap">
+                                    {/* اینماد - کد باید بدون هیچ تغییری درج شود */}
+                                    <div
+                                        className="rounded-lg bg-white flex items-center justify-center hover:shadow-lg transition-shadow overflow-hidden"
+                                        style={{ minWidth: 80, minHeight: 80 }}
+                                        dangerouslySetInnerHTML={{
+                                            __html: `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;padding:4px;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی اینماد' style='cursor:pointer;width:72px;height:72px;object-fit:contain;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>

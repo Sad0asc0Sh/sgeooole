@@ -32,6 +32,8 @@ import {
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -69,6 +71,10 @@ const formatPersianDate = (date, includeTime = false) => {
 }
 
 function AbandonedCartsPage() {
+  const { can } = useCan()
+  const canReadSettings = can(PERMISSIONS.SETTINGS_READ)
+  const canManageCarts = can(PERMISSIONS.CART_MANAGE)
+
   const [carts, setCarts] = useState([])
   const [loading, setLoading] = useState(false)
   const [stats, setStats] = useState(null)
@@ -82,6 +88,17 @@ function AbandonedCartsPage() {
   const [selectedCart, setSelectedCart] = useState(null)
 
   const fetchSettings = async () => {
+    if (!canReadSettings) {
+      setSettings({
+        cartSettings: {
+          cartTTLHours: 1,
+          expiryWarningMinutes: 30,
+          permanentCart: false,
+        },
+      })
+      return
+    }
+
     try {
       const res = await api.get('/settings')
       const data = res?.data?.data
@@ -241,6 +258,11 @@ function AbandonedCartsPage() {
   }
 
   const handleEmailReminder = async (cart) => {
+    if (!canManageCarts) {
+      message.error('شما مجوز مدیریت سبدهای خرید را ندارید.')
+      return
+    }
+
     Modal.confirm({
       title: 'ارسال ایمیل یادآوری',
       content: `آیا می‌خواهید ایمیل یادآوری به ${cart.user?.name || cart.user?.email} ارسال شود؟`,
@@ -260,6 +282,11 @@ function AbandonedCartsPage() {
   }
 
   const handleSmsReminder = async (cart) => {
+    if (!canManageCarts) {
+      message.error('شما مجوز مدیریت سبدهای خرید را ندارید.')
+      return
+    }
+
     Modal.confirm({
       title: 'ارسال پیامک یادآوری',
       content: `آیا می‌خواهید پیامک یادآوری به شماره ${cart.user?.mobile || 'نامشخص'} ارسال شود؟`,
@@ -279,6 +306,11 @@ function AbandonedCartsPage() {
   }
 
   const handleDeleteCart = async (cart) => {
+    if (!canManageCarts) {
+      message.error('شما مجوز مدیریت سبدهای خرید را ندارید.')
+      return
+    }
+
     Modal.confirm({
       title: 'حذف سبد خرید',
       content: `آیا مطمئن هستید که می‌خواهید سبد خرید ${cart.user?.name || 'این کاربر'} را حذف کنید؟`,
@@ -300,6 +332,11 @@ function AbandonedCartsPage() {
   }
 
   const handleCleanupExpired = async () => {
+    if (!canManageCarts) {
+      message.error('شما مجوز مدیریت سبدهای خرید را ندارید.')
+      return
+    }
+
     Modal.confirm({
       title: 'پاکسازی سبدهای منقضی شده',
       content: 'آیا می‌خواهید تمام سبدهای خریدی که زمان انقضای آنها گذشته است را پاکسازی کنید؟',
@@ -447,32 +484,38 @@ function AbandonedCartsPage() {
           >
             جزئیات
           </Button>
-          <Button
-            type="primary"
-            size="small"
-            icon={<MailOutlined />}
-            onClick={() => handleEmailReminder(record)}
-          >
-            ایمیل
-          </Button>
-          <Button
-            type="primary"
-            size="small"
-            icon={<MessageOutlined />}
-            onClick={() => handleSmsReminder(record)}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-          >
-            پیامک
-          </Button>
-          <Button
-            danger
-            type="primary"
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => handleDeleteCart(record)}
-          >
-            حذف
-          </Button>
+          {canManageCarts && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<MailOutlined />}
+              onClick={() => handleEmailReminder(record)}
+            >
+              ایمیل
+            </Button>
+          )}
+          {canManageCarts && (
+            <Button
+              type="primary"
+              size="small"
+              icon={<MessageOutlined />}
+              onClick={() => handleSmsReminder(record)}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
+              پیامک
+            </Button>
+          )}
+          {canManageCarts && (
+            <Button
+              danger
+              type="primary"
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={() => handleDeleteCart(record)}
+            >
+              حذف
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -512,9 +555,11 @@ function AbandonedCartsPage() {
           </div>
         </div>
         <Space>
-          <Button danger type="primary" icon={<ClearOutlined />} onClick={handleCleanupExpired}>
-            پاکسازی منقضی‌ها
-          </Button>
+          {canManageCarts && (
+            <Button danger type="primary" icon={<ClearOutlined />} onClick={handleCleanupExpired}>
+              پاکسازی منقضی‌ها
+            </Button>
+          )}
           <Button icon={<ReloadOutlined />} onClick={fetchAbandonedCarts}>
             بارگذاری مجدد
           </Button>
@@ -638,29 +683,33 @@ function AbandonedCartsPage() {
           <Button key="close" onClick={() => setDetailOpen(false)}>
             بستن
           </Button>,
-          <Button
-            key="email"
-            type="primary"
-            icon={<MailOutlined />}
-            onClick={() => {
-              handleEmailReminder(selectedCart)
-              setDetailOpen(false)
-            }}
-          >
-            یادآوری ایمیل
-          </Button>,
-          <Button
-            key="sms"
-            type="primary"
-            icon={<MessageOutlined />}
-            onClick={() => {
-              handleSmsReminder(selectedCart)
-              setDetailOpen(false)
-            }}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-          >
-            یادآوری پیامک
-          </Button>,
+          canManageCarts && (
+            <Button
+              key="email"
+              type="primary"
+              icon={<MailOutlined />}
+              onClick={() => {
+                handleEmailReminder(selectedCart)
+                setDetailOpen(false)
+              }}
+            >
+              یادآوری ایمیل
+            </Button>
+          ),
+          canManageCarts && (
+            <Button
+              key="sms"
+              type="primary"
+              icon={<MessageOutlined />}
+              onClick={() => {
+                handleSmsReminder(selectedCart)
+                setDetailOpen(false)
+              }}
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+            >
+              یادآوری پیامک
+            </Button>
+          ),
         ]}
         width={800}
         title={`جزئیات سبد - ${selectedCart?.user?.name || 'کاربر'}`}

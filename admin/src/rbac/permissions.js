@@ -40,6 +40,7 @@ export const PERMISSIONS = {
   ADMIN_CREATE: 'admin:create',
   ADMIN_UPDATE: 'admin:update',
   ADMIN_DELETE: 'admin:delete',
+  ADMIN_MANAGE_ROLE: 'admin:manage_role',
 
   // Coupons
   COUPON_READ: 'coupon:read',
@@ -118,4 +119,3 @@ export const PERMISSIONS = {
   CART_READ: 'cart:read',
   CART_MANAGE: 'cart:manage',
 }
-
