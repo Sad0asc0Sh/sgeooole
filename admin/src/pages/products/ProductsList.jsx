@@ -67,51 +67,6 @@ const csvSerialize = (headers, rows) => {
   return lines.join('\n')
 }
 
-const hasMeaningfulValue = (value) => {
-  if (value === 0) return true
-  if (value === false) return true
-  if (value == null) return false
-  return String(value).trim() !== ''
-}
-
-const applyProductsFiltersToParams = (params, { filters, includeChildren, dynamicFilters, mode }) => {
-  Object.keys(dynamicFilters || {}).forEach((key) => {
-    const value = dynamicFilters?.[key]
-    if (hasMeaningfulValue(value)) {
-      params.append(`properties[${key}]`, String(value))
-    }
-  })
-
-  if (filters.search) {
-    params.set('search', filters.search)
-    if (filters.searchField && filters.searchField !== 'all') {
-      params.set('searchField', filters.searchField)
-    }
-  }
-
-  if (filters.category) {
-    params.set('category', filters.category)
-    if (includeChildren) {
-      params.set('includeChildren', 'true')
-    }
-  }
-
-  if (filters.status === 'inactive') {
-    params.set('includeInactive', 'true')
-    params.set('isActive', 'false')
-    params.set('isActive[eq]', 'false')
-  } else {
-    params.set('isActive', 'true')
-    params.set('isActive[eq]', 'true')
-  }
-
-  if (mode === 'variable') {
-    params.set('productType', 'variable')
-  } else if (filters.productType) {
-    params.set('productType', filters.productType)
-  }
-}
-
 const parseCsvText = (text = '') => {
   const matrix = []
   const parseErrors = []
@@ -294,7 +249,41 @@ function ProductsList({ mode }) {
       // ✅ FIX: Get raw prices for admin panel (without discount calculation)
       params.set('skipDiscount', 'true')
 
-      applyProductsFiltersToParams(params, { filters, includeChildren, dynamicFilters, mode })
+      // Add Dynamic Filters
+      Object.keys(dynamicFilters).forEach((key) => {
+        if (dynamicFilters[key]) {
+          params.append(`properties[${key}]`, dynamicFilters[key])
+        }
+      })
+
+      if (filters.search) {
+        params.set('search', filters.search)
+        if (filters.searchField && filters.searchField !== 'all') {
+          params.set('searchField', filters.searchField)
+        }
+      }
+      if (filters.category) {
+        params.set('category', filters.category)
+        if (includeChildren) {
+          params.set('includeChildren', 'true')
+        }
+      }
+      if (filters.status) {
+        if (filters.status === 'active') {
+          params.set('isActive[eq]', 'true')
+        } else if (filters.status === 'inactive') {
+          params.set('includeInactive', 'true')
+          params.set('isActive[eq]', 'false')
+        }
+      }
+
+      // Product type filter (simple / variable)
+      if (mode === 'variable') {
+        // legacy route: فقط محصولات متغیر
+        params.set('productType', 'variable')
+      } else if (filters.productType) {
+        params.set('productType', filters.productType)
+      }
 
       const res = await api.get('/products', { params })
       const list = res?.data?.data || []
@@ -358,10 +347,12 @@ function ProductsList({ mode }) {
     const nextActive = !record.isActive
     try {
       await api.put(`/products/${record._id}`, { isActive: nextActive })
-      setProducts((prev) => prev.filter((p) => p._id !== record._id))
-      setPagination((prev) => ({ ...prev, total: Math.max(0, (prev.total || 0) - 1) }))
+      setProducts((prev) =>
+        prev.map((p) =>
+          p._id === record._id ? { ...p, isActive: nextActive } : p,
+        ),
+      )
       message.success('وضعیت محصول با موفقیت به‌روزرسانی شد')
-      fetchProducts(pagination.current, pagination.pageSize)
     } catch (err) {
       message.error(err?.message || 'خطا در تغییر وضعیت محصول')
     }
@@ -519,7 +510,17 @@ function ProductsList({ mode }) {
 
     try {
       const params = new URLSearchParams()
-      applyProductsFiltersToParams(params, { filters, includeChildren, dynamicFilters, mode })
+      if (filters.search) params.set('search', filters.search)
+      if (filters.category) {
+        params.set('category', filters.category)
+        if (includeChildren) params.set('includeChildren', 'true')
+      }
+      if (filters.status) {
+        if (filters.status === 'active') params.set('isActive[eq]', 'true')
+        else if (filters.status === 'inactive') params.set('isActive[eq]', 'false')
+      }
+      if (mode === 'variable') params.set('productType', 'variable')
+      else if (filters.productType) params.set('productType', filters.productType)
 
       const res = await api.get('/products/all-ids', { params })
       const ids = res?.data?.ids || []
@@ -918,7 +919,6 @@ function ProductsList({ mode }) {
           placeholder='وضعیت'
           style={{ width: 150 }}
           allowClear
-          value={filters.status || undefined}
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, status: value || null }))
           }
@@ -930,7 +930,6 @@ function ProductsList({ mode }) {
           placeholder="نوع محصول"
           style={{ width: 180 }}
           allowClear
-          value={filters.productType || undefined}
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, productType: value || '' }))
           }
