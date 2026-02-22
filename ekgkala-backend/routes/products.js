@@ -268,6 +268,17 @@ const buildProductFilter = (query) => {
     filter.isSpecialOffer = query.isSpecialOffer === 'true' || query.isSpecialOffer === true
   }
 
+  if (query.isActive !== undefined && (typeof query.isActive !== 'object' || Array.isArray(query.isActive))) {
+    const rawValue = Array.isArray(query.isActive) ? query.isActive[0] : query.isActive
+    const isTrue =
+      rawValue === true || rawValue === 'true' || rawValue === 1 || rawValue === '1'
+    const isFalse =
+      rawValue === false || rawValue === 'false' || rawValue === 0 || rawValue === '0'
+
+    if (isTrue) filter.isActive = true
+    else if (isFalse) filter.isActive = false
+  }
+
   // ===== PRICE RANGE FILTER =====
   // Handle minPrice and maxPrice parameters
   if (query.minPrice !== undefined || query.maxPrice !== undefined) {
@@ -1104,9 +1115,22 @@ router.get(
       }
 
       // Status filter
-      const isActiveEqRaw =
-        (req.query.isActive && typeof req.query.isActive === 'object' ? req.query.isActive.eq : undefined) ??
-        req.query['isActive[eq]']
+      const isActiveDirectRaw = Array.isArray(req.query.isActive)
+        ? req.query.isActive[0]
+        : req.query.isActive
+
+      const isActiveEqRawCandidate =
+        (req.query.isActive && typeof req.query.isActive === 'object' && !Array.isArray(req.query.isActive)
+          ? req.query.isActive.eq
+          : undefined) ??
+        req.query['isActive[eq]'] ??
+        (isActiveDirectRaw !== undefined && typeof isActiveDirectRaw !== 'object'
+          ? isActiveDirectRaw
+          : undefined)
+
+      const isActiveEqRaw = Array.isArray(isActiveEqRawCandidate)
+        ? isActiveEqRawCandidate[0]
+        : isActiveEqRawCandidate
 
       if (isActiveEqRaw !== undefined) {
         const isTrue = isActiveEqRaw === true || isActiveEqRaw === 'true' || isActiveEqRaw === 1 || isActiveEqRaw === '1'
