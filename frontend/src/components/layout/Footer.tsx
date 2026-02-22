@@ -148,7 +148,7 @@ function Footer() {
                                     {storeInfo.storeName || "EKG KALA"}
                                 </h3>
                                 <p className="text-amber-400 text-[11px] mb-5">
-                                    تجهیزات پزشکی و الکترونیکی
+                                   هدف‌ما بالا بردن سطح امنیت شماست
                                 </p>
 
                                 <div className="w-full space-y-3 max-w-xs lg:max-w-none">

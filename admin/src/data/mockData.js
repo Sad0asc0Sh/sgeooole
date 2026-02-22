@@ -316,7 +316,7 @@ export const mockSalesReports = {
 // تنظیمات
 export const mockSettings = {
   general: {
-    siteName: 'فروشگاه من',
+    siteName: 'EKGKala',
     logo: 'https://via.placeholder.com/200x80?text=Logo',
     favicon: 'https://via.placeholder.com/32',
     currency: 'تومان',
