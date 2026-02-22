@@ -27,6 +27,23 @@ export interface Settings {
     };
 }
 
+export interface PublicSettings {
+    storeName?: string;
+    storeEmail?: string;
+    storePhone?: string;
+    storeAddress?: string;
+    socialLinks?: {
+        telegram?: string;
+        instagram?: string;
+        aparat?: string;
+    };
+    cartSettings?: {
+        cartTTLHours?: number;
+        expiryWarningEnabled?: boolean;
+        expiryWarningMinutes?: number;
+    };
+}
+
 /**
  * Settings Service
  *
@@ -94,7 +111,7 @@ export const settingsService = {
      * Get Public Settings (No Auth Required)
      * Fetches public settings from the server - suitable for all users including guests
      */
-    getPublicSettings: async (): Promise<{ success: boolean; data: any }> => {
+    getPublicSettings: async (): Promise<{ success: boolean; data: PublicSettings }> => {
         try {
             console.log("[SETTINGS] Fetching public settings");
             const response = await api.get("/settings/public");

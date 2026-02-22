@@ -336,6 +336,7 @@ function SettingsPage() {
 
       setSaving(true)
       await api.put('/settings', payload)
+      window.dispatchEvent(new Event('settings:updated'))
       message.success('تنظیمات با موفقیت ذخیره شد')
       fetchSettings()
     } catch (err) {

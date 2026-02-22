@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 interface StoreInfo {
     storeName?: string;
+    storeEmail?: string;
     storePhone?: string;
     storeAddress?: string;
     socialLinks?: {
@@ -36,22 +37,29 @@ export default function Footer() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const response = await settingsService.getPublicSettings();
-                const settings = (response as any).settings || (response as any).data?.settings;
-
-                if (settings) {
-                    setStoreInfo({
-                        storeName: settings.storeName,
-                        storePhone: settings.storePhone,
-                        storeAddress: settings.storeAddress,
-                        socialLinks: settings.socialLinks,
-                    });
-                }
+                const { data } = await settingsService.getPublicSettings();
+                setStoreInfo({
+                    storeName: data.storeName,
+                    storeEmail: data.storeEmail,
+                    storePhone: data.storePhone,
+                    storeAddress: data.storeAddress,
+                    socialLinks: data.socialLinks,
+                });
             } catch (error) {
                 console.error("Error fetching store info:", error);
             }
         };
         fetchSettings();
+
+        const handleSettingsUpdated = () => fetchSettings();
+        window.addEventListener("settings:updated", handleSettingsUpdated);
+        const handleFocus = () => fetchSettings();
+        window.addEventListener("focus", handleFocus);
+
+        return () => {
+            window.removeEventListener("settings:updated", handleSettingsUpdated);
+            window.removeEventListener("focus", handleFocus);
+        };
     }, []);
 
     // Back to top button visibility
@@ -168,6 +176,23 @@ export default function Footer() {
                                             <span className="text-xs text-gray-400">تماس با ما</span>
                                             <span className="text-white font-bold text-sm ltr" dir="ltr">
                                                 {storeInfo.storePhone}
+                                            </span>
+                                        </div>
+                                    </a>
+                                )}
+
+                                {storeInfo.storeEmail && (
+                                    <a
+                                        href={`mailto:${storeInfo.storeEmail}`}
+                                        className="flex items-center gap-3 group hover:opacity-80 transition-opacity"
+                                    >
+                                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                                            <Mail size={18} className="text-emerald-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-xs text-gray-400">ایمیل</span>
+                                            <span className="text-white font-bold text-sm ltr" dir="ltr">
+                                                {storeInfo.storeEmail}
                                             </span>
                                         </div>
                                     </a>
