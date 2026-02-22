@@ -27,8 +27,15 @@ import {
 } from '@ant-design/icons'
 import { useCategoryStore } from '../../stores'
 import api from '../../api'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 function CategoriesPage() {
+  const { can } = useCan()
+  const canCreate = can(PERMISSIONS.CATEGORY_CREATE)
+  const canUpdate = can(PERMISSIONS.CATEGORY_UPDATE)
+  const canDelete = can(PERMISSIONS.CATEGORY_DELETE)
+
   // Zustand Store - Single Source of Truth
   const categoriesTree = useCategoryStore((state) => state.categoriesTree)
   const loading = useCategoryStore((state) => state.loading)
@@ -64,6 +71,17 @@ function CategoriesPage() {
 
   // Submit handler (create / update)
   const onFinish = async (values) => {
+    const isEditMode = Boolean(editingCategory && editingCategory._id)
+
+    if (isEditMode && !canUpdate) {
+      message.error('شما مجوز ویرایش دسته‌بندی را ندارید.')
+      return
+    }
+    if (!isEditMode && !canCreate) {
+      message.error('شما مجوز ایجاد دسته‌بندی را ندارید.')
+      return
+    }
+
     try {
       setSubmitting(true)
 
@@ -133,6 +151,11 @@ function CategoriesPage() {
 
   // Open Modal for Create
   const handleCreate = () => {
+    if (!canCreate) {
+      message.error('شما مجوز ایجاد دسته‌بندی را ندارید.')
+      return
+    }
+
     setEditingCategory(null)
     setProperties([]) // Reset properties
     form.resetFields()
@@ -141,6 +164,11 @@ function CategoriesPage() {
 
   // Open Modal for Edit
   const handleEdit = (category) => {
+    if (!canUpdate) {
+      message.error('شما مجوز ویرایش دسته‌بندی را ندارید.')
+      return
+    }
+
     const node = {
       ...category,
       _id: category._id || category.key,
@@ -180,6 +208,10 @@ function CategoriesPage() {
 
   // Delete Category
   const handleDelete = async (categoryId) => {
+    if (!canDelete) {
+      message.error('شما مجوز حذف دسته‌بندی را ندارید.')
+      return
+    }
     try {
       await api.delete(`/categories/${categoryId}`)
       message.success('دسته‌بندی با موفقیت حذف شد')
@@ -191,6 +223,10 @@ function CategoriesPage() {
 
   // Drag & Drop Handler (change parent)
   const onDrop = async (info) => {
+    if (!canUpdate) {
+      message.error('شما مجوز ویرایش دسته‌بندی را ندارید.')
+      return
+    }
     const dragNodeId = info.dragNode.key
     const dropNodeId = info.node.key
     const dropToGap = info.dropToGap
@@ -243,6 +279,7 @@ function CategoriesPage() {
             {item.isPopular && <StarFilled style={{ color: '#f59e0b', fontSize: 14 }} />}
           </span>
           <Space size="small">
+            {canUpdate && (
             <Button
               type="text"
               size="small"
@@ -252,6 +289,8 @@ function CategoriesPage() {
                 handleEdit(item)
               }}
             />
+            )}
+            {canDelete && (
             <Popconfirm
               title="حذف این دسته‌بندی؟"
               onConfirm={(e) => {
@@ -269,6 +308,7 @@ function CategoriesPage() {
                 onClick={(e) => e.stopPropagation()}
               />
             </Popconfirm>
+            )}
           </Space>
         </div>
       ),
@@ -286,9 +326,11 @@ function CategoriesPage() {
         }}
       >
         <h1>مدیریت دسته‌بندی‌ها</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          افزودن دسته‌بندی جدید
-        </Button>
+        {canCreate && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+            افزودن دسته‌بندی جدید
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -323,8 +365,8 @@ function CategoriesPage() {
                 treeData={renderTreeNodes(categoriesTree)}
                 defaultExpandAll
                 showLine
-                draggable
-                onDrop={onDrop}
+                draggable={canUpdate}
+                onDrop={canUpdate ? onDrop : undefined}
                 style={{
                   background: '#fafafa',
                   padding: 16,

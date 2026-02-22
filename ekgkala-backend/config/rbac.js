@@ -51,6 +51,7 @@ const PERMISSIONS = {
     ADMIN_CREATE: 'admin:create',
     ADMIN_UPDATE: 'admin:update',
     ADMIN_DELETE: 'admin:delete',
+    ADMIN_MANAGE_ROLE: 'admin:manage_role',
 
     // --- Coupon Permissions ---
     COUPON_READ: 'coupon:read',
@@ -142,6 +143,7 @@ const ROLES = {
         // Admin management (read & update only - cannot create or delete admins)
         PERMISSIONS.ADMIN_READ,
         PERMISSIONS.ADMIN_UPDATE,
+        PERMISSIONS.ADMIN_MANAGE_ROLE,
         // Products
         PERMISSIONS.PRODUCT_READ,
         PERMISSIONS.PRODUCT_CREATE,

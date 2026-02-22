@@ -22,6 +22,8 @@ import jalaliday from 'jalaliday'
 import api from '../../api'
 import { useNotificationStore } from '../../stores'
 import Countdown from 'react-countdown'
+import { PERMISSIONS } from '../../rbac/permissions'
+import { useCan } from '../../rbac/useCan'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -63,6 +65,8 @@ const { TextArea } = Input
 function OrderDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { can } = useCan()
+  const canUpdateStatus = can(PERMISSIONS.ORDER_UPDATE_STATUS)
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -99,6 +103,11 @@ function OrderDetail() {
   }, [id])
 
   const handleStatusUpdate = async () => {
+    if (!canUpdateStatus) {
+      message.error('شما مجوز تغییر وضعیت سفارش را ندارید.')
+      return
+    }
+
     if (!status) {
       message.warning('وضعیت سفارش را انتخاب کنید')
       return
@@ -364,6 +373,14 @@ function OrderDetail() {
           <Card title="مدیریت سفارش" loading={loading}>
             {order && (
               <Space direction="vertical" style={{ width: '100%' }} size="large">
+                {!canUpdateStatus && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="دسترسی فقط مشاهده"
+                    description="شما مجوز تغییر وضعیت/یادداشت سفارش را ندارید."
+                  />
+                )}
                 <div>
                   <label
                     style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}
@@ -375,6 +392,7 @@ function OrderDetail() {
                     onChange={setStatus}
                     style={{ width: '100%' }}
                     size="large"
+                    disabled={!canUpdateStatus}
                   >
                     <Select.Option value="Pending">ثبت سفارش</Select.Option>
                     <Select.Option value="Processing">درحال پردازش</Select.Option>
@@ -397,6 +415,7 @@ function OrderDetail() {
                         onChange={(e) => setTrackingCode(e.target.value)}
                         placeholder="کد ۲۴ رقمی پست"
                         style={{ fontFamily: 'monospace' }}
+                        disabled={!canUpdateStatus}
                       />
                     </div>
 
@@ -412,6 +431,7 @@ function OrderDetail() {
                         placeholder="مثلاً ۳ روز"
                         onChange={(e) => setDeliveryDays(e.target.value)}
                         suffix="روز"
+                        disabled={!canUpdateStatus}
                       />
                       <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
                         پس از گذشت این زمان، وضعیت سفارش به صورت خودکار به «تحویل شده» تغییر می‌کند.
@@ -456,6 +476,7 @@ function OrderDetail() {
                     onChange={(e) => setAdminNotes(e.target.value)}
                     rows={4}
                     placeholder="یادداشت‌های داخلی درباره این سفارش..."
+                    disabled={!canUpdateStatus}
                   />
                 </div>
 
@@ -466,6 +487,7 @@ function OrderDetail() {
                   icon={<SaveOutlined />}
                   onClick={handleStatusUpdate}
                   loading={saving}
+                  disabled={!canUpdateStatus}
                 >
                   ذخیره تغییرات
                 </Button>
@@ -504,4 +526,3 @@ function OrderDetail() {
 }
 
 export default OrderDetail
-

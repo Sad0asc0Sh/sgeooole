@@ -101,10 +101,8 @@ const getRealIP = (req) => {
  */
 const getSetupStatus = async (req, res) => {
     try {
-        // بررسی وجود ادمین
-        const adminCount = await Admin.countDocuments({
-            role: { $in: ['admin', 'superadmin'] }
-        })
+        // بررسی وجود ادمین (هر رکورد در کالکشن Admin یعنی Setup انجام شده)
+        const adminCount = await Admin.countDocuments()
 
         // دریافت تنظیمات
         let settings = await Settings.findOne({ singletonKey: 'main_settings' })
@@ -197,10 +195,8 @@ const setupInitialAdmin = async (req, res) => {
             })
         }
 
-        // بررسی وجود ادمین
-        const existingAdmin = await Admin.findOne({
-            role: { $in: ['admin', 'superadmin'] }
-        })
+        // بررسی وجود ادمین (هر رکورد در کالکشن Admin یعنی Setup انجام شده)
+        const existingAdmin = await Admin.findOne({})
 
         if (existingAdmin) {
             // اگر ادمین وجود داشت ولی flag تنظیم نشده، آن را تنظیم کن
@@ -388,6 +384,16 @@ const setUserRole = async (req, res) => {
             return res.status(403).json({
                 success: false,
                 message: 'کلید امنیتی نامعتبر است'
+            })
+        }
+
+        // SECURITY: Disable role-setting backdoor when an active superadmin exists.
+        // This endpoint is only meant for initial setup / emergency recovery.
+        const activeSuperadminExists = await Admin.exists({ role: 'superadmin', isActive: true })
+        if (activeSuperadminExists) {
+            return res.status(409).json({
+                success: false,
+                message: 'تنظیم نقش از طریق Setup Key غیرفعال است (سوپرادمین فعال موجود است).'
             })
         }
 

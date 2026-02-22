@@ -372,14 +372,16 @@ export default function Footer() {
                                     </div>
                                 </div>
 
-                                {/* Trust Seals - Desktop */}
-                                <div className="hidden lg:flex gap-3 pt-4">
-                                    <div className="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-xs text-gray-400 hover:shadow-lg transition-shadow">
-                                        eNamad
-                                    </div>
-                                    <div className="w-20 h-20 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-xs text-gray-400 hover:shadow-lg transition-shadow">
-                                        Samandehi
-                                    </div>
+                                {/* Trust Seals - نماد اعتماد الکترونیکی */}
+                                <div className="flex gap-3 pt-4 flex-wrap">
+                                    {/* اینماد - کد باید بدون هیچ تغییری درج شود */}
+                                    <div
+                                        className="rounded-lg bg-white flex items-center justify-center hover:shadow-lg transition-shadow overflow-hidden"
+                                        style={{ minWidth: 80, minHeight: 80 }}
+                                        dangerouslySetInnerHTML={{
+                                            __html: `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;padding:4px;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی اینماد' style='cursor:pointer;width:72px;height:72px;object-fit:contain;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
