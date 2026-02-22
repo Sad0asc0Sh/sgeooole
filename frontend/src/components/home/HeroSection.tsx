@@ -256,33 +256,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 )}
             </div>
 
-            {/* ═══════════════════════════════════════════════════
-                استایل‌های سفارشی Swiper
-               ═══════════════════════════════════════════════════ */}
-            <style jsx global>{`
-                .hero-swiper {
-                    border-radius: 1rem;
-                    overflow: hidden;
-                }
-                .hero-swiper .swiper-pagination {
-                    bottom: 12px !important;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    gap: 6px;
-                }
-                .hero-swiper .swiper-pagination-bullet {
-                    transition: all 0.3s ease;
-                    border: 1px solid rgba(255,255,255,0.4);
-                }
-                .hero-swiper .swiper-pagination-bullet-active {
-                    width: 28px !important;
-                    border-radius: 9999px !important;
-                    background: white !important;
-                    border-color: transparent;
-                    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-                }
-            `}</style>
+            {/* Swiper styles moved to globals.css for cross-browser compat */}
         </section>
     );
 }

@@ -185,14 +185,22 @@
 @layer base {
 
   /* Force GPU acceleration for smoother animations */
+  /* NOTE: only apply will-change during animation, not statically, for Edge/Safari compat */
   .swiper-slide,
   .swiper-wrapper {
-    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    /* will-change: transform; -- حذف شد: باعث crash layout در Edge Android می‌شد */
   }
 
   /* Optimize image rendering */
+  /* REMOVED: content-visibility:auto breaks Edge Android layout (images overlap / zero height) */
+  /* img { content-visibility: auto; } */
+
+  /* Image baseline fix for all browsers */
   img {
-    content-visibility: auto;
+    display: block;
+    max-width: 100%;
   }
 }
 
@@ -219,4 +227,38 @@
   -ms-overflow-style: auto !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
+}
+
+/* --- HERO SWIPER STYLES (moved from JSX for Edge Android compat) --- */
+.hero-swiper {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.hero-swiper .swiper-pagination {
+  bottom: 12px !important;
+  display: -webkit-box !important;
+  display: -webkit-flex !important;
+  display: flex !important;
+  -webkit-box-pack: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-swiper .swiper-pagination-bullet {
+  -webkit-transition: all 0.3s ease;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.hero-swiper .swiper-pagination-bullet-active {
+  width: 28px !important;
+  border-radius: 9999px !important;
+  background: white !important;
+  border-color: transparent;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
