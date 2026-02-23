@@ -1,0 +1,19 @@
+STDOUT:
+[36mvite v7.2.7 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[39m 3813 modules transformed.
+
+STDERR:
+[31m✗[39m Build failed in 14.71s
+[31merror during build:
+[31m[vite:prepare-out-dir] EBUSY: resource busy or locked, rmdir 'F:\frontend now3 google\admin\dist\assets'[31m
+    at rmdirSync (node:fs:1201:11)
+    at _rmdirSync (node:internal/fs/rimraf:236:5)
+    at rimrafSync (node:internal/fs/rimraf:194:7)
+    at Object.rmSync (node:fs:1247:10)
+    at emptyDir (file:///F:/frontend%20now3%20google/admin/node_modules/vite/dist/node/chunks/config.js:2167:11)
+    at prepareOutDir (file:///F:/frontend%20now3%20google/admin/node_modules/vite/dist/node/chunks/config.js:33324:55)
+    at Object.handler (file:///F:/frontend%20now3%20google/admin/node_modules/vite/dist/node/chunks/config.js:33314:6)
+    at Object.handler (file:///F:/frontend%20now3%20google/admin/node_modules/vite/dist/node/chunks/config.js:33742:13)
+    at file:///F:/frontend%20now3%20google/admin/node_modules/rollup/dist/es/shared/node-entry.js:22437:40
+    at async Promise.all (index 0)[39m
