@@ -370,7 +370,7 @@ function SettingsPage() {
               },
             ]}
           >
-            <Input placeholder="مثلاً: فروشگاه من" />
+            <Input placeholder="مثلاً: ای‌کا‌جی کالا" />
           </Form.Item>
 
           <Form.Item
