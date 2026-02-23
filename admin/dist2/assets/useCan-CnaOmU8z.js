@@ -1,0 +1,1 @@
+import{aR as r,aS as i,aT as o,aU as e}from"./index-ROoJcclj.js";function t(){const n=r(s=>s.permissions||[]),a=Array.isArray(n)?n:[];return{permissions:a,can:s=>e(a,s),canAny:s=>o(a,s),canAll:s=>i(a,s)}}export{t as u};
