@@ -412,7 +412,7 @@ app.get('/api/health', (req, res) => {
 })
 
 // Detailed health check - Admin only (requires auth token)
-const { protect, checkPermission, PERMISSIONS } = require('./middleware/auth')
+const { protect, optional, checkPermission, PERMISSIONS } = require('./middleware/auth')
 const redis = require('./utils/redis')
 
 app.get('/api/health/details', protect, checkPermission(PERMISSIONS.SETTINGS_READ), async (req, res) => {
@@ -463,7 +463,7 @@ app.use('/api/brands', brandsRoutes)
 // Products Routes
 // SECURITY: checkProductAccess blocks non-admin access to admin-only filters
 const productsRoutes = require('./routes/products')
-app.use('/api/products', checkProductAccess, productsRoutes)
+app.use('/api/products', optional, checkProductAccess, productsRoutes)
 // Admin panel create endpoint: /api/v1/admin/products -> same router
 app.use('/api/v1/admin/products', productsRoutes)
 

@@ -81,11 +81,43 @@ const hasPermission = (user, permission) => {
  * Sanitize query parameters to prevent type coercion attacks
  */
 const sanitizeQueryValue = (value) => {
+    if (Array.isArray(value)) {
+        return value.map((item) => sanitizeQueryValue(item))
+    }
+
     if (typeof value === 'object' && value !== null) {
-        logger.security('Query injection attempt blocked', { value })
-        return String(value)
+        const sanitized = {}
+        for (const [key, nestedValue] of Object.entries(value)) {
+            // Block mongo-style operator keys inside query objects
+            if (String(key).startsWith('$')) {
+                logger.security('Query injection key blocked', { key })
+                continue
+            }
+            sanitized[key] = sanitizeQueryValue(nestedValue)
+        }
+        return sanitized
     }
     return value
+}
+
+const removeAdminOnlyParam = (query, param) => {
+    if (!query || typeof query !== 'object') return false
+
+    let removed = false
+
+    if (query[param] !== undefined) {
+        delete query[param]
+        removed = true
+    }
+
+    Object.keys(query).forEach((key) => {
+        if (key === param || key.startsWith(`${param}[`)) {
+            delete query[key]
+            removed = true
+        }
+    })
+
+    return removed
 }
 
 /**
@@ -97,13 +129,10 @@ const checkProductAccess = (req, res, next) => {
     const userIsAdmin = isAdmin(req.user)
     const blockedParams = []
 
-    // Check for admin-only query parameters
+    // Check for admin-only query parameters (supports nested forms like isActive[eq])
     for (const param of ADMIN_ONLY_FILTERS) {
-        if (req.query[param] !== undefined) {
-            if (!userIsAdmin) {
-                blockedParams.push(param)
-                delete req.query[param]
-            }
+        if (!userIsAdmin && removeAdminOnlyParam(req.query, param)) {
+            blockedParams.push(param)
         }
     }
 
