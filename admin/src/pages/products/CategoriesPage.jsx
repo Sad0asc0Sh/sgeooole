@@ -55,6 +55,113 @@ function CategoriesPage() {
   const [newPropertyUnit, setNewPropertyUnit] = useState('')
   const [newPropertyFilterable, setNewPropertyFilterable] = useState(true)
 
+  const cloneTree = (nodes = []) =>
+    nodes.map((node) => ({
+      ...node,
+      children: cloneTree(node.children || []),
+    }))
+
+  const removeNodeByKey = (nodes = [], key) => {
+    for (let i = 0; i < nodes.length; i += 1) {
+      if (String(nodes[i].key) === String(key)) {
+        return nodes.splice(i, 1)[0]
+      }
+      const childRemoved = removeNodeByKey(nodes[i].children || [], key)
+      if (childRemoved) return childRemoved
+    }
+    return null
+  }
+
+  const findNodeMetaByKey = (nodes = [], key) => {
+    for (let i = 0; i < nodes.length; i += 1) {
+      const node = nodes[i]
+      if (String(node.key) === String(key)) {
+        return {
+          node,
+          siblings: nodes,
+          index: i,
+        }
+      }
+      const childMatch = findNodeMetaByKey(node.children || [], key)
+      if (childMatch) return childMatch
+    }
+    return null
+  }
+
+  const moveNodeByDropInfo = (tree = [], info) => {
+    const nextTree = cloneTree(tree)
+    const dragKey = String(info.dragNode.key)
+    const dropKey = String(info.node.key)
+
+    const dragNode = removeNodeByKey(nextTree, dragKey)
+    if (!dragNode) return null
+
+    const dropMeta = findNodeMetaByKey(nextTree, dropKey)
+    if (!dropMeta) return null
+
+    const dropPos = String(info.node.pos || '').split('-')
+    const dropIndex = Number(dropPos[dropPos.length - 1] || 0)
+    const relativeDropPosition =
+      typeof info.dropPosition === 'number'
+        ? info.dropPosition - dropIndex
+        : 0
+
+    if (!info.dropToGap) {
+      dropMeta.node.children = dropMeta.node.children || []
+      dropMeta.node.children.push(dragNode)
+      return nextTree
+    }
+
+    const shouldDropAsChild =
+      Array.isArray(dropMeta.node.children) &&
+      dropMeta.node.children.length > 0 &&
+      info.node.expanded &&
+      relativeDropPosition === 1
+
+    if (shouldDropAsChild) {
+      dropMeta.node.children = dropMeta.node.children || []
+      dropMeta.node.children.unshift(dragNode)
+      return nextTree
+    }
+
+    const insertIndex =
+      relativeDropPosition === -1 ? dropMeta.index : dropMeta.index + 1
+    dropMeta.siblings.splice(insertIndex, 0, dragNode)
+    return nextTree
+  }
+
+  const collectHierarchyState = (nodes = [], parentId = null, result = []) => {
+    nodes.forEach((node, index) => {
+      result.push({
+        id: String(node.key),
+        parent: parentId ? String(parentId) : null,
+        order: index,
+      })
+      if (node.children && node.children.length > 0) {
+        collectHierarchyState(node.children, node.key, result)
+      }
+    })
+    return result
+  }
+
+  const mapCurrentHierarchyState = (
+    nodes = [],
+    parentId = null,
+    map = new Map(),
+  ) => {
+    nodes.forEach((node, index) => {
+      const normalizedOrder = Number(node.order)
+      map.set(String(node.key), {
+        parent: parentId ? String(parentId) : null,
+        order: Number.isFinite(normalizedOrder) ? normalizedOrder : index,
+      })
+      if (node.children && node.children.length > 0) {
+        mapCurrentHierarchyState(node.children, node.key, map)
+      }
+    })
+    return map
+  }
+
   // Initial load
   useEffect(() => {
     if (!categoriesTree || categoriesTree.length === 0) {
@@ -221,28 +328,44 @@ function CategoriesPage() {
     }
   }
 
-  // Drag & Drop Handler (change parent)
+  // Drag & Drop Handler (change parent + reorder siblings)
   const onDrop = async (info) => {
     if (!canUpdate) {
       message.error('شما مجوز ویرایش دسته‌بندی را ندارید.')
       return
     }
-    const dragNodeId = info.dragNode.key
-    const dropNodeId = info.node.key
-    const dropToGap = info.dropToGap
-
     try {
-      let newParentId = null
-
-      if (!dropToGap) {
-        // dropped on node -> make it parent
-        newParentId = dropNodeId
-      } else if (info.node.parent) {
-        // dropped between nodes -> keep same parent as target node
-        newParentId = info.node.parent
+      const nextTree = moveNodeByDropInfo(categoriesTree, info)
+      if (!nextTree) {
+        message.error('Unable to calculate new category position.')
+        return
       }
 
-      await api.put(`/categories/${dragNodeId}`, { parent: newParentId })
+      const currentHierarchy = mapCurrentHierarchyState(categoriesTree)
+      const nextHierarchy = collectHierarchyState(nextTree)
+
+      const changedNodes = nextHierarchy.filter((item) => {
+        const current = currentHierarchy.get(item.id)
+        if (!current) return true
+
+        const currentParent = current.parent ?? null
+        const currentOrder = Number(current.order)
+        return currentParent !== item.parent || currentOrder !== item.order
+      })
+
+      if (changedNodes.length === 0) {
+        message.info('Category order is unchanged.')
+        return
+      }
+
+      await Promise.all(
+        changedNodes.map((item) =>
+          api.put(`/categories/${item.id}`, {
+            parent: item.parent,
+            order: item.order,
+          }),
+        ),
+      )
       message.success('ساختار دسته‌بندی با موفقیت به‌روزرسانی شد')
       await fetchCategoriesTree()
     } catch (error) {

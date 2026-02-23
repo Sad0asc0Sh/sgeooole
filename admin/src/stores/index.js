@@ -132,6 +132,7 @@ export const useCategoryStore = create((set, get) => ({
           _id: n._id, // Also include _id for compatibility
           parent: n.parent || null,
           description: n.description || '',
+          order: Number.isFinite(Number(n.order)) ? Number(n.order) : 0,
           isFeatured: !!n.isFeatured,
           isPopular: !!n.isPopular,
           icon: n.icon || null,
