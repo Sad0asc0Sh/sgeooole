@@ -37,7 +37,7 @@ const settingsSchema = new mongoose.Schema(
     // General settings
     storeName: {
       type: String,
-      default: 'ای‌کا‌جی کالا',
+      default: 'فروشگاه من',
     },
     storeEmail: {
       type: String,
