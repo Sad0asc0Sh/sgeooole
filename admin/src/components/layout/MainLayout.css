@@ -1,31 +1,93 @@
+/* =============================================
+   PROFESSIONAL ADMIN PANEL - FIXED SIDEBAR
+   ============================================= */
+
+/* Root layout wrapper - full viewport */
+.admin-root-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  direction: rtl;
+}
+
+/* ─── SIDEBAR (Fixed) ─────────────────────────── */
+.desktop-sider {
+  position: fixed !important;
+  top: 0;
+  right: 0;
+  height: 100vh !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Smooth scrollbar for sidebar menu */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.desktop-sider::-webkit-scrollbar {
+  width: 4px;
+}
+.desktop-sider::-webkit-scrollbar-track {
+  background: transparent;
+}
+.desktop-sider::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+}
+
+/* ─── LOGO AREA ───────────────────────────────── */
 .logo {
   height: 64px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  font-weight: bold;
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
+/* ─── MAIN AREA (pushes content away from sidebar) */
+.admin-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Offset to the right to make room for fixed sidebar */
+  /* Width is set dynamically via inline style in JSX */
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ─── HEADER ──────────────────────────────────── */
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 90;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: white;
+  background: #fff;
   padding: 0 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  height: 64px;
+  min-height: 64px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-}
-
-.mobile-menu-btn {
-  display: none;
-  font-size: 20px;
 }
 
 .header-right {
@@ -34,26 +96,58 @@
   gap: 16px;
 }
 
+.mobile-menu-btn {
+  display: none;
+  font-size: 20px;
+}
+
+/* ─── CONTENT SCROLL AREA ─────────────────────── */
+.admin-content-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Elegant scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+}
+
+.admin-content-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.admin-content-scroll::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+.admin-content-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+}
+.admin-content-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+
+/* ─── PAGE CONTENT ────────────────────────────── */
 .site-content {
   margin: 24px;
   padding: 24px;
-  background: white;
-  border-radius: 8px;
-  min-height: 280px;
+  background: #fff;
+  border-radius: 10px;
+  min-height: calc(100vh - 64px - 48px - 48px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
-.desktop-sider {
-  display: block;
-}
-
+/* ─── MOBILE DRAWER ───────────────────────────── */
 .mobile-drawer {
   display: none;
 }
 
-/* Mobile Responsive */
+/* ─── MOBILE RESPONSIVE ───────────────────────── */
 @media (max-width: 992px) {
   .desktop-sider {
     display: none !important;
+  }
+
+  .admin-main-area {
+    margin-right: 0 !important;
   }
 
   .mobile-menu-btn {
@@ -63,5 +157,6 @@
   .site-content {
     margin: 16px;
     padding: 16px;
+    min-height: calc(100vh - 64px - 32px - 32px);
   }
 }
