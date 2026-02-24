@@ -40,7 +40,7 @@ const formatPersianDate = (date, includeTime = false) => {
 }
 
 // نقش‌های سیستم RBAC - به ترتیب سطح دسترسی
-const ROLE_ORDER = ['user', 'support', 'editor', 'admin', 'manager', 'superadmin']
+const ROLE_ORDER = ['user', 'support', 'editor', 'admin', 'manager']
 const ROLE_LABELS = {
   user: 'کاربر عادی',
   support: 'پشتیبان',

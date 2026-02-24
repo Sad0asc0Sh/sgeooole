@@ -217,7 +217,6 @@ function CustomersList() {
           <Select.Option value="editor">ویرایشگر</Select.Option>
           <Select.Option value="admin">ادمین</Select.Option>
           <Select.Option value="manager">مدیر ارشد</Select.Option>
-          <Select.Option value="superadmin">سوپرادمین</Select.Option>
         </Select>
         <Select
           placeholder="وضعیت"
