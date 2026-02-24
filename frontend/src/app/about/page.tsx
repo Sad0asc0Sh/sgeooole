@@ -38,17 +38,17 @@ const brands = [
         icon: "🎥"
     },
     {
-        name: "Sailgis",
+        name: "Silex",
         description: "نمایندگی رسمی سیستم‌های نظارتی",
         icon: "📡"
     },
     {
-        name: "Suzuki",
+        name: "Doorpa",
         description: "نمایندگی رسمی محصولات",
         icon: "🔧"
     },
     {
-        name: "Vekra & Mover",
+        name: "Vakera & Mover",
         description: "نماینده برتر جک‌های پارکینگی",
         icon: "🚗"
     },
