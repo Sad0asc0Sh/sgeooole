@@ -1,46 +1,36 @@
 /* =============================================
-   PROFESSIONAL ADMIN PANEL - FIXED SIDEBAR
+   PROFESSIONAL ADMIN PANEL LAYOUT
+   - Fixed Sidebar with independent scroll
+   - Sticky Header
+   - Independent main content scroll
    ============================================= */
 
-/* Root layout wrapper - full viewport */
+/* ─── ROOT LAYOUT ─────────────────────────────── */
 .admin-root-layout {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  direction: rtl;
+  height: 100vh !important;
+  overflow: hidden !important;
 }
 
-/* ─── SIDEBAR (Fixed) ─────────────────────────── */
-.desktop-sider {
+/* ─── SIDEBAR ─────────────────────────────────── */
+.admin-sider {
   position: fixed !important;
   top: 0;
   right: 0;
+  bottom: 0;
   height: 100vh !important;
-  overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 100;
+  z-index: 101;
+  box-shadow: -2px 0 16px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+}
+
+.admin-sider .admin-sider-inner {
   display: flex;
   flex-direction: column;
-  box-shadow: -2px 0 12px rgba(0, 0, 0, 0.18);
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Smooth scrollbar for sidebar menu */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+  height: 100vh;
 }
 
-.desktop-sider::-webkit-scrollbar {
-  width: 4px;
-}
-.desktop-sider::-webkit-scrollbar-track {
-  background: transparent;
-}
-.desktop-sider::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 4px;
-}
-
-/* ─── LOGO AREA ───────────────────────────────── */
-.logo {
+/* Logo area — sticky at top of sidebar */
+.admin-sider .logo {
   height: 64px;
   min-height: 64px;
   display: flex;
@@ -53,41 +43,73 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   letter-spacing: 0.5px;
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
-/* ─── MAIN AREA (pushes content away from sidebar) */
-.admin-main-area {
+/* Menu scrollable area */
+.admin-sider .admin-sider-menu-wrap {
   flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Sleek scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.admin-sider .admin-sider-menu-wrap::-webkit-scrollbar {
+  width: 4px;
+}
+
+.admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Remove default ant border on menu */
+.admin-sider .ant-menu {
+  border-inline-end: none !important;
+}
+
+/* ─── MAIN LAYOUT (beside sidebar) ────────────── */
+.admin-main-layout {
+  /* Push content to account for the fixed sidebar */
+  margin-right: 220px !important;
+  transition: margin-right 0.2s ease;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  /* Offset to the right to make room for fixed sidebar */
-  /* Width is set dynamically via inline style in JSX */
   overflow: hidden;
-  min-width: 0;
+}
+
+/* When sidebar is collapsed, less margin */
+.admin-root-layout .ant-layout-sider-collapsed+.admin-main-layout,
+.admin-root-layout .ant-layout-sider-collapsed~.admin-main-layout {
+  margin-right: 80px !important;
 }
 
 /* ─── HEADER ──────────────────────────────────── */
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 90;
-  display: flex;
+.admin-header {
+  display: flex !important;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  padding: 0 24px;
-  height: 64px;
+  background: #fff !important;
+  padding: 0 24px !important;
+  height: 64px !important;
   min-height: 64px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  z-index: 90;
   flex-shrink: 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
+  gap: 4px;
 }
 
 .header-right {
@@ -96,43 +118,59 @@
   gap: 16px;
 }
 
-.mobile-menu-btn {
-  display: none;
-  font-size: 20px;
+.header-user-info {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  margin-right: 8px;
 }
 
-/* ─── CONTENT SCROLL AREA ─────────────────────── */
-.admin-content-scroll {
+/* Desktop collapse button */
+.collapse-btn {
+  font-size: 18px !important;
+}
+
+/* Mobile hamburger — hidden by default */
+.mobile-menu-btn {
+  display: none !important;
+  font-size: 20px !important;
+}
+
+/* ─── CONTENT AREA ────────────────────────────── */
+.admin-content-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  background: #f5f6fa !important;
   /* Elegant scrollbar */
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
-.admin-content-scroll::-webkit-scrollbar {
+.admin-content-area::-webkit-scrollbar {
   width: 6px;
 }
-.admin-content-scroll::-webkit-scrollbar-track {
-  background: #f5f5f5;
-}
-.admin-content-scroll::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-}
-.admin-content-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.28);
+
+.admin-content-area::-webkit-scrollbar-track {
+  background: #f5f6fa;
 }
 
-/* ─── PAGE CONTENT ────────────────────────────── */
-.site-content {
+.admin-content-area::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.14);
+  border-radius: 6px;
+}
+
+.admin-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.24);
+}
+
+.admin-content-inner {
   margin: 24px;
   padding: 24px;
   background: #fff;
   border-radius: 10px;
-  min-height: calc(100vh - 64px - 48px - 48px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  min-height: calc(100vh - 64px - 48px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* ─── MOBILE DRAWER ───────────────────────────── */
@@ -140,23 +178,31 @@
   display: none;
 }
 
-/* ─── MOBILE RESPONSIVE ───────────────────────── */
+/* ─── MOBILE / TABLET RESPONSIVE ──────────────── */
 @media (max-width: 992px) {
-  .desktop-sider {
+
+  /* Hide the fixed sidebar completely */
+  .admin-sider {
     display: none !important;
   }
 
-  .admin-main-area {
+  /* Remove margin from main area */
+  .admin-main-layout {
     margin-right: 0 !important;
   }
 
+  /* Show hamburger, hide collapse */
   .mobile-menu-btn {
-    display: block;
+    display: inline-flex !important;
   }
 
-  .site-content {
+  .collapse-btn {
+    display: none !important;
+  }
+
+  .admin-content-inner {
     margin: 16px;
     padding: 16px;
-    min-height: calc(100vh - 64px - 32px - 32px);
+    min-height: calc(100vh - 64px - 32px);
   }
 }

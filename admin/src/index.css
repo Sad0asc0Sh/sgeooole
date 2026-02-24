@@ -10,9 +10,7 @@ body {
   text-align: right;
 }
 
-.ant-layout {
-  min-height: 100vh;
-}
+/* Layout height is managed by MainLayout.css */
 
 /* Fix RTL for Ant Design */
 .ant-menu {
@@ -31,7 +29,7 @@ body {
 }
 
 .widget-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* React Quill RTL */

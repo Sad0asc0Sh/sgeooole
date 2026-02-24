@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from 'react'
-import { Menu, Badge, Dropdown, Avatar, Button, Drawer } from 'antd'
+﻿import { useState } from 'react'
+import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -15,6 +15,8 @@ import {
   BellOutlined,
   LogoutOutlined,
   MenuOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons'
 import {
   useAuthStore,
@@ -25,9 +27,7 @@ import { hasAnyPermission, hasPermission } from '../../rbac/access'
 import ProfileModal from './ProfileModal'
 import './MainLayout.css'
 
-// Ant Design Sider width constants
-const SIDER_WIDTH = 200
-const SIDER_COLLAPSED_WIDTH = 80
+const { Header, Sider, Content } = Layout
 
 function MainLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -370,51 +370,37 @@ function MainLayout({ children }) {
     onClick: handleUserMenuClick,
   }
 
-  const siderWidth = collapsed ? SIDER_COLLAPSED_WIDTH : SIDER_WIDTH
-
   return (
-    <div className="admin-root-layout">
-      {/* ── Fixed Desktop Sidebar ────────────────── */}
-      <aside
-        className="desktop-sider ant-layout-sider ant-layout-sider-dark"
-        style={{ width: siderWidth }}
+    <Layout className="admin-root-layout">
+      {/* ── Desktop Sidebar: fixed + independent scroll ── */}
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        breakpoint="lg"
+        collapsedWidth={80}
+        width={220}
+        className="admin-sider"
       >
-        <div className="logo">
-          {collapsed ? 'مدیر' : 'پنل مدیریت'}
+        <div className="admin-sider-inner">
+          <div className="logo">
+            {collapsed ? 'مدیر' : 'پنل مدیریت'}
+          </div>
+          <div className="admin-sider-menu-wrap">
+            <Menu
+              theme="dark"
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              defaultOpenKeys={
+                collapsed ? [] : ['/' + location.pathname.split('/')[1]]
+              }
+              items={filteredMenuItems}
+            />
+          </div>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          inlineCollapsed={collapsed}
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={['/' + location.pathname.split('/')[1]]}
-          items={filteredMenuItems}
-          style={{ flex: 1, borderInlineEnd: 'none' }}
-        />
-        {/* Collapse toggle button */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          style={{
-            width: '100%',
-            height: 48,
-            background: 'rgba(255,255,255,0.05)',
-            border: 'none',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            color: 'rgba(255,255,255,0.65)',
-            cursor: 'pointer',
-            fontSize: 18,
-            transition: 'background 0.2s',
-            flexShrink: 0,
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-          title={collapsed ? 'باز کردن منو' : 'بستن منو'}
-        >
-          {collapsed ? '‹' : '›'}
-        </button>
-      </aside>
+      </Sider>
 
-      {/* ── Mobile Drawer ────────────────────────── */}
+      {/* Mobile Drawer */}
       <Drawer
         title="منوی ناوبری"
         placement="right"
@@ -431,14 +417,19 @@ function MainLayout({ children }) {
         />
       </Drawer>
 
-      {/* ── Main Area (header + scrollable content) ── */}
-      <div
-        className="admin-main-area"
-        style={{ marginRight: siderWidth }}
-      >
+      {/* ── Main content area ── */}
+      <Layout className="admin-main-layout">
         {/* Sticky Header */}
-        <header className="site-header">
+        <Header className="admin-header">
           <div className="header-left">
+            {/* Desktop collapse toggle */}
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              className="collapse-btn"
+            />
+            {/* Mobile hamburger */}
             <Button
               type="text"
               icon={<MenuOutlined />}
@@ -455,14 +446,7 @@ function MainLayout({ children }) {
             </Dropdown>
 
             <Dropdown menu={userMenu} trigger={['click']}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  cursor: 'pointer',
-                  marginRight: 16,
-                }}
-              >
+              <div className="header-user-info">
                 <Avatar
                   src={user?.avatar?.url}
                   icon={!user?.avatar?.url && <UserOutlined />}
@@ -472,20 +456,22 @@ function MainLayout({ children }) {
               </div>
             </Dropdown>
           </div>
-        </header>
+        </Header>
 
-        {/* Independent scrollable content */}
-        <div className="admin-content-scroll">
-          <main className="site-content">{children}</main>
-        </div>
-      </div>
+        {/* Scrollable content */}
+        <Content className="admin-content-area">
+          <div className="admin-content-inner">
+            {children}
+          </div>
+        </Content>
+      </Layout>
 
       {/* Profile Modal */}
       <ProfileModal
         open={profileModalOpen}
         onClose={() => setProfileModalOpen(false)}
       />
-    </div>
+    </Layout>
   )
 }
 
