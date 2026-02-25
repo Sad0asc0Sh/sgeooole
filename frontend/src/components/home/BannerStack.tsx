@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
 import { useRouter } from "next/navigation";
+import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
 
 /**
  * بنرهای تبلیغاتی میانی
@@ -43,15 +44,13 @@ export default function BannerStack() {
                             relative w-full rounded-xl overflow-hidden bg-gray-50
                             shadow-sm hover:shadow-lg transition-all duration-300
                             hover:scale-[1.02] group
-                            ${banner.link ? 'cursor-pointer' : ''}
+                            ${canNavigateToHref(banner.link) ? 'cursor-pointer' : ''}
                         `}
                         style={{ aspectRatio: '16/5' }}
                         onClick={() => {
-                            if (banner.link && banner.link !== '#') {
-                                router.push(banner.link);
-                            }
+                            navigateHref(router, banner.link);
                         }}
-                        role={banner.link ? "button" : undefined}
+                        role={canNavigateToHref(banner.link) ? "button" : undefined}
                         aria-label={banner.title || "بنر تبلیغاتی"}
                     >
                         <Image

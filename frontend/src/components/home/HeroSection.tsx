@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
 import { useRouter } from "next/navigation";
+import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
 
 type HeroSectionProps = {
     initialBanners?: Banner[];
@@ -137,9 +138,8 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     const handlePointerUp = (href?: string | null) => {
         const moved = dragRef.current?.moved;
         dragRef.current = null;
-        const target = href && href !== "#" ? href : null;
-        if (!moved && target) {
-            router.push(target);
+        if (!moved && canNavigateToHref(href)) {
+            navigateHref(router, href);
         }
     };
 
@@ -181,7 +181,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 return (
                                     <SwiperSlide key={banner._id}>
                                         <div
-                                            className={`relative w-full ${banner.link ? "cursor-pointer" : ""}`}
+                                            className={`relative w-full ${canNavigateToHref(banner.link) ? "cursor-pointer" : ""}`}
                                             style={{ aspectRatio: '12/5' }}
                                             onMouseDown={(e) => handlePointerDown(e.clientX)}
                                             onMouseMove={(e) => handlePointerMove(e.clientX)}
@@ -190,7 +190,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                             onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
                                             onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
                                             onTouchEnd={() => handlePointerUp(banner.link)}
-                                            role={banner.link ? "button" : undefined}
+                                            role={canNavigateToHref(banner.link) ? "button" : undefined}
                                             aria-label={banner.title || "banner"}
                                         >
                                             <Image
@@ -229,17 +229,15 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                         relative w-full rounded-xl overflow-hidden bg-gray-50
                                         shadow-sm hover:shadow-lg transition-all duration-300
                                         hover:scale-[1.02] group
-                                        ${banner.link ? "cursor-pointer" : ""}
+                                        ${canNavigateToHref(banner.link) ? "cursor-pointer" : ""}
                                         ${middleBanners.length === 2 && index === 1 ? 'sm:col-span-1' : ''}
                                         ${middleBanners.length === 1 ? 'sm:col-span-2 lg:col-span-3' : ''}
                                     `}
                                     style={{ aspectRatio: '16/5' }}
                                     onClick={() => {
-                                        if (banner.link && banner.link !== '#') {
-                                            router.push(banner.link);
-                                        }
+                                        navigateHref(router, banner.link);
                                     }}
-                                    role={banner.link ? "button" : undefined}
+                                    role={canNavigateToHref(banner.link) ? "button" : undefined}
                                     aria-label={banner.title || "بنر تبلیغاتی"}
                                 >
                                     <Image
