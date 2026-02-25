@@ -177,27 +177,44 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                     (banner as any).image,
                                     "/placeholder-banner.png",
                                 );
+                                const bannerLink = banner.link;
+                                const canNavigate = canNavigateToHref(bannerLink);
+                                
+                                // دیباگ
+                                console.debug('Main banner link:', bannerLink, 'Can navigate:', canNavigate);
 
                                 return (
                                     <SwiperSlide key={banner._id}>
                                         <div
-                                            className={`relative w-full ${canNavigateToHref(banner.link) ? "cursor-pointer" : ""}`}
+                                            className={`relative w-full ${canNavigate ? "cursor-pointer" : ""}`}
                                             style={{ aspectRatio: '12/5' }}
                                             onMouseDown={(e) => handlePointerDown(e.clientX)}
                                             onMouseMove={(e) => handlePointerMove(e.clientX)}
-                                            onMouseUp={() => handlePointerUp(banner.link)}
+                                            onMouseUp={() => handlePointerUp(bannerLink)}
                                             onMouseLeave={() => (dragRef.current = null)}
                                             onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
                                             onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
-                                            onTouchEnd={() => handlePointerUp(banner.link)}
-                                            role={canNavigateToHref(banner.link) ? "button" : undefined}
+                                            onTouchEnd={() => handlePointerUp(bannerLink)}
+                                            onClick={() => {
+                                                console.debug('Main banner clicked:', bannerLink);
+                                                if (!dragRef.current?.moved && bannerLink) {
+                                                    navigateHref(router, bannerLink);
+                                                }
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                                if ((e.key === 'Enter' || e.key === ' ') && bannerLink) {
+                                                    navigateHref(router, bannerLink);
+                                                }
+                                            }}
                                             aria-label={banner.title || "banner"}
                                         >
                                             <Image
                                                 src={imageUrl}
                                                 alt={banner.title}
                                                 fill
-                                                className="object-cover object-center"
+                                                className="object-cover object-center pointer-events-none"
                                                 priority
                                                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1200px"
                                             />
@@ -221,6 +238,11 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 (banner as any).image,
                                 "/placeholder-banner.png",
                             );
+                            const bannerLink = banner.link;
+                            const canNavigate = canNavigateToHref(bannerLink);
+                            
+                            // دیباگ
+                            console.debug('Middle banner link:', bannerLink, 'Can navigate:', canNavigate);
 
                             return (
                                 <div
@@ -228,24 +250,40 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                     className={`
                                         relative w-full rounded-xl overflow-hidden bg-gray-50
                                         shadow-sm hover:shadow-lg transition-all duration-300
-                                        hover:scale-[1.02] group
-                                        ${canNavigateToHref(banner.link) ? "cursor-pointer" : ""}
+                                        hover:scale-[1.02] group cursor-pointer
+                                        ${canNavigate ? '' : 'opacity-75'}
                                         ${middleBanners.length === 2 && index === 1 ? 'sm:col-span-1' : ''}
                                         ${middleBanners.length === 1 ? 'sm:col-span-2 lg:col-span-3' : ''}
                                     `}
                                     style={{ aspectRatio: '16/5' }}
                                     onClick={() => {
-                                        navigateHref(router, banner.link);
+                                        console.debug('Middle banner clicked:', bannerLink);
+                                        if (bannerLink) {
+                                            navigateHref(router, bannerLink);
+                                        }
                                     }}
-                                    role={canNavigateToHref(banner.link) ? "button" : undefined}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if ((e.key === 'Enter' || e.key === ' ') && bannerLink) {
+                                            navigateHref(router, bannerLink);
+                                        }
+                                    }}
                                     aria-label={banner.title || "بنر تبلیغاتی"}
                                 >
                                     <Image
                                         src={imageUrl}
                                         alt={banner.title}
                                         fill
-                                        className="object-cover object-center group-hover:brightness-105 transition-all duration-300"
+                                        className="object-cover object-center group-hover:brightness-105 transition-all duration-300 pointer-events-none"
                                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            console.debug('Image clicked, navigating to:', bannerLink);
+                                            if (bannerLink) {
+                                                navigateHref(router, bannerLink);
+                                            }
+                                        }}
                                     />
                                 </div>
                             );
