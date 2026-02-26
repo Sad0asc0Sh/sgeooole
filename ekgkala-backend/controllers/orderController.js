@@ -3,6 +3,51 @@ const Cart = require('../models/Cart')
 const paymentService = require('../utils/paymentService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
 
+// ============================================
+// Helper for updating product stock and sales count
+// ============================================
+const adjustProductStats = async (orderItems, isIncrement) => {
+  try {
+    const Product = require('../models/Product')
+    const multiplier = isIncrement ? 1 : -1
+
+    for (const item of orderItems) {
+      if (!item.product) continue
+
+      const product = await Product.findById(item.product)
+      if (!product) continue
+
+      // Update sales count (salesCount)
+      product.salesCount = Math.max(0, (product.salesCount || 0) + (item.quantity * multiplier))
+
+      // Update stock if it's a simple product
+      if (product.productType === 'simple') {
+        product.stock = Math.max(0, (product.stock || 0) - (item.quantity * multiplier))
+      }
+      // Update stock for variable products
+      else if (product.productType === 'variable' && item.variantOptions && item.variantOptions.length > 0) {
+        // Find matching variant based on options
+        const isMatch = (variantOptions, itemOptions) => {
+          if (!variantOptions || !itemOptions) return false
+          if (variantOptions.length !== itemOptions.length) return false
+          return itemOptions.every(io =>
+            variantOptions.some(vo => vo.name === io.name && vo.value === io.value)
+          )
+        }
+
+        const variant = product.variants.find(v => isMatch(v.options, item.variantOptions))
+        if (variant) {
+          variant.stock = Math.max(0, (variant.stock || 0) - (item.quantity * multiplier))
+        }
+      }
+
+      // Save without triggering validations to avoid unrelated schema errors
+      await product.save({ validateBeforeSave: false })
+    }
+  } catch (error) {
+    console.error('Error in adjustProductStats:', error)
+  }
+}
 const sanitizeOrderForCustomer = (order) => {
   if (!order) return order
   const sanitized = { ...order }
@@ -89,6 +134,11 @@ exports.createOrder = async (req, res) => {
     })
 
     const createdOrder = await order.save()
+
+    // NEW LOGIC: Adjust stats if order is Cash-On-Delivery
+    if (createdOrder.paymentMethod === 'cod') {
+      await adjustProductStats(createdOrder.orderItems, true)
+    }
 
     // پاک کردن سبد خرید کاربر بعد از ثبت سفارش
     const cart = await Cart.findOne({ user: userId, status: 'active' })
@@ -312,6 +362,20 @@ exports.updateOrderStatus = async (req, res) => {
         runValidators: false,
       },
     )
+
+    // NEW LOGIC: Revert stats if Cancelled, or re-apply if uncanceled
+    const previousStatus = order.orderStatus
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled') {
+      // Revert if it was a paid order or COD
+      if (order.isPaid || order.paymentMethod === 'cod') {
+        await adjustProductStats(order.orderItems, false)
+      }
+    } else if (previousStatus === 'Cancelled' && status !== 'Cancelled') {
+      // Re-apply if uncanceled and it's paid or COD
+      if (order.isPaid || order.paymentMethod === 'cod') {
+        await adjustProductStats(order.orderItems, true)
+      }
+    }
 
     // Audit Log
     const { logAction } = require('../utils/auditLogger')
@@ -602,6 +666,9 @@ exports.verifyPayment = async (req, res) => {
 
       await order.save()
 
+      // NEW LOGIC: Adjust stats after successful payment
+      await adjustProductStats(order.orderItems, true)
+
       // Audit Log
       const { logAction } = require('../utils/auditLogger')
       await logAction({
@@ -800,6 +867,11 @@ exports.createOrderForUser = async (req, res) => {
     })
 
     const createdOrder = await order.save()
+
+    // NEW LOGIC: Adjust stats if COD
+    if (createdOrder.paymentMethod === 'cod') {
+      await adjustProductStats(createdOrder.orderItems, true)
+    }
 
     // Audit Log
     const { logAction } = require('../utils/auditLogger')
