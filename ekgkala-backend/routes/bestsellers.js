@@ -5,8 +5,7 @@
 const express = require('express')
 const router = express.Router()
 const bestsellersController = require('../controllers/bestsellersController')
-const { authenticateToken } = require('../middleware/auth')
-const { isAdmin } = require('../middleware/admin')
+const { protect, admin } = require('../middleware/auth')
 
 // ============================================
 // Public Routes
@@ -26,11 +25,11 @@ router.post('/tracking/impression', bestsellersController.trackImpression)
 
 // آمار بخش پرفروش‌ترین‌ها
 // GET /api/v1/bestsellers/stats
-router.get('/bestsellers/stats', authenticateToken, isAdmin, bestsellersController.getBestsellerStats)
+router.get('/bestsellers/stats', protect, admin, bestsellersController.getBestsellerStats)
 
 // بروزرسانی دستی امتیازات
 // POST /api/v1/bestsellers/recalculate
-router.post('/bestsellers/recalculate', authenticateToken, isAdmin, bestsellersController.recalculateScores)
+router.post('/bestsellers/recalculate', protect, admin, bestsellersController.recalculateScores)
 
 // ثبت رویداد فروش (از خدمات داخلی)
 // POST /api/v1/internal/sales-event

@@ -460,6 +460,10 @@ app.use('/api/categories', categoriesRoutes)
 const brandsRoutes = require('./routes/brands')
 app.use('/api/brands', brandsRoutes)
 
+// Bestsellers Routes
+const bestsellersRoutes = require('./routes/bestsellers')
+app.use('/api', bestsellersRoutes)
+
 // Products Routes
 // SECURITY: checkProductAccess blocks non-admin access to admin-only filters
 const productsRoutes = require('./routes/products')
