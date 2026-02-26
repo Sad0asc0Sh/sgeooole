@@ -349,9 +349,9 @@ export const productService = {
    */
   getBestSellers: async (limit: number = 10): Promise<Product[]> => {
     try {
-      // OPTIMIZED: Only fetch fields needed for rail display, sort by salesCount
-      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,salesCount';
-      const response = await api.get(`/products?sort=-salesCount&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
+      // OPTIMIZED: Use the professional /bestsellers endpoint instead of generic sort
+      // This enables the advanced Redis-cached time-decay logic
+      const response = await api.get(`/bestsellers?limit=${limit}&_t=${Date.now()}`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
