@@ -72,15 +72,15 @@ const productionHeaders = [
         key: 'Content-Security-Policy',
         value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://ekgkala.ir",
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://ekgkala.ir https://accounts.google.com https://apis.google.com",
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https: blob: https://res.cloudinary.com",
-            "connect-src 'self' https://ekgkala.ir https://*.ekgkala.ir",
+            "connect-src 'self' https://ekgkala.ir https://*.ekgkala.ir https://accounts.google.com",
             "frame-ancestors 'self'",
             "base-uri 'self'",
             "form-action 'self'",
-            "frame-src 'self'",
+            "frame-src 'self' https://accounts.google.com",
             "object-src 'none'",
             "upgrade-insecure-requests"
         ].join('; ')
