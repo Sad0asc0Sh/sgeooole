@@ -344,19 +344,82 @@ export const productService = {
   },
 
   /**
-   * Fetch best-selling products
+   * Fetch best-selling products from the dedicated bestsellers scoring engine.
+   * Uses the /bestsellers endpoint which leverages ProductScore with decayed_score
+   * for accurate bestseller ranking (vs. naive salesCount sort).
    * @param limit - Number of products to return (default: 10)
    */
   getBestSellers: async (limit: number = 10): Promise<Product[]> => {
     try {
-      // OPTIMIZED: Only fetch fields needed for rail display, sort by salesCount
-      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,salesCount';
-      const response = await api.get(`/products?sort=-salesCount&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
-      const items = productService._extractList(response);
+      // Primary: Use the dedicated bestsellers endpoint (ProductScore engine)
+      const response = await api.get(`/bestsellers?limit=${limit}&in_stock=true&_t=${Date.now()}`);
+      const payload = response?.data;
+
+      // The bestsellers endpoint returns { success, data: [...] }
+      // where each item has a different shape than standard products
+      if (payload?.success && Array.isArray(payload.data) && payload.data.length > 0) {
+        return payload.data.map((item: any) => {
+          // Map bestsellers response format to frontend Product interface
+          const normalizeImage = (img: any): string | null => {
+            if (!img) return null;
+            let url: string | null = null;
+            if (typeof img === "string" && img.trim() !== "") url = img.trim();
+            else if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim() !== "") {
+              url = img.url.trim();
+            }
+            if (url && url.startsWith("/")) {
+              const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+              let BACKEND_URL = API_URL.replace(/\/api\/?$/, "");
+              BACKEND_URL = BACKEND_URL.replace("localhost", "127.0.0.1");
+              return `${BACKEND_URL}${url}`;
+            }
+            return url;
+          };
+
+          // Handle image - bestsellers returns image as string or object
+          let imageUrl = normalizeImage(item.image) || "/placeholder.svg";
+
+          // Handle stock - could be a number or an object with variants
+          const stock = typeof item.stock === 'number' ? item.stock : 0;
+
+          return {
+            id: item._id,
+            name: item.name || "",
+            title: item.name || "",
+            slug: item.slug || "",
+            price: item.price || 0,
+            oldPrice: item.discount > 0 ? Math.round(item.price / (1 - item.discount / 100)) : undefined,
+            discount: item.discount || 0,
+            image: imageUrl,
+            images: [imageUrl],
+            category: item.category?.name || "عمومی",
+            categoryPath: item.category ? [{ id: item.category._id || "", name: item.category.name || "", slug: item.category.slug || "" }] : [],
+            rating: item.average_rating || 0,
+            reviewCount: item.review_count || 0,
+            countInStock: stock,
+            isFlashDeal: false,
+            isSpecialOffer: false,
+          } as Product;
+        });
+      }
+
+      // Fallback: If bestsellers endpoint returns empty or fails,
+      // fall back to regular products sorted by salesCount
+      console.warn("[ProductService] Bestsellers endpoint returned empty, falling back to salesCount sort");
+      const fallbackResponse = await api.get(`/products?sort=-salesCount&limit=${limit}&_t=${Date.now()}`);
+      const items = productService._extractList(fallbackResponse);
       return items.map(mapBackendToFrontend);
     } catch (error) {
       console.error("Error fetching best sellers:", error);
-      throw error;
+      // Final fallback: try the simple products endpoint
+      try {
+        const fallbackResponse = await api.get(`/products?sort=-salesCount&limit=${limit}&_t=${Date.now()}`);
+        const items = productService._extractList(fallbackResponse);
+        return items.map(mapBackendToFrontend);
+      } catch (fallbackError) {
+        console.error("Error in bestsellers fallback:", fallbackError);
+        throw error;
+      }
     }
   },
 

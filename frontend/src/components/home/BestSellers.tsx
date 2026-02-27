@@ -44,25 +44,27 @@ interface BestsellersResponse {
 }
 
 // API Service
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+
 const bestsellersService = {
   getBestsellers: async (limit: number = 8, category: string | null = null, inStock: boolean = true): Promise<BestsellersResponse> => {
     const params = new URLSearchParams({
       limit: String(limit),
       in_stock: String(inStock),
     })
-    
+
     if (category) {
       params.append('category', category)
     }
-    
-    const response = await fetch(`/api/v1/products/bestsellers?${params}`)
+
+    const response = await fetch(`${API_BASE}/bestsellers?${params}`)
     if (!response.ok) throw new Error('Failed to fetch bestsellers')
     return response.json()
   },
 
   trackImpression: async (productId: string, section: string = 'bestsellers', position: number = 0): Promise<void> => {
     try {
-      await fetch('/api/v1/tracking/impression', {
+      await fetch(`${API_BASE}/tracking/impression`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -276,11 +278,10 @@ export default function BestSellers({
                         {[...Array(5)].map((_, i) => (
                           <Star
                             key={i}
-                            className={`w-3.5 h-3.5 ${
-                              i < Math.round(product.average_rating)
+                            className={`w-3.5 h-3.5 ${i < Math.round(product.average_rating)
                                 ? 'fill-yellow-400 text-yellow-400'
                                 : 'text-gray-300'
-                            }`}
+                              }`}
                           />
                         ))}
                       </div>

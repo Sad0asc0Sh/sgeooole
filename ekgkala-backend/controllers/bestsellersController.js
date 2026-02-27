@@ -38,63 +38,139 @@ exports.getBestsellers = async (req, res) => {
       }
     }
 
-    // Query پایه
-    const query = {
-      stock_available: in_stock === 'true' || in_stock === true,
-    }
+    // بررسی آیا ProductScore داده‌ای دارد
+    const scoreCount = await ProductScore.countDocuments()
 
-    // فیلتر دسته‌بندی (اگر مشخص شده باشد)
-    if (category && category !== 'null') {
-      query.category_id = category
-    }
+    let result = []
 
-    // دریافت پرفروش‌ترین‌ها
-    const bestsellers = await ProductScore.find(query)
-      .sort({ decayed_score: -1 })
-      .limit(parseInt(limit) || 8)
-      .populate({
-        path: 'product_id',
-        select: 'name slug image price discount average_rating review_count stock variants',
-        populate: {
-          path: 'category_id',
-          select: 'name slug',
-        },
-      })
-      .lean()
-
-    // تحویل محصولات در فرمت مورد نیاز Frontend
-    const result = bestsellers.map((score) => {
-      const product = score.product_id
-      return {
-        _id: product._id,
-        name: product.name,
-        slug: product.slug,
-        image: product.image,
-        price: product.price,
-        discount: product.discount || 0,
-        average_rating: product.average_rating || 0,
-        review_count: product.review_count || 0,
-        stock: product.stock || 0,
-        bestsellers_score: {
-          decayed_score: score.decayed_score,
-          final_score: score.final_score,
-          trend_score: score.trend_score,
-          is_new: score.is_new_product,
-          trend_up: score.trend_score > 0.5,
-        },
-        category: product.category_id,
+    if (scoreCount > 0) {
+      // ===== مسیر اصلی: استفاده از ProductScore =====
+      const query = {
+        stock_available: in_stock === 'true' || in_stock === true,
       }
-    })
+
+      // فیلتر دسته‌بندی (اگر مشخص شده باشد)
+      if (category && category !== 'null') {
+        query.category_id = category
+      }
+
+      // دریافت پرفروش‌ترین‌ها از ProductScore
+      const bestsellers = await ProductScore.find(query)
+        .sort({ decayed_score: -1 })
+        .limit(parseInt(limit) || 8)
+        .populate({
+          path: 'product_id',
+          select: 'name slug images price discount rating numReviews stock category',
+          populate: {
+            path: 'category',
+            select: 'name slug',
+          },
+        })
+        .lean()
+
+      // تحویل محصولات در فرمت مورد نیاز Frontend
+      result = bestsellers
+        .filter((score) => score.product_id) // فیلتر محصولات حذف شده
+        .map((score) => {
+          const product = score.product_id
+
+          // Extract image URL from images array
+          let imageData = null
+          if (product.images && product.images.length > 0) {
+            const img = product.images[0]
+            if (typeof img === 'string') {
+              imageData = img
+            } else if (img && img.url) {
+              imageData = img
+            }
+          }
+
+          return {
+            _id: product._id,
+            name: product.name,
+            slug: product.slug,
+            image: imageData,
+            price: product.price,
+            discount: product.discount || 0,
+            average_rating: product.rating || 0,
+            review_count: product.numReviews || 0,
+            stock: product.stock || 0,
+            bestsellers_score: {
+              decayed_score: score.decayed_score,
+              final_score: score.final_score,
+              trend_score: score.trend_score,
+              is_new: score.is_new_product,
+              trend_up: score.trend_score > 0.5,
+            },
+            category: product.category,
+          }
+        })
+
+      console.log(`[BestSellers] ✅ ${result.length} محصول از ProductScore برگردانده شد`)
+    } else {
+      // ===== Fallback: ProductScore خالی است =====
+      // از salesCount در مدل Product استفاده میکنیم
+      console.log('[BestSellers] ⚠️ ProductScore خالی است، استفاده از salesCount fallback')
+
+      const productQuery = { isActive: true }
+      if (in_stock === 'true' || in_stock === true) {
+        productQuery.stock = { $gt: 0 }
+      }
+
+      const fallbackProducts = await Product.find(productQuery)
+        .sort({ salesCount: -1, createdAt: -1 })
+        .limit(parseInt(limit) || 8)
+        .select('name slug images price discount rating numReviews stock category')
+        .populate('category', 'name slug')
+        .lean()
+
+      result = fallbackProducts.map((product) => {
+        let imageData = null
+        if (product.images && product.images.length > 0) {
+          const img = product.images[0]
+          if (typeof img === 'string') {
+            imageData = img
+          } else if (img && img.url) {
+            imageData = img
+          }
+        }
+
+        return {
+          _id: product._id,
+          name: product.name,
+          slug: product.slug,
+          image: imageData,
+          price: product.price,
+          discount: product.discount || 0,
+          average_rating: product.rating || 0,
+          review_count: product.numReviews || 0,
+          stock: product.stock || 0,
+          bestsellers_score: {
+            decayed_score: 0,
+            final_score: 0,
+            trend_score: 0,
+            is_new: false,
+            trend_up: false,
+          },
+          category: product.category,
+        }
+      })
+
+      // شروع محاسبه امتیازات در پس‌زمینه (بدون بلاک کردن ریکوئست)
+      recalculateAllScores().catch((err) => {
+        console.error('[BestSellers] خطا در محاسبه اولیه امتیازات:', err.message)
+      })
+    }
 
     // ذخیره در کش (TTL: 15 دقیقه)
-    if (redis) {
+    if (redis && result.length > 0) {
       await redis.setex(cacheKey, 900, JSON.stringify(result))
     }
 
     res.json({
       success: true,
       data: result,
-      source: 'database',
+      source: scoreCount > 0 ? 'scoring_engine' : 'fallback_salescount',
       count: result.length,
     })
   } catch (error) {

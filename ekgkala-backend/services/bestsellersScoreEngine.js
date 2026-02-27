@@ -355,9 +355,10 @@ async function recalculateAllScores() {
     ])
 
     // دریافت تمام محصولات فعال
+    // CRITICAL FIX: Product model uses 'isActive' (camelCase), not 'is_active' (snake_case)
     const allProducts = await Product.find(
-      { is_active: true },
-      { _id: 1, name: 1, average_rating: 1 }
+      { isActive: true },
+      { _id: 1, name: 1, average_rating: 1, rating: 1, createdAt: 1, stock: 1 }
     )
 
     let updated = 0
@@ -379,7 +380,7 @@ async function recalculateAllScores() {
       const lastSale = await SalesEvent.findOne({ product_id: product._id }).sort({ sold_at: -1 }).lean()
 
       // محاسبه Boost برای محصولات جدید
-      const createdAt = product.created_at || new Date()
+      const createdAt = product.createdAt || new Date()
       const ageInDays = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
       const newProductBoost = ageInDays < 7 ? 0.15 : 0
 
@@ -434,8 +435,8 @@ async function recalculateAllScores() {
           total_units_sold: saleCount,
           total_views_14d: viewCount,
           return_rate: returnRate,
-          avg_rating: product.average_rating || 0,
-          stock_available: true, // این باید از Product.stock بروزرسانی شود
+          avg_rating: product.rating || 0,
+          stock_available: (product.stock || 0) > 0,
           is_new_product: ageInDays < 7,
           new_product_boost: newProductBoost,
           high_return_penalty: highReturnPenalty,
