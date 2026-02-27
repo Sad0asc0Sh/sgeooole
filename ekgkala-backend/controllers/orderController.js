@@ -1,7 +1,77 @@
 const Order = require('../models/Order')
 const Cart = require('../models/Cart')
+const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
+
+// ============================================
+// Helper: Record SalesEvents for Bestsellers Engine
+// This feeds the ProductScore scoring system
+// ============================================
+const recordSalesEvents = async (orderItems, orderId) => {
+  try {
+    const events = []
+    for (const item of orderItems) {
+      if (!item.product) continue
+      events.push({
+        product_id: item.product,
+        order_id: orderId,
+        quantity: item.quantity || 1,
+        revenue: (item.price || 0) * (item.quantity || 1),
+        margin_pct: 0, // Can be updated later if cost data is available
+        sold_at: new Date(),
+      })
+    }
+
+    if (events.length > 0) {
+      await SalesEvent.insertMany(events)
+      console.log(`[SalesEvent] ✅ ${events.length} sales events recorded for order ${orderId}`)
+
+      // Invalidate bestsellers cache so new data appears
+      try {
+        const redis = require('../utils/redis')
+        if (redis) {
+          const keys = await redis.keys('bestsellers:*')
+          if (keys.length > 0) {
+            await redis.del(keys)
+          }
+        }
+      } catch (cacheErr) {
+        // Cache invalidation failure is non-critical
+      }
+    }
+  } catch (error) {
+    // SalesEvent recording should never block the order flow
+    console.error('[SalesEvent] ❌ Error recording sales events:', error.message)
+  }
+}
+
+// ============================================
+// Helper: Revert SalesEvents on order cancellation
+// ============================================
+const revertSalesEvents = async (orderId) => {
+  try {
+    const result = await SalesEvent.deleteMany({ order_id: orderId })
+    if (result.deletedCount > 0) {
+      console.log(`[SalesEvent] 🗑️ ${result.deletedCount} sales events reverted for order ${orderId}`)
+
+      // Invalidate bestsellers cache
+      try {
+        const redis = require('../utils/redis')
+        if (redis) {
+          const keys = await redis.keys('bestsellers:*')
+          if (keys.length > 0) {
+            await redis.del(keys)
+          }
+        }
+      } catch (cacheErr) {
+        // Non-critical
+      }
+    }
+  } catch (error) {
+    console.error('[SalesEvent] ❌ Error reverting sales events:', error.message)
+  }
+}
 
 // ============================================
 // Helper for updating product stock and sales count
@@ -138,6 +208,8 @@ exports.createOrder = async (req, res) => {
     // NEW LOGIC: Adjust stats if order is Cash-On-Delivery
     if (createdOrder.paymentMethod === 'cod') {
       await adjustProductStats(createdOrder.orderItems, true)
+      // Record SalesEvents for Bestsellers scoring engine
+      await recordSalesEvents(createdOrder.orderItems, createdOrder._id)
     }
 
     // پاک کردن سبد خرید کاربر بعد از ثبت سفارش
@@ -369,11 +441,15 @@ exports.updateOrderStatus = async (req, res) => {
       // Revert if it was a paid order or COD
       if (order.isPaid || order.paymentMethod === 'cod') {
         await adjustProductStats(order.orderItems, false)
+        // Revert SalesEvents for Bestsellers scoring engine
+        await revertSalesEvents(order._id)
       }
     } else if (previousStatus === 'Cancelled' && status !== 'Cancelled') {
       // Re-apply if uncanceled and it's paid or COD
       if (order.isPaid || order.paymentMethod === 'cod') {
         await adjustProductStats(order.orderItems, true)
+        // Re-record SalesEvents for Bestsellers scoring engine
+        await recordSalesEvents(order.orderItems, order._id)
       }
     }
 
@@ -669,6 +745,9 @@ exports.verifyPayment = async (req, res) => {
       // NEW LOGIC: Adjust stats after successful payment
       await adjustProductStats(order.orderItems, true)
 
+      // Record SalesEvents for Bestsellers scoring engine
+      await recordSalesEvents(order.orderItems, order._id)
+
       // Audit Log
       const { logAction } = require('../utils/auditLogger')
       await logAction({
@@ -871,6 +950,8 @@ exports.createOrderForUser = async (req, res) => {
     // NEW LOGIC: Adjust stats if COD
     if (createdOrder.paymentMethod === 'cod') {
       await adjustProductStats(createdOrder.orderItems, true)
+      // Record SalesEvents for Bestsellers scoring engine
+      await recordSalesEvents(createdOrder.orderItems, createdOrder._id)
     }
 
     // Audit Log

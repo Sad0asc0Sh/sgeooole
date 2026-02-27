@@ -404,16 +404,20 @@ export const productService = {
       }
 
       // Fallback: If bestsellers endpoint returns empty or fails,
-      // fall back to regular products sorted by salesCount
+      // fall back to regular products sorted by salesCount (only products with actual sales)
       console.warn("[ProductService] Bestsellers endpoint returned empty, falling back to salesCount sort");
-      const fallbackResponse = await api.get(`/products?sort=-salesCount&limit=${limit}&_t=${Date.now()}`);
+      const fallbackResponse = await api.get(`/products?sort=-salesCount&minSalesCount=1&limit=${limit}&_t=${Date.now()}`);
       const items = productService._extractList(fallbackResponse);
-      return items.map(mapBackendToFrontend);
+      if (items.length > 0) {
+        return items.map(mapBackendToFrontend);
+      }
+      // If no products with sales, return empty - don't show newest products as bestsellers
+      return [];
     } catch (error) {
       console.error("Error fetching best sellers:", error);
-      // Final fallback: try the simple products endpoint
+      // Final fallback: try the simple products endpoint with sales filter
       try {
-        const fallbackResponse = await api.get(`/products?sort=-salesCount&limit=${limit}&_t=${Date.now()}`);
+        const fallbackResponse = await api.get(`/products?sort=-salesCount&minSalesCount=1&limit=${limit}&_t=${Date.now()}`);
         const items = productService._extractList(fallbackResponse);
         return items.map(mapBackendToFrontend);
       } catch (fallbackError) {

@@ -670,6 +670,24 @@ const connectDB = async () => {
       const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
       startCartCleanupJob()
 
+      // Bestsellers Score Recalculation (every 30 minutes)
+      const { recalculateAllScores } = require('./services/bestsellersScoreEngine')
+      const BESTSELLERS_RECALC_INTERVAL = 30 * 60 * 1000 // 30 minutes
+
+      // Initial calculation after 60s delay (let server stabilize)
+      setTimeout(() => {
+        recalculateAllScores()
+          .then((count) => console.log(`[BestSellers] ✅ Initial score calculation: ${count} products`))
+          .catch((err) => console.error('[BestSellers] ❌ Initial calculation failed:', err.message))
+      }, 60000)
+
+      // Periodic recalculation
+      setInterval(() => {
+        recalculateAllScores()
+          .then((count) => console.log(`[BestSellers] ✅ Periodic score update: ${count} products`))
+          .catch((err) => console.error('[BestSellers] ❌ Periodic calculation failed:', err.message))
+      }, BESTSELLERS_RECALC_INTERVAL)
+
       return // Success - exit function
 
     } catch (err) {

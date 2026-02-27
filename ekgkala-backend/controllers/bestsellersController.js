@@ -109,20 +109,89 @@ exports.getBestsellers = async (req, res) => {
       console.log(`[BestSellers] ✅ ${result.length} محصول از ProductScore برگردانده شد`)
     } else {
       // ===== Fallback: ProductScore خالی است =====
-      // از salesCount در مدل Product استفاده میکنیم
-      console.log('[BestSellers] ⚠️ ProductScore خالی است، استفاده از salesCount fallback')
+      // ابتدا از SalesEvent استفاده می‌کنیم (داده‌های واقعی فروش)
+      console.log('[BestSellers] ⚠️ ProductScore خالی است، استفاده از fallback')
 
-      const productQuery = { isActive: true }
-      if (in_stock === 'true' || in_stock === true) {
-        productQuery.stock = { $gt: 0 }
+      const parsedLimit = parseInt(limit) || 8
+
+      // مرحله 1: سعی کن از SalesEvent واقعی استفاده کنی
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      const topSellingProducts = await SalesEvent.aggregate([
+        { $match: { sold_at: { $gte: thirtyDaysAgo } } },
+        {
+          $group: {
+            _id: '$product_id',
+            total_quantity: { $sum: '$quantity' },
+            total_revenue: { $sum: '$revenue' },
+            last_sale: { $max: '$sold_at' },
+          },
+        },
+        { $sort: { total_quantity: -1 } },
+        { $limit: parsedLimit * 2 }, // Get extra to filter
+      ])
+
+      let fallbackProducts = []
+
+      if (topSellingProducts.length > 0) {
+        // SalesEvent data exists - use it
+        const productIds = topSellingProducts.map((s) => s._id)
+        const stockFilter = (in_stock === 'true' || in_stock === true) ? { stock: { $gt: 0 } } : {}
+
+        const products = await Product.find({
+          _id: { $in: productIds },
+          isActive: true,
+          ...stockFilter,
+        })
+          .select('name slug images price discount rating numReviews stock category')
+          .populate('category', 'name slug')
+          .lean()
+
+        // Maintain the sales order
+        const productMap = {}
+        products.forEach((p) => { productMap[p._id.toString()] = p })
+
+        fallbackProducts = topSellingProducts
+          .filter((s) => productMap[s._id.toString()])
+          .slice(0, parsedLimit)
+          .map((s) => productMap[s._id.toString()])
+
+        console.log(`[BestSellers] ✅ ${fallbackProducts.length} محصول از SalesEvent fallback`)
       }
 
-      const fallbackProducts = await Product.find(productQuery)
-        .sort({ salesCount: -1, createdAt: -1 })
-        .limit(parseInt(limit) || 8)
-        .select('name slug images price discount rating numReviews stock category')
-        .populate('category', 'name slug')
-        .lean()
+      // مرحله 2: اگر SalesEvent هم خالی بود، از salesCount استفاده کن
+      if (fallbackProducts.length === 0) {
+        const productQuery = { isActive: true, salesCount: { $gt: 0 } }
+        if (in_stock === 'true' || in_stock === true) {
+          productQuery.stock = { $gt: 0 }
+        }
+
+        fallbackProducts = await Product.find(productQuery)
+          .sort({ salesCount: -1 })
+          .limit(parsedLimit)
+          .select('name slug images price discount rating numReviews stock category salesCount')
+          .populate('category', 'name slug')
+          .lean()
+
+        console.log(`[BestSellers] ${fallbackProducts.length > 0 ? '✅' : '⚠️'} ${fallbackProducts.length} محصول از salesCount fallback`)
+      }
+
+      // مرحله 3: آخرین fallback - محصولات با بیشترین بازدید + امتیاز
+      // این مرحله فقط وقتی اجرا می‌شود که هیچ داده فروشی وجود ندارد
+      if (fallbackProducts.length === 0) {
+        const productQuery = { isActive: true }
+        if (in_stock === 'true' || in_stock === true) {
+          productQuery.stock = { $gt: 0 }
+        }
+
+        fallbackProducts = await Product.find(productQuery)
+          .sort({ views: -1, rating: -1 })
+          .limit(parsedLimit)
+          .select('name slug images price discount rating numReviews stock category views')
+          .populate('category', 'name slug')
+          .lean()
+
+        console.log(`[BestSellers] ⚠️ هیچ داده فروشی وجود ندارد - ${fallbackProducts.length} محصول از views/rating fallback`)
+      }
 
       result = fallbackProducts.map((product) => {
         let imageData = null

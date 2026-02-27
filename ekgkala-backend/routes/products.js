@@ -369,6 +369,14 @@ const buildProductFilter = (query) => {
     applyAdvancedFilter(field, op, query[key])
   })
 
+  // Minimum salesCount filter (used by bestsellers fallback to exclude products with 0 sales)
+  if (query.minSalesCount !== undefined) {
+    const minSales = parseInt(query.minSalesCount, 10)
+    if (!isNaN(minSales) && minSales > 0) {
+      filter.salesCount = { ...(filter.salesCount || {}), $gte: minSales }
+    }
+  }
+
   return filter
 }
 
