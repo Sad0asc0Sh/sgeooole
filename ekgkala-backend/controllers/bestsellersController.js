@@ -54,9 +54,9 @@ exports.getBestsellers = async (req, res) => {
       .limit(parseInt(limit) || 8)
       .populate({
         path: 'product_id',
-        select: 'name slug productCode sku image images price compareAtPrice discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme properties stock countInStock average_rating review_count variants category categoryPath brand',
+        select: 'name slug image price discount average_rating review_count stock variants',
         populate: {
-          path: 'category',
+          path: 'category_id',
           select: 'name slug',
         },
       })
@@ -64,17 +64,25 @@ exports.getBestsellers = async (req, res) => {
 
     // تحویل محصولات در فرمت مورد نیاز Frontend
     const result = bestsellers.map((score) => {
-      const product = score.product_id || {}
+      const product = score.product_id
       return {
-        ...product, // Include all fields mapped by product schema
         _id: product._id,
+        name: product.name,
+        slug: product.slug,
+        image: product.image,
+        price: product.price,
+        discount: product.discount || 0,
+        average_rating: product.average_rating || 0,
+        review_count: product.review_count || 0,
+        stock: product.stock || 0,
         bestsellers_score: {
           decayed_score: score.decayed_score,
           final_score: score.final_score,
           trend_score: score.trend_score,
           is_new: score.is_new_product,
           trend_up: score.trend_score > 0.5,
-        }
+        },
+        category: product.category_id,
       }
     })
 
