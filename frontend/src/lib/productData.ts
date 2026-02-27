@@ -18,7 +18,9 @@ const fetchWithRetry = async (
   const timeoutMs = isBuildPhase ? 3000 : 15000;
 
   for (let attempt = 0; attempt < effectiveRetries; attempt++) {
-    const controller = options.signal ? null : new AbortController();
+    // Guard access to options (may be undefined) and prefer an existing signal
+    const providedSignal = options?.signal as AbortSignal | undefined;
+    const controller = providedSignal ? null : new AbortController();
     const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
     try {
@@ -37,9 +39,30 @@ const fetchWithRetry = async (
       // 429 (Rate Limited) or 5xx (Server Error) - retry with backoff
       if (response.status === 429 || response.status >= 500) {
         const retryAfter = response.headers.get('Retry-After');
-        const delay = retryAfter
-          ? parseInt(retryAfter, 10) * 1000
+
+        // Parse Retry-After header robustly: it may be either seconds or an HTTP-date
+        const parseRetryAfter = (value: string | null): number | null => {
+          if (!value) return null;
+          // Try seconds first
+          const seconds = parseInt(value, 10);
+          if (!Number.isNaN(seconds)) return seconds * 1000;
+          // Try HTTP-date
+          const dateMs = Date.parse(value);
+          if (!Number.isNaN(dateMs)) {
+            const diff = dateMs - Date.now();
+            return diff > 0 ? diff : 0;
+          }
+          return null;
+        };
+
+        const retryAfterMs = parseRetryAfter(retryAfter);
+        let delay = typeof retryAfterMs === 'number' && Number.isFinite(retryAfterMs)
+          ? retryAfterMs
           : baseDelay * Math.pow(2, attempt);
+
+        if (!Number.isFinite(delay) || delay < 0) {
+          delay = baseDelay * Math.pow(2, attempt);
+        }
 
         // If this is the last attempt, return the error response
         if (attempt === effectiveRetries - 1) {
