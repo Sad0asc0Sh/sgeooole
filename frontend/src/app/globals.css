@@ -1,3 +1,18 @@
+/* ---------- 1️⃣ تعریف فونت IRANSans به‌صورت لوکال ---------- */
+@font-face {
+  font-family: 'IRANSans';
+  src: url('/fonts/iransans.woff2') format('woff2');
+  font-weight: normal;      /* اگر وزن‌های دیگر دارید می‌توانید خطوط جداگانه اضافه کنید */
+  font-style: normal;
+  font-display: swap;       /* بارگذاری به‑صورت lazy & swap */
+}
+
+/* متغیر CSS که در ادامه استفاده می‌شود */
+:root {
+  --font-iransans: 'IRANSans', system-ui, sans-serif;
+}
+
+/* ---------- 2️⃣ وارد کردن Tailwind ---------- */
 @import "tailwindcss";
 
 @theme {
@@ -35,6 +50,7 @@
   --color-kala-900: #78350f;
   --color-kala-950: #451a03;
 
+  /* استفاده از متغیر فونت تعریف‌شده */
   --font-sans: var(--font-iransans);
 }
 
@@ -44,7 +60,6 @@
   looks the same as it did with Tailwind CSS v3.
 */
 @layer base {
-
   *,
   ::after,
   ::before,
@@ -54,15 +69,14 @@
   }
 }
 
+/* --------- سایر متغیرها (قابلیت تغییر نشد) --------- */
 :root {
   /* Base Background (EKG Neutral) */
   --background: 0 0% 100%;
   /* White */
   --foreground: 215 19% 35%;
-  /* Deep Gray (EKG Text) */
 
   /* Primary: Kala (Golden-Orange) */
-  /* Hex equivalent approx: #EA9F12 */
   --primary: 39 85% 49%;
   --primary-foreground: 0 0% 100%;
 
@@ -76,24 +90,17 @@
   --border: 214.3 31.8% 91.4%;
 }
 
+/* ---------- باقی‌ماندهٔ استایل‌ها (بدون تغییر) ---------- */
 @utility mobile-container {
   @apply w-full px-4 mx-auto max-w-md overflow-x-hidden;
 }
 
 /* --- HIDE SCROLLBARS GLOBALLY --- */
 @layer utilities {
-
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  *::-webkit-scrollbar {
-    display: none;
-  }
-
-  /* Hide scrollbar for IE, Edge and Firefox */
+  *::-webkit-scrollbar { display: none; }
   * {
     -ms-overflow-style: none;
-    /* IE and Edge */
     scrollbar-width: none;
-    /* Firefox */
   }
 }
 
@@ -103,7 +110,6 @@
   display: flex !important;
   flex-direction: row !important;
 }
-
 .free-mode-slider .swiper-slide {
   flex-shrink: 0 !important;
   width: auto !important;
@@ -111,93 +117,50 @@
 }
 
 /* --- CATEGORY RAIL SLIDER --- */
-.category-rail-slider .swiper-wrapper {
-  display: flex !important;
-  flex-direction: row !important;
-}
-
+.category-rail-slider .swiper-wrapper { display: flex !important; flex-direction: row !important; }
 .category-rail-slider .swiper-slide {
   flex-shrink: 0 !important;
   width: auto !important;
   height: auto !important;
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
+.category-rail-slider .swiper-slide-active { z-index: 2; }
 
-.category-rail-slider .swiper-slide-active {
-  z-index: 2;
-}
-
-/* Flash Offer rail hardening: force horizontal flex layout */
+/* Flash Offer rail hardening */
 .flash-offer-swiper .swiper-wrapper {
   display: flex !important;
   flex-direction: row !important;
   align-items: stretch !important;
 }
-
 .flash-offer-swiper .swiper-slide {
   flex-shrink: 0 !important;
   width: auto !important;
   height: auto !important;
   scroll-snap-align: start;
 }
-
-/* Fallback: if Swiper fails to move slides into wrapper, keep row layout */
-.flash-offer-swiper {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-}
-
-.flash-offer-swiper>.swiper-slide {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-}
+.flash-offer-swiper { display: flex; flex-direction: row; align-items: stretch; }
+.flash-offer-swiper>.swiper-slide { flex: 0 0 auto; scroll-snap-align: start; }
 
 /* --- SKELETON SHIMMER ANIMATION --- */
 @keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
-
-.animate-shimmer {
-  animation: shimmer 1.5s infinite linear;
-}
+.animate-shimmer { animation: shimmer 1.5s infinite linear; }
 
 /* --- OPTIMIZED TRANSITIONS --- */
 @layer utilities {
-  .transition-fast {
-    transition-duration: 150ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .transition-smooth {
-    transition-duration: 200ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
+  .transition-fast   { transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4,0,0.2,1); }
+  .transition-smooth { transition-duration: 200ms; transition-timing-function: cubic-bezier(0.4,0,0.2,1); }
 }
 
 /* --- PERFORMANCE OPTIMIZATIONS --- */
 @layer base {
-
-  /* Force GPU acceleration for smoother animations */
-  /* NOTE: only apply will-change during animation, not statically, for Edge/Safari compat */
   .swiper-slide,
   .swiper-wrapper {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
-    /* will-change: transform; -- حذف شد: باعث crash layout در Edge Android می‌شد */
   }
-
-  /* Optimize image rendering */
-  /* REMOVED: content-visibility:auto breaks Edge Android layout (images overlap / zero height) */
-  /* img { content-visibility: auto; } */
-
-  /* Image baseline fix for all browsers */
   img {
     display: block;
     max-width: 100%;
@@ -205,28 +168,14 @@
 }
 
 /* --- MEGA MENU SCROLLBAR (override global hide) --- */
-.mega-menu-scrollbar::-webkit-scrollbar {
-  display: block !important;
-  width: 5px;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 10px;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
-}
-
+.mega-menu-scrollbar::-webkit-scrollbar { display: block !important; width: 5px; }
+.mega-menu-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.mega-menu-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 10px; }
+.mega-menu-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
 .mega-menu-scrollbar {
   -ms-overflow-style: auto !important;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
+  scrollbar-color: rgba(0,0,0,0.12) transparent !important;
 }
 
 /* --- HERO SWIPER STYLES (moved from JSX for Edge Android compat) --- */
@@ -234,31 +183,22 @@
   border-radius: 1rem;
   overflow: hidden;
 }
-
 .hero-swiper .swiper-pagination {
   bottom: 12px !important;
-  display: -webkit-box !important;
-  display: -webkit-flex !important;
   display: flex !important;
-  -webkit-box-pack: center;
-  -webkit-justify-content: center;
   justify-content: center;
-  -webkit-box-align: center;
-  -webkit-align-items: center;
   align-items: center;
   gap: 6px;
 }
-
 .hero-swiper .swiper-pagination-bullet {
   -webkit-transition: all 0.3s ease;
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255,255,255,0.4);
 }
-
 .hero-swiper .swiper-pagination-bullet-active {
   width: 28px !important;
   border-radius: 9999px !important;
   background: white !important;
   border-color: transparent;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
 }

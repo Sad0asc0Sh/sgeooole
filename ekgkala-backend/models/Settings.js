@@ -88,7 +88,7 @@ const settingsSchema = new mongoose.Schema(
         merchantId: {
           type: String,
           default: '',
-          select: false, // Hidden by default for security
+          select: false,
         },
         isSandbox: {
           type: Boolean,
@@ -131,54 +131,48 @@ const settingsSchema = new mongoose.Schema(
     // Notification settings
     notificationSettings: {
       // SMS Settings (Melipayamak)
-      smsUsername: { type: String, select: false }, // نام کاربری پنل ملی‌پیامک
-      smsPassword: { type: String, select: false }, // رمز عبور پنل ملی‌پیامک
-      smsApiKey: { type: String, select: false }, // توکن کنسول (اختیاری - برای API های جدیدتر)
-      smsSenderNumber: { type: String, default: '' }, // شماره فرستنده
+      smsUsername: { type: String, select: false },
+      smsPassword: { type: String, select: false },
+      smsApiKey: { type: String, select: false },
+      smsSenderNumber: { type: String, default: '' },
+      smsBodyId: { type: String, default: '' }, // شناسه الگوی ملی پیامک برای OTP
       emailFrom: { type: String, default: 'noreply@example.com' },
     },
 
     // Cart settings
     cartSettings: {
-      // مدت زمان نگهداری سبد خرید (به ساعت)
       cartTTLHours: {
         type: Number,
-        default: 1, // پیش‌فرض: 1 ساعت
-        min: 0.5, // حداقل: 30 دقیقه
-        max: 168, // حداکثر: 7 روز (168 ساعت)
+        default: 1,
+        min: 0.5,
+        max: 168,
       },
-      // فعال/غیرفعال کردن انقضای خودکار
       autoExpireEnabled: {
         type: Boolean,
         default: true,
       },
-      // حذف خودکار سبدهای منقضی شده
       autoDeleteExpired: {
         type: Boolean,
-        default: false, // پیش‌فرض: فقط علامت‌گذاری می‌شود، حذف نمی‌شود
+        default: false,
       },
-      // سبدهای خرید ماندگار (بدون انقضا)
       permanentCart: {
         type: Boolean,
-        default: false, // پیش‌فرض: سبدها دارای مهلت زمانی هستند
+        default: false,
       },
-      // فعال‌سازی هشدار قبل از انقضا
       expiryWarningEnabled: {
         type: Boolean,
-        default: false, // پیش‌فرض: غیرفعال
+        default: false,
       },
-      // چند دقیقه قبل از انقضا هشدار داده شود
       expiryWarningMinutes: {
         type: Number,
-        default: 30, // پیش‌فرض: 30 دقیقه
-        min: 5, // حداقل: 5 دقیقه
-        max: 120, // حداکثر: 2 ساعت
+        default: 30,
+        min: 5,
+        max: 120,
       },
-      // نوع اعلان برای هشدار انقضا (email, sms, both)
       notificationType: {
         type: String,
         enum: ['email', 'sms', 'both'],
-        default: 'both', // پیش‌فرض: هم ایمیل و هم پیامک
+        default: 'both',
       },
     },
 
@@ -189,30 +183,26 @@ const settingsSchema = new mongoose.Schema(
         enum: ['mock', 'finnotech', 'jibit'],
         default: 'mock',
       },
-      apiKey: { type: String, select: false }, // کلید دسترسی سرویس
-      clientId: { type: String, select: false }, // شناسه کلاینت (مخصوص فینوتک)
+      apiKey: { type: String, select: false },
+      clientId: { type: String, select: false },
       isActive: { type: Boolean, default: true },
     },
 
     // AI Chat Assistant Settings
     aiConfig: {
-      // فعال/غیرفعال کردن دستیار هوشمند
       enabled: {
         type: Boolean,
-        default: false, // پیش‌فرض: غیرفعال (نیاز به تنظیم API Key)
+        default: false,
       },
-      // API Key (رمزنگاری شده در دیتابیس)
       apiKey: {
         type: String,
-        select: false, // برای امنیت، در query های عادی برگردانده نمی‌شود
+        select: false,
         default: '',
       },
-      // Base URL سرویس AI
       baseUrl: {
         type: String,
         default: 'https://openrouter.ai/api/v1',
       },
-      // مدل زبانی مورد استفاده (OpenRouter)
       model: {
         type: String,
         default: 'meta-llama/llama-3.3-70b-instruct',
@@ -225,7 +215,6 @@ const settingsSchema = new mongoose.Schema(
           'google/gemini-pro',
         ],
       },
-      // مدل زبانی Groq (برای دستیار چت)
       groqModel: {
         type: String,
         default: 'llama-3.3-70b-versatile',
@@ -235,40 +224,34 @@ const settingsSchema = new mongoose.Schema(
           'openai/gpt-oss-120b',
         ],
       },
-      // حداکثر تعداد پیام روزانه (محدودیت هزینه)
       maxDailyMessages: {
         type: Number,
         default: 1000,
         min: 10,
         max: 100000,
       },
-      // محدودیت پیام روزانه برای هر کاربر
       userDailyLimit: {
         type: Number,
         default: 20,
         min: 1,
         max: 1000,
       },
-      // حداکثر تعداد توکن در هر پاسخ
       maxTokens: {
         type: Number,
         default: 500,
         min: 100,
         max: 4000,
       },
-      // Temperature (0 = دقیق، 1 = خلاق)
       temperature: {
         type: Number,
         default: 0.7,
         min: 0,
         max: 1,
       },
-      // System Prompt سفارشی (اختیاری)
       customSystemPrompt: {
         type: String,
         default: '',
       },
-      // آمار استفاده
       usage: {
         dailyMessageCount: { type: Number, default: 0 },
         lastResetDate: { type: Date, default: Date.now },
@@ -278,24 +261,20 @@ const settingsSchema = new mongoose.Schema(
 
     // Search & Trending Settings
     searchSettings: {
-      // فعال/غیرفعال کردن ردیابی جستجوها
       trackingEnabled: {
         type: Boolean,
         default: true,
       },
-      // فعال/غیرفعال کردن نمایش محبوب‌ترین‌ها
       trendingEnabled: {
         type: Boolean,
         default: false,
       },
-      // تعداد جستجوهای محبوب که نمایش داده شوند
       trendingLimit: {
         type: Number,
         default: 8,
         min: 3,
         max: 20,
       },
-      // بازه زمانی محاسبه محبوبیت (روز)
       trendingPeriodDays: {
         type: Number,
         default: 30,
@@ -304,47 +283,40 @@ const settingsSchema = new mongoose.Schema(
       },
     },
 
-    // Popular Categories Settings (تنظیمات دسته‌بندی‌های محبوب)
+    // Popular Categories Settings
     popularCategoriesSettings: {
-      // فعال/غیرفعال کردن ردیابی بازدید دسته‌بندی‌ها
       trackingEnabled: {
         type: Boolean,
         default: true,
       },
-      // فعال/غیرفعال کردن نمایش دسته‌بندی‌های محبوب (بر اساس آمار واقعی)
       displayEnabled: {
         type: Boolean,
-        default: false, // پیش‌فرض: غیرفعال (تا زمانی که داده کافی جمع‌آوری شود)
+        default: false,
       },
-      // تعداد دسته‌بندی‌های محبوب که نمایش داده شوند
       displayLimit: {
         type: Number,
         default: 8,
         min: 3,
         max: 20,
       },
-      // بازه زمانی محاسبه محبوبیت (روز)
       periodDays: {
         type: Number,
         default: 30,
         min: 1,
         max: 90,
       },
-      // حداقل تعداد بازدید برای محتسب شدن به عنوان محبوب
       minViews: {
         type: Number,
         default: 5,
         min: 1,
         max: 100,
       },
-      // حداقل تعداد کل بازدید برای فعال‌سازی نمایش آمار واقعی
       minTotalViewsForActivation: {
         type: Number,
         default: 100,
         min: 10,
         max: 10000,
       },
-      // استفاده از fallback (دسته‌بندی‌های دستی isPopular) وقتی داده کافی نیست
       useFallback: {
         type: Boolean,
         default: true,
@@ -355,4 +327,3 @@ const settingsSchema = new mongoose.Schema(
 )
 
 module.exports = mongoose.model('Settings', settingsSchema)
-

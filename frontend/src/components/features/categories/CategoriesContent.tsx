@@ -32,7 +32,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
 
         // If backend returns relative path, prepend API base (same logic as products)
         if (url.startsWith("/")) {
-            const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+            const API_URL = typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api");
             let base = API_URL.replace(/\/api\/?$/, "");
             base = base.replace("localhost", "127.0.0.1");
             return `${base}${url}`;

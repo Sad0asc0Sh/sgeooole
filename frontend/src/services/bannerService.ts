@@ -3,6 +3,8 @@ import api from "@/lib/api";
 export interface BannerImage {
   url: string;
   public_id?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface Banner {

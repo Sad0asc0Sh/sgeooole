@@ -1,265 +1,272 @@
 const express = require('express')
 const router = express.Router()
-const multer = require('multer')
-const { upload, cloudinary, MAX_UPLOAD_FILE_SIZE_MB } = require('../middleware/upload')
+const path = require('path')
+const fs = require('fs')
+const { upload, normalizeFileUrl, MAX_UPLOAD_FILE_SIZE_MB, UPLOAD_BASE_PATH } = require('../middleware/upload')
 const { protect, checkPermission, checkAnyPermission, PERMISSIONS } = require('../middleware/auth')
 
-const buildTransformedCloudinaryUrl = (url, transform) => {
-    if (!url || typeof url !== 'string') return url
-    if (!url.includes('/upload/')) return url
-    return url.replace('/upload/', `/upload/${transform}/`)
+// ============================================
+// Helper: خواندن ابعاد تصویر بدون پکیج خارجی
+// ============================================
+const getImageDimensions = (filePath) => {
+  try {
+    const fd = fs.openSync(filePath, 'r')
+    const buf = Buffer.alloc(24)
+    fs.readSync(fd, buf, 0, 24, 0)
+    fs.closeSync(fd)
+
+    // PNG
+    if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) {
+      return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+    }
+
+    // JPEG
+    const fullBuf = fs.readFileSync(filePath)
+    let offset = 2
+    while (offset < fullBuf.length) {
+      if (fullBuf[offset] !== 0xff) break
+      const marker = fullBuf[offset + 1]
+      const segLen = fullBuf.readUInt16BE(offset + 2)
+      if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) ||
+          (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+        return { height: fullBuf.readUInt16BE(offset + 5), width: fullBuf.readUInt16BE(offset + 7) }
+      }
+      offset += 2 + segLen
+    }
+
+    return { width: null, height: null }
+  } catch (e) {
+    return { width: null, height: null }
+  }
 }
 
+// ============================================
+// Helper: تبدیل فایل به { url, public_id, width, height }
+// ============================================
 const extractImageInfo = (file) => {
-    const originalUrl = file.path || file.secure_url || file.url
-    return {
-        url: originalUrl,
-        public_id: file.filename || file.public_id,
-    }
+  if (!file) return null
+  const dims = file.path ? getImageDimensions(file.path) : { width: null, height: null }
+  return {
+    url: file.url || `/uploads/${file.filename}`,
+    public_id: file.filename,
+    width: dims.width,
+    height: dims.height,
+  }
 }
 
-const extractBannerImageInfo = (file) => {
-    const base = extractImageInfo(file)
-    const originalUrl = base.url
-    return {
-        ...base,
-        original_url: originalUrl,
-        // Optimized delivery URLs from Cloudinary CDN
-        url: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
-        variants: {
-            desktop: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
-            mobile: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_900,c_limit'),
-        },
-    }
-}
-
+// ============================================
+// Middleware: آپلود تک تصویر با مدیریت خطا
+// ============================================
 const handleSingleImageUpload = (req, res, next) => {
-    upload.single('image')(req, res, (err) => {
-        if (!err) return next()
-
-        if (err instanceof multer.MulterError) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(413).json({
-                    success: false,
-                    message: `حجم فایل بیشتر از حد مجاز است (حداکثر ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت).`,
-                })
-            }
-
-            return res.status(400).json({
-                success: false,
-                message: `خطا در آپلود فایل: ${err.message}`,
-            })
-        }
-
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
-            success: false,
-            message: err.message || 'خطا در آپلود فایل',
+          success: false,
+          message: `حجم فایل نباید بیشتر از ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت باشد`,
         })
-    })
+      }
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'خطا در آپلود فایل',
+      })
+    }
+    normalizeFileUrl(req, res, next)
+  })
 }
 
+// ============================================
+// Middleware: آپلود چند تصویر با مدیریت خطا
+// ============================================
 const handleMultipleImagesUpload = (req, res, next) => {
-    upload.array('images', 10)(req, res, (err) => {
-        if (!err) return next()
-
-        if (err instanceof multer.MulterError) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-                return res.status(413).json({
-                    success: false,
-                    message: `حجم یکی از فایل‌ها بیشتر از حد مجاز است (حداکثر ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت).`,
-                })
-            }
-
-            return res.status(400).json({
-                success: false,
-                message: `خطا در آپلود فایل‌ها: ${err.message}`,
-            })
-        }
-
+  upload.array('images', 10)(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({
-            success: false,
-            message: err.message || 'خطا در آپلود فایل‌ها',
+          success: false,
+          message: `حجم فایل نباید بیشتر از ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت باشد`,
         })
-    })
+      }
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'خطا در آپلود فایل‌ها',
+      })
+    }
+    normalizeFileUrl(req, res, next)
+  })
 }
 
 // ============================================
-// POST /api/uploads/image
-// Immediate image upload to Cloudinary
-// Returns the uploaded image URL and public_id
+// POST /api/uploads/image — تک تصویر محصول
 // ============================================
 router.post(
-    '/image',
-    protect,
-    checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
-    handleSingleImageUpload,
-    async (req, res) => {
-        try {
-            if (!req.file) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'هیچ فایلی آپلود نشده است',
-                })
-            }
+  '/image',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
+  handleSingleImageUpload,
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'هیچ فایلی آپلود نشده است',
+        })
+      }
 
-            // Extract image info from Cloudinary response
-            console.log('[UPLOAD] File received:', {
-                path: req.file.path,
-                secure_url: req.file.secure_url,
-                url: req.file.url,
-                filename: req.file.filename,
-                public_id: req.file.public_id,
-                originalname: req.file.originalname,
-            })
+      console.log('[UPLOAD] File received:', {
+        path: req.file.path,
+        url: req.file.url,
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+      })
 
-            const imageInfo = extractImageInfo(req.file)
+      const imageInfo = extractImageInfo(req.file)
+      console.log('[UPLOAD] Returning:', imageInfo)
 
-            console.log('[UPLOAD] Returning:', imageInfo)
-
-            res.json({
-                success: true,
-                message: 'تصویر با موفقیت آپلود شد',
-                data: imageInfo,
-            })
-        } catch (error) {
-            console.error('Error uploading image:', error)
-            res.status(500).json({
-                success: false,
-                message: 'خطا در آپلود تصویر',
-                error: error.message,
-            })
-        }
+      res.json({
+        success: true,
+        message: 'تصویر با موفقیت آپلود شد',
+        data: imageInfo,
+      })
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در آپلود تصویر',
+        error: error.message,
+      })
     }
+  }
 )
 
 // ============================================
-// POST /api/uploads/banner
-// Immediate banner upload to Cloudinary with optimized delivery URLs
+// POST /api/uploads/images — چند تصویر محصول
 // ============================================
 router.post(
-    '/banner',
-    protect,
-    checkAnyPermission(
-        PERMISSIONS.BANNER_CREATE,
-        PERMISSIONS.BANNER_UPDATE,
-        PERMISSIONS.PRODUCT_MANAGE_IMAGES
-    ),
-    handleSingleImageUpload,
-    async (req, res) => {
-        try {
-            if (!req.file) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'هیچ فایل بنری آپلود نشده است',
-                })
-            }
+  '/images',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
+  handleMultipleImagesUpload,
+  async (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'هیچ فایلی آپلود نشده است',
+        })
+      }
 
-            const imageInfo = extractBannerImageInfo(req.file)
+      const uploadedImages = req.files.map((file) => extractImageInfo(file))
 
-            res.json({
-                success: true,
-                message: 'تصویر بنر با موفقیت آپلود شد',
-                data: imageInfo,
-            })
-        } catch (error) {
-            console.error('Error uploading banner image:', error)
-            res.status(500).json({
-                success: false,
-                message: 'خطا در آپلود تصویر بنر',
-                error: error.message,
-            })
-        }
+      res.json({
+        success: true,
+        message: `${uploadedImages.length} تصویر با موفقیت آپلود شد`,
+        data: uploadedImages,
+      })
+    } catch (error) {
+      console.error('Error uploading images:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در آپلود تصاویر',
+        error: error.message,
+      })
     }
+  }
 )
 
 // ============================================
-// POST /api/uploads/images (multiple)
-// Immediate multiple images upload to Cloudinary
+// POST /api/uploads/banner — آپلود بنر
 // ============================================
 router.post(
-    '/images',
-    protect,
-    checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
-    handleMultipleImagesUpload,
-    async (req, res) => {
-        try {
-            if (!req.files || req.files.length === 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'هیچ فایلی آپلود نشده است',
-                })
-            }
-
-            // Extract image info from each uploaded file
-            const uploadedImages = req.files.map((file) => extractImageInfo(file))
-
-            res.json({
-                success: true,
-                message: `${uploadedImages.length} تصویر با موفقیت آپلود شد`,
-                data: uploadedImages,
-            })
-        } catch (error) {
-            console.error('Error uploading images:', error)
-            res.status(500).json({
-                success: false,
-                message: 'خطا در آپلود تصاویر',
-                error: error.message,
-            })
+  '/banner',
+  protect,
+  checkAnyPermission(PERMISSIONS.BANNER_CREATE, PERMISSIONS.BANNER_UPDATE),
+  (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({
+            success: false,
+            message: `حجم فایل نباید بیشتر از ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت باشد`,
+          })
         }
+        return res.status(400).json({
+          success: false,
+          message: err.message || 'خطا در آپلود بنر',
+        })
+      }
+      normalizeFileUrl(req, res, next)
+    })
+  },
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: 'هیچ فایلی آپلود نشده است',
+        })
+      }
+
+      const imageInfo = extractImageInfo(req.file)
+
+      res.json({
+        success: true,
+        message: 'بنر با موفقیت آپلود شد',
+        data: imageInfo,
+      })
+    } catch (error) {
+      console.error('Error uploading banner:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در آپلود بنر',
+        error: error.message,
+      })
     }
+  }
 )
 
 // ============================================
-// DELETE /api/uploads/image/:publicId(*)
-// Delete an uploaded image from Cloudinary
-// Note: publicId can contain slashes (e.g., ekgkala/products/uuid)
+// DELETE /api/uploads/image/:filename — حذف تصویر
 // ============================================
 router.delete(
-    '/image/*',
-    protect,
-    checkAnyPermission(
-        PERMISSIONS.PRODUCT_MANAGE_IMAGES,
-        PERMISSIONS.BANNER_CREATE,
-        PERMISSIONS.BANNER_UPDATE,
-        PERMISSIONS.BANNER_DELETE
-    ),
-    async (req, res) => {
-        try {
-            // Get publicId from the wildcard param (everything after /image/)
-            const publicId = req.params[0]
+  '/image/:filename',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_MANAGE_IMAGES),
+  async (req, res) => {
+    try {
+      const { filename } = req.params
 
-            if (!publicId) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'شناسه تصویر ارائه نشده است',
-                })
-            }
+      if (!filename) {
+        return res.status(400).json({
+          success: false,
+          message: 'نام فایل مشخص نشده است',
+        })
+      }
 
-            console.log('[DELETE IMAGE] Deleting from Cloudinary:', publicId)
-            const result = await cloudinary.uploader.destroy(publicId)
-            console.log('[DELETE IMAGE] Cloudinary result:', result)
+      const filePath = path.join(UPLOAD_BASE_PATH, filename)
 
-            if (result.result === 'ok' || result.result === 'not found') {
-                res.json({
-                    success: true,
-                    message: 'تصویر با موفقیت حذف شد',
-                })
-            } else {
-                res.status(400).json({
-                    success: false,
-                    message: 'خطا در حذف تصویر',
-                    result,
-                })
-            }
-        } catch (error) {
-            console.error('Error deleting image:', error)
-            res.status(500).json({
-                success: false,
-                message: 'خطا در حذف تصویر',
-                error: error.message,
-            })
-        }
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({
+          success: false,
+          message: 'فایل یافت نشد',
+        })
+      }
+
+      fs.unlinkSync(filePath)
+
+      res.json({
+        success: true,
+        message: 'تصویر با موفقیت حذف شد',
+      })
+    } catch (error) {
+      console.error('Error deleting image:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در حذف تصویر',
+        error: error.message,
+      })
     }
+  }
 )
 
 module.exports = router

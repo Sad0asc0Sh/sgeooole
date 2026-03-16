@@ -290,7 +290,7 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
   };
 };
 
-const apiBaseUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const apiBaseUrl = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
 
 const encodePathSegment = (value: string) => {
   // Avoid double-encoding: Next/router params may already be percent-encoded.

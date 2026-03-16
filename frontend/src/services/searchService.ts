@@ -3,7 +3,7 @@
  * Handles search-related API calls including trending searches, tracking, and suggestions
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = typeof window === "undefined" ? (process.env.INTERNAL_API_URL || 'http://localhost:5000/api') : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
 
 interface TrendingSearchesResponse {
     success: boolean;

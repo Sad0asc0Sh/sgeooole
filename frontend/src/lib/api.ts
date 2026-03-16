@@ -1,8 +1,12 @@
 import axios from "axios";
 import { getOrCreateSessionId } from "./sessionId";
 
-// Get API base URL from environment variable or default to localhost
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+// Server-side: use internal URL to avoid loopback through nginx/SSL
+// Client-side: use public URL
+const baseURL =
+  typeof window === "undefined"
+    ? process.env.INTERNAL_API_URL || "http://localhost:5000/api"
+    : process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
 
 // Fail fast during `next build` prerender to avoid build timeouts when the backend is unavailable.
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
@@ -44,23 +48,18 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle different error scenarios
     if (error.response) {
-      // Server responded with error status
       const { status, data } = error.response;
 
       switch (status) {
         case 401:
           console.error("Unauthorized - Please login");
-          // Optional: redirect to login page on client
           if (typeof window !== "undefined") {
-            // Avoid redirect loops on auth pages
             const isAuthPage = window.location.pathname.startsWith("/login");
             if (!isAuthPage) {
               window.location.href = "/login";
             }
           }
-          // Redirect to login page if needed
           break;
         case 404:
           console.error("Resource not found");
@@ -72,13 +71,10 @@ api.interceptors.response.use(
           console.error(`Error: ${data?.message || "Something went wrong"}`);
       }
     } else if (error.request) {
-      // Request was made but no response received (server not running)
-      // Use console.warn in development to reduce noise
       if (process.env.NODE_ENV === 'development') {
         console.warn("[API] Server unreachable - is backend running?");
       }
     } else {
-      // Something else happened
       console.error("Error:", error.message);
     }
 

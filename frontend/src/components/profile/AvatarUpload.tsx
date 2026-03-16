@@ -43,7 +43,7 @@ export default function AvatarUpload({
     if (typeof currentAvatar === 'string') {
       return currentAvatar.startsWith('http')
         ? currentAvatar
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/${currentAvatar}`;
+        : `${typeof window === "undefined" ? (process.env.INTERNAL_API_URL || 'http://localhost:5000') : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')}/${currentAvatar}`;
     }
     return currentAvatar.url;
   };

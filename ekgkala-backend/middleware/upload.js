@@ -1,54 +1,32 @@
 const multer = require('multer')
-const { v2: cloudinary } = require('cloudinary')
-const { Readable } = require('stream')
 const crypto = require('crypto')
 const path = require('path')
+const fs = require('fs')
 
+// ============================================
+// تنظیمات حجم فایل
+// ============================================
 const DEFAULT_MAX_UPLOAD_FILE_SIZE_MB = 10
 const parsedMaxUploadFileSizeMb = Number(process.env.UPLOAD_MAX_FILE_SIZE_MB)
-const MAX_UPLOAD_FILE_SIZE_MB = Number.isFinite(parsedMaxUploadFileSizeMb) && parsedMaxUploadFileSizeMb > 0
-  ? parsedMaxUploadFileSizeMb
-  : DEFAULT_MAX_UPLOAD_FILE_SIZE_MB
+const MAX_UPLOAD_FILE_SIZE_MB =
+  Number.isFinite(parsedMaxUploadFileSizeMb) && parsedMaxUploadFileSizeMb > 0
+    ? parsedMaxUploadFileSizeMb
+    : DEFAULT_MAX_UPLOAD_FILE_SIZE_MB
 const MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
 
 // ============================================
-// Cloudinary Configuration
+// مسیر ذخیره‌سازی
 // ============================================
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-  timeout: 180000, // 3 minutes timeout for uploads (Cloudinary servers can be slow)
-})
+const UPLOAD_BASE_PATH = process.env.UPLOAD_BASE_PATH || '/var/www/ekgkala/uploads'
 
-const hasCloudinaryConfig = Boolean(
-  process.env.CLOUDINARY_CLOUD_NAME &&
-  process.env.CLOUDINARY_API_KEY &&
-  process.env.CLOUDINARY_API_SECRET
-)
-
-if (!hasCloudinaryConfig) {
-  console.warn('[CLOUDINARY] Missing credentials. Upload endpoints will fail until CLOUDINARY_* env vars are set.')
+// ساخت پوشه اگر وجود نداشت
+if (!fs.existsSync(UPLOAD_BASE_PATH)) {
+  fs.mkdirSync(UPLOAD_BASE_PATH, { recursive: true })
+  console.log('[UPLOAD] Created upload directory:', UPLOAD_BASE_PATH)
 }
 
 // ============================================
-// SECURITY: Magic Numbers for File Validation
-// These are the first bytes of each file type
-// ============================================
-const MAGIC_NUMBERS = {
-  // JPEG: FF D8 FF
-  jpeg: [0xff, 0xd8, 0xff],
-  // PNG: 89 50 4E 47 0D 0A 1A 0A
-  png: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-  // GIF: 47 49 46 38 (GIF8)
-  gif: [0x47, 0x49, 0x46, 0x38],
-  // WebP: 52 49 46 46 ... 57 45 42 50 (RIFF...WEBP)
-  webp: [0x52, 0x49, 0x46, 0x46], // First 4 bytes, full check done separately
-}
-
-// ============================================
-// Security: Allowed File Types (Whitelist)
-// SVG explicitly EXCLUDED due to XSS risk
+// لیست MIME و extension های مجاز
 // ============================================
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -58,7 +36,6 @@ const ALLOWED_MIME_TYPES = [
   'image/gif',
 ]
 
-// SECURITY: SVG explicitly excluded - can contain malicious JavaScript
 const BLOCKED_MIME_TYPES = [
   'image/svg+xml',
   'image/svg',
@@ -70,11 +47,14 @@ const BLOCKED_MIME_TYPES = [
 ]
 
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif']
-const BLOCKED_EXTENSIONS = ['.svg', '.html', '.htm', '.xml', '.js', '.php', '.asp', '.aspx', '.exe', '.sh', '.bat']
+
+const BLOCKED_EXTENSIONS = [
+  '.svg', '.html', '.htm', '.xml', '.js',
+  '.php', '.asp', '.aspx', '.exe', '.sh', '.bat',
+]
 
 // ============================================
-// Security: Generate Safe Filename (UUID)
-// Prevents directory traversal and shell injection
+// تولید نام امن
 // ============================================
 const generateSafeFilename = (originalName) => {
   const ext = path.extname(originalName).toLowerCase()
@@ -83,233 +63,106 @@ const generateSafeFilename = (originalName) => {
 }
 
 // ============================================
-// Custom Cloudinary Storage Engine for Multer
-// Compatible with Cloudinary SDK v2.x
-// Replaces deprecated multer-storage-cloudinary
+// Disk Storage
 // ============================================
-class CloudinaryStorageEngine {
-  constructor(options = {}) {
-    this.cloudinary = options.cloudinary || cloudinary
-    this.params = options.params || {}
-  }
-
-  _handleFile(req, file, cb) {
-    if (!hasCloudinaryConfig) {
-      return cb(new Error('Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET.'))
-    }
-
-    // Determine upload parameters
-    const getParams = typeof this.params === 'function'
-      ? this.params(req, file)
-      : this.params
-
-    Promise.resolve(getParams)
-      .then((params) => {
-        // Create upload stream to Cloudinary
-        const uploadStream = this.cloudinary.uploader.upload_stream(
-          {
-            folder: params.folder || 'ekgkala/uploads',
-            resource_type: params.resource_type || 'image',
-            public_id: params.public_id || crypto.randomUUID(),
-            allowed_formats: params.allowed_formats || ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-          },
-          (error, result) => {
-            if (error) {
-              console.error('[CLOUDINARY] Upload error:', error.message)
-              return cb(error)
-            }
-
-            // Return Cloudinary result matching multer-storage-cloudinary format
-            cb(null, {
-              path: result.secure_url,
-              filename: result.public_id,
-              public_id: result.public_id,
-              size: result.bytes,
-              format: result.format,
-              width: result.width,
-              height: result.height,
-              secure_url: result.secure_url,
-              url: result.url,
-              resource_type: result.resource_type,
-            })
-          }
-        )
-
-        // Pipe file stream to Cloudinary
-        file.stream.pipe(uploadStream)
-      })
-      .catch((err) => {
-        cb(err)
-      })
-  }
-
-  _removeFile(req, file, cb) {
-    // Delete from Cloudinary if needed
-    if (file.public_id) {
-      this.cloudinary.uploader.destroy(file.public_id, { resource_type: 'image' }, cb)
-    } else {
-      cb(null)
-    }
-  }
-}
-
-// ============================================
-// Create Storage Instance
-// ============================================
-const storage = new CloudinaryStorageEngine({
-  cloudinary,
-  params: (req, file) => {
-    let folder = 'ekgkala/uploads'
-    const requestPath = req?.originalUrl || ''
-    const isBannerRoute =
-      req?.baseUrl === '/api/banners' ||
-      requestPath.includes('/api/banners') ||
-      requestPath.includes('/api/uploads/banner')
-    const isProductImageUploadRoute =
-      requestPath.includes('/api/uploads/image') &&
-      !requestPath.includes('/api/uploads/banner')
-
-    // Determine folder based on field type
-    if (isBannerRoute && file.fieldname === 'image') {
-      folder = 'ekgkala/banners'
-    } else if (isProductImageUploadRoute && file.fieldname === 'image') {
-      folder = 'ekgkala/products'
-    } else if (file.fieldname === 'icon' || file.fieldname === 'image') {
-      folder = 'ekgkala/categories'
-    } else if (file.fieldname === 'logo') {
-      folder = 'ekgkala/brands'
-    } else if (file.fieldname === 'avatar') {
-      folder = 'ekgkala/avatars'
-    } else if (file.fieldname === 'images') {
-      folder = 'ekgkala/products'
-    } else if (file.fieldname === 'banner') {
-      folder = 'ekgkala/banners'
-    }
-
-    // Generate safe public_id (prevents injection attacks)
-    const safePublicId = crypto.randomUUID()
-
-    return {
-      folder,
-      resource_type: 'image',
-      public_id: safePublicId,
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'gif'],
-      // NOTE: No eager transformations here for faster upload
-      // Cloudinary CDN applies transformations on-demand when images are accessed
-      // This significantly speeds up the upload process
-    }
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, UPLOAD_BASE_PATH)
+  },
+  filename: (req, file, cb) => {
+    const safeFilename = generateSafeFilename(file.originalname)
+    cb(null, safeFilename)
   },
 })
 
 // ============================================
-// File Filter with Strict Validation
+// File Filter
 // ============================================
 const secureFileFilter = (req, file, cb) => {
-  // 1. SECURITY: Block dangerous MIME types first
-  if (BLOCKED_MIME_TYPES.includes(file.mimetype)) {
-    console.warn(`[SECURITY] Blocked dangerous MIME type: ${file.mimetype} from ${file.originalname}`)
-    return cb(
-      new Error('این نوع فایل مجاز نیست.'),
-      false
-    )
-  }
-
-  // 2. Check allowed MIME type
-  if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    return cb(
-      new Error('فرمت فایل نامعتبر است. فقط تصاویر (jpg, jpeg, png, webp, gif) مجاز هستند.'),
-      false
-    )
-  }
-
-  // 3. Check file extension
+  const mime = file.mimetype?.toLowerCase()
   const ext = path.extname(file.originalname).toLowerCase()
+  const originalName = file.originalname?.toLowerCase() || ''
 
-  // SECURITY: Block dangerous extensions
-  if (BLOCKED_EXTENSIONS.includes(ext)) {
-    console.warn(`[SECURITY] Blocked dangerous extension: ${ext} from ${file.originalname}`)
-    return cb(
-      new Error('این پسوند فایل مجاز نیست.'),
-      false
-    )
+  // block dangerous mime
+  if (BLOCKED_MIME_TYPES.includes(mime)) {
+    return cb(new Error(`نوع فایل ${mime} مجاز نیست`))
   }
 
+  // allow only image mime
+  if (!ALLOWED_MIME_TYPES.includes(mime)) {
+    return cb(new Error('فقط فایل‌های تصویری مجاز هستند'))
+  }
+
+  // check extension
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return cb(
-      new Error('پسوند فایل نامعتبر است. فقط jpg, jpeg, png, webp, gif مجاز هستند.'),
-      false
-    )
+    return cb(new Error(`پسوند ${ext} مجاز نیست`))
   }
 
-  // 4. Check for suspicious patterns (double extensions, null bytes)
-  const suspiciousPatterns = [
-    /\.php/i,
-    /\.asp/i,
-    /\.exe/i,
-    /\.sh/i,
-    /\.bat/i,
-    /\.js$/i,
-    /\.svg/i, // SECURITY: Block SVG
-    /\.htm/i, // SECURITY: Block HTML
-    /\0/, // null byte
-    /\.\./, // directory traversal
-  ]
+  // block dangerous extensions
+  if (BLOCKED_EXTENSIONS.some((blocked) => originalName.includes(blocked))) {
+    return cb(new Error('فایل مشکوک شناسایی شد'))
+  }
 
-  const originalName = file.originalname
-  for (const pattern of suspiciousPatterns) {
-    if (pattern.test(originalName)) {
-      console.warn(`[SECURITY] Blocked suspicious file upload: ${originalName}`)
-      return cb(new Error('نام فایل نامعتبر است.'), false)
-    }
+  // block suspicious patterns
+  const suspiciousPatterns = [/\.php/i, /\.asp/i, /\.exe/i, /\.sh/i, /\.bat/i, /\.js$/i, /\.svg/i, /\.htm/i, /\0/, /\.\./]
+  if (suspiciousPatterns.some((p) => p.test(originalName))) {
+    return cb(new Error('نام فایل مشکوک است'))
   }
 
   cb(null, true)
 }
 
 // ============================================
-// SECURITY: Magic Number Validation Middleware
-// Validates actual file content, not just extension
-// Use this AFTER multer processes the file
+// Multer instance
 // ============================================
-const validateMagicNumbers = (req, res, next) => {
-  // Skip if no file uploaded
-  if (!req.file && (!req.files || req.files.length === 0)) {
-    return next()
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
+    files: 10,
+  },
+  fileFilter: secureFileFilter,
+})
+
+// ============================================
+// normalizeFileUrl middleware
+// URL محلی را به req.file.url اضافه می‌کند
+// ============================================
+const normalizeFileUrl = (req, res, next) => {
+  const BASE_URL = process.env.BASE_URL || ''
+
+  if (req.file) {
+    req.file.url = `${BASE_URL}/uploads/${req.file.filename}`
   }
 
-  // Get files to validate
-  const files = req.file ? [req.file] : (req.files || [])
-
-  for (const file of files) {
-    // Cloudinary storage doesn't give us buffer access
-    // so we rely on Cloudinary's server-side validation
-    // which is actually more secure
-
-    // Log upload for audit
-    console.log(`[UPLOAD] File uploaded: ${file.originalname} -> ${file.filename || file.public_id}`)
+  if (req.files && Array.isArray(req.files)) {
+    req.files.forEach((file) => {
+      file.url = `${BASE_URL}/uploads/${file.filename}`
+    })
   }
 
   next()
 }
 
 // ============================================
-// Multer Upload Instance
+// validateMagicNumbers middleware (log only)
 // ============================================
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
-    files: 10, // Max 10 files per request
-  },
-  fileFilter: secureFileFilter,
-})
+const validateMagicNumbers = (req, res, next) => {
+  if (!req.file && (!req.files || req.files.length === 0)) {
+    return next()
+  }
 
-// ============================================
-// Exports
-// ============================================
+  const files = req.file ? [req.file] : req.files || []
+  for (const file of files) {
+    console.log(`[UPLOAD] File saved: ${file.originalname} -> ${file.filename}`)
+  }
+
+  next()
+}
+
 module.exports = {
   upload,
-  cloudinary,
+  normalizeFileUrl,
   validateMagicNumbers,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
@@ -317,5 +170,5 @@ module.exports = {
   BLOCKED_EXTENSIONS,
   MAX_UPLOAD_FILE_SIZE_MB,
   MAX_UPLOAD_FILE_SIZE_BYTES,
-  CloudinaryStorageEngine, // Export for testing/custom usage
+  UPLOAD_BASE_PATH,
 }

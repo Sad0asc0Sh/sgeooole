@@ -56,34 +56,27 @@ exports.sendOtp = async (req, res) => {
       return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
     }
 
-    const code = crypto.randomInt(1000, 9999).toString()
+    // API جدید ملی‌پیامک کد را خودش تولید و برمی‌گرداند
+    let smsResult
+    try {
+      smsResult = await sendOtpSMS(mobile)
+    } catch (smsError) {
+      console.error(`[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
+      const err = new Error('خطا در ارسال پیامک. لطفا دوباره تلاش کنید.')
+      err.code = smsError.code || 'SMS_PROVIDER_ERROR'
+      throw err
+    }
+
+    const code = smsResult.code
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
     const otp = new OTP({ mobile, code, expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
-    console.log(`[OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+    const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
+    console.log(`[OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
-
-    // Send in background (do not block user login flow on network timeouts)
-    sendOtpSMS(mobile, code)
-      .then((result) => {
-        const provider = result?.provider ? ` (${result.provider})` : ''
-        console.log(`[OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
-      })
-      .catch(async (smsError) => {
-        console.error(
-          `[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`,
-          smsError.code || 'UNKNOWN',
-          smsError.message
-        )
-
-        // If provider rejected the request (credentials/line/etc), remove the OTP to avoid locking user out
-        if (smsError.code === 'SMS_PROVIDER_ERROR' || smsError.code === 'SMS_NOT_CONFIGURED') {
-          await OTP.deleteOne({ _id: otp._id }).catch(() => { })
-        }
-      })
 
   } catch (error) {
     console.error('Error sending OTP:', error)
@@ -700,32 +693,27 @@ exports.sendBindOtp = async (req, res) => {
       return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
     }
 
-    const code = crypto.randomInt(1000, 9999).toString()
+    // API جدید ملی‌پیامک کد را خودش تولید و برمی‌گرداند
+    let smsResult
+    try {
+      smsResult = await sendOtpSMS(mobile)
+    } catch (smsError) {
+      console.error(`[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
+      const err = new Error('خطا در ارسال پیامک. لطفا دوباره تلاش کنید.')
+      err.code = smsError.code || 'SMS_PROVIDER_ERROR'
+      throw err
+    }
+
+    const code = smsResult.code
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
     const otp = new OTP({ mobile, code, expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
-    console.log(`[BIND OTP] Code generated for mobile: ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+    const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
+    console.log(`[BIND OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
 
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
-
-    sendOtpSMS(mobile, code)
-      .then((result) => {
-        const provider = result?.provider ? ` (${result.provider})` : ''
-        console.log(`[BIND OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
-      })
-      .catch(async (smsError) => {
-        console.error(
-          `[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`,
-          smsError.code || 'UNKNOWN',
-          smsError.message
-        )
-
-        if (smsError.code === 'SMS_PROVIDER_ERROR' || smsError.code === 'SMS_NOT_CONFIGURED') {
-          await OTP.deleteOne({ _id: otp._id }).catch(() => { })
-        }
-      })
   } catch (error) {
     console.error('Error sending bind OTP:', error)
     res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })

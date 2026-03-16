@@ -1,27 +1,31 @@
 const Brand = require('../models/Brand')
-const { cloudinary } = require('../middleware/upload')
+const path = require('path')
+const fs = require('fs')
 
-// تبدیل فایل آپلود شده Cloudinary به { url, public_id }
+// تبدیل فایل آپلود شده به { url, public_id }
 const extractImageInfo = (file) => {
   if (!file) return null
   return {
-    url: file.path,
+    url: file.url || `/uploads/${file.filename}`,
     public_id: file.filename,
   }
 }
 
-// GET /api/brands
+// GET /api/brands - دریافت همه برندها
 exports.getAllBrands = async (req, res) => {
   try {
-    const { limit = 1000, fields } = req.query
+    const { limit, fields } = req.query
+    let query = Brand.find().sort({ name: 1 })
 
-    let brandsQuery = Brand.find().limit(parseInt(limit, 10)).sort({ name: 1 })
-
-    if (fields) {
-      brandsQuery = brandsQuery.select(fields.split(',').join(' '))
+    if (limit) {
+      query = query.limit(parseInt(limit, 10))
     }
 
-    const brands = await brandsQuery
+    if (fields) {
+      query = query.select(fields.split(',').join(' '))
+    }
+
+    const brands = await query
 
     res.json({
       success: true,
@@ -29,22 +33,20 @@ exports.getAllBrands = async (req, res) => {
       count: brands.length,
     })
   } catch (error) {
-    console.error('Error fetching brands:', error)
+    console.error('Error in getAllBrands:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در دریافت لیست برندها',
+      message: 'خطا در دریافت برندها',
       error: error.message,
     })
   }
 }
 
-// GET /api/brands/homepage - برندهای صفحه اصلی
+// GET /api/brands/homepage - دریافت برندهای صفحه اصلی
 exports.getHomepageBrands = async (req, res) => {
   try {
-    const brands = await Brand.find({ showOnHomepage: true })
-      .sort({ displayOrder: 1, name: 1 })
+    const brands = await Brand.find({ showOnHomepage: true }).sort({ displayOrder: 1, name: 1 })
       .select('name slug logo textColor hoverColor displayOrder')
-      .lean()
 
     res.json({
       success: true,
@@ -52,7 +54,7 @@ exports.getHomepageBrands = async (req, res) => {
       count: brands.length,
     })
   } catch (error) {
-    console.error('Error fetching homepage brands:', error)
+    console.error('Error in getHomepageBrands:', error)
     res.status(500).json({
       success: false,
       message: 'خطا در دریافت برندهای صفحه اصلی',
@@ -61,7 +63,7 @@ exports.getHomepageBrands = async (req, res) => {
   }
 }
 
-// GET /api/brands/:id
+// GET /api/brands/:id - دریافت برند با ID
 exports.getBrandById = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id)
@@ -78,10 +80,10 @@ exports.getBrandById = async (req, res) => {
       data: brand,
     })
   } catch (error) {
-    console.error('Error fetching brand by id:', error)
+    console.error('Error in getBrandById:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در دریافت اطلاعات برند',
+      message: 'خطا در دریافت برند',
       error: error.message,
     })
   }
@@ -91,11 +93,8 @@ exports.getBrandById = async (req, res) => {
 exports.getBrandBySlug = async (req, res) => {
   try {
     const { slug } = req.params
-
-    // First try to find by slug
     let brand = await Brand.findOne({ slug: slug })
 
-    // If not found by slug, try by ObjectId (for backward compatibility)
     if (!brand) {
       const mongoose = require('mongoose')
       if (mongoose.Types.ObjectId.isValid(slug)) {
@@ -115,16 +114,16 @@ exports.getBrandBySlug = async (req, res) => {
       data: brand,
     })
   } catch (error) {
-    console.error('Error fetching brand by slug:', error)
+    console.error('Error in getBrandBySlug:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در دریافت اطلاعات برند',
+      message: 'خطا در دریافت برند',
       error: error.message,
     })
   }
 }
 
-// POST /api/brands
+// POST /api/brands - ایجاد برند جدید
 exports.createBrand = async (req, res) => {
   try {
     const { name, description, showOnHomepage, displayOrder, textColor, hoverColor } = req.body
@@ -158,7 +157,7 @@ exports.createBrand = async (req, res) => {
       message: 'برند با موفقیت ایجاد شد',
     })
   } catch (error) {
-    console.error('Error creating brand:', error)
+    console.error('Error in createBrand:', error)
     res.status(500).json({
       success: false,
       message: 'خطا در ایجاد برند',
@@ -167,7 +166,7 @@ exports.createBrand = async (req, res) => {
   }
 }
 
-// PUT /api/brands/:id
+// PUT /api/brands/:id - ویرایش برند
 exports.updateBrand = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id)
@@ -182,23 +181,22 @@ exports.updateBrand = async (req, res) => {
     const { name, description, removeLogo, showOnHomepage, displayOrder, textColor, hoverColor } = req.body
     const hasNewLogo = Boolean(req.file)
 
-    // مدیریت لوگو: اگر لوگو جدید آپلود شده، لوگو قدیمی را از Cloudinary حذف کن
+    // مدیریت لوگو
     if (hasNewLogo) {
+      // حذف فایل قدیمی از دیسک
       if (brand.logo && brand.logo.public_id) {
-        try {
-          await cloudinary.uploader.destroy(brand.logo.public_id)
-        } catch (err) {
-          console.error('Error deleting old logo from Cloudinary:', err.message)
+        const oldFilePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath)
         }
       }
       brand.logo = extractImageInfo(req.file)
     } else if (removeLogo === 'true' || removeLogo === true) {
-      // اگر درخواست حذف لوگو داده شده
+      // حذف لوگو
       if (brand.logo && brand.logo.public_id) {
-        try {
-          await cloudinary.uploader.destroy(brand.logo.public_id)
-        } catch (err) {
-          console.error('Error deleting logo from Cloudinary:', err.message)
+        const oldFilePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
+        if (fs.existsSync(oldFilePath)) {
+          fs.unlinkSync(oldFilePath)
         }
       }
       brand.logo = { url: null, public_id: null }
@@ -224,7 +222,7 @@ exports.updateBrand = async (req, res) => {
       message: 'برند با موفقیت به‌روزرسانی شد',
     })
   } catch (error) {
-    console.error('Error updating brand:', error)
+    console.error('Error in updateBrand:', error)
     res.status(500).json({
       success: false,
       message: 'خطا در به‌روزرسانی برند',
@@ -233,7 +231,7 @@ exports.updateBrand = async (req, res) => {
   }
 }
 
-// DELETE /api/brands/:id
+// DELETE /api/brands/:id - حذف برند
 exports.deleteBrand = async (req, res) => {
   try {
     const brand = await Brand.findById(req.params.id)
@@ -245,12 +243,11 @@ exports.deleteBrand = async (req, res) => {
       })
     }
 
-    // حذف لوگو از Cloudinary (در صورت وجود)
+    // حذف لوگو از دیسک
     if (brand.logo && brand.logo.public_id) {
-      try {
-        await cloudinary.uploader.destroy(brand.logo.public_id)
-      } catch (err) {
-        console.error('Error deleting logo from Cloudinary:', err.message)
+      const filePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
       }
     }
 
@@ -261,7 +258,7 @@ exports.deleteBrand = async (req, res) => {
       message: 'برند با موفقیت حذف شد',
     })
   } catch (error) {
-    console.error('Error deleting brand:', error)
+    console.error('Error in deleteBrand:', error)
     res.status(500).json({
       success: false,
       message: 'خطا در حذف برند',

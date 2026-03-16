@@ -125,7 +125,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     if (url) {
       // If url is relative (starts with /), prepend the backend URL
       if (url.startsWith("/")) {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+        const API_URL = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api"));
         let BACKEND_URL = API_URL.replace(/\/api\/?$/, "");
         // Force localhost to 127.0.0.1 to avoid Next.js private IP errors
         BACKEND_URL = BACKEND_URL.replace("localhost", "127.0.0.1");
@@ -368,7 +368,7 @@ export const productService = {
               url = img.url.trim();
             }
             if (url && url.startsWith("/")) {
-              const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+              const API_URL = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://127.0.0.1:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api"));
               let BACKEND_URL = API_URL.replace(/\/api\/?$/, "");
               BACKEND_URL = BACKEND_URL.replace("localhost", "127.0.0.1");
               return `${BACKEND_URL}${url}`;

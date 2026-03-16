@@ -130,7 +130,7 @@ export default function BlogPage() {
                     transition={{ delay: 0.6 }}
                     className="flex flex-wrap justify-center gap-3 mb-10"
                 >
-                    {["مقالات سلامت", "راهنمای مکمل‌ها", "نکات تغذیه‌ای", "سبک زندگی"].map(
+                    {["مقالات امنیتی", "اشنایی با دنیای یکپارچه", "نکات حفاظتی", "راهنمای خرید"].map(
                         (item, index) => (
                             <motion.span
                                 key={item}

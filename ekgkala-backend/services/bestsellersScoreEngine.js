@@ -243,10 +243,7 @@ async function calculateRatingScore() {
           $multiply: [
             '$avg_rating',
             {
-              $log: {
-                input: { $max: [2, '$review_count'] }, // حداقل 2 برای تجنب log(0)
-                base: 10,
-              },
+                $log: [{ $max: [2, '$review_count'] }, 10],
             },
           ],
         },
@@ -262,7 +259,7 @@ async function calculateRatingScore() {
   const scoreMap = {}
   for (const review of reviewStats) {
     const normalized = normalizeScore(review.weighted_rating, 0, p95)
-    scoreMap[review._id.toString()] = normalized
+    if (review._id) scoreMap[review._id.toString()] = normalized
   }
 
   return scoreMap

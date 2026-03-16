@@ -121,7 +121,7 @@ const helmetConfig = {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"], // Required for some CSS
-      imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "blob:"],
+      imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "data:"],
       connectSrc: [
         "'self'",
@@ -129,8 +129,6 @@ const helmetConfig = {
         ...(clientUrls.length > 0
           ? clientUrls
           : ['https:', 'http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173']),
-        'https://api.cloudinary.com',
-        'https://res.cloudinary.com',
       ],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
@@ -272,26 +270,11 @@ const allowAllOrigins = allowedOriginInputs
   .map((value) => value.trim())
   .some((value) => value === '*')
 
-// Vercel و Netlify Preview URL patterns
-// این اجازه می‌دهد Preview deployments بدون اضافه کردن هر URL کار کنند
-const vercelProjectName = process.env.VERCEL_PROJECT_NAME || ''
-const netlifyProjectName = process.env.NETLIFY_PROJECT_NAME || ''
-
-// ساخت regex pattern برای پروژه‌های خاص
-const createProjectPattern = (projectName, domain) => {
-  if (!projectName) return null
-  const escaped = projectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`^https:\\/\\/${escaped}[\\w-]*\\.${domain}$`, 'i')
-}
-
-const vercelPattern = vercelProjectName ? createProjectPattern(vercelProjectName, 'vercel\\.app') : null
-const netlifyPattern = netlifyProjectName ? createProjectPattern(netlifyProjectName, 'netlify\\.app') : null
+// NOTE: Preview-deployment origin support removed (VPS deployment)
 
 console.log('🌐 CORS Config:', {
   allowedOrigins: allowedOrigins.length > 0 ? allowedOrigins : '(none)',
   allowAllOrigins,
-  vercelProject: vercelProjectName || '(not set)',
-  netlifyProject: netlifyProjectName || '(not set)',
 })
 
 const corsOptions = {
@@ -308,16 +291,6 @@ const corsOptions = {
 
     // ۳. اجازه اگر دامنه در لیست مجاز باشد (exact match)
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // ۴. اجازه به Vercel preview URLs (فقط پروژه مشخص شده)
-    if (vercelPattern && vercelPattern.test(origin)) {
-      return callback(null, true);
-    }
-
-    // ۵. اجازه به Netlify preview URLs (فقط پروژه مشخص شده)
-    if (netlifyPattern && netlifyPattern.test(origin)) {
       return callback(null, true);
     }
 
@@ -627,6 +600,7 @@ const connectDB = async () => {
         maxPoolSize: 10,
         retryWrites: true,
         w: 'majority',
+        autoIndex: process.env.NODE_ENV !== 'production',
       })
 
       console.log(`✅ MongoDB Connected: ${conn.connection.host}`)

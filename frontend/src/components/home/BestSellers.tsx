@@ -44,7 +44,7 @@ interface BestsellersResponse {
 }
 
 // API Service
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api'
+const API_BASE = typeof window === 'undefined' ? (process.env.INTERNAL_API_URL || 'http://localhost:5000/api') : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api')
 
 const bestsellersService = {
   getBestsellers: async (limit: number = 8, category: string | null = null, inStock: boolean = true): Promise<BestsellersResponse> => {

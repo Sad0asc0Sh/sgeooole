@@ -16,19 +16,13 @@
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    // Monorepo: Pin Next workspace root to this app to avoid lockfile ambiguity warnings.
     turbopack: {
         root: __dirname,
     },
     outputFileTracingRoot: __dirname,
 
-    // Remove X-Powered-By header
     poweredByHeader: false,
-
-    // React Strict Mode
     reactStrictMode: true,
-
-    // Compression
     compress: true,
 
     // Image Configuration
@@ -42,39 +36,28 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'ekgkala.ir',
             },
+            {
+                protocol: 'http',
+                hostname: 'localhost',
+                port: '5000',
+            },
         ],
-        unoptimized: process.env.DISABLE_IMAGE_OPTIMIZATION === 'true',
+        // غیرفعال کردن image optimization برای جلوگیری از timeout در SSR
+        unoptimized: true,
     },
 
-    // Security Headers
     async headers() {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ekgkala.ir'
 
         return [
-            // Global Security Headers
             {
                 source: '/:path*',
                 headers: [
-                    {
-                        key: 'X-DNS-Prefetch-Control',
-                        value: 'on',
-                    },
-                    {
-                        key: 'X-Frame-Options',
-                        value: 'SAMEORIGIN',
-                    },
-                    {
-                        key: 'X-Content-Type-Options',
-                        value: 'nosniff',
-                    },
-                    {
-                        key: 'X-XSS-Protection',
-                        value: '1; mode=block',
-                    },
-                    {
-                        key: 'Referrer-Policy',
-                        value: 'strict-origin-when-cross-origin',
-                    },
+                    { key: 'X-DNS-Prefetch-Control', value: 'on' },
+                    { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+                    { key: 'X-Content-Type-Options', value: 'nosniff' },
+                    { key: 'X-XSS-Protection', value: '1; mode=block' },
+                    { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
                     {
                         key: 'Permissions-Policy',
                         value: [
@@ -106,86 +89,46 @@ const nextConfig = {
                     },
                 ],
             },
-
-            // Sensitive Routes - NO CACHE
             {
                 source: '/(admin|profile|dashboard|checkout)/:path*',
                 headers: [
-                    {
-                        key: 'Cache-Control',
-                        value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
-                    },
-                    {
-                        key: 'Pragma',
-                        value: 'no-cache',
-                    },
-                    {
-                        key: 'Expires',
-                        value: '0',
-                    },
+                    { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' },
+                    { key: 'Pragma', value: 'no-cache' },
+                    { key: 'Expires', value: '0' },
                 ],
             },
-
-            // API Routes - NO CACHE
             {
                 source: '/api/:path*',
                 headers: [
-                    {
-                        key: 'Cache-Control',
-                        value: 'no-store, max-age=0',
-                    },
+                    { key: 'Cache-Control', value: 'no-store, max-age=0' },
                 ],
             },
-
-            // Static Assets - Long-term Cache
             {
                 source: '/_next/static/:path*',
                 headers: [
-                    {
-                        key: 'Cache-Control',
-                        value: 'public, max-age=31536000, immutable',
-                    },
+                    { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
                 ],
             },
-
-            // Public Static Files
             {
                 source: '/static/:path*',
                 headers: [
-                    {
-                        key: 'Cache-Control',
-                        value: 'public, max-age=86400, stale-while-revalidate=604800',
-                    },
+                    { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
                 ],
             },
         ]
     },
 
-    // Redirects
     async redirects() {
         return [
-            // Force HTTPS
             {
                 source: '/:path*',
-                has: [
-                    {
-                        type: 'header',
-                        key: 'x-forwarded-proto',
-                        value: 'http',
-                    },
-                ],
+                has: [{ type: 'header', key: 'x-forwarded-proto', value: 'http' }],
                 destination: 'https://ekgkala.ir/:path*',
                 permanent: true,
             },
-            // Redirect www to non-www
             {
                 source: '/:path*',
-                has: [
-                    {
-                        type: 'host',
-                        value: 'www.ekgkala.ir',
-                    },
-                ],
+                has: [{ type: 'host', value: 'www.ekgkala.ir' }],
                 destination: 'https://ekgkala.ir/:path*',
                 permanent: true,
             },

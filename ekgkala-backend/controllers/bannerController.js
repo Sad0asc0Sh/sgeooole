@@ -1,11 +1,12 @@
+const path = require('path')
+const fs = require('fs')
 const Banner = require('../models/Banner')
-const { cloudinary } = require('../middleware/upload')
 
-const buildTransformedCloudinaryUrl = (url, transform) => {
-  if (!url || typeof url !== 'string') return url
-  if (!url.includes('/upload/')) return url
-  return url.replace('/upload/', `/upload/${transform}/`)
-}
+const { UPLOAD_BASE_PATH } = require('../middleware/upload')
+
+// ============================================
+// Helpers
+// ============================================
 
 const parseBoolean = (value, fallback = true) => {
   if (value === undefined || value === null) return fallback
@@ -35,58 +36,64 @@ const normalizeImageInput = (imageInput) => {
   if (typeof imageInput === 'object' && imageInput.url) {
     const trimmedUrl = String(imageInput.url).trim()
     if (!trimmedUrl) return null
-
-    const normalized = {
-      url: trimmedUrl,
-    }
-
-    if (imageInput.public_id) normalized.public_id = imageInput.public_id
-    if (imageInput.original_url) normalized.original_url = imageInput.original_url
-    if (imageInput.variants && typeof imageInput.variants === 'object') {
-      normalized.variants = imageInput.variants
-    }
-
-    return normalized
+    return { url: trimmedUrl }
   }
 
   return null
 }
 
+// فایل آپلود شده توسط multer را به ساختار image بنر تبدیل می‌کند
 const mapUploadedFileToBannerImage = (file) => {
   if (!file) return null
 
-  const originalUrl = file.path || file.secure_url || file.url
-  const image = {
-    url: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
-    original_url: originalUrl,
-    public_id: file.filename || file.public_id,
-    variants: {
-      desktop: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_1920,c_limit'),
-      mobile: buildTransformedCloudinaryUrl(originalUrl, 'f_auto,q_auto,w_900,c_limit'),
-    },
-  }
+  // url توسط normalizeFileUrl ست می‌شه، اگر نبود fallback می‌زنیم
+  const BASE_URL = process.env.BASE_URL || ''
+  const url = file.url || `${BASE_URL}/uploads/${file.filename}`
 
-  return normalizeImageInput(image)
+  return {
+    url,
+    filename: file.filename,
+  }
 }
 
-const extractPublicId = (image) => {
-  if (image && typeof image === 'object' && typeof image.public_id === 'string') {
-    return image.public_id
+// مسیر فیزیکی فایل روی دیسک
+const resolveLocalFilePath = (image) => {
+  if (!image) return null
+
+  // اگر filename مستقیم داریم
+  if (image.filename) {
+    return path.join(UPLOAD_BASE_PATH, image.filename)
   }
+
+  // از url استخراج می‌کنیم
+  if (image.url && typeof image.url === 'string') {
+    const match = image.url.match(/\/uploads\/([^/?#]+)$/)
+    if (match) return path.join(UPLOAD_BASE_PATH, match[1])
+  }
+
   return null
 }
 
-const deleteCloudinaryImageSafe = async (publicId) => {
-  if (!publicId) return
+// حذف فیزیکی تصویر از دیسک
+const deleteLocalImageSafe = (image) => {
+  const filePath = resolveLocalFilePath(image)
+  if (!filePath) return
 
   try {
-    await cloudinary.uploader.destroy(publicId)
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+      console.log('[BANNER] Deleted local image:', filePath)
+    }
   } catch (error) {
-    console.error('[BANNER] Failed to delete Cloudinary image:', publicId, error.message)
+    console.error('[BANNER] Failed to delete local image:', filePath, error.message)
   }
 }
 
-// لیست بنرها (با فیلتر و صفحه‌بندی)
+// ============================================
+// Controllers
+// ============================================
+
+// GET /api/banners
 exports.getBanners = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1
@@ -94,20 +101,15 @@ exports.getBanners = async (req, res) => {
     const skip = (page - 1) * limit
 
     const filter = {}
-
-    if (req.query.position) {
-      filter.position = req.query.position
-    }
-
-    if (req.query.isActive === 'true') {
-      filter.isActive = true
-    } else if (req.query.isActive === 'false') {
-      filter.isActive = false
-    }
+    if (req.query.position) filter.position = req.query.position
+    if (req.query.isActive === 'true') filter.isActive = true
+    else if (req.query.isActive === 'false') filter.isActive = false
 
     const sort = req.query.sort || 'sortOrder -createdAt'
-    const query = Banner.find(filter).sort(sort).skip(skip).limit(limit)
-    const [items, total] = await Promise.all([query.lean(), Banner.countDocuments(filter)])
+    const [items, total] = await Promise.all([
+      Banner.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+      Banner.countDocuments(filter),
+    ])
 
     res.json({
       success: true,
@@ -121,32 +123,25 @@ exports.getBanners = async (req, res) => {
     })
   } catch (error) {
     console.error('Error fetching banners:', error)
-    res.status(500).json({
-      success: false,
-      message: 'خطا در دریافت بنرها',
-      error: error.message,
-    })
+    res.status(500).json({ success: false, message: 'خطا در دریافت بنرها', error: error.message })
   }
 }
 
-// ایجاد بنر
+// POST /api/banners
 exports.createBanner = async (req, res) => {
-  let uploadedPublicId = null
+  let uploadedFile = null
 
   try {
     const { title, link, position, isActive, image, sortOrder } = req.body || {}
 
     if (!title) {
-      return res.status(400).json({
-        success: false,
-        message: 'عنوان بنر الزامی است',
-      })
+      return res.status(400).json({ success: false, message: 'عنوان بنر الزامی است' })
     }
 
     let bannerImage = null
 
     if (req.file) {
-      uploadedPublicId = req.file.filename || req.file.public_id || null
+      uploadedFile = req.file
       bannerImage = mapUploadedFileToBannerImage(req.file)
     } else if (image) {
       bannerImage = normalizeImageInput(image)
@@ -161,41 +156,29 @@ exports.createBanner = async (req, res) => {
       sortOrder: parseNumber(sortOrder, 0),
     })
 
-    res.status(201).json({
-      success: true,
-      message: 'بنر با موفقیت ایجاد شد',
-      data: banner,
-    })
+    res.status(201).json({ success: true, message: 'بنر با موفقیت ایجاد شد', data: banner })
   } catch (error) {
-    if (uploadedPublicId) {
-      await deleteCloudinaryImageSafe(uploadedPublicId)
-    }
+    // اگر بنر ذخیره نشد، فایل آپلود شده رو پاک می‌کنیم
+    if (uploadedFile) deleteLocalImageSafe({ filename: uploadedFile.filename })
 
     console.error('Error creating banner:', error)
-    res.status(500).json({
-      success: false,
-      message: 'خطا در ایجاد بنر',
-      error: error.message,
-    })
+    res.status(500).json({ success: false, message: 'خطا در ایجاد بنر', error: error.message })
   }
 }
 
-// ویرایش بنر
+// PUT /api/banners/:id
 exports.updateBanner = async (req, res) => {
-  let uploadedPublicId = null
+  let uploadedFile = null
 
   try {
     const updates = req.body || {}
     const banner = await Banner.findById(req.params.id)
 
     if (!banner) {
-      return res.status(404).json({
-        success: false,
-        message: 'بنر یافت نشد',
-      })
+      return res.status(404).json({ success: false, message: 'بنر یافت نشد' })
     }
 
-    const oldPublicId = extractPublicId(banner.image)
+    const oldImage = banner.image
     let nextImage = undefined
 
     if (updates.title !== undefined) banner.title = updates.title
@@ -205,7 +188,7 @@ exports.updateBanner = async (req, res) => {
     if (updates.sortOrder !== undefined) banner.sortOrder = parseNumber(updates.sortOrder, banner.sortOrder)
 
     if (req.file) {
-      uploadedPublicId = req.file.filename || req.file.public_id || null
+      uploadedFile = req.file
       nextImage = mapUploadedFileToBannerImage(req.file)
     } else if (updates.image !== undefined) {
       nextImage = normalizeImageInput(updates.image)
@@ -216,57 +199,36 @@ exports.updateBanner = async (req, res) => {
     }
 
     const saved = await banner.save()
-    const newPublicId = extractPublicId(saved.image)
 
-    if (oldPublicId && oldPublicId !== newPublicId) {
-      await deleteCloudinaryImageSafe(oldPublicId)
+    // اگر تصویر عوض شد، تصویر قدیمی رو از دیسک حذف می‌کنیم
+    if (nextImage !== undefined && oldImage) {
+      deleteLocalImageSafe(oldImage)
     }
 
-    res.json({
-      success: true,
-      message: 'بنر با موفقیت ویرایش شد',
-      data: saved,
-    })
+    res.json({ success: true, message: 'بنر با موفقیت ویرایش شد', data: saved })
   } catch (error) {
-    if (uploadedPublicId) {
-      await deleteCloudinaryImageSafe(uploadedPublicId)
-    }
+    if (uploadedFile) deleteLocalImageSafe({ filename: uploadedFile.filename })
 
     console.error('Error updating banner:', error)
-    res.status(500).json({
-      success: false,
-      message: 'خطا در ویرایش بنر',
-      error: error.message,
-    })
+    res.status(500).json({ success: false, message: 'خطا در ویرایش بنر', error: error.message })
   }
 }
 
-// حذف بنر
+// DELETE /api/banners/:id
 exports.deleteBanner = async (req, res) => {
   try {
     const banner = await Banner.findById(req.params.id)
     if (!banner) {
-      return res.status(404).json({
-        success: false,
-        message: 'بنر یافت نشد',
-      })
+      return res.status(404).json({ success: false, message: 'بنر یافت نشد' })
     }
 
-    const publicId = extractPublicId(banner.image)
+    const imageToDelete = banner.image
     await banner.deleteOne()
-    await deleteCloudinaryImageSafe(publicId)
+    deleteLocalImageSafe(imageToDelete)
 
-    res.json({
-      success: true,
-      message: 'بنر با موفقیت حذف شد',
-    })
+    res.json({ success: true, message: 'بنر با موفقیت حذف شد' })
   } catch (error) {
     console.error('Error deleting banner:', error)
-    res.status(500).json({
-      success: false,
-      message: 'خطا در حذف بنر',
-      error: error.message,
-    })
+    res.status(500).json({ success: false, message: 'خطا در حذف بنر', error: error.message })
   }
 }
-

@@ -4,90 +4,59 @@ import { useEffect, useState } from "react";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
 import { useRouter } from "next/navigation";
-import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
+import { navigateHref } from "@/lib/navigateHref";
 
-/**
- * بنرهای تبلیغاتی میانی
- * ابعاد ایده‌آل: 800×250 پیکسل (نسبت 16:5)
- */
 export default function BannerStack() {
     const [banners, setBanners] = useState<Banner[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        const fetchBanners = async () => {
-            try {
-                const data = await bannerService.getByPosition('middle-banner');
-                setBanners(data);
-            } catch (error) {
-                console.error("Failed to fetch middle banners:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBanners();
+        bannerService.getByPosition('middle-banner')
+            .then(setBanners)
+            .catch((e) => console.error("Failed to fetch middle banners:", e))
+            .finally(() => setLoading(false));
     }, []);
 
-    if (loading || banners.length === 0) {
-        return null;
-    }
+    if (loading || banners.length === 0) return null;
 
     return (
         <div className="container mx-auto px-3 sm:px-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {banners.map((banner) => {
-                    // دیباگ: بررسی لینک بنر
-                    const bannerLink = banner.link;
-                    const canNavigate = canNavigateToHref(bannerLink);
-                    
-                    // Log برای دیباگ
-                    console.debug('Banner link:', bannerLink, 'Can navigate:', canNavigate);
-                    
+                    const hasLink = !!banner.link?.trim();
                     return (
-                    <div
-                        key={banner._id}
-                        className={`
-                            relative w-full rounded-xl overflow-hidden bg-gray-50
-                            shadow-sm hover:shadow-lg transition-all duration-300
-                            hover:scale-[1.02] group cursor-pointer
-                            ${canNavigate ? '' : 'opacity-75'}
-                        `}
-                        style={{ aspectRatio: '16/5' }}
-                        onClick={() => {
-                            console.debug('Banner clicked:', bannerLink);
-                            if (bannerLink) {
-                                navigateHref(router, bannerLink);
-                            }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                            if ((e.key === 'Enter' || e.key === ' ') && bannerLink) {
-                                navigateHref(router, bannerLink);
-                            }
-                        }}
-                        aria-label={banner.title || "بنر تبلیغاتی"}
-                    >
-                        <Image
-                            src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
-                            alt={banner.title}
-                            fill
-                            className="object-cover object-center group-hover:brightness-105 transition-all duration-300 pointer-events-none"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                console.debug('Image clicked, navigating to:', bannerLink);
-                                if (bannerLink) {
-                                    navigateHref(router, bannerLink);
+                        <div
+                            key={banner._id}
+                            className={`
+                                relative w-full rounded-xl overflow-hidden bg-gray-50
+                                shadow-sm hover:shadow-lg transition-all duration-300
+                                hover:scale-[1.02] group
+                                ${hasLink ? 'cursor-pointer' : 'cursor-default'}
+                            `}
+                            style={{ aspectRatio: '16/5' }}
+                            onClick={() => hasLink && navigateHref(router, banner.link)}
+                            role={hasLink ? "button" : undefined}
+                            tabIndex={hasLink ? 0 : undefined}
+                            onKeyDown={(e) => {
+                                if (hasLink && (e.key === 'Enter' || e.key === ' ')) {
+                                    navigateHref(router, banner.link);
                                 }
                             }}
-                        />
-                    </div>
-                );
+                            aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
+                        >
+                            <Image
+                                src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
+                                alt={banner.title}
+                                fill
+                                className="object-cover object-center group-hover:brightness-105 transition-all duration-300 pointer-events-none"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                            />
+                        </div>
+                    );
                 })}
             </div>
         </div>
     );
 }
+

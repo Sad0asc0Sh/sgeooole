@@ -27,7 +27,7 @@ exports.getBestsellers = async (req, res) => {
 
     // بررسی کش (مگر اگر fresh=true)
     if (!fresh && redis) {
-      const cached = await redis.get(cacheKey)
+      const cached = await redis.getCache(cacheKey)
       if (cached) {
         console.log('[BestSellers] 📦 نتیجه از کش برگردانده شد')
         return res.json({
@@ -233,7 +233,7 @@ exports.getBestsellers = async (req, res) => {
 
     // ذخیره در کش (TTL: 15 دقیقه)
     if (redis && result.length > 0) {
-      await redis.setex(cacheKey, 900, JSON.stringify(result))
+      await redis.setCache(cacheKey, result, 900)
     }
 
     res.json({
@@ -471,11 +471,7 @@ async function invalidateBestsellersCache() {
 
   try {
     // پاک کردن تمام کلیدهای bestsellers:*
-    const keys = await redis.keys('bestsellers:*')
-    if (keys.length > 0) {
-      await redis.del(keys)
-      console.log(`[BestSellers] 🗑️ ${keys.length} کلید کش پاک شد`)
-    }
+    await redis.deleteCachePattern('bestsellers:*')
   } catch (error) {
     console.error('[BestSellers] خطا در invalidate کش:', error)
   }

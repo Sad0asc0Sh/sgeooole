@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const axios = require('axios')
 const Settings = require('../../models/Settings')
-const { sendOtpSMS, getSmsHttpsAgent } = require('../../utils/notificationService')
+const { sendOtpSMS } = require('../../utils/notificationService')
 const { normalizeIranMobile } = require('../../utils/phone')
 const { protect, authorize } = require('../../middleware/auth')
 

@@ -19,9 +19,9 @@ type HeroSectionProps = {
  * ============================================================
  *  سیستم بنر تبلیغاتی حرفه‌ای - EKGKala
  * ============================================================
- * 
+ *
  *  📐 ابعاد استاندارد بنرها:
- * 
+ *
  *  ┌─────────────────────────────────────────────────────┐
  *  │  🖼️  اسلایدر اصلی (main-slider)                     │
  *  │  ──────────────────────────────────────────────────  │
@@ -104,11 +104,9 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     if (loading) {
         return (
             <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
-                {/* اسکلتون اسلایدر اصلی */}
                 <div className="w-full rounded-2xl overflow-hidden bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
                     style={{ aspectRatio: '12/5' }}
                 />
-                {/* اسکلتون بنرهای میانی */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-pulse"
                         style={{ aspectRatio: '16/5' }}
@@ -146,11 +144,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     return (
         <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
             <div className="container mx-auto">
-                {/* ═══════════════════════════════════════════════════
-                    اسلایدر اصلی - Main Slider
-                    ابعاد بنر: 1200×500 (نسبت 12:5)
-                    در موبایل و دسکتاپ بدون بریدگی نمایش داده می‌شود
-                   ═══════════════════════════════════════════════════ */}
                 {mainBanners.length > 0 && (
                     <div className="w-full rounded-2xl overflow-hidden shadow-md bg-gray-50">
                         <Swiper
@@ -179,15 +172,12 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 );
                                 const bannerLink = banner.link;
                                 const canNavigate = canNavigateToHref(bannerLink);
-                                
-                                // دیباگ
-                                console.debug('Main banner link:', bannerLink, 'Can navigate:', canNavigate);
 
                                 return (
                                     <SwiperSlide key={banner._id}>
                                         <div
                                             className={`relative w-full ${canNavigate ? "cursor-pointer" : ""}`}
-                                            style={{ aspectRatio: '12/5' }}
+                                            style={{}}
                                             onMouseDown={(e) => handlePointerDown(e.clientX)}
                                             onMouseMove={(e) => handlePointerMove(e.clientX)}
                                             onMouseUp={() => handlePointerUp(bannerLink)}
@@ -195,28 +185,22 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                             onTouchStart={(e) => handlePointerDown(e.touches[0].clientX)}
                                             onTouchMove={(e) => handlePointerMove(e.touches[0].clientX)}
                                             onTouchEnd={() => handlePointerUp(bannerLink)}
-                                            onClick={() => {
-                                                console.debug('Main banner clicked:', bannerLink);
-                                                if (!dragRef.current?.moved && bannerLink) {
-                                                    navigateHref(router, bannerLink);
-                                                }
-                                            }}
-                                            role="button"
-                                            tabIndex={0}
+                                            role={canNavigate ? "button" : undefined}
+                                            tabIndex={canNavigate ? 0 : undefined}
                                             onKeyDown={(e) => {
-                                                if ((e.key === 'Enter' || e.key === ' ') && bannerLink) {
+                                                if ((e.key === 'Enter' || e.key === ' ') && canNavigate) {
                                                     navigateHref(router, bannerLink);
                                                 }
                                             }}
-                                            aria-label={banner.title || "banner"}
+                                            aria-label={canNavigate ? (banner.title || "banner") : undefined}
                                         >
                                             <Image
                                                 src={imageUrl}
                                                 alt={banner.title}
-                                                fill
-                                                className="object-cover object-center pointer-events-none"
+                                                width={typeof (banner as any).image === 'object' && (banner as any).image?.width ? (banner as any).image.width : 1200}
+                                                height={typeof (banner as any).image === 'object' && (banner as any).image?.height ? (banner as any).image.height : 500}
+                                                className="w-full h-auto pointer-events-none"
                                                 priority
-                                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1200px"
                                             />
                                         </div>
                                     </SwiperSlide>
@@ -226,11 +210,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     </div>
                 )}
 
-                {/* ═══════════════════════════════════════════════════
-                    بنرهای تبلیغاتی میانی - Middle Banners
-                    ابعاد بنر: 800×250 (نسبت 16:5)
-                    در موبایل: تمام‌عرض - در تبلت: ۲ تا - در دسکتاپ: ۳ تا
-                   ═══════════════════════════════════════════════════ */}
                 {middleBanners.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
                         {middleBanners.map((banner, index) => {
@@ -239,10 +218,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                 "/placeholder-banner.png",
                             );
                             const bannerLink = banner.link;
-                            const canNavigate = canNavigateToHref(bannerLink);
-                            
-                            // دیباگ
-                            console.debug('Middle banner link:', bannerLink, 'Can navigate:', canNavigate);
+                            const hasLink = !!bannerLink?.trim();
 
                             return (
                                 <div
@@ -250,40 +226,28 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                                     className={`
                                         relative w-full rounded-xl overflow-hidden bg-gray-50
                                         shadow-sm hover:shadow-lg transition-all duration-300
-                                        hover:scale-[1.02] group cursor-pointer
-                                        ${canNavigate ? '' : 'opacity-75'}
+                                        hover:scale-[1.02] group
+                                        ${hasLink ? 'cursor-pointer' : 'cursor-default'}
                                         ${middleBanners.length === 2 && index === 1 ? 'sm:col-span-1' : ''}
                                         ${middleBanners.length === 1 ? 'sm:col-span-2 lg:col-span-3' : ''}
                                     `}
-                                    style={{ aspectRatio: '16/5' }}
-                                    onClick={() => {
-                                        console.debug('Middle banner clicked:', bannerLink);
-                                        if (bannerLink) {
-                                            navigateHref(router, bannerLink);
-                                        }
-                                    }}
-                                    role="button"
-                                    tabIndex={0}
+                                    style={{}}
+                                    onClick={() => hasLink && navigateHref(router, bannerLink)}
+                                    role={hasLink ? "button" : undefined}
+                                    tabIndex={hasLink ? 0 : undefined}
                                     onKeyDown={(e) => {
-                                        if ((e.key === 'Enter' || e.key === ' ') && bannerLink) {
+                                        if (hasLink && (e.key === 'Enter' || e.key === ' ')) {
                                             navigateHref(router, bannerLink);
                                         }
                                     }}
-                                    aria-label={banner.title || "بنر تبلیغاتی"}
+                                    aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
                                 >
                                     <Image
                                         src={imageUrl}
                                         alt={banner.title}
-                                        fill
-                                        className="object-cover object-center group-hover:brightness-105 transition-all duration-300 pointer-events-none"
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            console.debug('Image clicked, navigating to:', bannerLink);
-                                            if (bannerLink) {
-                                                navigateHref(router, bannerLink);
-                                            }
-                                        }}
+                                        width={typeof (banner as any).image === 'object' && (banner as any).image?.width ? (banner as any).image.width : 800}
+                                        height={typeof (banner as any).image === 'object' && (banner as any).image?.height ? (banner as any).image.height : 250}
+                                        className="w-full h-auto group-hover:brightness-105 transition-all duration-300 pointer-events-none"
                                     />
                                 </div>
                             );
@@ -291,8 +255,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     </div>
                 )}
             </div>
-
-            {/* Swiper styles moved to globals.css for cross-browser compat */}
         </section>
     );
 }
