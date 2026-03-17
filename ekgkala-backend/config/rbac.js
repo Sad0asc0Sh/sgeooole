@@ -250,13 +250,15 @@ const ROLES = {
 
     // Admin: Standard operational access
     admin: [
-        // Products (full access except import/export)
+        // Products (full access)
         PERMISSIONS.PRODUCT_READ,
         PERMISSIONS.PRODUCT_CREATE,
         PERMISSIONS.PRODUCT_UPDATE,
         PERMISSIONS.PRODUCT_DELETE,
         PERMISSIONS.PRODUCT_MANAGE_STOCK,
         PERMISSIONS.PRODUCT_MANAGE_IMAGES,
+        PERMISSIONS.PRODUCT_IMPORT,
+        PERMISSIONS.PRODUCT_EXPORT,
 
         // Categories
         PERMISSIONS.CATEGORY_READ,
@@ -444,4 +446,3 @@ module.exports = {
     hasPermission,
     getPermissions,
 }
-
