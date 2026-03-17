@@ -2086,7 +2086,80 @@ router.get(
 )
 
 // ============================================
+// GET /api/products/export/csv - Export products to CSV
+// ============================================
+router.get(
+  '/export/csv',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_EXPORT),
+  async (req, res) => {
+    try {
+      const products = await Product.find({
+        $or: [
+          { category: { $type: 'objectId' } },
+          { category: { $exists: false } },
+          { category: null },
+        ],
+      })
+        .select(
+          'name sku productCode productType price compareAtPrice stock category brand description isActive isFeatured',
+        )
+        .populate('category', 'name')
+        .populate('brand', 'name')
+        .lean()
+
+      const csvEscape = (val) => {
+        const str = String(val ?? '')
+        if (/[",\r\n]/.test(str)) {
+          return `"${str.replace(/"/g, '""')}"`
+        }
+        return str
+      }
+
+      const headers = [
+        'name', 'sku', 'productCode', 'productType', 'price', 'compareAtPrice',
+        'stock', 'category', 'brand', 'description', 'isActive', 'isFeatured',
+      ]
+      const lines = [headers.join(',')]
+
+      products.forEach((product) => {
+        const row = [
+          csvEscape(product.name || ''),
+          csvEscape(product.sku || ''),
+          csvEscape(product.productCode || ''),
+          csvEscape(product.productType || 'simple'),
+          product.price || 0,
+          product.compareAtPrice || '',
+          product.stock || 0,
+          csvEscape(product.category?.name || ''),
+          csvEscape(product.brand?.name || ''),
+          csvEscape(product.description || ''),
+          product.isActive ? 'true' : 'false',
+          product.isFeatured ? 'true' : 'false',
+        ]
+        lines.push(row.join(','))
+      })
+
+      const csvContent = '\uFEFF' + lines.join('\n')
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+      res.setHeader('Content-Disposition', 'attachment; filename=products.csv')
+      res.send(csvContent)
+    } catch (error) {
+      console.error('Error exporting products to CSV:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در برون‌ریزی محصولات به CSV',
+        error: error.message,
+      })
+    }
+  },
+)
+
+// ============================================
 // POST /api/products/import/csv - Import products from CSV
+// Supports ?mode=update to update existing products by SKU/productCode
+// without deleting images or other preserved data
 // ============================================
 router.post(
   '/import/csv',
@@ -2107,6 +2180,7 @@ router.post(
 
       const filePath = req.file.path
       const startedAt = Date.now()
+      const importMode = (req.query.mode || req.body.mode || 'create').toLowerCase()
       const products = await parseCsvFile(filePath)
       const errors = []
 
@@ -2117,8 +2191,6 @@ router.post(
           message: 'CSV file is empty or has no valid rows',
         })
       }
-
-      const productsToCreate = []
 
       // 1. Collect all unique category and brand names
       const categoryNames = new Set()
@@ -2142,23 +2214,189 @@ router.post(
       const categoryMap = new Map(categories.map((c) => [c.name, c._id]))
       const brandMap = new Map(brands.map((b) => [b.name, b._id]))
 
-      // 4. Build documents
+      if (importMode === 'update') {
+        // ============================================
+        // UPDATE MODE: Find existing products by SKU or productCode
+        // and update only the specified fields. Images and other
+        // unspecified data are preserved.
+        // ============================================
+        let totalUpdated = 0
+        let totalCreated = 0
+
+        const skuSet = new Set()
+        const codeSet = new Set()
+        products.forEach((row) => {
+          if (row.sku) skuSet.add(String(row.sku).trim())
+          if (row.productCode) codeSet.add(String(row.productCode).trim().toUpperCase())
+        })
+
+        const existingByQuery = []
+        if (skuSet.size > 0) {
+          const bySkus = await Product.find({ sku: { $in: Array.from(skuSet) } }).lean()
+          existingByQuery.push(...bySkus)
+        }
+        if (codeSet.size > 0) {
+          const byCodes = await Product.find({ productCode: { $in: Array.from(codeSet) } }).lean()
+          existingByQuery.push(...byCodes)
+        }
+
+        const existingBySkuMap = new Map()
+        const existingByCodeMap = new Map()
+        existingByQuery.forEach((p) => {
+          if (p.sku) existingBySkuMap.set(p.sku, p)
+          if (p.productCode) existingByCodeMap.set(p.productCode, p)
+        })
+
+        const productsToCreate = []
+
+        for (let i = 0; i < products.length; i++) {
+          const row = products[i]
+
+          try {
+            const rowSku = row.sku ? String(row.sku).trim() : ''
+            const rowCode = row.productCode ? String(row.productCode).trim().toUpperCase() : ''
+
+            let existingProduct = null
+            if (rowCode) existingProduct = existingByCodeMap.get(rowCode)
+            if (!existingProduct && rowSku) existingProduct = existingBySkuMap.get(rowSku)
+
+            let categoryId = undefined
+            if (row.category) {
+              const resolved = categoryMap.get(String(row.category).trim())
+              if (resolved) categoryId = resolved
+            }
+
+            let brandId = undefined
+            if (row.brand) {
+              const resolved = brandMap.get(String(row.brand).trim())
+              if (resolved) brandId = resolved
+            }
+
+            if (existingProduct) {
+              const updateFields = {}
+
+              if (row.name !== undefined && row.name !== '') updateFields.name = row.name
+              if (row.productType !== undefined && row.productType !== '') updateFields.productType = row.productType
+              if (row.price !== undefined && row.price !== '') updateFields.price = parseCsvNumber(row.price, existingProduct.price)
+              if (row.compareAtPrice !== undefined && row.compareAtPrice !== '') updateFields.compareAtPrice = parseCsvNumber(row.compareAtPrice, existingProduct.compareAtPrice)
+              if (row.stock !== undefined && row.stock !== '') updateFields.stock = Math.max(0, Math.floor(parseCsvNumber(row.stock, existingProduct.stock)))
+              if (categoryId !== undefined) updateFields.category = categoryId
+              if (brandId !== undefined) updateFields.brand = brandId
+              if (row.description !== undefined && row.description !== '') updateFields.description = row.description
+              if (row.isActive !== undefined && row.isActive !== '') updateFields.isActive = parseCsvBoolean(row.isActive)
+              if (row.isFeatured !== undefined && row.isFeatured !== '') updateFields.isFeatured = parseCsvBoolean(row.isFeatured)
+              if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
+
+              if (Object.keys(updateFields).length > 0) {
+                await Product.updateOne(
+                  { _id: existingProduct._id },
+                  { $set: updateFields },
+                )
+                totalUpdated++
+              }
+            } else {
+              const mongoose = require('mongoose')
+              const productData = {
+                name: row.name || `Product ${i + 1}`,
+                sku: rowSku,
+                productType: row.productType || 'simple',
+                price: parseCsvNumber(row.price, 0),
+                compareAtPrice: row.compareAtPrice ? parseCsvNumber(row.compareAtPrice, undefined) : undefined,
+                stock: Math.max(0, Math.floor(parseCsvNumber(row.stock, 0))),
+                category: categoryId || null,
+                brand: brandId || null,
+                description: row.description || '',
+                isActive: parseCsvBoolean(row.isActive),
+                isFeatured: parseCsvBoolean(row.isFeatured),
+              }
+
+              if (productData.name) {
+                const base = productData.name.toString().trim().toLowerCase()
+                let slug = base
+                  .replace(/\s+/g, '-')
+                  .replace(/[^\p{L}\p{N}\-]+/gu, '')
+                  .replace(/\-+/g, '-')
+                  .replace(/^-+/, '')
+                  .replace(/-+$/, '')
+                if (!slug) slug = new mongoose.Types.ObjectId().toString()
+                const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
+                productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
+              }
+
+              if (productData.sku) {
+                const skuDigits = normalizeDigits(productData.sku).replace(/\D/g, '')
+                if (skuDigits.length > 0) {
+                  productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
+                }
+              }
+              if (!productData.productCode) {
+                const uniqueNum = (Date.now() % 10000000) + i
+                const code = (uniqueNum % 10000000).toString().padStart(7, '0')
+                productData.productCode = `KY-${code}`
+              }
+
+              productsToCreate.push(productData)
+            }
+          } catch (rowError) {
+            errors.push(`Row ${i + 1} processing error: ${rowError.message}`)
+          }
+        }
+
+        for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
+          const chunk = productsToCreate.slice(i, i + CSV_IMPORT_BATCH_SIZE)
+          try {
+            const result = await Product.insertMany(chunk, { ordered: false })
+            totalCreated += result.length
+          } catch (batchError) {
+            console.error(`Error importing batch ${i / CSV_IMPORT_BATCH_SIZE + 1}:`, batchError.message)
+            if (batchError.insertedDocs) {
+              totalCreated += batchError.insertedDocs.length
+            }
+            errors.push(`Batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1} save error: ${batchError.message}`)
+          }
+        }
+
+        clearCacheByPrefix('/api/products')
+        clearCacheByPrefix('/api/v1/admin/products')
+        safeUnlink(filePath)
+
+        const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
+        const messageParts = []
+        if (totalUpdated > 0) messageParts.push(`${totalUpdated} updated`)
+        if (totalCreated > 0) messageParts.push(`${totalCreated} created`)
+        if (messageParts.length === 0) messageParts.push('No changes made')
+
+        return res.json({
+          success: true,
+          message: messageParts.join(', '),
+          updated: totalUpdated,
+          created: totalCreated,
+          imported: totalUpdated + totalCreated,
+          durationSeconds,
+          errors: errors.length > 0 ? errors : undefined,
+        })
+      }
+
+      // ============================================
+      // CREATE MODE (default): Insert all as new products
+      // ============================================
+      const productsToCreate = []
+
       for (let i = 0; i < products.length; i++) {
         const row = products[i]
 
         try {
-          // Find category by name from map
           let categoryId = null
           if (row.category) {
             categoryId = categoryMap.get(String(row.category).trim())
           }
 
-          // Find brand by name from map
           let brandId = null
           if (row.brand) {
             brandId = brandMap.get(String(row.brand).trim())
           }
 
+          const mongoose = require('mongoose')
           const productData = {
             name: row.name || `Product ${i + 1}`,
             sku: row.sku || '',
@@ -2173,7 +2411,6 @@ router.post(
             isFeatured: parseCsvBoolean(row.isFeatured),
           }
 
-          // Manual Slug Generation
           if (productData.name) {
             const base = productData.name.toString().trim().toLowerCase()
             let slug = base
@@ -2182,14 +2419,11 @@ router.post(
               .replace(/\-+/g, '-')
               .replace(/^-+/, '')
               .replace(/-+$/, '')
-
             if (!slug) slug = new mongoose.Types.ObjectId().toString()
-
             const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
             productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
           }
 
-          // Manual ProductCode Generation
           if (productData.sku) {
             const skuDigits = normalizeDigits(productData.sku).replace(/\D/g, '')
             if (skuDigits.length > 0) {
@@ -2209,7 +2443,6 @@ router.post(
         }
       }
 
-      // Insert products in batches
       let totalImported = 0
 
       for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
@@ -2228,15 +2461,14 @@ router.post(
 
       clearCacheByPrefix('/api/products')
       clearCacheByPrefix('/api/v1/admin/products')
-
       safeUnlink(filePath)
 
       const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
-      const message = `${totalImported} products imported successfully`
+      const resultMessage = `${totalImported} products imported successfully`
 
       return res.json({
         success: true,
-        message,
+        message: resultMessage,
         imported: totalImported,
         durationSeconds,
         errors: errors.length > 0 ? errors : undefined,

@@ -3,6 +3,7 @@ import {
   Table,
   Button,
   Input,
+  Dropdown,
   Select,
   Space,
   Switch,
@@ -17,6 +18,8 @@ import {
   PlusOutlined,
   SearchOutlined,
   ExportOutlined,
+  DownOutlined,
+  MoreOutlined,
   ImportOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -205,6 +208,7 @@ function ProductsList({ mode }) {
   const [dynamicFilters, setDynamicFilters] = useState({})
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [importUpdateMode, setImportUpdateMode] = useState(false)
   const [timerModalVisible, setTimerModalVisible] = useState(false)
   const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
   const [flashTimerModalVisible, setFlashTimerModalVisible] = useState(false)
@@ -540,7 +544,7 @@ function ProductsList({ mode }) {
     fetchProducts(pag.current, pag.pageSize)
   }
 
-  // Handle Excel Export
+  // Handle Excel Export (existing)
   const handleExport = async () => {
     if (!canExport) {
       message.error('شما مجوز برون‌ریزی ندارید.')
@@ -570,7 +574,36 @@ function ProductsList({ mode }) {
     }
   }
 
-  const importLargeCsvInChunks = async (file) => {
+  // Handle CSV Export
+  const handleExportCsv = async () => {
+    if (!canExport) {
+      message.error('شما مجوز برون‌ریزی ندارید.')
+      return
+    }
+
+    try {
+      const response = await api.get('/products/export/csv', {
+        responseType: 'blob',
+        timeout: 0,
+      })
+
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'products.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+
+      message.success('فایل CSV با موفقیت دانلود شد')
+    } catch (err) {
+      console.error('Error exporting products to CSV:', err)
+      message.error('خطا در برون‌ریزی محصولات')
+    }
+  }
+
+  const importLargeCsvInChunks = async (file, updateMode = false) => {
     const fileText = await file.text()
     const { headers, rows, parseErrors } = parseCsvText(fileText)
 
@@ -604,6 +637,7 @@ function ProductsList({ mode }) {
       let lastError = null
 
       for (let attempt = 1; attempt <= CSV_CHUNK_RETRY_COUNT; attempt++) {
+        const importUrl = updateMode ? '/products/import/csv?mode=update' : '/products/import/csv'
         try {
           const chunkFormData = new FormData()
           chunkFormData.append(
@@ -612,7 +646,7 @@ function ProductsList({ mode }) {
             `products-chunk-${chunkIndex + 1}.csv`,
           )
 
-          const response = await api.post('/products/import/csv', chunkFormData, {
+          const response = await api.post(importUrl, chunkFormData, {
             timeout: 600000,
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
@@ -659,16 +693,19 @@ function ProductsList({ mode }) {
       setUploading(true)
       const shouldUseChunkImport = file.size > CSV_DIRECT_UPLOAD_LIMIT_BYTES
 
+      const updateMode = importUpdateMode
+
       try {
         let data
 
         if (shouldUseChunkImport) {
-          data = await importLargeCsvInChunks(file)
+          data = await importLargeCsvInChunks(file, updateMode)
         } else {
           const formData = new FormData()
           formData.append('file', file)
 
-          const response = await api.post('/products/import/csv', formData, {
+          const importUrl = updateMode ? '/products/import/csv?mode=update' : '/products/import/csv'
+          const response = await api.post(importUrl, formData, {
             timeout: 600000, // 10 minutes timeout for large CSVs
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
@@ -684,6 +721,7 @@ function ProductsList({ mode }) {
         }
 
         setImportModalVisible(false)
+        setImportUpdateMode(false)
         fetchProducts() // Refresh product list
       } catch (err) {
         message.destroy(CSV_IMPORT_MESSAGE_KEY)
@@ -795,40 +833,94 @@ function ProductsList({ mode }) {
     <div>
       <div
         style={{
-          marginBottom: 16,
+          marginBottom: 20,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
         }}
       >
-        <h1>لیست محصولات</h1>
-        <Space>
+        <h1 style={{ margin: 0 }}>لیست محصولات</h1>
+        <Space wrap size={8}>
           {canImport && (
-            <Button icon={<ImportOutlined />} onClick={() => setImportModalVisible(true)}>
-            درون‌ریزی CSV
-          </Button>
-          )}
-          {canUpdate && (
-            <Button icon={<FieldTimeOutlined />} onClick={() => setTimerModalVisible(true)}>
-            تنظیم تایمر
-          </Button>
-          )}
-          {canUpdate && (
-            <Button icon={<FieldTimeOutlined />} onClick={() => setFlashTimerModalVisible(true)}>
-            Flash Deal Timer
-          </Button>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'import-csv',
+                    icon: <ImportOutlined />,
+                    label: 'درون‌ریزی CSV',
+                    onClick: () => { setImportUpdateMode(false); setImportModalVisible(true) },
+                  },
+                  {
+                    key: 'update-csv',
+                    icon: <ImportOutlined />,
+                    label: 'به‌روزرسانی از CSV',
+                    onClick: () => { setImportUpdateMode(true); setImportModalVisible(true) },
+                  },
+                ],
+              }}
+            >
+              <Button icon={<ImportOutlined />}>
+                درون‌ریزی <DownOutlined />
+              </Button>
+            </Dropdown>
           )}
           {canExport && (
-            <Button icon={<ExportOutlined />} onClick={handleExport}>
-            برون‌ریزی Excel
-          </Button>
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'export-excel',
+                    icon: <ExportOutlined />,
+                    label: 'برون‌ریزی Excel',
+                    onClick: handleExport,
+                  },
+                  {
+                    key: 'export-csv',
+                    icon: <ExportOutlined />,
+                    label: 'برون‌ریزی CSV',
+                    onClick: handleExportCsv,
+                  },
+                ],
+              }}
+            >
+              <Button icon={<ExportOutlined />}>
+                برون‌ریزی <DownOutlined />
+              </Button>
+            </Dropdown>
+          )}
+          {canUpdate && (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: 'special-offer-timer',
+                    icon: <FieldTimeOutlined />,
+                    label: 'تنظیم تایمر شگفت‌انگیز',
+                    onClick: () => setTimerModalVisible(true),
+                  },
+                  {
+                    key: 'flash-deal-timer',
+                    icon: <FieldTimeOutlined />,
+                    label: 'Flash Deal Timer',
+                    onClick: () => setFlashTimerModalVisible(true),
+                  },
+                ],
+              }}
+            >
+              <Button icon={<MoreOutlined />}>
+                عملیات بیشتر <DownOutlined />
+              </Button>
+            </Dropdown>
           )}
           {canCreate && (
             <Link to="/products/new">
-            <Button type="primary" icon={<PlusOutlined />}>
-              محصول جدید
-            </Button>
-          </Link>
+              <Button type="primary" icon={<PlusOutlined />}>
+                محصول جدید
+              </Button>
+            </Link>
           )}
         </Space>
       </div>
@@ -1109,22 +1201,44 @@ function ProductsList({ mode }) {
 
       {/* Import Modal */}
       <Modal
-        title="درون‌ریزی محصولات از CSV"
+        title={importUpdateMode ? 'به‌روزرسانی محصولات از CSV' : 'درون‌ریزی محصولات از CSV'}
         open={importModalVisible}
-        onCancel={() => setImportModalVisible(false)}
+        onCancel={() => { setImportModalVisible(false); setImportUpdateMode(false) }}
         footer={null}
         width={600}
       >
         <div style={{ marginBottom: 16 }}>
-          <p>
-            فایل CSV خود را با فرمت زیر آماده کنید:
-          </p>
-          <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
-            name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
-          </code>
-          <p style={{ fontSize: '0.9em', color: '#666' }}>
-            نکته: نام دسته‌بندی و برند باید دقیقاً با نام موجود در سیستم مطابقت داشته باشد.
-          </p>
+          {importUpdateMode ? (
+            <>
+              <p>
+                فایل CSV خود را آپلود کنید. محصولات موجود بر اساس <strong>SKU</strong> یا <strong>کد محصول (productCode)</strong> شناسایی و به‌روزرسانی می‌شوند.
+              </p>
+              <p style={{ fontSize: '0.9em', color: '#666', marginTop: 8 }}>
+                ✅ تصاویر و سایر اطلاعات حفظ می‌شوند — فقط فیلدهای موجود در CSV به‌روز می‌شوند.
+              </p>
+              <p style={{ fontSize: '0.9em', color: '#666' }}>
+                ✅ اگر محصولی با SKU/کد محصول یافت نشود، به عنوان محصول جدید ایجاد می‌شود.
+              </p>
+              <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
+                name,sku,productCode,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
+              </code>
+              <p style={{ fontSize: '0.85em', color: '#999' }}>
+                نکته: ابتدا فایل CSV را از «برون‌ریزی CSV» دانلود کنید، تغییرات لازم را اعمال کرده و مجدداً آپلود کنید.
+              </p>
+            </>
+          ) : (
+            <>
+              <p>
+                فایل CSV خود را با فرمت زیر آماده کنید:
+              </p>
+              <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
+                name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
+              </code>
+              <p style={{ fontSize: '0.9em', color: '#666' }}>
+                نکته: نام دسته‌بندی و برند باید دقیقاً با نام موجود در سیستم مطابقت داشته باشد.
+              </p>
+            </>
+          )}
         </div>
 
         <Dragger {...uploadProps} disabled={uploading}>
