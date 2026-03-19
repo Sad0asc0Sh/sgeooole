@@ -60,6 +60,12 @@ const userSchema = new mongoose.Schema(
 
     avatar: {
       type: String, // URL to user profile picture (from Google or uploaded)
+      set: function(val) {
+        if (val && typeof val === 'object' && val.url) {
+          return val.url;
+        }
+        return val;
+      },
     },
 
     // Wallet balance

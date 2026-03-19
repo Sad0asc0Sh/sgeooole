@@ -1,0 +1,382 @@
+const mongoose = require('mongoose')
+
+// ============================================
+// Schema برای یک متغیر محصول (Product Variant)
+// ============================================
+const variantSchema = new mongoose.Schema(
+  {
+    sku: {
+      type: String,
+      trim: true,
+    },
+
+    price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+
+    stock: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    // گزینه‌های این متغیر (مثل: [{name: 'رنگ', value: 'آبی'}, {name: 'سایز', value: 'L'}])
+    options: [
+      {
+        name: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        value: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+      },
+    ],
+
+    // تصاویر اختصاصی این متغیر
+    images: [
+      {
+        url: { type: String },
+        public_id: { type: String },
+      },
+    ],
+  },
+  { _id: true },
+)
+
+// ============================================
+// Schema برای یک ویژگی محصول (Product Attribute)
+// ============================================
+const attributeSchema = new mongoose.Schema(
+  {
+    // نام ویژگی (مثلاً: 'رنگ' یا 'سایز')
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    // مقادیر ممکن این ویژگی (مثلاً: ['آبی', 'قرمز', 'سبز'])
+    values: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+  },
+  { _id: false },
+)
+
+// ============================================
+// Schema اصلی محصول (Product)
+// ============================================
+const ProductSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Product name is required'],
+      trim: true,
+      maxlength: 200,
+    },
+
+    slug: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+
+    // ============================================
+    // کد یکتای محصول برای URL (مثل: ky-1234567)
+    // ============================================
+    productCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      uppercase: true,
+    },
+
+    description: {
+      type: String,
+      default: '',
+    },
+
+    // ============================================
+    // نوع محصول: ساده یا متغیر
+    // ============================================
+    productType: {
+      type: String,
+      enum: ['simple', 'variable'],
+      default: 'simple',
+    },
+
+    // ============================================
+    // فیلدهای قیمت و موجودی (برای محصولات ساده)
+    // در محصولات متغیر، این مقادیر در variants تعریف می‌شوند
+    // ============================================
+    price: {
+      type: Number,
+      min: 0,
+      // برای محصولات ساده الزامی است
+      required: function () {
+        return this.productType === 'simple'
+      },
+    },
+
+    compareAtPrice: {
+      type: Number,
+      min: 0,
+    },
+
+    // Discount percentage (0-100)
+    discount: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: 0,
+    },
+
+    sku: {
+      type: String,
+      trim: true,
+    },
+
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      required: false,
+    },
+
+    brand: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Brand',
+      required: false,
+    },
+
+    // Images: array of objects {url, public_id} (Cloudinary)
+    // در محصولات متغیر، این تصاویر مشترک هستند
+    images: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+
+    stock: {
+      type: Number,
+      default: 0,
+      min: 0,
+      // برای محصولات ساده الزامی است
+      required: function () {
+        return this.productType === 'simple'
+      },
+    },
+
+    // ============================================
+    // ویژگی‌ها (فقط برای محصولات متغیر)
+    // ============================================
+    attributes: [attributeSchema],
+
+    // ============================================
+    // متغیرها (فقط برای محصولات متغیر)
+    // ============================================
+    variants: [variantSchema],
+
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+
+    numReviews: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+
+    isOnSale: {
+      type: Boolean,
+      default: false,
+    },
+
+    specifications: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    // ============================================
+    // Time-Based Promotion Fields
+    // ============================================
+
+    // Flash Deal: Individual product countdown
+    isFlashDeal: {
+      type: Boolean,
+      default: false,
+    },
+    flashDealEndTime: {
+      type: Date,
+      // Only relevant if isFlashDeal === true
+    },
+
+    // Special Offer: Global campaign with shared countdown
+    isSpecialOffer: {
+      type: Boolean,
+      default: false,
+    },
+    specialOfferEndTime: {
+      type: Date,
+      // Used for the global "Special Offers" section countdown
+    },
+
+    // ============================================
+    // Popularity & Analytics Fields
+    // ============================================
+    views: {
+      type: Number,
+      default: 0,
+    },
+    salesCount: {
+      type: Number,
+      default: 0,
+    },
+    clickCount: {
+      type: Number,
+      default: 0,
+    },
+
+    // ============================================
+    // Smart Filter Properties (e.g., Resolution: 4K, Weight: 500g)
+    // Used for filtering products in a category
+    // ============================================
+    properties: [
+      {
+        label: { type: String, required: true, trim: true },
+        value: { type: String, required: true, trim: true },
+      }
+    ],
+  },
+  {
+    timestamps: true,
+  },
+)
+
+// ============================================
+// Database Indexes for Performance
+// ============================================
+// Compound index for common filter combinations
+ProductSchema.index({ productType: 1, category: 1, brand: 1 })
+ProductSchema.index({ isActive: 1, productType: 1 })
+// Text index for search
+ProductSchema.index({ name: 'text', description: 'text' })
+// Single field indexes
+ProductSchema.index({ category: 1 })
+ProductSchema.index({ brand: 1 })
+ProductSchema.index({ slug: 1 })
+// Time-based promotion indexes (for Flash Deals and Special Offers)
+ProductSchema.index({ isFlashDeal: 1, flashDealEndTime: 1 })
+ProductSchema.index({ isSpecialOffer: 1, specialOfferEndTime: 1 })
+// Compound indexes for active promotions (most common queries)
+ProductSchema.index({ isActive: 1, isFlashDeal: 1, flashDealEndTime: 1 })
+ProductSchema.index({ isActive: 1, isSpecialOffer: 1, specialOfferEndTime: 1 })
+// Sorting indexes for common sort patterns
+ProductSchema.index({ createdAt: -1 }) // For "Newest" sorting
+ProductSchema.index({ salesCount: -1 }) // For "Best Sellers" sorting
+ProductSchema.index({ views: -1 }) // For "Most Viewed" sorting
+ProductSchema.index({ price: 1 }) // For price sorting (low to high)
+ProductSchema.index({ price: -1 }) // For price sorting (high to low)
+// Compound index for category filtering with sorting
+ProductSchema.index({ category: 1, createdAt: -1 })
+ProductSchema.index({ category: 1, salesCount: -1 })
+ProductSchema.index({ isActive: 1, createdAt: -1 })
+// Index for Smart Filter Properties (category-based specs filtering)
+ProductSchema.index({ 'properties.label': 1, 'properties.value': 1 })
+
+// ============================================
+// Pre-save Hook: Generate slug and productCode
+// ============================================
+ProductSchema.pre('save', async function (next) {
+  // 1. Generate slug from name if not provided
+  if (this.isModified('name') && !this.slug) {
+    const base = (this.name || '').toString().trim().toLowerCase()
+    let slug = base
+      .replace(/\s+/g, '-')
+      .replace(/[^\p{L}\p{N}\-]+/gu, '')
+      .replace(/\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '')
+
+    if (!slug) {
+      slug = this._id ? this._id.toString() : new mongoose.Types.ObjectId().toString()
+    }
+
+    this.slug = slug
+  }
+
+  // 2. Generate productCode (KY-XXXXXXX) if not provided
+  if (!this.productCode) {
+    let code = ''
+
+    // Try to extract 7 digits from SKU first
+    if (this.sku) {
+      const skuDigits = this.sku.replace(/\D/g, '')
+      if (skuDigits.length > 0) {
+        code = skuDigits.slice(-7).padStart(7, '0')
+      }
+    }
+
+    // If no valid SKU, generate from MongoDB ObjectId or random
+    if (!code) {
+      const id = this._id ? this._id.toString() : new mongoose.Types.ObjectId().toString()
+      // Convert hex to numeric and take last 7 digits
+      const numericId = parseInt(id.slice(-8), 16)
+      code = (numericId % 10000000).toString().padStart(7, '0')
+    }
+
+    this.productCode = `KY-${code}`
+
+    // Ensure uniqueness
+    const Product = mongoose.model('Product')
+    let existingProduct = await Product.findOne({
+      productCode: this.productCode,
+      _id: { $ne: this._id }
+    })
+
+    let suffix = 1
+    const baseCode = this.productCode
+    while (existingProduct) {
+      suffix++
+      const newNum = (parseInt(code) + suffix) % 10000000
+      this.productCode = `KY-${newNum.toString().padStart(7, '0')}`
+      existingProduct = await Product.findOne({
+        productCode: this.productCode,
+        _id: { $ne: this._id }
+      })
+    }
+  }
+
+  next()
+})
+
+ProductSchema.index({ slug: 1 }, { unique: true, sparse: true })
+ProductSchema.index({ productCode: 1 }, { unique: true, sparse: true })
+ProductSchema.index({ name: 1 })
+ProductSchema.index({ isFeatured: 1 })
+ProductSchema.index({ isActive: 1 })
+
+module.exports = mongoose.model('Product', ProductSchema)
