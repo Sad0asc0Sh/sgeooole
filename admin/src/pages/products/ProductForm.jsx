@@ -46,7 +46,7 @@ const modules = {
 const formats = [
   'header',
   'bold', 'italic', 'underline', 'strike',
-  'align', 'list', 'bullet', 'indent',
+  'align', 'list', 'indent',
   'direction',
   'color', 'background',
   'link', 'image', 'video',
