@@ -11,7 +11,7 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
-const { upload, cloudinary } = require('../middleware/upload')
+const { upload, uploadToArvan, deleteFromArvan } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
 // ============================================
@@ -201,12 +201,12 @@ const handleCsvUpload = (req, res, next) => {
 // Helpers
 // ============================================
 
-// Normalize Cloudinary file object to { url, public_id }
-const extractImageInfo = (file) => {
-  if (!file) return null
+// Normalize upload result from ArvanCloud to { url, public_id }
+const extractImageInfo = (uploadResult) => {
+  if (!uploadResult) return null
   return {
-    url: file.path,
-    public_id: file.filename,
+    url: uploadResult.url,
+    public_id: uploadResult.filename || uploadResult.public_id,
   }
 }
 
@@ -1485,10 +1485,10 @@ router.put(
           for (const img of product.images) {
             if (img && typeof img === 'object' && img.public_id) {
               try {
-                await cloudinary.uploader.destroy(img.public_id)
+                await deleteFromArvan(img.public_id)
               } catch (err) {
                 console.error(
-                  'Error deleting product image from Cloudinary during update:',
+                  'Error deleting product image from ArvanCloud during update:',
                   err.message,
                 )
               }
@@ -1520,11 +1520,11 @@ router.put(
               if (shouldRemove) {
                 if (existingPublicId) {
                   try {
-                    console.log('[DEBUG] Deleting from Cloudinary:', existingPublicId)
-                    await cloudinary.uploader.destroy(existingPublicId)
+                    console.log('[DEBUG] Deleting from ArvanCloud:', existingPublicId)
+                    await deleteFromArvan(existingPublicId)
                   } catch (err) {
                     console.error(
-                      'Error deleting product image from Cloudinary during partial update:',
+                      'Error deleting product image from ArvanCloud during partial update:',
                       err.message,
                     )
                   }
@@ -1633,9 +1633,12 @@ router.post(
         })
       }
 
-      const newImages = (req.files || [])
-        .map((file) => extractImageInfo(file))
-        .filter(Boolean)
+      const newImages = []
+      for (const file of (req.files || [])) {
+        const result = await uploadToArvan(file.buffer, file.originalname)
+        const info = extractImageInfo(result)
+        if (info) newImages.push(info)
+      }
 
       product.images = [...(product.images || []), ...newImages]
       await product.save()
@@ -1702,18 +1705,12 @@ router.delete(
 
       console.log(`[DELETE IMAGE] Found image:`, imageToDelete)
 
-      // حذف از Cloudinary
+      // حذف از ArvanCloud
       try {
-        const cloudinaryResult = await cloudinary.uploader.destroy(publicId)
-        console.log(`[DELETE IMAGE] Cloudinary result:`, cloudinaryResult)
-
-        if (cloudinaryResult.result !== 'ok' && cloudinaryResult.result !== 'not found') {
-          console.warn(`[DELETE IMAGE] Cloudinary deletion warning: ${cloudinaryResult.result}`)
-        }
-      } catch (cloudinaryError) {
-        console.error(`[DELETE IMAGE] Cloudinary error:`, cloudinaryError)
-        // ادامه می‌دهیم حتی اگر حذف از Cloudinary ناموفق باشد
-        // چون ممکن است عکس قبلاً از Cloudinary حذف شده باشد
+        await deleteFromArvan(publicId)
+        console.log(`[DELETE IMAGE] Deleted from ArvanCloud:`, publicId)
+      } catch (arvanError) {
+        console.error(`[DELETE IMAGE] ArvanCloud error:`, arvanError)
       }
 
       // حذف از آرایه images محصول
@@ -1820,20 +1817,20 @@ router.post(
         })
       }
 
-      // Find all products to delete (for Cloudinary cleanup)
+      // Find all products to delete (for ArvanCloud cleanup)
       const products = await Product.find({ _id: { $in: ids } }).select('images')
 
-      // Delete Cloudinary images for all products
-      const cloudinaryErrors = []
+      // Delete ArvanCloud images for all products
+      const deleteErrors = []
       for (const product of products) {
         if (Array.isArray(product.images)) {
           for (const img of product.images) {
             if (img && typeof img === 'object' && img.public_id) {
               try {
-                await cloudinary.uploader.destroy(img.public_id)
+                await deleteFromArvan(img.public_id)
               } catch (err) {
-                cloudinaryErrors.push(err.message)
-                console.error('Error deleting product image from Cloudinary:', err.message)
+                deleteErrors.push(err.message)
+                console.error('Error deleting product image from ArvanCloud:', err.message)
               }
             }
           }
@@ -1882,14 +1879,14 @@ router.delete(
         })
       }
 
-      // Delete any Cloudinary images associated with this product
+      // Delete any ArvanCloud images associated with this product
       if (Array.isArray(product.images)) {
         for (const img of product.images) {
           if (img && typeof img === 'object' && img.public_id) {
             try {
-              await cloudinary.uploader.destroy(img.public_id)
+              await deleteFromArvan(img.public_id)
             } catch (err) {
-              console.error('Error deleting product image from Cloudinary:', err.message)
+              console.error('Error deleting product image from ArvanCloud:', err.message)
             }
           }
         }

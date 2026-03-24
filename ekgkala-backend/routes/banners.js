@@ -1,6 +1,5 @@
 const express = require('express')
 const router = express.Router()
-const multer = require('multer')
 
 const {
   getBanners,
@@ -34,11 +33,12 @@ router.get('/', cacheMiddleware(300), getBanners)
 // مجوزهای مورد نیاز: BANNER_CREATE, BANNER_UPDATE, BANNER_DELETE
 // ============================================
 
-const { upload, normalizeFileUrl, MAX_UPLOAD_FILE_SIZE_MB } = require('../middleware/upload')
+const multer = require('multer')
+const { upload, MAX_UPLOAD_FILE_SIZE_MB } = require('../middleware/upload')
 
 const handleBannerImageUpload = (req, res, next) => {
   upload.single('image')(req, res, (err) => {
-    if (!err) return normalizeFileUrl(req, res, next)
+    if (!err) return next()
 
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {

@@ -1,13 +1,13 @@
 const Brand = require('../models/Brand')
-const path = require('path')
-const fs = require('fs')
+const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
 
-// تبدیل فایل آپلود شده به { url, public_id }
-const extractImageInfo = (file) => {
+// آپلود فایل multer (memoryStorage) به ArvanCloud و برگرداندن { url, public_id }
+const extractImageInfo = async (file) => {
   if (!file) return null
+  const result = await uploadToArvan(file.buffer, file.originalname)
   return {
-    url: file.url || `/uploads/${file.filename}`,
-    public_id: file.filename,
+    url: result.url,
+    public_id: result.filename,
   }
 }
 
@@ -146,7 +146,7 @@ exports.createBrand = async (req, res) => {
 
     // اگر لوگو آپلود شده باشد، اطلاعات آن را ذخیره کن
     if (req.file) {
-      brandData.logo = extractImageInfo(req.file)
+      brandData.logo = await extractImageInfo(req.file)
     }
 
     const brand = await Brand.create(brandData)
@@ -183,20 +183,16 @@ exports.updateBrand = async (req, res) => {
 
     // مدیریت لوگو
     if (hasNewLogo) {
-      // حذف فایل قدیمی از دیسک
       if (brand.logo && brand.logo.public_id) {
-        const oldFilePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath)
+        try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
+          console.error('Error deleting old brand logo from ArvanCloud:', e.message)
         }
       }
-      brand.logo = extractImageInfo(req.file)
+      brand.logo = await extractImageInfo(req.file)
     } else if (removeLogo === 'true' || removeLogo === true) {
-      // حذف لوگو
       if (brand.logo && brand.logo.public_id) {
-        const oldFilePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
-        if (fs.existsSync(oldFilePath)) {
-          fs.unlinkSync(oldFilePath)
+        try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
+          console.error('Error deleting brand logo from ArvanCloud:', e.message)
         }
       }
       brand.logo = { url: null, public_id: null }
@@ -243,11 +239,9 @@ exports.deleteBrand = async (req, res) => {
       })
     }
 
-    // حذف لوگو از دیسک
     if (brand.logo && brand.logo.public_id) {
-      const filePath = path.join('/var/www/ekgkala/uploads', brand.logo.public_id)
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
+      try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
+        console.error('Error deleting brand logo from ArvanCloud:', e.message)
       }
     }
 

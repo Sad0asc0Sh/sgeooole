@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 const withBundleAnalyzer =
-  process.env.ANALYZE === "true" ? require("@next/bundle-analyzer")({ enabled: true }) : (config: NextConfig) => config;
+  process.env.ANALYZE === "true"
+    ? require("@next/bundle-analyzer")({ enabled: true })
+    : (config: NextConfig) => config;
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+).replace(/\/$/, "");
 
 const fetchJsonWithTimeout = async (url: string, timeoutMs: number) => {
   const controller = new AbortController();
@@ -18,10 +22,20 @@ const fetchJsonWithTimeout = async (url: string, timeoutMs: number) => {
 
 const buildProductUrl = (product: any) => {
   const path = Array.isArray(product?.categoryPath)
-    ? product.categoryPath.map((c: any) => c.slug).filter(Boolean).join("/")
+    ? product.categoryPath
+        .map((c: any) => c.slug)
+        .filter(Boolean)
+        .join("/")
     : "product";
   return `/${path}/${product.slug || product._id || product.id}`;
 };
+
+// ArvanCloud configuration
+const ARVAN_ENDPOINT =
+  process.env.NEXT_PUBLIC_ARVAN_ENDPOINT ||
+  "https://s3.ir-thr-at1.arvanstorage.ir";
+const ARVAN_BUCKET_NAME =
+  process.env.NEXT_PUBLIC_ARVAN_BUCKET_NAME || "";
 
 const baseConfig: NextConfig = {
   reactCompiler: true,
@@ -34,15 +48,28 @@ const baseConfig: NextConfig = {
     imageSizes: [64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     // SECURITY: SVG disabled to prevent XSS attacks
-    // SVG files can contain malicious JavaScript
     dangerouslyAllowSVG: false,
     contentDispositionType: "attachment",
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    contentSecurityPolicy:
+      "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
+      // ArvanCloud Object Storage (PRIMARY)
+      {
+        protocol: "https",
+        hostname: ARVAN_BUCKET_NAME ? ARVAN_BUCKET_NAME + "." : "s3.ir-thr-at1.",
+        pathname: `/${ARVAN_BUCKET_NAME || "ekgkala-media"}/**`,
+      },
+      {
+        protocol: "https",
+        hostname: "s3.ir-thr-at1.arvanstorage.ir",
+        pathname: `/${ARVAN_BUCKET_NAME || "ekgkala-media"}/**`,
+      },
+      // Keep Cloudinary for legacy data during migration
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      // Local dev
       {
         protocol: "http",
         hostname: "localhost",
@@ -79,11 +106,11 @@ const baseConfig: NextConfig = {
           },
           ...(process.env.NODE_ENV === "production"
             ? [
-              {
-                key: "Strict-Transport-Security",
-                value: "max-age=31536000; includeSubDomains; preload",
-              },
-            ]
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=31536000; includeSubDomains; preload",
+                },
+              ]
             : []),
         ],
       },
@@ -91,7 +118,10 @@ const baseConfig: NextConfig = {
   },
   async redirects() {
     try {
-      const json = await fetchJsonWithTimeout(`${API_BASE}/products?limit=100`, 8000);
+      const json = await fetchJsonWithTimeout(
+        `${API_BASE}/products?limit=100`,
+        8000
+      );
       const items: any[] = Array.isArray(json?.data) ? json.data : [];
 
       const mapped = items

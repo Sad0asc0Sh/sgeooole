@@ -1,6 +1,6 @@
 const Category = require('../models/Category')
 const Product = require('../models/Product')
-const { cloudinary } = require('../middleware/upload')
+const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
 
 const parseBooleanQueryParam = (value) =>
   value === true || value === 'true' || value === '1' || value === 1
@@ -47,12 +47,13 @@ const computeConnectedCategoryIdSet = (categories = []) => {
   return connectedIds
 }
 
-// Normalize Cloudinary file object to { url, public_id }
-const extractImageInfo = (file) => {
+// Upload a multer memory file to ArvanCloud and return { url, public_id }
+const uploadAndExtract = async (file) => {
   if (!file) return null
+  const result = await uploadToArvan(file.buffer, file.originalname)
   return {
-    url: file.path,
-    public_id: file.filename,
+    url: result.url,
+    public_id: result.filename,
   }
 }
 
@@ -608,8 +609,8 @@ exports.createCategory = async (req, res) => {
     // DEBUG: Log received files
     console.log('[CREATE_CATEGORY] Received files:', {
       hasFiles: !!req.files,
-      iconFile: req.files?.icon?.[0] ? { path: req.files.icon[0].path, filename: req.files.icon[0].filename } : null,
-      imageFile: req.files?.image?.[0] ? { path: req.files.image[0].path, filename: req.files.image[0].filename } : null,
+      iconFile: req.files?.icon?.[0] ? { originalname: req.files.icon[0].originalname, size: req.files.icon[0].size } : null,
+      imageFile: req.files?.image?.[0] ? { originalname: req.files.image[0].originalname, size: req.files.image[0].size } : null,
     })
 
     if (!name) {
@@ -640,10 +641,10 @@ exports.createCategory = async (req, res) => {
 
     if (req.files) {
       if (req.files.icon && req.files.icon[0]) {
-        categoryData.icon = extractImageInfo(req.files.icon[0])
+        categoryData.icon = await uploadAndExtract(req.files.icon[0])
       }
       if (req.files.image && req.files.image[0]) {
-        categoryData.image = extractImageInfo(req.files.image[0])
+        categoryData.image = await uploadAndExtract(req.files.image[0])
       }
     }
 
@@ -671,8 +672,8 @@ exports.updateCategory = async (req, res) => {
     console.log('[UPDATE_CATEGORY] Received files:', {
       categoryId: req.params.id,
       hasFiles: !!req.files,
-      iconFile: req.files?.icon?.[0] ? { path: req.files.icon[0].path, filename: req.files.icon[0].filename } : null,
-      imageFile: req.files?.image?.[0] ? { path: req.files.image[0].path, filename: req.files.image[0].filename } : null,
+      iconFile: req.files?.icon?.[0] ? { originalname: req.files.icon[0].originalname, size: req.files.icon[0].size } : null,
+      imageFile: req.files?.image?.[0] ? { originalname: req.files.image[0].originalname, size: req.files.image[0].size } : null,
       bodyKeys: Object.keys(req.body),
     })
 
@@ -705,23 +706,23 @@ exports.updateCategory = async (req, res) => {
     if (hasNewIcon) {
       if (category.icon && category.icon.public_id) {
         try {
-          await cloudinary.uploader.destroy(category.icon.public_id)
+          await deleteFromArvan(category.icon.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(
-            'Error deleting old icon from Cloudinary:',
+            'Error deleting old icon from ArvanCloud:',
             err.message,
           )
         }
       }
-      category.icon = extractImageInfo(req.files.icon[0])
+      category.icon = await uploadAndExtract(req.files.icon[0])
     } else if (removeIcon === 'true' || removeIcon === true) {
       if (category.icon && category.icon.public_id) {
         try {
-          await cloudinary.uploader.destroy(category.icon.public_id)
+          await deleteFromArvan(category.icon.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('Error deleting icon from Cloudinary:', err.message)
+          console.error('Error deleting icon from ArvanCloud:', err.message)
         }
       }
       category.icon = null
@@ -731,23 +732,23 @@ exports.updateCategory = async (req, res) => {
     if (hasNewImage) {
       if (category.image && category.image.public_id) {
         try {
-          await cloudinary.uploader.destroy(category.image.public_id)
+          await deleteFromArvan(category.image.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(
-            'Error deleting old image from Cloudinary:',
+            'Error deleting old image from ArvanCloud:',
             err.message,
           )
         }
       }
-      category.image = extractImageInfo(req.files.image[0])
+      category.image = await uploadAndExtract(req.files.image[0])
     } else if (removeImage === 'true' || removeImage === true) {
       if (category.image && category.image.public_id) {
         try {
-          await cloudinary.uploader.destroy(category.image.public_id)
+          await deleteFromArvan(category.image.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('Error deleting image from Cloudinary:', err.message)
+          console.error('Error deleting image from ArvanCloud:', err.message)
         }
       }
       category.image = null
@@ -812,17 +813,17 @@ exports.deleteCategory = async (req, res) => {
 
     if (category.icon && category.icon.public_id) {
       try {
-        await cloudinary.uploader.destroy(category.icon.public_id)
+        await deleteFromArvan(category.icon.public_id)
       } catch (err) {
-        console.error('Error deleting icon from Cloudinary:', err.message)
+        console.error('Error deleting icon from ArvanCloud:', err.message)
       }
     }
 
     if (category.image && category.image.public_id) {
       try {
-        await cloudinary.uploader.destroy(category.image.public_id)
+        await deleteFromArvan(category.image.public_id)
       } catch (err) {
-        console.error('Error deleting image from Cloudinary:', err.message)
+        console.error('Error deleting image from ArvanCloud:', err.message)
       }
     }
 

@@ -1,4 +1,5 @@
 const crypto = require('crypto')
+const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
 const { OAuth2Client } = require('google-auth-library')
@@ -1081,9 +1082,15 @@ exports.updateAvatar = async (req, res) => {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
     }
 
-    // In a real app with Cloudinary, you would delete the old image here
-    // For now, we just update the path
-    user.avatar = req.file.path.replace(/\\/g, '/') // Normalize path for Windows
+    // Delete old avatar from ArvanCloud if it exists
+    if (user.avatar && typeof user.avatar === 'object' && user.avatar.public_id) {
+      try { await deleteFromArvan(user.avatar.public_id) } catch (e) {
+        console.error('Error deleting old customer avatar from ArvanCloud:', e.message)
+      }
+    }
+
+    const arvanResult = await uploadToArvan(req.file.buffer, req.file.originalname)
+    user.avatar = { url: arvanResult.url, public_id: arvanResult.filename }
 
     await user.save()
 

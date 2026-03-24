@@ -1,5 +1,5 @@
 const Admin = require('../models/Admin')
-const { cloudinary } = require('../middleware/upload')
+const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
 const Joi = require('joi')
 
 const updateProfileSchema = Joi.object({
@@ -175,18 +175,19 @@ exports.updateMyAvatar = async (req, res) => {
     // O-OøU? O›U^OO¦OOñ U,O_UOU.UO OOý Cloudinary (OU_Oñ U^OªU^O_ O_OO\'O¦UØ O"OO\'O_)
     if (user.avatar && user.avatar.public_id) {
       try {
-        await cloudinary.uploader.destroy(user.avatar.public_id)
-        console.log('Old avatar deleted from Cloudinary:', user.avatar.public_id)
+        await deleteFromArvan(user.avatar.public_id)
+        console.log('Old avatar deleted from ArvanCloud:', user.avatar.public_id)
       } catch (error) {
-        console.error('Error deleting old avatar from Cloudinary:', error)
+        console.error('Error deleting old avatar from ArvanCloud:', error)
         // OO_OU.UØ U.UOƒ?OO_UØUOU. O-O¦UO OU_Oñ O-OøU? O¦OæU^UOOñ U,O_UOU.UO U+OU.U^U?U, O"OO\'O_
       }
     }
 
     // OøOrUOOñUØ O›U^OO¦OOñ OªO_UOO_
+    const arvanResult = await uploadToArvan(req.file.buffer, req.file.originalname)
     user.avatar = {
-      url: req.file.path,
-      public_id: req.file.filename,
+      url: arvanResult.url,
+      public_id: arvanResult.filename,
     }
 
     await user.save()

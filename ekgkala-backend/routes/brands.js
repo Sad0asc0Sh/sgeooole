@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
-const { upload, normalizeFileUrl } = require('../middleware/upload')
+const { upload } = require('../middleware/upload')
 const brandController = require('../controllers/brandController')
 
 // ============================================
@@ -22,7 +22,6 @@ router.post('/',
   protect,
   checkPermission(PERMISSIONS.BRAND_CREATE),
   upload.single('logo'),
-  normalizeFileUrl,
   brandController.createBrand,
 )
 
@@ -32,7 +31,6 @@ router.put(
   protect,
   checkPermission(PERMISSIONS.BRAND_UPDATE),
   upload.single('logo'),
-  normalizeFileUrl,
   brandController.updateBrand,
 )
 

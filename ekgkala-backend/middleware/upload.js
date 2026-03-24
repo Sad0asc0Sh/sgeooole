@@ -1,7 +1,7 @@
 const multer = require('multer')
 const crypto = require('crypto')
 const path = require('path')
-const fs = require('fs')
+const { uploadToArvan, deleteFromArvan, getPublicUrl } = require('../lib/arvanS3')
 
 // ============================================
 // تنظیمات حجم فایل
@@ -17,13 +17,7 @@ const MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
 // ============================================
 // مسیر ذخیره‌سازی
 // ============================================
-const UPLOAD_BASE_PATH = process.env.UPLOAD_BASE_PATH || '/var/www/ekgkala/uploads'
-
-// ساخت پوشه اگر وجود نداشت
-if (!fs.existsSync(UPLOAD_BASE_PATH)) {
-  fs.mkdirSync(UPLOAD_BASE_PATH, { recursive: true })
-  console.log('[UPLOAD] Created upload directory:', UPLOAD_BASE_PATH)
-}
+const UPLOAD_BASE_PATH = process.env.UPLOAD_BASE_PATH || '/var/www/ekgkala/uploads';
 
 // ============================================
 // لیست MIME و extension های مجاز
@@ -63,17 +57,9 @@ const generateSafeFilename = (originalName) => {
 }
 
 // ============================================
-// Disk Storage
+// Memory Storage (buffer available for ArvanCloud upload)
 // ============================================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, UPLOAD_BASE_PATH)
-  },
-  filename: (req, file, cb) => {
-    const safeFilename = generateSafeFilename(file.originalname)
-    cb(null, safeFilename)
-  },
-})
+const storage = multer.memoryStorage()
 
 // ============================================
 // File Filter
@@ -129,15 +115,17 @@ const upload = multer({
 // URL محلی را به req.file.url اضافه می‌کند
 // ============================================
 const normalizeFileUrl = (req, res, next) => {
-  const BASE_URL = process.env.BASE_URL || ''
-
   if (req.file) {
-    req.file.url = `${BASE_URL}/uploads/${req.file.filename}`
+    if (!req.file.filename) {
+      req.file.filename = generateSafeFilename(req.file.originalname)
+    }
   }
 
   if (req.files && Array.isArray(req.files)) {
     req.files.forEach((file) => {
-      file.url = `${BASE_URL}/uploads/${file.filename}`
+      if (!file.filename) {
+        file.filename = generateSafeFilename(file.originalname)
+      }
     })
   }
 
@@ -164,6 +152,9 @@ module.exports = {
   upload,
   normalizeFileUrl,
   validateMagicNumbers,
+  uploadToArvan,
+  deleteFromArvan,
+  getPublicUrl,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
   BLOCKED_MIME_TYPES,

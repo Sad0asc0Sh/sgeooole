@@ -1,8 +1,5 @@
-const path = require('path')
-const fs = require('fs')
 const Banner = require('../models/Banner')
-
-const { UPLOAD_BASE_PATH } = require('../middleware/upload')
+const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
 
 // ============================================
 // Helpers
@@ -42,50 +39,24 @@ const normalizeImageInput = (imageInput) => {
   return null
 }
 
-// فایل آپلود شده توسط multer را به ساختار image بنر تبدیل می‌کند
-const mapUploadedFileToBannerImage = (file) => {
+// آپلود فایل multer (memoryStorage) به ArvanCloud و برگرداندن ساختار image بنر
+const mapUploadedFileToBannerImage = async (file) => {
   if (!file) return null
-
-  // url توسط normalizeFileUrl ست می‌شه، اگر نبود fallback می‌زنیم
-  const BASE_URL = process.env.BASE_URL || ''
-  const url = file.url || `${BASE_URL}/uploads/${file.filename}`
-
+  const result = await uploadToArvan(file.buffer, file.originalname)
   return {
-    url,
-    filename: file.filename,
+    url: result.url,
+    filename: result.filename,
   }
 }
 
-// مسیر فیزیکی فایل روی دیسک
-const resolveLocalFilePath = (image) => {
-  if (!image) return null
-
-  // اگر filename مستقیم داریم
-  if (image.filename) {
-    return path.join(UPLOAD_BASE_PATH, image.filename)
-  }
-
-  // از url استخراج می‌کنیم
-  if (image.url && typeof image.url === 'string') {
-    const match = image.url.match(/\/uploads\/([^/?#]+)$/)
-    if (match) return path.join(UPLOAD_BASE_PATH, match[1])
-  }
-
-  return null
-}
-
-// حذف فیزیکی تصویر از دیسک
-const deleteLocalImageSafe = (image) => {
-  const filePath = resolveLocalFilePath(image)
-  if (!filePath) return
-
+// حذف تصویر از ArvanCloud
+const deleteImageSafe = async (image) => {
+  if (!image || !image.filename) return
   try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
-      console.log('[BANNER] Deleted local image:', filePath)
-    }
+    await deleteFromArvan(image.filename)
+    console.log('[BANNER] Deleted from ArvanCloud:', image.filename)
   } catch (error) {
-    console.error('[BANNER] Failed to delete local image:', filePath, error.message)
+    console.error('[BANNER] Failed to delete from ArvanCloud:', image.filename, error.message)
   }
 }
 
@@ -142,7 +113,7 @@ exports.createBanner = async (req, res) => {
 
     if (req.file) {
       uploadedFile = req.file
-      bannerImage = mapUploadedFileToBannerImage(req.file)
+      bannerImage = await mapUploadedFileToBannerImage(req.file)
     } else if (image) {
       bannerImage = normalizeImageInput(image)
     }
@@ -159,7 +130,7 @@ exports.createBanner = async (req, res) => {
     res.status(201).json({ success: true, message: 'بنر با موفقیت ایجاد شد', data: banner })
   } catch (error) {
     // اگر بنر ذخیره نشد، فایل آپلود شده رو پاک می‌کنیم
-    if (uploadedFile) deleteLocalImageSafe({ filename: uploadedFile.filename })
+    if (uploadedFile && bannerImage) await deleteImageSafe(bannerImage)
 
     console.error('Error creating banner:', error)
     res.status(500).json({ success: false, message: 'خطا در ایجاد بنر', error: error.message })
@@ -189,7 +160,7 @@ exports.updateBanner = async (req, res) => {
 
     if (req.file) {
       uploadedFile = req.file
-      nextImage = mapUploadedFileToBannerImage(req.file)
+      nextImage = await mapUploadedFileToBannerImage(req.file)
     } else if (updates.image !== undefined) {
       nextImage = normalizeImageInput(updates.image)
     }
@@ -202,12 +173,12 @@ exports.updateBanner = async (req, res) => {
 
     // اگر تصویر عوض شد، تصویر قدیمی رو از دیسک حذف می‌کنیم
     if (nextImage !== undefined && oldImage) {
-      deleteLocalImageSafe(oldImage)
+      await deleteImageSafe(oldImage)
     }
 
     res.json({ success: true, message: 'بنر با موفقیت ویرایش شد', data: saved })
   } catch (error) {
-    if (uploadedFile) deleteLocalImageSafe({ filename: uploadedFile.filename })
+    if (uploadedFile && nextImage) await deleteImageSafe(nextImage)
 
     console.error('Error updating banner:', error)
     res.status(500).json({ success: false, message: 'خطا در ویرایش بنر', error: error.message })
@@ -224,7 +195,7 @@ exports.deleteBanner = async (req, res) => {
 
     const imageToDelete = banner.image
     await banner.deleteOne()
-    deleteLocalImageSafe(imageToDelete)
+    await deleteImageSafe(imageToDelete)
 
     res.json({ success: true, message: 'بنر با موفقیت حذف شد' })
   } catch (error) {
