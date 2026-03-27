@@ -1,5 +1,5 @@
 const Banner = require('../models/Banner')
-const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 
 // ============================================
 // Helpers
@@ -39,24 +39,24 @@ const normalizeImageInput = (imageInput) => {
   return null
 }
 
-// آپلود فایل multer (memoryStorage) به ArvanCloud و برگرداندن ساختار image بنر
+// آپلود فایل multer (memoryStorage) به ParsPack و برگرداندن ساختار image بنر
 const mapUploadedFileToBannerImage = async (file) => {
   if (!file) return null
-  const result = await uploadToArvan(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname)
   return {
     url: result.url,
     filename: result.filename,
   }
 }
 
-// حذف تصویر از ArvanCloud
+// حذف تصویر از ParsPack
 const deleteImageSafe = async (image) => {
   if (!image || !image.filename) return
   try {
-    await deleteFromArvan(image.filename)
-    console.log('[BANNER] Deleted from ArvanCloud:', image.filename)
+    await deleteFromParsPack(image.filename)
+    console.log('[BANNER] Deleted from ParsPack:', image.filename)
   } catch (error) {
-    console.error('[BANNER] Failed to delete from ArvanCloud:', image.filename, error.message)
+    console.error('[BANNER] Failed to delete from ParsPack:', image.filename, error.message)
   }
 }
 

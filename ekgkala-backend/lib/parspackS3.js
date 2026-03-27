@@ -1,22 +1,30 @@
 const crypto = require("crypto");
 const path = require("path");
 const axios = require("axios");
+const { execFile } = require("child_process");
 
 // ============================================
-// ArvanCloud S3 Configuration
+// ParsPack S3 Configuration
 // ============================================
-const ARVAN_ENDPOINT = (process.env.ARVAN_ENDPOINT || "s3.ir-thr-at1.arvanstorage.ir").replace(/^https?:\/\//, "");
-const ARVAN_BUCKET_NAME = process.env.ARVAN_BUCKET_NAME || "";
-const ARVAN_ACCESS_KEY = process.env.ARVAN_ACCESS_KEY || "";
-const ARVAN_SECRET_KEY = process.env.ARVAN_SECRET_KEY || "";
-const ARVAN_REGION = process.env.ARVAN_REGION || "ir-thr-at1";
+const PARSPACK_ENDPOINT = (process.env.PARSPACK_ENDPOINT || "c258565.parspack.net").replace(/^https?:\/\//, "");
+const PARSPACK_BUCKET_NAME = process.env.PARSPACK_BUCKET_NAME || "";
+const PARSPACK_ACCESS_KEY = process.env.PARSPACK_ACCESS_KEY || "";
+const PARSPACK_SECRET_KEY = process.env.PARSPACK_SECRET_KEY || "";
+const PARSPACK_REGION = process.env.PARSPACK_REGION || "default";
 const SERVICE = "s3";
 
-// Validate required env vars
-const isValidConfig = ARVAN_BUCKET_NAME && ARVAN_ACCESS_KEY && ARVAN_SECRET_KEY;
+// ParsPack uses virtual-hosted-style routing: the first label of the
+// endpoint hostname (e.g. "c258565" from "c258565.parspack.net") is the
+// real S3 bucket.  The value in PARSPACK_BUCKET_NAME ("ekgkala-uploads")
+// is actually just a key-prefix / folder inside that bucket.
+// The canonical URI that ParsPack validates against is:
+//   /<hostBucket>/<PARSPACK_BUCKET_NAME>/<objectKey>
+const HOST_BUCKET = PARSPACK_ENDPOINT.split(".")[0];
+
+const isValidConfig = PARSPACK_BUCKET_NAME && PARSPACK_ACCESS_KEY && PARSPACK_SECRET_KEY;
 
 if (!isValidConfig) {
-  console.warn("[ArvanS3] Missing ARVAN_BUCKET_NAME, ARVAN_ACCESS_KEY, or ARVAN_SECRET_KEY — uploads will fail.");
+  console.warn("[ParspackS3] Missing PARSPACK_BUCKET_NAME, PARSPACK_ACCESS_KEY, or PARSPACK_SECRET_KEY — uploads will fail.");
 }
 
 // ============================================
@@ -83,6 +91,94 @@ const buildAuthorizationHeader = ({
 };
 
 // ============================================
+// URI-encode per AWS spec (RFC 3986)
+// Encodes every character except unreserved ones: A-Z a-z 0-9 - _ . ~
+// Forward slashes '/' are preserved (not encoded).
+// ============================================
+const uriEncode = (str) => {
+  return String(str).replace(/[^A-Za-z0-9\-_.~\/]/g, (ch) => {
+    const hex = ch.charCodeAt(0).toString(16).toUpperCase();
+    return "%" + (hex.length === 1 ? "0" + hex : hex);
+  });
+};
+
+// ============================================
+// WebP Conversion via ImageMagick
+// Converts an image buffer to WebP using the system `convert` binary.
+// Falls back to the original buffer on any error (missing binary,
+// unsupported format, timeout, etc.).
+// GIF is skipped because animated frames are not reliably preserved.
+// ============================================
+const WEBP_QUALITY = 82;
+const CONVERT_TIMEOUT_MS = 15000;
+
+const convertToWebp = (buffer) =>
+  new Promise((resolve) => {
+    const child = execFile(
+      "convert",
+      [
+        "-",              // read from stdin
+        "-quality", String(WEBP_QUALITY),
+        "-strip",         // remove metadata for smaller size
+        "webp:-",         // write webp to stdout
+      ],
+      {
+        encoding: "buffer",
+        timeout: CONVERT_TIMEOUT_MS,
+        maxBuffer: 50 * 1024 * 1024,
+      },
+      (err, stdout) => {
+        if (err || !stdout || stdout.length === 0) {
+          if (err) {
+            console.warn("[ParspackS3] WebP conversion failed, using original:", err.message);
+          }
+          resolve(null);
+        } else {
+          resolve(stdout);
+        }
+      }
+    );
+
+    try {
+      child.stdin.write(buffer);
+      child.stdin.end();
+    } catch (stdinErr) {
+      console.warn("[ParspackS3] Could not write to convert stdin:", stdinErr.message);
+      resolve(null);
+    }
+  });
+
+const shouldConvertToWebp = (extLower) => {
+  // Skip GIF (animated frames) and files already in webp format
+  if (extLower === ".gif" || extLower === ".webp") return false;
+  return [".jpg", ".jpeg", ".png"].includes(extLower);
+};
+
+const MIME_MAP = {
+  ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+  ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
+};
+
+// ============================================
+// Verbose S3 error logger
+// ============================================
+const logS3Error = (label, error) => {
+  if (error.response) {
+    const { status, headers, data } = error.response;
+    const body = typeof data === "string"
+      ? data
+      : (Buffer.isBuffer(data) ? data.toString("utf-8") : JSON.stringify(data));
+    console.error(`[ParspackS3] ${label} — HTTP ${status}`);
+    console.error(`[ParspackS3] ${label} — Response Headers:`, JSON.stringify(headers));
+    console.error(`[ParspackS3] ${label} — Response Body (S3 XML):`, body);
+  } else if (error.request) {
+    console.error(`[ParspackS3] ${label} — No response received (network error):`, error.message);
+  } else {
+    console.error(`[ParspackS3] ${label} — Error:`, error.message);
+  }
+};
+
+// ============================================
 // Security Configuration
 // ============================================
 const ALLOWED_MIME_TYPES = [
@@ -135,27 +231,22 @@ const validateFile = (file) => {
   const ext = path.extname(file.originalname).toLowerCase();
   const originalName = file.originalname?.toLowerCase() || "";
 
-  // Check blocked mime types
   if (BLOCKED_MIME_TYPES.includes(mime)) {
     throw new Error(`نوع فایل ${mime} مجاز نیست`);
   }
 
-  // Check allowed mime types
   if (!ALLOWED_MIME_TYPES.includes(mime)) {
     throw new Error("فقط فایل‌های تصویری مجاز هستند");
   }
 
-  // Check allowed extensions
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     throw new Error(`پسوند ${ext} مجاز نیست`);
   }
 
-  // Check blocked extensions
   if (BLOCKED_EXTENSIONS.some((blocked) => originalName.includes(blocked))) {
     throw new Error("فایل مشکوک شناسایی شد");
   }
 
-  // Check suspicious patterns
   const suspiciousPatterns = [
     /\.php$/i,
     /\.asp$/i,
@@ -172,7 +263,6 @@ const validateFile = (file) => {
     throw new Error("نام فایل مشکوک است");
   }
 
-  // Check file size
   if (file.size > MAX_UPLOAD_FILE_SIZE_BYTES) {
     throw new Error(
       `حجم فایل نباید بیشتر از ${MAX_UPLOAD_FILE_SIZE_MB} مگابایت باشد`
@@ -192,30 +282,55 @@ const generateSafeFilename = (originalName) => {
 };
 
 // ============================================
-// Upload to ArvanCloud S3
+// Upload to ParsPack S3
+// Virtual-hosted: host already contains the bucket; PARSPACK_BUCKET_NAME
+// is a key prefix.  The canonical URI signed must equal what ParsPack
+// internally resolves: /<hostBucket>/<bucketName>/<objectKey>
 // ============================================
-const uploadToArvan = async (buffer, originalName) => {
+const uploadToParsPack = async (buffer, originalName) => {
   if (!isValidConfig) {
-    throw new Error("تنظیمات ArvanCloud انجام نشده است");
+    throw new Error("تنظیمات ParsPack Cloud Storage انجام نشده است");
+  }
+
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("[ParspackS3] Upload payload must be a Buffer");
   }
 
   const filename = generateSafeFilename(originalName);
-  const key = `uploads/${filename}`;
-  const host = `${ARVAN_BUCKET_NAME}.${ARVAN_ENDPOINT}`;
-  const url = `https://${host}/${key}`;
-
   const ext = path.extname(originalName).toLowerCase();
-  const mimeMap = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif" };
-  const contentType = mimeMap[ext] || "application/octet-stream";
+
+  // --- WebP conversion ---
+  let uploadBuffer = buffer;
+  let uploadFilename = filename;
+  let contentType = MIME_MAP[ext] || "application/octet-stream";
+
+  if (shouldConvertToWebp(ext)) {
+    const webpBuffer = await convertToWebp(buffer);
+    if (webpBuffer) {
+      uploadBuffer = webpBuffer;
+      uploadFilename = filename.replace(/\.[^.]+$/, ".webp");
+      contentType = "image/webp";
+      console.log(
+        `[ParspackS3] Converted to WebP: ${buffer.length} → ${webpBuffer.length} bytes (${Math.round((1 - webpBuffer.length / buffer.length) * 100)}% smaller)`
+      );
+    }
+  }
+
+  const objectKey = `uploads/${uploadFilename}`;
+
+  const host = PARSPACK_ENDPOINT;
+  const urlPath = `/${PARSPACK_BUCKET_NAME}/${objectKey}`;
+  const url = `https://${host}${urlPath}`;
+  const canonicalUri = uriEncode(`/${HOST_BUCKET}${urlPath}`);
 
   const now = new Date();
   const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
-  const payloadHash = sha256(buffer);
+  const payloadHash = "UNSIGNED-PAYLOAD";
 
   const headersObj = {
-    host: host,
     "content-type": contentType,
+    host: host,
     "x-amz-acl": "public-read",
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
@@ -224,111 +339,68 @@ const uploadToArvan = async (buffer, originalName) => {
 
   const authorization = buildAuthorizationHeader({
     method: "PUT",
-    pathname: `/${key}`,
+    pathname: canonicalUri,
     queryString: "",
     headers: headersObj,
     signedHeaders,
     payloadHash,
-    accessKey: ARVAN_ACCESS_KEY,
-    secretKey: ARVAN_SECRET_KEY,
-    region: ARVAN_REGION,
+    accessKey: PARSPACK_ACCESS_KEY,
+    secretKey: PARSPACK_SECRET_KEY,
+    region: PARSPACK_REGION,
     service: SERVICE,
     dateStamp,
     amzDate,
   });
 
   try {
-    const response = await axios.put(url, buffer, {
+    const response = await axios.put(url, uploadBuffer, {
       headers: {
         ...headersObj,
+        "content-length": String(uploadBuffer.length),
         Authorization: authorization,
-        "Content-Length": buffer.length,
       },
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
+      transformRequest: [(data) => data],
     });
 
+    const publicUrl = `https://${host}${urlPath}`;
+
     return {
-      key,
-      filename,
-      url,
-      etag: response.ETag,
+      key: objectKey,
+      filename: uploadFilename,
+      url: publicUrl,
+      etag: response.headers && response.headers.etag,
     };
   } catch (error) {
-    const msg = error.response
-      ? `[ArvanS3] Upload error (${error.response.status}): ${typeof error.response.data === "string" ? error.response.data.slice(0, 300) : JSON.stringify(error.response.data).slice(0, 300)}`
-      : `[ArvanS3] Upload error: ${error.message}`;
-    console.error(msg);
-    throw new Error("خطا در آپلود روی ابر آروان");
+    logS3Error("Upload", error);
+    const detail = error.response
+      ? `(HTTP ${error.response.status}) ${typeof error.response.data === "string" ? error.response.data.slice(0, 500) : JSON.stringify(error.response.data).slice(0, 500)}`
+      : error.message;
+    throw new Error(`خطا در آپلود روی ParsPack Cloud Storage: ${detail}`);
   }
 };
 
 // ============================================
-// Get image dimensions from buffer
+// Delete file from ParsPack S3
 // ============================================
-const getImageDimensions = (buffer) => {
-  try {
-    // Check first 24 bytes
-    const buf = buffer.slice(0, 24);
-    const fd = Buffer.alloc(24);
-    buf.copy(fd);
-
-    // PNG
-    if (
-      buf[0] === 0x89 &&
-      buf[1] === 0x50 &&
-      buf[2] === 0x4e &&
-      buf[3] === 0x47
-    ) {
-      return {
-        width: buf.readUInt32BE(16),
-        height: buf.readUInt32BE(20),
-      };
-    }
-
-    // JPEG
-    let offset = 2;
-    while (offset < buffer.length) {
-      if (buffer[offset] !== 0xff) break;
-      const marker = buffer[offset + 1];
-      const segLen = buffer.readUInt16BE(offset + 2);
-      if (
-        (marker >= 0xc0 && marker <= 0xc3) ||
-        (marker >= 0xc5 && marker <= 0xc7) ||
-        (marker >= 0xc9 && marker <= 0xcb) ||
-        (marker >= 0xcd && marker <= 0xcf)
-      ) {
-        return {
-          height: buffer.readUInt16BE(offset + 5),
-          width: buffer.readUInt16BE(offset + 7),
-        };
-      }
-      offset += 2 + segLen;
-    }
-
-    return { width: null, height: null };
-  } catch (e) {
-    return { width: null, height: null };
-  }
-};
-
-// ============================================
-// Delete file from ArvanCloud
-// ============================================
-const deleteFromArvan = async (key) => {
+const deleteFromParsPack = async (key) => {
   if (!isValidConfig || !key) {
-    console.warn("[ArvanS3] Config not set, skip delete");
+    console.warn("[ParspackS3] Config not set, skip delete");
     return;
   }
 
-  const host = `${ARVAN_BUCKET_NAME}.${ARVAN_ENDPOINT}`;
   const objectKey = key.startsWith("uploads/") ? key : `uploads/${key}`;
-  const url = `https://${host}/${objectKey}`;
+
+  const host = PARSPACK_ENDPOINT;
+  const urlPath = `/${PARSPACK_BUCKET_NAME}/${objectKey}`;
+  const url = `https://${host}${urlPath}`;
+  const canonicalUri = uriEncode(`/${HOST_BUCKET}${urlPath}`);
 
   const now = new Date();
   const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
-  const payloadHash = sha256("");
+  const payloadHash = "UNSIGNED-PAYLOAD";
 
   const headersObj = {
     host: host,
@@ -339,14 +411,14 @@ const deleteFromArvan = async (key) => {
 
   const authorization = buildAuthorizationHeader({
     method: "DELETE",
-    pathname: `/${objectKey}`,
+    pathname: canonicalUri,
     queryString: "",
     headers: headersObj,
     signedHeaders,
     payloadHash,
-    accessKey: ARVAN_ACCESS_KEY,
-    secretKey: ARVAN_SECRET_KEY,
-    region: ARVAN_REGION,
+    accessKey: PARSPACK_ACCESS_KEY,
+    secretKey: PARSPACK_SECRET_KEY,
+    region: PARSPACK_REGION,
     service: SERVICE,
     dateStamp,
     amzDate,
@@ -359,13 +431,13 @@ const deleteFromArvan = async (key) => {
         Authorization: authorization,
       },
     });
-    console.log("[ArvanS3] File deleted:", objectKey);
+    console.log("[ParspackS3] File deleted:", objectKey);
   } catch (error) {
     if (error.response && error.response.status === 404) {
-      console.log("[ArvanS3] File already gone (404):", objectKey);
+      console.log("[ParspackS3] File already gone (404):", objectKey);
       return;
     }
-    console.error("[ArvanS3] Delete error:", error.response ? error.response.status : error.message);
+    logS3Error("Delete", error);
   }
 };
 
@@ -373,7 +445,7 @@ const deleteFromArvan = async (key) => {
 // Get public URL from key
 // ============================================
 const getPublicUrl = (key) => {
-  return `https://${ARVAN_BUCKET_NAME}.${ARVAN_ENDPOINT}/${key}`;
+  return `https://${PARSPACK_ENDPOINT}/${PARSPACK_BUCKET_NAME}/${key}`;
 };
 
 // ============================================
@@ -382,14 +454,11 @@ const getPublicUrl = (key) => {
 const extractImageInfo = (buffer, originalName) => {
   const filename = generateSafeFilename(originalName);
   const key = `uploads/${filename}`;
-  const dims = getImageDimensions(buffer);
 
   return {
-    url: `https://${ARVAN_BUCKET_NAME}.${ARVAN_ENDPOINT}/${key}`,
+    url: `https://${PARSPACK_ENDPOINT}/${PARSPACK_BUCKET_NAME}/${key}`,
     public_id: filename,
     key: key,
-    width: dims.width,
-    height: dims.height,
   };
 };
 
@@ -397,8 +466,8 @@ const extractImageInfo = (buffer, originalName) => {
 // Export
 // ============================================
 module.exports = {
-  uploadToArvan,
-  deleteFromArvan,
+  uploadToParsPack,
+  deleteFromParsPack,
   getPublicUrl,
   extractImageInfo,
   validateFile,

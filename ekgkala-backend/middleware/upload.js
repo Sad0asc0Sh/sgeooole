@@ -1,7 +1,7 @@
 const multer = require('multer')
 const crypto = require('crypto')
 const path = require('path')
-const { uploadToArvan, deleteFromArvan, getPublicUrl } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack, getPublicUrl } = require('../lib/parspackS3')
 
 // ============================================
 // تنظیمات حجم فایل
@@ -57,7 +57,7 @@ const generateSafeFilename = (originalName) => {
 }
 
 // ============================================
-// Memory Storage (buffer available for ArvanCloud upload)
+// Memory Storage (buffer available for ParsPack upload)
 // ============================================
 const storage = multer.memoryStorage()
 
@@ -152,8 +152,8 @@ module.exports = {
   upload,
   normalizeFileUrl,
   validateMagicNumbers,
-  uploadToArvan,
-  deleteFromArvan,
+  uploadToParsPack,
+  deleteFromParsPack,
   getPublicUrl,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,

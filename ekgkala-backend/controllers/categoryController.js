@@ -1,6 +1,6 @@
 const Category = require('../models/Category')
 const Product = require('../models/Product')
-const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 
 const parseBooleanQueryParam = (value) =>
   value === true || value === 'true' || value === '1' || value === 1
@@ -47,10 +47,10 @@ const computeConnectedCategoryIdSet = (categories = []) => {
   return connectedIds
 }
 
-// Upload a multer memory file to ArvanCloud and return { url, public_id }
+// Upload a multer memory file to ParsPack and return { url, public_id }
 const uploadAndExtract = async (file) => {
   if (!file) return null
-  const result = await uploadToArvan(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname)
   return {
     url: result.url,
     public_id: result.filename,
@@ -706,11 +706,11 @@ exports.updateCategory = async (req, res) => {
     if (hasNewIcon) {
       if (category.icon && category.icon.public_id) {
         try {
-          await deleteFromArvan(category.icon.public_id)
+          await deleteFromParsPack(category.icon.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(
-            'Error deleting old icon from ArvanCloud:',
+            'Error deleting old icon from ParsPack:',
             err.message,
           )
         }
@@ -719,10 +719,10 @@ exports.updateCategory = async (req, res) => {
     } else if (removeIcon === 'true' || removeIcon === true) {
       if (category.icon && category.icon.public_id) {
         try {
-          await deleteFromArvan(category.icon.public_id)
+          await deleteFromParsPack(category.icon.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('Error deleting icon from ArvanCloud:', err.message)
+          console.error('Error deleting icon from ParsPack:', err.message)
         }
       }
       category.icon = null
@@ -732,11 +732,11 @@ exports.updateCategory = async (req, res) => {
     if (hasNewImage) {
       if (category.image && category.image.public_id) {
         try {
-          await deleteFromArvan(category.image.public_id)
+          await deleteFromParsPack(category.image.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error(
-            'Error deleting old image from ArvanCloud:',
+            'Error deleting old image from ParsPack:',
             err.message,
           )
         }
@@ -745,10 +745,10 @@ exports.updateCategory = async (req, res) => {
     } else if (removeImage === 'true' || removeImage === true) {
       if (category.image && category.image.public_id) {
         try {
-          await deleteFromArvan(category.image.public_id)
+          await deleteFromParsPack(category.image.public_id)
         } catch (err) {
           // eslint-disable-next-line no-console
-          console.error('Error deleting image from ArvanCloud:', err.message)
+          console.error('Error deleting image from ParsPack:', err.message)
         }
       }
       category.image = null
@@ -813,17 +813,17 @@ exports.deleteCategory = async (req, res) => {
 
     if (category.icon && category.icon.public_id) {
       try {
-        await deleteFromArvan(category.icon.public_id)
+        await deleteFromParsPack(category.icon.public_id)
       } catch (err) {
-        console.error('Error deleting icon from ArvanCloud:', err.message)
+        console.error('Error deleting icon from ParsPack:', err.message)
       }
     }
 
     if (category.image && category.image.public_id) {
       try {
-        await deleteFromArvan(category.image.public_id)
+        await deleteFromParsPack(category.image.public_id)
       } catch (err) {
-        console.error('Error deleting image from ArvanCloud:', err.message)
+        console.error('Error deleting image from ParsPack:', err.message)
       }
     }
 

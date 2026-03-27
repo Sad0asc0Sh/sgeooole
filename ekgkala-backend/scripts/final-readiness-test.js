@@ -96,7 +96,7 @@ test('.env.example complete', () => {
     )
     return envExample.includes('MONGODB_URI') &&
         envExample.includes('JWT_SECRET') &&
-        envExample.includes('CLOUDINARY_CLOUD_NAME')
+        envExample.includes('PARSPACK_ENDPOINT')
 })
 
 test('ecosystem.config.js exists', () =>

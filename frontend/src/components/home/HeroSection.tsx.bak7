@@ -1,0 +1,202 @@
+"use client";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import Image from "next/image";
+import { Banner, bannerService } from "@/services/bannerService";
+import { resolveImageUrl, generateBannerBlurPlaceholder } from "@/lib/image";
+import { useRouter } from "next/navigation";
+import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
+import dynamic from "next/dynamic";
+
+const SwiperSlider = dynamic(() => import("./SwiperSlider"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full aspect-[2/1] md:aspect-[16/5] bg-gray-100 animate-pulse" />
+  ),
+});
+
+type HeroSectionProps = {
+  initialBanners?: Banner[];
+};
+
+/**
+ * ============================================================
+ *  Hybrid Rendering Hero Section - ArvanCloud Optimized
+ * ============================================================
+ *
+ *  📐 Banner Dimensions (IMPORTANT):
+ *  ─────────────────────────────────
+ *  - Main slider:     1920 × 600  (16:5 = 3.2:1)
+ *  - Middle banners:  800  × 250  (16:5)
+ *  - Campaign banners: 1200 × 400 (3:1)
+ *
+ *  ⚠️  Upload banners at EXACTLY 1920×600 for best results!
+ *      Content/text should be within the center 1200px zone.
+ * ============================================================
+ */
+
+export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
+  const [banners, setBanners] = useState<Banner[]>(initialBanners);
+  const [loading, setLoading] = useState(initialBanners.length === 0);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (initialBanners.length > 0) {
+      setBanners(initialBanners);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchBanners = async () => {
+      try {
+        const data = await bannerService.getAll();
+        if (!isMounted) return;
+        setBanners(data);
+      } catch (error) {
+        console.error("Failed to fetch banners:", error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchBanners();
+    return () => { isMounted = false; };
+  }, [initialBanners]);
+
+  const mainBanners = banners
+    .filter((b) => b.position === "main-slider")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const middleBanners = banners
+    .filter((b) => b.position === "middle-banner")
+    .slice(0, 3);
+
+  if (loading) {
+    return (
+      <section className="flex flex-col gap-3 pt-2">
+        <div className="w-full aspect-[2/1] md:aspect-[16/5] bg-gray-200 animate-pulse" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-[150px] sm:h-[200px] bg-gray-200 animate-pulse rounded-xl" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (!mainBanners || mainBanners.length === 0) return null;
+
+  const firstBanner = mainBanners[0];
+
+  return (
+    <section className="flex flex-col gap-3 pt-2">
+      {/* === Single Banner === */}
+      {mainBanners.length === 1 && firstBanner && (
+        <div className="relative w-full overflow-hidden">
+          {(() => {
+            const imageUrl = resolveImageUrl((firstBanner as any).image, "/placeholder-banner.png");
+            const bannerLink = firstBanner.link;
+            const canNavigate = canNavigateToHref(bannerLink);
+            const width = typeof (firstBanner as any).image === "object" && (firstBanner as any).image?.width ? (firstBanner as any).image.width : 1920;
+            const height = typeof (firstBanner as any).image === "object" && (firstBanner as any).image?.height ? (firstBanner as any).image.height : 600;
+            const blurPlaceholder = generateBannerBlurPlaceholder(width, height);
+
+            return (
+              <div
+                className={`relative w-full aspect-[2/1] md:aspect-[16/5] overflow-hidden ${canNavigate ? "cursor-pointer" : ""}`}
+                onClick={() => canNavigate && navigateHref(router, bannerLink)}
+                role={canNavigate ? "button" : undefined}
+                tabIndex={canNavigate ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if ((e.key === "Enter" || e.key === " ") && canNavigate) {
+                    navigateHref(router, bannerLink);
+                  }
+                }}
+                aria-label={canNavigate ? (firstBanner.title || "banner") : undefined}
+              >
+                <Image
+                  src={imageUrl}
+                  alt={firstBanner.title || "بنر اصلی"}
+                  fill
+                  className="object-cover"
+                  priority
+                  fetchPriority="high"
+                  loading="eager"
+                  placeholder="blur"
+                  blurDataURL={blurPlaceholder}
+                  sizes="100vw"
+                />
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* === Multiple Banners === */}
+      {mainBanners.length > 1 && (
+        <>
+          <noscript>
+            <div className="relative w-full aspect-[2/1] md:aspect-[16/5] overflow-hidden">
+              <Image
+                src={resolveImageUrl((firstBanner as any).image, "/placeholder-banner.png")}
+                alt={firstBanner.title || "بنر اصلی"}
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
+          </noscript>
+          <SwiperSlider banners={mainBanners} />
+        </>
+      )}
+
+      {/* Middle Banners Grid */}
+      {middleBanners.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+          {middleBanners.map((banner, index) => {
+            const imageUrl = resolveImageUrl((banner as any).image, "/placeholder-banner.png");
+            const bannerLink = banner.link;
+            const hasLink = !!bannerLink?.trim();
+            const width = typeof (banner as any).image === "object" && (banner as any).image?.width ? (banner as any).image.width : 800;
+            const height = typeof (banner as any).image === "object" && (banner as any).image?.height ? (banner as any).image.height : 250;
+            const blurPlaceholder = generateBannerBlurPlaceholder(width, height);
+
+            return (
+              <div
+                key={banner._id}
+                className={`
+                  relative w-full rounded-xl overflow-hidden bg-gray-50
+                  shadow-sm hover:shadow-lg transition-all duration-300
+                  hover:scale-[1.02] group
+                  ${hasLink ? "cursor-pointer" : "cursor-default"}
+                  ${middleBanners.length === 2 && index === 1 ? "sm:col-span-1" : ""}
+                  ${middleBanners.length === 1 ? "sm:col-span-2 lg:col-span-3" : ""}
+                `}
+                onClick={() => hasLink && navigateHref(router, bannerLink)}
+                role={hasLink ? "button" : undefined}
+                tabIndex={hasLink ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (hasLink && (e.key === "Enter" || e.key === " ")) {
+                    navigateHref(router, bannerLink);
+                  }
+                }}
+                aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
+              >
+                <Image
+                  src={imageUrl}
+                  alt={banner.title || "بنر تبلیغاتی"}
+                  width={width}
+                  height={height}
+                  className="w-full h-auto group-hover:brightness-105 transition-all duration-300 object-cover"
+                  loading="lazy"
+                  placeholder="blur"
+                  blurDataURL={blurPlaceholder}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}

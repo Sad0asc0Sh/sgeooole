@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const path = require("path");
 const {
-  uploadToArvan,
-  deleteFromArvan,
+  uploadToParsPack,
+  deleteFromParsPack,
   validateFile,
   generateSafeFilename,
   getPublicUrl,
@@ -11,11 +11,11 @@ const {
   MAX_UPLOAD_FILE_SIZE_BYTES,
   ALLOWED_MIME_TYPES,
   ALLOWED_EXTENSIONS,
-} = require("../lib/arvanS3");
+} = require("../lib/parspackS3");
 const { protect, checkPermission, checkAnyPermission, PERMISSIONS } = require("../middleware/auth");
 
 // ============================================
-// Stream handling middleware for ArvanCloud upload
+// Stream handling middleware for ParsPack upload
 // ============================================
 const handleSingleImageUpload = (req, res, next) => {
   // Use multer memory storage for direct buffer handling
@@ -137,7 +137,7 @@ const handleMultipleImagesUpload = (req, res, next) => {
 
 // ============================================
 // POST /api/uploads/image — تک تصویر محصول
-// Upload to ArvanCloud S3
+// Upload to ParsPack S3
 // ============================================
 router.post(
   "/image",
@@ -156,10 +156,10 @@ router.post(
       // Validate file
       validateFile(req.file);
 
-      // Upload to ArvanCloud S3
-      const result = await uploadToArvan(req.file.buffer, req.file.originalname);
+      // Upload to ParsPack S3
+      const result = await uploadToParsPack(req.file.buffer, req.file.originalname);
 
-      console.log("[UPLOAD] Uploaded to ArvanCloud:", {
+      console.log("[UPLOAD] Uploaded to ParsPack:", {
         filename: result.filename,
         key: result.key,
         url: result.url,
@@ -167,7 +167,7 @@ router.post(
 
       res.json({
         success: true,
-        message: "تصویر با موفقیت در ابر آروان آپلود شد",
+        message: "تصویر با موفقیت در ParsPack آپلود شد",
         data: {
           url: result.url,
           public_id: result.filename,
@@ -208,8 +208,8 @@ router.post(
         // Validate file
         validateFile(file);
 
-        // Upload to ArvanCloud S3
-        const result = await uploadToArvan(file.buffer, file.originalname);
+        // Upload to ParsPack S3
+        const result = await uploadToParsPack(file.buffer, file.originalname);
 
         uploadedImages.push({
           url: result.url,
@@ -220,7 +220,7 @@ router.post(
 
       res.json({
         success: true,
-        message: `${uploadedImages.length} تصویر با موفقیت در ابر آروان آپلود شدند`,
+        message: `${uploadedImages.length} تصویر با موفقیت در ParsPack آپلود شدند`,
         data: uploadedImages,
       });
     } catch (error) {
@@ -254,12 +254,12 @@ router.post(
       // Validate file
       validateFile(req.file);
 
-      // Upload to ArvanCloud S3
-      const result = await uploadToArvan(req.file.buffer, req.file.originalname);
+      // Upload to ParsPack S3
+      const result = await uploadToParsPack(req.file.buffer, req.file.originalname);
 
       res.json({
         success: true,
-        message: "بنر با موفقیت در ابر آروان آپلود شد",
+        message: "بنر با موفقیت در ParsPack آپلود شد",
         data: {
           url: result.url,
           public_id: result.filename,
@@ -278,7 +278,7 @@ router.post(
 );
 
 // ============================================
-// DELETE /api/uploads/image/:key — حذف تصویر از آروان
+// DELETE /api/uploads/image/:key — حذف تصویر از ParsPack
 // ============================================
 router.delete(
   "/image/:key",
@@ -295,12 +295,12 @@ router.delete(
         });
       }
 
-      // Delete from ArvanCloud S3
-      await deleteFromArvan(key);
+      // Delete from ParsPack S3
+      await deleteFromParsPack(key);
 
       res.json({
         success: true,
-        message: "تصویر با موفقیت از ابر آروان حذف شد",
+        message: "تصویر با موفقیت از ParsPack حذف شد",
       });
     } catch (error) {
       console.error("Error deleting image:", error);

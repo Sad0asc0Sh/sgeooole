@@ -1,10 +1,10 @@
 const Brand = require('../models/Brand')
-const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 
-// آپلود فایل multer (memoryStorage) به ArvanCloud و برگرداندن { url, public_id }
+// آپلود فایل multer (memoryStorage) به ParsPack و برگرداندن { url, public_id }
 const extractImageInfo = async (file) => {
   if (!file) return null
-  const result = await uploadToArvan(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname)
   return {
     url: result.url,
     public_id: result.filename,
@@ -184,15 +184,15 @@ exports.updateBrand = async (req, res) => {
     // مدیریت لوگو
     if (hasNewLogo) {
       if (brand.logo && brand.logo.public_id) {
-        try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
-          console.error('Error deleting old brand logo from ArvanCloud:', e.message)
+        try { await deleteFromParsPack(brand.logo.public_id) } catch (e) {
+          console.error('Error deleting old brand logo from ParsPack:', e.message)
         }
       }
       brand.logo = await extractImageInfo(req.file)
     } else if (removeLogo === 'true' || removeLogo === true) {
       if (brand.logo && brand.logo.public_id) {
-        try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
-          console.error('Error deleting brand logo from ArvanCloud:', e.message)
+        try { await deleteFromParsPack(brand.logo.public_id) } catch (e) {
+          console.error('Error deleting brand logo from ParsPack:', e.message)
         }
       }
       brand.logo = { url: null, public_id: null }
@@ -240,8 +240,8 @@ exports.deleteBrand = async (req, res) => {
     }
 
     if (brand.logo && brand.logo.public_id) {
-      try { await deleteFromArvan(brand.logo.public_id) } catch (e) {
-        console.error('Error deleting brand logo from ArvanCloud:', e.message)
+      try { await deleteFromParsPack(brand.logo.public_id) } catch (e) {
+        console.error('Error deleting brand logo from ParsPack:', e.message)
       }
     }
 

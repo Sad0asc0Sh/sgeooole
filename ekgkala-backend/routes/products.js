@@ -11,7 +11,7 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
-const { upload, uploadToArvan, deleteFromArvan } = require('../middleware/upload')
+const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
 // ============================================
@@ -201,7 +201,7 @@ const handleCsvUpload = (req, res, next) => {
 // Helpers
 // ============================================
 
-// Normalize upload result from ArvanCloud to { url, public_id }
+// Normalize upload result from ParsPack to { url, public_id }
 const extractImageInfo = (uploadResult) => {
   if (!uploadResult) return null
   return {
@@ -1479,16 +1479,16 @@ router.put(
         })
       }
 
-      // Remove all images (and from Cloudinary) if requested
+      // Remove all images (and from ParsPack S3) if requested
       if (removeAllImages) {
         if (Array.isArray(product.images)) {
           for (const img of product.images) {
             if (img && typeof img === 'object' && img.public_id) {
               try {
-                await deleteFromArvan(img.public_id)
+                await deleteFromParsPack(img.public_id)
               } catch (err) {
                 console.error(
-                  'Error deleting product image from ArvanCloud during update:',
+                  'Error deleting product image from ParsPack during update:',
                   err.message,
                 )
               }
@@ -1520,11 +1520,11 @@ router.put(
               if (shouldRemove) {
                 if (existingPublicId) {
                   try {
-                    console.log('[DEBUG] Deleting from ArvanCloud:', existingPublicId)
-                    await deleteFromArvan(existingPublicId)
+                    console.log('[DEBUG] Deleting from ParsPack:', existingPublicId)
+                    await deleteFromParsPack(existingPublicId)
                   } catch (err) {
                     console.error(
-                      'Error deleting product image from ArvanCloud during partial update:',
+                      'Error deleting product image from ParsPack during partial update:',
                       err.message,
                     )
                   }
@@ -1635,7 +1635,7 @@ router.post(
 
       const newImages = []
       for (const file of (req.files || [])) {
-        const result = await uploadToArvan(file.buffer, file.originalname)
+        const result = await uploadToParsPack(file.buffer, file.originalname)
         const info = extractImageInfo(result)
         if (info) newImages.push(info)
       }
@@ -1705,12 +1705,12 @@ router.delete(
 
       console.log(`[DELETE IMAGE] Found image:`, imageToDelete)
 
-      // حذف از ArvanCloud
+      // حذف از ParsPack
       try {
-        await deleteFromArvan(publicId)
-        console.log(`[DELETE IMAGE] Deleted from ArvanCloud:`, publicId)
-      } catch (arvanError) {
-        console.error(`[DELETE IMAGE] ArvanCloud error:`, arvanError)
+        await deleteFromParsPack(publicId)
+        console.log(`[DELETE IMAGE] Deleted from ParsPack:`, publicId)
+      } catch (parspackError) {
+        console.error(`[DELETE IMAGE] ParsPack error:`, parspackError)
       }
 
       // حذف از آرایه images محصول
@@ -1817,20 +1817,20 @@ router.post(
         })
       }
 
-      // Find all products to delete (for ArvanCloud cleanup)
+      // Find all products to delete (for ParsPack cleanup)
       const products = await Product.find({ _id: { $in: ids } }).select('images')
 
-      // Delete ArvanCloud images for all products
+      // Delete ParsPack images for all products
       const deleteErrors = []
       for (const product of products) {
         if (Array.isArray(product.images)) {
           for (const img of product.images) {
             if (img && typeof img === 'object' && img.public_id) {
               try {
-                await deleteFromArvan(img.public_id)
+                await deleteFromParsPack(img.public_id)
               } catch (err) {
                 deleteErrors.push(err.message)
-                console.error('Error deleting product image from ArvanCloud:', err.message)
+                console.error('Error deleting product image from ParsPack:', err.message)
               }
             }
           }
@@ -1879,14 +1879,14 @@ router.delete(
         })
       }
 
-      // Delete any ArvanCloud images associated with this product
+      // Delete any ParsPack images associated with this product
       if (Array.isArray(product.images)) {
         for (const img of product.images) {
           if (img && typeof img === 'object' && img.public_id) {
             try {
-              await deleteFromArvan(img.public_id)
+              await deleteFromParsPack(img.public_id)
             } catch (err) {
-              console.error('Error deleting product image from ArvanCloud:', err.message)
+              console.error('Error deleting product image from ParsPack:', err.message)
             }
           }
         }

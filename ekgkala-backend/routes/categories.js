@@ -5,7 +5,7 @@ const { upload } = require('../middleware/upload')
 const categoryController = require('../controllers/categoryController')
 const { cacheMiddleware, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 
-// ØªØ¹Ø±ÛŒÙ ÙÛŒÙ„Ø¯Ù‡Ø§ÛŒ Ø¢Ù¾Ù„ÙˆØ¯ (Cloudinary)
+// ØªØ¹Ø±ÛŒÙ ÙÛŒÙ„Ø¯Ù‡Ø§ÛŒ Ø¢Ù¾Ù„ÙˆØ¯ (ParsPack S3)
 const categoryUpload = upload.fields([
   { name: 'icon', maxCount: 1 },
   { name: 'image', maxCount: 1 },

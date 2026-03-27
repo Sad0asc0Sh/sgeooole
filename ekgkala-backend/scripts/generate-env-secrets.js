@@ -40,7 +40,7 @@ console.log()
 // Quick reference for other required values
 console.log('📝 Other values you need to configure:')
 console.log('   - MONGODB_URI: Your MongoDB connection string')
-console.log('   - CLOUDINARY_*: From your Cloudinary dashboard')
+console.log('   - PARSPACK_*: ParsPack S3 credentials from your panel')
 console.log('   - ZARINPAL_MERCHANT_ID: From ZarinPal panel')
 console.log('   - KAVENEGAR_API_KEY: From Kavenegar panel')
 console.log('   - SMTP_*: Your email server settings')

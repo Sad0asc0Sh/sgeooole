@@ -432,7 +432,7 @@ function ProductForm() {
       formData.append('image', file)
 
       const response = await api.post('/uploads/image', formData, {
-        timeout: 180000, // 3 minutes for slow connections to Cloudinary
+        timeout: 180000, // 3 minutes for slow connections
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
           setFiles(prev => prev.map(f =>
@@ -473,7 +473,7 @@ function ProductForm() {
     return false
   }
 
-  // حذف تصویر آپلود شده از Cloudinary
+  // حذف تصویر آپلود شده از سرور
   const handleRemoveUploadedImage = async (file) => {
     // فوراً وضعیت را به "در حال حذف" تغییر بده
     setFiles(prev => prev.map(f =>
@@ -491,14 +491,14 @@ function ProductForm() {
       setRemovedImages(prev => [...prev, { url: file.url, public_id: file.public_id }])
     }
 
-    // حذف از Cloudinary در پس‌زمینه (async - بدون انتظار)
+    // حذف از سرور در پس‌زمینه (async - بدون انتظار)
     if (file.public_id && (!isEdit || isNewUpload)) {
       api.delete(`/uploads/image/${file.public_id}`)
         .then(() => {
-          console.log('Image deleted from Cloudinary:', file.public_id)
+          console.log('Image deleted from ParsPack:', file.public_id)
         })
         .catch((error) => {
-          console.error('Error deleting image from Cloudinary:', error)
+          console.error('Error deleting image from ParsPack:', error)
           // Don't show error to user - file is already removed from UI
         })
     }

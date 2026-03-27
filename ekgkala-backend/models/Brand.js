@@ -22,7 +22,7 @@ const brandSchema = new mongoose.Schema(
       maxlength: [500, 'توضیحات حداکثر 500 کاراکتر مجاز است'],
     },
 
-    // Logo: همان معماری Cloudinary که برای دسته‌بندی‌ها استفاده شد
+    // Logo: همان معماری ParsPack S3 که برای دسته‌بندی‌ها استفاده شد
     logo: {
       url: { type: String, default: null },
       public_id: { type: String, default: null },

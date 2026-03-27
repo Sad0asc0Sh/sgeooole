@@ -604,7 +604,7 @@ function BannersPage() {
       try {
         const res = await api.post('/uploads/banner', formData, {
           baseURL,
-          timeout: 180000, // 3 minutes for slow Cloudinary uploads
+          timeout: 180000, // 3 minutes for slow uploads
           onUploadProgress: (event) => {
             const total = event?.total || file?.size || 0
             if (!total) return
@@ -1222,7 +1222,7 @@ function BannersPage() {
                     <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
                       {uploadProgress < 100
                         ? `در حال ارسال فایل به سرور: ${uploadProgress}%`
-                        : 'فایل ارسال شد، در حال پردازش روی Cloudinary...'}
+                        : 'فایل ارسال شد، در حال پردازش روی سرور...'}
                     </div>
                   </div>
                 )}

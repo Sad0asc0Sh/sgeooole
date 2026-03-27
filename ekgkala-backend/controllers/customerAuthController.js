@@ -1,5 +1,5 @@
 const crypto = require('crypto')
-const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 const jwt = require('jsonwebtoken')
 const axios = require('axios')
 const { OAuth2Client } = require('google-auth-library')
@@ -1082,15 +1082,15 @@ exports.updateAvatar = async (req, res) => {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
     }
 
-    // Delete old avatar from ArvanCloud if it exists
+    // Delete old avatar from ParsPack if it exists
     if (user.avatar && typeof user.avatar === 'object' && user.avatar.public_id) {
-      try { await deleteFromArvan(user.avatar.public_id) } catch (e) {
-        console.error('Error deleting old customer avatar from ArvanCloud:', e.message)
+      try { await deleteFromParsPack(user.avatar.public_id) } catch (e) {
+        console.error('Error deleting old customer avatar from ParsPack:', e.message)
       }
     }
 
-    const arvanResult = await uploadToArvan(req.file.buffer, req.file.originalname)
-    user.avatar = { url: arvanResult.url, public_id: arvanResult.filename }
+    const parspackResult = await uploadToParsPack(req.file.buffer, req.file.originalname)
+    user.avatar = { url: parspackResult.url, public_id: parspackResult.filename }
 
     await user.save()
 

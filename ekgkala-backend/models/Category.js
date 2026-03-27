@@ -21,7 +21,7 @@ const CategorySchema = new mongoose.Schema(
     },
 
     // Icon and image can be either simple string path or
-    // an object { url, public_id } for integrations like Cloudinary.
+    // an object { url, public_id } for integrations like ParsPack S3.
     icon: {
       type: mongoose.Schema.Types.Mixed,
       default: null,

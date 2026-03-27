@@ -1,5 +1,5 @@
 const Admin = require('../models/Admin')
-const { uploadToArvan, deleteFromArvan } = require('../lib/arvanS3')
+const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 const Joi = require('joi')
 
 const updateProfileSchema = Joi.object({
@@ -172,22 +172,22 @@ exports.updateMyAvatar = async (req, res) => {
       })
     }
 
-    // O-OøU? O›U^OO¦OOñ U,O_UOU.UO OOý Cloudinary (OU_Oñ U^OªU^O_ O_OO\'O¦UØ O"OO\'O_)
+    // O-OøU? O›U^OO¦OOñ U,O_UOU.UO OOý ParsPack S3 (OU_Oñ U^OªU^O_ O_OO\'O¦UØ O"OO\'O_)
     if (user.avatar && user.avatar.public_id) {
       try {
-        await deleteFromArvan(user.avatar.public_id)
-        console.log('Old avatar deleted from ArvanCloud:', user.avatar.public_id)
+        await deleteFromParsPack(user.avatar.public_id)
+        console.log('Old avatar deleted from ParsPack:', user.avatar.public_id)
       } catch (error) {
-        console.error('Error deleting old avatar from ArvanCloud:', error)
+        console.error('Error deleting old avatar from ParsPack:', error)
         // OO_OU.UØ U.UOƒ?OO_UØUOU. O-O¦UO OU_Oñ O-OøU? O¦OæU^UOOñ U,O_UOU.UO U+OU.U^U?U, O"OO\'O_
       }
     }
 
     // OøOrUOOñUØ O›U^OO¦OOñ OªO_UOO_
-    const arvanResult = await uploadToArvan(req.file.buffer, req.file.originalname)
+    const parspackResult = await uploadToParsPack(req.file.buffer, req.file.originalname)
     user.avatar = {
-      url: arvanResult.url,
-      public_id: arvanResult.filename,
+      url: parspackResult.url,
+      public_id: parspackResult.filename,
     }
 
     await user.save()

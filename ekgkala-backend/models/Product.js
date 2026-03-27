@@ -160,7 +160,7 @@ const ProductSchema = new mongoose.Schema(
       required: false,
     },
 
-    // Images: array of objects {url, public_id} (Cloudinary)
+    // Images: array of objects {url, public_id} (ParsPack S3)
     // در محصولات متغیر، این تصاویر مشترک هستند
     images: {
       type: [mongoose.Schema.Types.Mixed],

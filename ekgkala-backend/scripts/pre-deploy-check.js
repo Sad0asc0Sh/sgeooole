@@ -29,9 +29,9 @@ if (!fs.existsSync(envFile)) {
     const requiredVars = [
         'MONGODB_URI',
         'JWT_SECRET',
-        'CLOUDINARY_CLOUD_NAME',
-        'CLOUDINARY_API_KEY',
-        'CLOUDINARY_API_SECRET',
+        'PARSPACK_ENDPOINT',
+        'PARSPACK_ACCESS_KEY',
+        'PARSPACK_SECRET_KEY',
     ]
 
     for (const varName of requiredVars) {
