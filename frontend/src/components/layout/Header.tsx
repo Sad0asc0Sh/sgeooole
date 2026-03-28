@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Search, Sparkles, ShoppingCart, User } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,6 +27,12 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
         minSwitchDistance: 20,
         transitionMs: 350,
     });
+    const [spacerReady, setSpacerReady] = useState(false);
+
+    useEffect(() => {
+        const id = requestAnimationFrame(() => setSpacerReady(true));
+        return () => cancelAnimationFrame(id);
+    }, []);
 
     const desktopNavLinks = [
         { href: "/", label: "خانه" },
@@ -42,7 +48,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             {/* Spacer: keeps layout stable when header is fixed (and animates with nav collapse/expand) */}
             <div
                 aria-hidden
-                className={`h-16 transition-[height] duration-300 ease-in-out ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
+                className={`h-16 ${spacerReady ? "transition-[height] duration-300 ease-in-out" : ""} ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
             />
 
             <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white/80 backdrop-blur-md">
