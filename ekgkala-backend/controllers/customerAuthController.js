@@ -57,27 +57,32 @@ exports.sendOtp = async (req, res) => {
       return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
     }
 
-    // API جدید ملی‌پیامک کد را خودش تولید و برمی‌گرداند
-    let smsResult
-    try {
-      smsResult = await sendOtpSMS(mobile)
-    } catch (smsError) {
-      console.error(`[OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
-      const err = new Error('خطا در ارسال پیامک. لطفا دوباره تلاش کنید.')
-      err.code = smsError.code || 'SMS_PROVIDER_ERROR'
-      throw err
-    }
-
-    const code = smsResult.code
+    // تولید کد موقت (API ملی‌پیامک کد خودش را تولید می‌کند)
+    const tempCode = Math.floor(10000 + Math.random() * 90000).toString()
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
-    const otp = new OTP({ mobile, code, expiresAt, verified: false, attempts: 0 })
+    const otp = new OTP({ mobile, code: tempCode, expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
-    const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
-    console.log(`[OTP] SMS accepted by provider${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
-
+    // بلافاصله جواب بده
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
+
+    // ارسال پیامک در پس‌زمینه
+    sendOtpSMS(mobile)
+      .then(smsResult => {
+        // آپدیت کد واقعی از API
+        OTP.findOneAndUpdate(
+          { mobile, code: tempCode },
+          { code: smsResult.code },
+          { new: true }
+        ).then(() => {
+          const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
+          console.log(`[OTP] SMS sent${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
+        })
+      })
+      .catch(err => {
+        console.error(`[OTP] Background SMS failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, err.message)
+      })
 
   } catch (error) {
     console.error('Error sending OTP:', error)

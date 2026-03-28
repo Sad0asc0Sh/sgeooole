@@ -101,34 +101,41 @@ class NotificationService {
       throw err;
     }
 
-    try {
-      const response = await axios.post(
-        `https://console.melipayamak.com/api/send/otp/${this.smsConfig.pathToken}`,
-        { to: phoneNumber },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 15000
-        }
-      );
+    const maxRetries = 2;
+    const timeout = 10000;
 
-      if (response.data && response.data.code) {
-        return {
-          success: true,
-          code: response.data.code,
-          status: response.data.status,
-          provider: 'melipayamak-console'
-        };
-      } else {
-        const err = new Error(response.data?.status || 'خطای نامشخص در ارسال پیامک');
-        err.code = 'SMS_PROVIDER_ERROR';
-        throw err;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await axios.post(
+          `https://console.melipayamak.com/api/send/otp/${this.smsConfig.pathToken}`,
+          { to: phoneNumber },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: timeout
+          }
+        );
+
+        if (response.data && response.data.code) {
+          return {
+            success: true,
+            code: response.data.code,
+            status: response.data.status,
+            provider: 'melipayamak-console'
+          };
+        } else {
+          const err = new Error(response.data?.status || 'خطای نامشخص در ارسال پیامک');
+          err.code = 'SMS_PROVIDER_ERROR';
+          throw err;
+        }
+      } catch (error) {
+        if (attempt === maxRetries || error.code === 'SMS_PROVIDER_ERROR') {
+          console.error('خطا در ارسال پیامک:', error.message);
+          const err = new Error('خطا در ارتباط با سرویس پیامک');
+          err.code = 'SMS_PROVIDER_ERROR';
+          throw err;
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
-    } catch (error) {
-      if (error.code === 'SMS_PROVIDER_ERROR') throw error;
-      console.error('خطا در ارسال پیامک:', error.message);
-      const err = new Error('خطا در ارتباط با سرویس پیامک');
-      err.code = 'SMS_PROVIDER_ERROR';
-      throw err;
     }
   }
 
