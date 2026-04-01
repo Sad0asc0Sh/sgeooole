@@ -330,8 +330,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
             {/* Gallery Slider */}
             <div className="relative w-full bg-white rounded-xl lg:rounded-2xl lg:border lg:border-gray-100 lg:shadow-sm overflow-hidden">
                 {/* Main Image Container - Compact for better viewport fit */}
-                <div className="flex justify-center py-4 lg:py-4">
-                    <div className="w-[70%] max-w-xs lg:w-full lg:max-w-[340px] aspect-[4/3] lg:aspect-[4/3]">
+                <div className="flex justify-center py-4 lg:py-2">
+                    <div className="w-[70%] max-w-xs lg:w-full lg:max-w-[340px] aspect-[4/3] lg:aspect-[16/9]">
                         <Swiper
                             key={product.id}
                             modules={[]}

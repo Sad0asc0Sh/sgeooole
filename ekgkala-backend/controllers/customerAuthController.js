@@ -41,58 +41,61 @@ const setAuthCookie = (res, token) => {
 // ======================
 exports.sendOtp = async (req, res) => {
   try {
-    const { mobile } = req.body
+    const { mobile } = req.body;
+
     if (!mobile || !/^09\d{9}$/.test(mobile)) {
-      return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
+      return res.status(400).json({
+        success: false,
+        message: 'شماره موبایل نامعتبر است'
+      });
     }
 
-    const smsSettings = await getSmsSettings()
-    if (!smsSettings.configured) {
-      return res.status(503).json({ success: false, message: 'سیستم پیامک در پنل ادمین تنظیم نشده است.' })
-    }
+    // پاک کردن TP های قبلی
+    await OTP.cleanupOld(mobile);
 
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-    const recentOtps = await OTP.countDocuments({ mobile, createdAt: { $gte: tenMinutesAgo } })
-    if (recentOtps >= 3) {
-      return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
-    }
+    // ساخت رکورد OTP با کد موقت
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
+    const otpRecord = new OTP({
+      mobile,
+      code: '0000',
+      expiresAt,
+      verified: false,
+      attempts: 0
+    });
+    await otpRecord.save();
 
-    // تولید کد موقت (API ملی‌پیامک کد خودش را تولید می‌کند)
-    const tempCode = Math.floor(10000 + Math.random() * 90000).toString()
-    const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
+    // ✅ فوری پاسخ بده - فرانت به صفحه کد می‌رود
+    res.json({
+      success: true,
+      message: 'کد تایید ارسال شد',
+      expiresIn: 120
+    });
 
-    const otp = new OTP({ mobile, code: tempCode, expiresAt, verified: false, attempts: 0 })
-    await otp.save()
-
-    // بلافاصله جواب بده
-    res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
-
-    // ارسال پیامک در پس‌زمینه
+    // ✅ در پس‌زمینه پیامک بفرست (non-blocking)
     sendOtpSMS(mobile)
-      .then(smsResult => {
-        // آپدیت کد واقعی از API
-        OTP.findOneAndUpdate(
-          { mobile, code: tempCode },
-          { code: smsResult.code },
-          { new: true }
-        ).then(() => {
-          const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
-          console.log(`[OTP] SMS sent${provider} for ${mobile.slice(0, 3)}****${mobile.slice(-2)}`)
-        })
+      .then(async (result) => {
+        if (result && result.code) {
+          otpRecord.code = result.code;
+          await otpRecord.save();
+          console.log('[OTP] SMS sent & code saved for ' + mobile);
+        }
       })
-      .catch(err => {
-        console.error(`[OTP] Background SMS failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, err.message)
-      })
+      .catch((err) => {
+        console.error('[OTP] SMS send failed:', err.message);
+      });
 
   } catch (error) {
-    console.error('Error sending OTP:', error)
-    res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })
+    console.error('[OTP] Error:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: 'خطا در ارسال کد تایید'
+      });
+    }
   }
-}
+};
 
-// ======================
-// OTP: Verify code
-// ======================
+
 exports.verifyOtp = async (req, res) => {
   try {
     const { mobile, code } = req.body
