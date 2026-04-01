@@ -266,19 +266,20 @@ function FlashOfferRail() {
           })}
 
           {/* "See All" Card (Last Slide) */}
-          <SwiperSlide style={{ width: "148px", height: "auto" }}>
+          <SwiperSlide style={{ height: "auto" }}>
             <Link href="/products?sort=flash" className="block h-full">
               <div
-                className="bg-gray-800/70 h-full border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400 hover:bg-gray-800/80 transition-all duration-300 pt-4 pb-4"
-                style={{
-                  clipPath: "polygon(0 0, 50% 15px, 100% 0, 100% 100%, 50% calc(100% - 15px), 0 100%)",
-                  borderRadius: "0"
-                }}
+                className="bg-gradient-to-b from-gray-800/80 to-gray-900/90 h-full rounded-xl border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 px-4 py-6 min-h-[200px]"
               >
-                <div className="w-12 h-12 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400 group-hover:bg-amber-500/10 group-hover:scale-110 transition-all shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                  <ChevronLeft size={24} />
+                <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400 group-hover:bg-amber-500 group-hover:text-gray-900 group-hover:border-amber-500 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                  <ChevronLeft size={22} strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-bold text-gray-300 group-hover:text-amber-400 transition-colors">مشاهده همه</span>
+                <span className="text-sm font-bold text-gray-300 group-hover:text-amber-400 transition-colors duration-300">
+                  مشاهده همه
+                </span>
+                <span className="text-[10px] text-gray-500 group-hover:text-amber-500/70 transition-colors duration-300">
+                  مشاهده تمام پیشنهادها
+                </span>
               </div>
             </Link>
           </SwiperSlide>

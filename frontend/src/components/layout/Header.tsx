@@ -87,16 +87,16 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
             {/* DESKTOP HEADER */}
             <div className="hidden md:block">
-                <div className="container mx-auto">
+                <div className="w-full max-w-[1440px] mx-auto">
                     {/* Top Row: Logo - Search - Actions */}
-                    <div className="flex items-center justify-between h-20 px-4">
+                    <div className="flex items-center h-20 gap-4 pl-4">
                         {/* Right: Logo */}
                         <Link href="/" className="flex-shrink-0">
                             <Logo />
                         </Link>
 
                         {/* Center: Expanded Search Bar */}
-                        <div className="flex-1 max-w-2xl mx-8">
+                        <div className="flex-1 min-w-0">
                             <DesktopSearch />
                         </div>
 

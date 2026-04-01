@@ -85,10 +85,13 @@ function SpecialOfferRail() {
           </div>
 
           {/* View All Button */}
-          <button className="flex items-center gap-0.5 text-white text-sm font-bold hover:text-white/90 transition-all hover:scale-105 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30">
+          <Link
+            href="/products?sort=special"
+            className="flex items-center gap-0.5 text-white text-sm font-bold hover:text-white/90 transition-all hover:scale-105 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full border border-white/30"
+          >
             <span>مشاهده همه</span>
             <ChevronLeft size={16} />
-          </button>
+          </Link>
         </div>
 
         <div className="relative">
@@ -225,15 +228,20 @@ function SpecialOfferRail() {
             })}
 
             {/* See All Card */}
-            <SwiperSlide style={{ width: "148px", height: "auto" }}>
-              <div className="bg-white h-full rounded-lg flex flex-col items-center justify-center gap-3 cursor-pointer group border border-transparent hover:border-gray-100">
-                <div className="w-12 h-12 border border-gray-100 rounded-full flex items-center justify-center text-kala-600 group-hover:bg-gray-50 transition-colors">
-                  <ChevronLeft size={24} />
+            <SwiperSlide style={{ height: "auto" }}>
+              <Link href="/products?sort=special" className="block h-full">
+                <div className="bg-gradient-to-b from-white to-rose-50/60 h-full rounded-xl border border-rose-100 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-rose-300 hover:shadow-lg hover:shadow-rose-100/50 transition-all duration-300 px-4 py-6 min-h-[200px]">
+                  <div className="w-12 h-12 bg-rose-50 border border-rose-200 rounded-full flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white group-hover:border-rose-500 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                    <ChevronLeft size={22} strokeWidth={2.5} />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 group-hover:text-rose-600 transition-colors duration-300">
+                    مشاهده همه
+                  </span>
+                  <span className="text-[10px] text-gray-400 group-hover:text-rose-400 transition-colors duration-300">
+                    مشاهده تمام پیشنهادها
+                  </span>
                 </div>
-                <span className="text-sm font-bold text-gray-700">
-                  مشاهده همه
-                </span>
-              </div>
+              </Link>
             </SwiperSlide>
           </Swiper>
 

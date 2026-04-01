@@ -2,7 +2,6 @@
 
 import { memo, useMemo } from "react";
 import ProductRail from "./ProductRail";
-import { Product } from "@/services/productService";
 import { useNewestProducts, useBestSellers } from "@/hooks/useProducts";
 
 interface ProductRailContainerProps {
@@ -43,6 +42,18 @@ function ProductRailContainer({
         return { products: [], isLoading: false, error: null };
     }
   }, [fetchType, newestHook, bestSellersHook]);
+
+  // Determine the "View All" link based on fetchType
+  const viewAllHref = useMemo(() => {
+    switch (fetchType) {
+      case "bestSellers":
+        return "/products?sort=bestseller";
+      case "newest":
+        return "/products?sort=newest";
+      default:
+        return "/products";
+    }
+  }, [fetchType]);
 
   // Loading skeleton - optimized with CSS animations
   if (isLoading) {
@@ -90,7 +101,7 @@ function ProductRailContainer({
   }
 
   // Render ProductRail with fetched data
-  return <ProductRail title={title} products={products} />;
+  return <ProductRail title={title} products={products} viewAllHref={viewAllHref} />;
 }
 
 // Export with memo for component-level memoization

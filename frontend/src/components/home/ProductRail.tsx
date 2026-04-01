@@ -15,9 +15,10 @@ import { isFlashDealLabel } from "@/lib/flashDealUtils";
 interface ProductRailProps {
   title: string;
   products: any[];
+  viewAllHref?: string;
 }
 
-export default function ProductRail({ title, products }: ProductRailProps) {
+export default function ProductRail({ title, products, viewAllHref = "/products" }: ProductRailProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -35,10 +36,13 @@ export default function ProductRail({ title, products }: ProductRailProps) {
             محصولات منتخب برای شما
           </span>
         </div>
-        <button className="flex items-center gap-0.5 text-blue-500 text-xs font-bold hover:text-blue-600 transition-colors">
+        <Link
+          href={viewAllHref}
+          className="flex items-center gap-0.5 text-blue-500 text-xs font-bold hover:text-blue-600 transition-colors"
+        >
           <span>مشاهده همه</span>
           <ChevronLeft size={14} />
-        </button>
+        </Link>
       </div>
 
       <div className="relative">
@@ -273,13 +277,20 @@ export default function ProductRail({ title, products }: ProductRailProps) {
           })}
 
           {/* "See All" Card (Last Slide) */}
-          <SwiperSlide style={{ width: "148px", height: "auto" }}>
-            <div className="bg-white h-full rounded-lg border border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-gray-300 transition-colors">
-              <div className="w-10 h-10 border border-gray-200 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-50 transition-colors">
-                <ChevronLeft size={20} />
+          <SwiperSlide style={{ height: "auto" }}>
+            <Link href={viewAllHref} className="block h-full">
+              <div className="bg-gradient-to-b from-white to-blue-50/60 h-full rounded-xl border border-blue-100 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-blue-300 hover:shadow-lg hover:shadow-blue-100/50 transition-all duration-300 px-4 py-6 min-h-[200px]">
+                <div className="w-12 h-12 bg-blue-50 border border-blue-200 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white group-hover:border-blue-500 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                  <ChevronLeft size={22} strokeWidth={2.5} />
+                </div>
+                <span className="text-sm font-bold text-gray-700 group-hover:text-blue-600 transition-colors duration-300">
+                  مشاهده همه
+                </span>
+                <span className="text-[10px] text-gray-400 group-hover:text-blue-400 transition-colors duration-300">
+                  مشاهده تمام محصولات
+                </span>
               </div>
-              <span className="text-sm font-bold text-gray-700">مشاهده همه</span>
-            </div>
+            </Link>
           </SwiperSlide>
         </Swiper>
 
