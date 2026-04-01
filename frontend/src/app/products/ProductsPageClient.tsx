@@ -247,7 +247,7 @@ function ProductListingContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8 pt-6">
-      <div className="container mx-auto px-4">
+      <div className="max-w-[1440px] mx-auto px-4">
         {/* Search Results Header */}
         {searchQuery && !brandDetails && (
           <motion.div
@@ -315,7 +315,7 @@ function ProductListingContent() {
         )}
 
         {/* Main Grid Layout */}
-        <div className="lg:grid lg:grid-cols-12 lg:gap-6">
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           {itemList && (
             <script
               type="application/ld+json"
@@ -688,7 +688,7 @@ function ProductListingContent() {
             ) : (
               <motion.div
                 layout
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
+                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5"
               >
                 <AnimatePresence mode="popLayout">
                   {products.map((product) => (
