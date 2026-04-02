@@ -314,8 +314,8 @@ function ProductListingContent() {
           </div>
         )}
 
-        {/* Main Grid Layout */}
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+       {/* Main Grid Layout */}
+        <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
           {itemList && (
             <script
               type="application/ld+json"
@@ -324,9 +324,9 @@ function ProductListingContent() {
             />
           )}
 
-          {/* Desktop Sidebar - Sticky on lg+ */}
-          <aside className="hidden lg:block lg:col-span-3">
-            <div className="sticky top-24 space-y-4">
+        {/* Desktop Sidebar - Sticky on lg+ */}
+         <aside className="hidden lg:block lg:col-span-3 sticky top-[6rem] self-start max-h-[calc(100vh-7.5rem)] overflow-y-auto">
+            <div className="space-y-4">
               {/* Active Filters Summary */}
               {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
                 <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
