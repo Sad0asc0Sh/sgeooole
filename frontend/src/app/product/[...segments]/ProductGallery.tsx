@@ -8,7 +8,7 @@ import "swiper/css/zoom";
 import "swiper/css/navigation";
 import "swiper/css/thumbs";
 
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Product } from "@/services/productService";
@@ -205,7 +205,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             <SwiperSlide key={getImageKey(index, img)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                 <div className="swiper-zoom-container" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <div style={{ position: 'relative', width: '100%', height: '100%', maxHeight: '60vh' }}>
-                                        <Image
+                                        <ResilientImage
                                             src={img}
                                             alt={`${product.title} - ${index + 1}`}
                                             fill
@@ -303,7 +303,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                     padding: 0,
                                 }}
                             >
-                                <Image
+                                <ResilientImage
                                     src={img}
                                     alt={`Thumbnail ${index + 1}`}
                                     fill
@@ -365,7 +365,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                                 </div>
                                             </div>
                                         )}
-                                        <Image
+                                        <ResilientImage
                                             src={img}
                                             alt={`${product.title} - ${index + 1}`}
                                             fill
@@ -406,7 +406,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 : "border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-300"
                                 }`}
                         >
-                            <Image
+                            <ResilientImage
                                 src={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill

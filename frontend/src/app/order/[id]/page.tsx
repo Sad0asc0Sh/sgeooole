@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircle, Package, MapPin, CreditCard, ChevronLeft, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { orderService, Order } from "@/services/orderService";
 
 export default function OrderDetailPage() {
@@ -199,7 +199,7 @@ export default function OrderDetailPage() {
                         {order.orderItems.map((item, index) => (
                             <div key={index} className="flex items-center gap-3 pb-3 border-b border-gray-100 last:border-0">
                                 <div className="relative w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                    <ResilientImage src={item.image} alt={item.name} fill className="object-cover" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>

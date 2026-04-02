@@ -2,7 +2,7 @@
 
 import React, { memo, useMemo } from "react";
 import { AlertTriangle } from "lucide-react";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import Link from "next/link";
 import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
@@ -104,7 +104,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
             >
                 {/* Product Image */}
                 <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
-                    <Image
+                    <ResilientImage
                         src={product.image || "/placeholder.png"}
                         alt={product.name}
                         fill
@@ -116,6 +116,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                         quality={75}
                         placeholder="blur"
                         blurDataURL={getBlurDataURL()}
+                        fallbackSrc="/placeholder.png"
                     />
 
                     {/* Campaign Badge */}

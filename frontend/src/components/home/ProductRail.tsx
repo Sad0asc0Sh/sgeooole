@@ -8,7 +8,7 @@ import "swiper/css/free-mode";
 import "swiper/css/navigation";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
@@ -186,11 +186,12 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
                     <div className={headerConfig ? "px-3 pb-3" : ""}>
                       {/* Image */}
                       <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
-                        <Image
+                        <ResilientImage
                           src={product.image || "/placeholder.png"}
                           alt={product.name}
                           fill
                           className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                          fallbackSrc="/placeholder.png"
                         />
 
                         {/* Timer Overlay (Top Right) */}

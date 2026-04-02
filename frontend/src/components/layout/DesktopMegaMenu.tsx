@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { ChevronLeft, Menu, Loader2, Grid3X3 } from "lucide-react";
 import type { Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
@@ -69,13 +69,13 @@ const CategoryIcon = ({
             className={cn("relative overflow-hidden rounded-lg bg-slate-100 flex-shrink-0", className)}
             style={{ width: size, height: size }}
         >
-            <Image
+            <ResilientImage
                 src={iconUrl}
                 alt={category.name}
                 fill
                 className="object-contain p-0.5"
                 sizes={`${size}px`}
-                onError={() => setHasError(true)}
+                onRetryExhausted={() => setHasError(true)}
             />
         </div>
     );

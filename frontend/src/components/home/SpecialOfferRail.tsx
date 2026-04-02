@@ -8,7 +8,7 @@ import "swiper/css/navigation";
 import "swiper/css/free-mode";
 import { AlertTriangle, ChevronLeft, Percent } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { Product } from "@/services/productService";
 import { useSpecialOffers } from "@/hooks/useProducts";
 import { useCountdown } from "@/hooks/useCountdown";
@@ -147,11 +147,12 @@ function SpecialOfferRail() {
                       <div className="">
                         {/* Product Image */}
                         <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md p-2">
-                          <Image
+                          <ResilientImage
                             src={product.image || "/placeholder.png"}
                             alt={product.name}
                             fill
                             className={`object-contain group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                            fallbackSrc="/placeholder.png"
                           />
 
                           {/* Badges - Only show if no header */}

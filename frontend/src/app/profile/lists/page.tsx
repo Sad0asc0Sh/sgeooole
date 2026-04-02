@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ArrowRight, Heart, Trash2, ShoppingCart, Loader2, Plus, Minus, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { wishlistService, WishlistItem } from "@/services/wishlistService";
 import { useCart } from "@/hooks/useCart";
 import { Product } from "@/services/productService";
@@ -274,12 +274,12 @@ export default function ListsPage() {
                                 <div key={product._id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50 hover:shadow-md transition-shadow flex flex-col">
                                     {/* Product Image */}
                                     <Link href={`/product/${product._id}`} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-3">
-                                        <Image
+                                        <ResilientImage
                                             src={getImageUrl(product)}
                                             fill
                                             className={`object-cover hover:scale-110 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                                             alt={product.name}
-                                            onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                            fallbackSrc="/placeholder.png"
                                         />
                                         {pricing.discount > 0 && (
                                             <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">

@@ -7,7 +7,7 @@ import {
     AlertCircle, MoreVertical, Reply, Eye, Calendar, User, ShoppingBag,
     ChevronLeft, ChevronRight, Mail, Phone
 } from "lucide-react";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -233,7 +233,7 @@ export default function ReviewsPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-gray-100 rounded-lg relative overflow-hidden flex-shrink-0 border border-gray-200">
                                                     {(review.product as any)?.images?.[0] ? (
-                                                        <Image src={(review.product as any).images[0]} alt="" fill className="object-cover" />
+                                                        <ResilientImage src={(review.product as any).images[0]} alt="" fill className="object-cover" />
                                                     ) : (
                                                         <ShoppingBag className="m-auto text-gray-300" size={16} />
                                                     )}
@@ -452,7 +452,7 @@ export default function ReviewsPage() {
                                             <h4 className="text-xs font-bold text-gray-400 uppercase mb-4">محصول مرتبط</h4>
                                             <div className="relative aspect-video w-full bg-gray-100 rounded-xl overflow-hidden mb-3 border border-gray-200">
                                                 {(selectedReview.product as any)?.images?.[0] ? (
-                                                    <Image
+                                                    <ResilientImage
                                                         src={(selectedReview.product as any).images[0]}
                                                         alt="Product"
                                                         fill

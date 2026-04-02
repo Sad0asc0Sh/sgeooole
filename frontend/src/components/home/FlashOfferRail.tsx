@@ -6,7 +6,7 @@ import { FreeMode, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/free-mode";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { Product } from "@/services/productService";
 import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
@@ -175,7 +175,7 @@ function FlashOfferRail() {
 
                       {/* Image */}
                       <div className="aspect-square w-full mb-2 relative flex items-center justify-center bg-gray-700/30 rounded-lg overflow-hidden border border-white/5">
-                        <Image
+                        <ResilientImage
                           src={product.image || "/placeholder.png"}
                           alt={product.name}
                           fill
@@ -185,6 +185,7 @@ function FlashOfferRail() {
                           quality={75}
                           placeholder="blur"
                           blurDataURL={getBlurDataURL()}
+                          fallbackSrc="/placeholder.png"
                         />
 
                         {/* Timer Overlay (Top Right) */}

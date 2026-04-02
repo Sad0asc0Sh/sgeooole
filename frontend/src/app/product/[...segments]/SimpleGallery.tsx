@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
@@ -54,7 +54,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
         <div className="relative bg-gray-50 w-full pb-10">
             {/* Main Image */}
             <div className="relative h-[380px] w-full bg-white flex items-center justify-center">
-                <Image
+                <ResilientImage
                     src={images[activeIndex]}
                     alt={`${product.title} - ${activeIndex + 1}`}
                     fill
@@ -64,6 +64,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                     quality={85}
                     placeholder="blur"
                     blurDataURL={getBlurDataURL()}
+                    fallbackSrc="/placeholder.png"
                 />
 
                 {/* Navigation Arrows */}
@@ -137,7 +138,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                             type="button"
                             aria-label={`انتخاب تصویر ${index + 1}`}
                         >
-                            <Image
+                            <ResilientImage
                                 src={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
@@ -146,6 +147,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                                 quality={75}
                                 placeholder="blur"
                                 blurDataURL={getBlurDataURL()}
+                                fallbackSrc="/placeholder.png"
                             />
                         </button>
                     ))}

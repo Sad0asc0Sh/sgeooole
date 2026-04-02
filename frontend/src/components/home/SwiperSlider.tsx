@@ -5,7 +5,7 @@ import { Autoplay, Pagination, Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 import "swiper/css/autoplay";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { useRouter } from "next/navigation";
 import { Banner } from "@/services/bannerService";
 import { resolveImageUrl, generateBannerBlurPlaceholder } from "@/lib/image";
@@ -58,7 +58,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
               }}
               aria-label={canNavigate ? (banner.title || "banner") : undefined}
             >
-              <Image
+              <ResilientImage
                 src={imageUrl}
                 alt={banner.title || "بنر تبلیغاتی"}
                 width={width}
@@ -67,6 +67,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                 loading="lazy"
                 placeholder="blur"
                 blurDataURL={blurPlaceholder}
+                fallbackSrc="/placeholder-banner.png"
               />
             </div>
           </SwiperSlide>

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl, generateBannerBlurPlaceholder } from "@/lib/image";
 import { useRouter } from "next/navigation";
@@ -148,7 +148,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 }}
                 aria-label={canNavigate ? (firstBanner.title || "banner") : undefined}
               >
-                <Image
+                <ResilientImage
                   src={imageUrl}
                   alt={firstBanner.title || "بنر اصلی"}
                   width={width}
@@ -159,6 +159,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                   loading="eager"
                   placeholder="blur"
                   blurDataURL={blurPlaceholder}
+                  fallbackSrc="/placeholder-banner.png"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
                 />
               </div>
@@ -173,7 +174,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
           {/* LCP: First banner SSR-rendered (visible until Swiper loads) */}
           <noscript>
             <div className="relative w-full rounded-xl overflow-hidden bg-gray-50 shadow-sm">
-              <Image
+              <ResilientImage
                 src={resolveImageUrl((firstBanner as any).image, "/placeholder-banner.png")}
                 alt={firstBanner.title || "بنر اصلی"}
                 width={1200}
@@ -232,7 +233,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 }}
                 aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
               >
-                <Image
+                <ResilientImage
                   src={imageUrl}
                   alt={banner.title || "بنر تبلیغاتی"}
                   width={width}
@@ -241,6 +242,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                   loading="lazy"
                   placeholder="blur"
                   blurDataURL={blurPlaceholder}
+                  fallbackSrc="/placeholder-banner.png"
                 />
               </div>
             );

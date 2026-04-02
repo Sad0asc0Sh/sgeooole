@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, Loader2, Package, AlertCircle } from "lucide-react";
 import type { Category } from "@/services/categoryService";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCategoryTree } from "@/hooks/useCategories";
@@ -141,7 +141,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                         {/* Category Icon */}
                         {resolveCategoryImage(cat) ? (
                             <div className="relative w-6 h-6">
-                                <Image
+                                <ResilientImage
                                     src={resolveCategoryImage(cat)!}
                                     alt={cat.name}
                                     fill
@@ -216,7 +216,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                     {resolveCategoryImage(subCategory) && (
                                                         <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden flex-shrink-0">
                                                             <div className="relative w-6 h-6">
-                                                                <Image
+                                                                <ResilientImage
                                                                     src={resolveCategoryImage(subCategory)!}
                                                                     alt={subCategory.name}
                                                                     fill
@@ -252,7 +252,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                                 <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-kala-200 transition-colors overflow-hidden">
                                                                     {resolveCategoryImage(item) ? (
                                                                         <div className="relative w-full h-full">
-                                                                            <Image
+                                                                            <ResilientImage
                                                                                 src={resolveCategoryImage(item)!}
                                                                                 alt={item.name}
                                                                                 fill

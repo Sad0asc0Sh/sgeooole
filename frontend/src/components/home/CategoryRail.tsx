@@ -1,9 +1,23 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useResilientImg } from "@/components/ui/ResilientImage";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
+
+function ResilientCategoryImg({ url, name }: { url: string; name: string }) {
+    const { src, onError, ref } = useResilientImg(url, "/placeholder.png");
+    return (
+        <img
+            ref={ref}
+            src={src}
+            alt={name}
+            onError={onError}
+            className="w-full h-full object-contain"
+        />
+    );
+}
 
 interface CategoryRailProps {
     title: string;
@@ -162,10 +176,9 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
                                     <div className="w-20 h-20 rounded-full p-[2px] bg-gradient-to-tr from-kala-400 to-ekg-300 transition-transform duration-300 group-hover:scale-105">
                                         <div className="w-full h-full bg-white rounded-full p-2 flex items-center justify-center overflow-hidden relative">
                                             {category.image?.url || category.icon?.url ? (
-                                                <img
-                                                    src={category.image?.url || category.icon?.url}
-                                                    alt={category.name}
-                                                    className="w-full h-full object-contain"
+                                                <ResilientCategoryImg
+                                                    url={(category.image?.url || category.icon?.url)!}
+                                                    name={category.name}
                                                 />
                                             ) : (
                                                 <div className="w-full h-full bg-gray-100 rounded-full" />
@@ -180,14 +193,13 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
 
                             {/* --- VARIANT: CARD (POPULAR) --- */}
                             {variant === 'card' && (
-                                <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 hover:border-kala-200 hover:shadow-md transition-all duration-300">
-                                    <div className="w-16 h-16 mb-2 relative flex items-center justify-center transition-transform duration-300 hover:scale-105">
-                                        {category.image?.url || category.icon?.url ? (
-                                            <img
-                                                src={category.image?.url || category.icon?.url}
-                                                alt={category.name}
-                                                className="w-full h-full object-contain rounded-lg"
-                                            />
+                                    <div className="flex flex-col items-center bg-gray-50 rounded-xl p-3 cursor-pointer border border-gray-100 select-none hover:bg-gray-100 hover:border-kala-200 hover:shadow-md transition-all duration-300">
+                                        <div className="w-16 h-16 mb-2 relative flex items-center justify-center transition-transform duration-300 hover:scale-105">
+                                            {category.image?.url || category.icon?.url ? (
+                                                <ResilientCategoryImg
+                                                    url={(category.image?.url || category.icon?.url)!}
+                                                    name={category.name}
+                                                />
                                         ) : (
                                             <div className="w-full h-full bg-white rounded-lg shadow-sm" />
                                         )}

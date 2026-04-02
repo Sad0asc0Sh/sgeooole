@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { Heart, Star, AlertTriangle } from "lucide-react";
 
 import { Product } from "@/services/productService";
@@ -210,7 +210,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 <Link href={buildProductUrl(product)} className="block w-full h-full">
                     {/* Static Image */}
                     <div className="relative w-full h-full">
-                        <Image
+                        <ResilientImage
                             src={product.image || "/placeholder.svg"}
                             alt={product.title}
                             fill
@@ -220,6 +220,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                             quality={75}
                             placeholder="blur"
                             blurDataURL={getBlurDataURL()}
+                            fallbackSrc="/placeholder.svg"
                         />
                     </div>
                 </Link>

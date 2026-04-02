@@ -3,7 +3,7 @@
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { brandService, HomepageBrand } from "@/services/brandService";
 import { useRef, useState, MouseEvent, useEffect } from "react";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { useRouter } from "next/navigation";
 
 export default function BrandsStrip() {
@@ -120,12 +120,13 @@ export default function BrandsStrip() {
               {/* Show logo if available */}
               {brand.logo?.url && (
                 <div className="relative w-24 h-24 rounded">
-                  <Image
+                  <ResilientImage
                     src={brand.logo.url}
                     alt={brand.name}
                     fill
                     className="object-contain"
                     sizes="96px"
+                    fallbackSrc="/placeholder.png"
                   />
                 </div>
               )}

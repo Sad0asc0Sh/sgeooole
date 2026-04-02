@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { ArrowRight, MessageSquare, Star, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { reviewService, Review } from "@/services/reviewService";
 
 const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
@@ -166,12 +166,12 @@ export default function ReviewsPage() {
                             <div key={review._id} className="bg-white rounded-2xl p-3 shadow-sm border border-gray-50 hover:shadow-md transition-shadow flex flex-col">
                                 {/* Product Image */}
                                 <Link href={`/product/${getProductSlug(review)}`} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-3">
-                                    <Image
+                                    <ResilientImage
                                         src={getProductImage(review)}
                                         fill
                                         className="object-cover hover:scale-110 transition-transform duration-500"
                                         alt={getProductName(review)}
-                                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                        fallbackSrc="/placeholder.png"
                                     />
                                 </Link>
 

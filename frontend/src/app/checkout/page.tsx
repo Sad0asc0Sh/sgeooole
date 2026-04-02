@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Trash2, CheckCircle2, FileText, Hash, Building2, UserCheck, ChevronDown } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { useCart } from "@/hooks/useCart";
 import { orderService, CreateOrderRequest, OrderItem, ShippingAddress } from "@/services/orderService";
 import { authService, User as UserType } from "@/services/authService";
@@ -559,7 +559,7 @@ export default function CheckoutPage() {
                                             return (
                                                 <div key={itemKey} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-none">
                                                     <div className="relative w-14 h-14 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
-                                                        <Image src={item.image} alt={item.name} fill className="object-cover" />
+                                                        <ResilientImage src={item.image} alt={item.name} fill className="object-cover" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs font-bold text-gray-800 truncate mb-1">{item.name}</p>
