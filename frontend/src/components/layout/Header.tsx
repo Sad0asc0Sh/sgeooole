@@ -34,6 +34,13 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
         return () => cancelAnimationFrame(id);
     }, []);
 
+    useEffect(() => {
+        document.documentElement.style.setProperty(
+            '--header-height',
+            isNavVisible ? '136px' : '80px'
+        );
+    }, [isNavVisible]);
+
     const desktopNavLinks = [
         { href: "/", label: "خانه" },
         { href: "/categories", label: "دسته‌بندی‌ها" },

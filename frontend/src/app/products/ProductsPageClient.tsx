@@ -325,7 +325,7 @@ function ProductListingContent() {
           )}
 
         {/* Desktop Sidebar - Sticky on lg+ */}
-         <aside className="hidden lg:block lg:col-span-3 sticky top-[6rem] self-start max-h-[calc(100vh-7.5rem)] overflow-y-auto">
+         <aside className="hidden lg:block lg:col-span-3 sticky self-start overflow-y-auto" style={{ top: 'calc(var(--header-height, 136px) + 1rem)', maxHeight: 'calc(100vh - var(--header-height, 136px) - 1.5rem)', transition: 'top 0.3s ease-in-out, max-height 0.3s ease-in-out' }}>
             <div className="space-y-4">
               {/* Active Filters Summary */}
               {(minPriceParam || maxPriceParam || Object.keys(selectedProperties).length > 0) && (
