@@ -7,12 +7,10 @@ import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import SWRProvider from "@/providers/SWRProvider";
 import { Suspense } from "react";
 
-// ArvanCloud configuration for DNS preconnect
-const ARVAN_ENDPOINT =
-  process.env.NEXT_PUBLIC_ARVAN_ENDPOINT ||
-  "https://s3.ir-thr-at1.arvanstorage.ir";
-const ARVAN_BUCKET_NAME =
-  process.env.NEXT_PUBLIC_ARVAN_BUCKET_NAME || "";
+// Parspack Cloud Storage — DNS preconnect
+const PARSPACK_ENDPOINT =
+  process.env.NEXT_PUBLIC_PARSPACK_ENDPOINT ||
+  "https://c258565.parspack.net";
 
 export const metadata: Metadata = {
   metadataBase: (() => {
@@ -54,15 +52,20 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" className={iransans.variable}>
       <head>
-        {/* ArvanCloud DNS Prefetch & Preconnect for LCP optimization */}
+        {/* Parspack Storage DNS Prefetch & Preconnect for LCP optimization */}
         <link
           rel="dns-prefetch"
-          href={ARVAN_ENDPOINT}
+          href={PARSPACK_ENDPOINT}
         />
         <link
           rel="preconnect"
-          href={ARVAN_ENDPOINT}
+          href={PARSPACK_ENDPOINT}
           crossOrigin="anonymous"
+        />
+        {/* Second preconnect without crossorigin for non-CORS image fetches */}
+        <link
+          rel="preconnect"
+          href={PARSPACK_ENDPOINT}
         />
       </head>
       <body

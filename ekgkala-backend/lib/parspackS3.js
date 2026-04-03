@@ -335,6 +335,7 @@ const uploadToParsPack = async (buffer, originalName) => {
     "x-amz-content-sha256": payloadHash,
     "x-amz-date": amzDate,
   };
+  headersObj["cache-control"] = "public, max-age=31536000, immutable";
   const signedHeaders = Object.keys(headersObj).sort();
 
   const authorization = buildAuthorizationHeader({

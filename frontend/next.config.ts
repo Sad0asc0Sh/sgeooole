@@ -30,10 +30,14 @@ const buildProductUrl = (product: any) => {
   return `/${path}/${product.slug || product._id || product.id}`;
 };
 
-// ArvanCloud configuration
-const ARVAN_ENDPOINT =
-  process.env.NEXT_PUBLIC_ARVAN_ENDPOINT ||
-  "https://s3.ir-thr-at1.arvanstorage.ir";
+// Parspack Cloud Storage configuration
+const PARSPACK_ENDPOINT_HOST =
+  (process.env.NEXT_PUBLIC_PARSPACK_ENDPOINT || "https://c258565.parspack.net")
+    .replace(/^https?:\/\//, "");
+const PARSPACK_BUCKET_NAME =
+  process.env.PARSPACK_BUCKET_NAME || "ekgkala-uploads";
+
+// Legacy ArvanCloud (kept for migration period)
 const ARVAN_BUCKET_NAME =
   process.env.NEXT_PUBLIC_ARVAN_BUCKET_NAME || "";
 
@@ -53,12 +57,13 @@ const baseConfig: NextConfig = {
     contentSecurityPolicy:
       "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
-      // ArvanCloud Object Storage (PRIMARY)
+      // Parspack Cloud Storage (PRIMARY)
       {
         protocol: "https",
-        hostname: ARVAN_BUCKET_NAME ? ARVAN_BUCKET_NAME + "." : "s3.ir-thr-at1.",
-        pathname: `/${ARVAN_BUCKET_NAME || "ekgkala-media"}/**`,
+        hostname: PARSPACK_ENDPOINT_HOST,
+        pathname: `/${PARSPACK_BUCKET_NAME}/**`,
       },
+      // ArvanCloud Object Storage (legacy)
       {
         protocol: "https",
         hostname: "s3.ir-thr-at1.arvanstorage.ir",

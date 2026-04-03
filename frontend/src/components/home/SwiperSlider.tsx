@@ -27,7 +27,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       className="w-full rounded-xl overflow-hidden"
       dir="rtl"
     >
-      {banners.map((banner) => {
+      {banners.map((banner, index) => {
         const imageUrl = resolveImageUrl(
           (banner as any).image,
           "/placeholder-banner.png"
@@ -64,7 +64,8 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                 width={width}
                 height={height}
                 className="w-full h-auto object-cover"
-                loading="lazy"
+                loading={index === 0 ? "eager" : "lazy"}
+                priority={index === 0}
                 placeholder="blur"
                 blurDataURL={blurPlaceholder}
                 fallbackSrc="/placeholder-banner.png"

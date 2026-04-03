@@ -1,20 +1,23 @@
 /**
- * ArvanCloud-Optimized Image URL Resolver
+ * Parspack-Optimized Image URL Resolver
  * ============================================================
  * 
  * This utility resolves image URLs from multiple sources:
- * 1. ArvanCloud Object Storage (primary)
- * 2. Local uploads (for backward compatibility)
- * 3. Cloudinary (for legacy data)
- * 4. Fallback placeholder
+ * 1. Parspack Cloud Storage (primary)
+ * 2. ArvanCloud Object Storage (legacy)
+ * 3. Local uploads (for backward compatibility)
+ * 4. Cloudinary (for legacy data)
+ * 5. Fallback placeholder
  * 
  * Environment variables required:
- * - ARVAN_ENDPOINT: e.g., https://s3.ir-thr-at1.arvanstorage.ir
- * - ARVAN_BUCKET_NAME: e.g., ekgkala-media
+ * - NEXT_PUBLIC_PARSPACK_ENDPOINT: e.g., https://c258565.parspack.net
  * 
  * Usage:
  *   resolveImageUrl(imageSource, fallbackUrl)
  */
+
+const PARSPACK_ENDPOINT =
+  process.env.NEXT_PUBLIC_PARSPACK_ENDPOINT || "https://c258565.parspack.net";
 
 export const resolveImageUrl = (
   source: unknown,
@@ -54,11 +57,11 @@ export const resolveImageUrl = (
     "key" in source &&
     typeof (source as any).key === "string"
   ) {
-    const endpoint = process.env.NEXT_PUBLIC_ARVAN_ENDPOINT || "https://s3.ir-thr-at1.arvanstorage.ir";
-    const bucketName = process.env.NEXT_PUBLIC_ARVAN_BUCKET_NAME || "";
+    const endpoint = PARSPACK_ENDPOINT;
+    const bucketName = process.env.PARSPACK_BUCKET_NAME || "ekgkala-uploads";
     const key = (source as any).key.trim();
     
-    if (endpoint && bucketName && key) {
+    if (endpoint && key) {
       return `${endpoint}/${bucketName}/${key}`;
     }
     return fallback;

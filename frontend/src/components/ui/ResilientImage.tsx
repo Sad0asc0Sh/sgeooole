@@ -9,15 +9,14 @@ import {
   forwardRef,
 } from "react";
 
-const MAX_RETRIES = 10;
-const BASE_DELAY_MS = 1000;
-const MAX_DELAY_MS = 30000;
+const MAX_RETRIES = 5;
+const RETRY_DELAYS_MS = [300, 800, 2000, 5000, 10000];
 const PLACEHOLDER_SRC = "/placeholder.png";
 
 function getRetryDelay(attempt: number): number {
-  const exponential = BASE_DELAY_MS * Math.pow(2, attempt);
-  const jitter = exponential * 0.3 * Math.random();
-  return Math.min(exponential + jitter, MAX_DELAY_MS);
+  const base = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+  const jitter = base * 0.2 * Math.random();
+  return base + jitter;
 }
 
 function bustCache(src: string): string {
@@ -31,6 +30,29 @@ function bustCache(src: string): string {
   }
 }
 
+/**
+ * Warm the TCP+TLS connection to the image origin so subsequent
+ * <img> loads skip the cold-start handshake. Uses a zero-byte
+ * HEAD via fetch (no actual image download).
+ */
+const warmedOrigins = new Set<string>();
+function warmConnection(src: string): void {
+  try {
+    const url = new URL(src, window.location.origin);
+    const origin = url.origin;
+    if (warmedOrigins.has(origin)) return;
+    warmedOrigins.add(origin);
+    fetch(src, {
+      method: "HEAD",
+      mode: "no-cors",
+      credentials: "omit",
+      cache: "no-store",
+    }).catch(() => {});
+  } catch {
+    // ignore malformed URLs
+  }
+}
+
 export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string;
   maxRetries?: number;
@@ -41,14 +63,15 @@ export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
  * ResilientImage
  * ==============
  * A drop-in replacement for next/image that automatically retries failed
- * image loads with exponential backoff, but *only* when the image is
+ * image loads with fast progressive backoff, but *only* when the image is
  * inside the viewport (Intersection Observer).
  *
  * Features:
- * - Auto-retry on onerror with exponential backoff + jitter
+ * - Auto-retry on onerror with fast progressive backoff (300ms → 800ms → 2s → 5s → 10s)
+ * - Connection warming via HEAD request on first failure
  * - Viewport-gated retries via IntersectionObserver
  * - Cache-busting query param on each retry
- * - Configurable max retries (default 10)
+ * - Configurable max retries (default 5)
  * - Falls back to a placeholder after all retries are exhausted
  */
 const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
@@ -123,6 +146,10 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
 
     const handleError = useCallback(() => {
       if (failed) return;
+
+      if (typeof originalSrc === "string" && retryCount.current === 0) {
+        warmConnection(originalSrc);
+      }
 
       if (retryCount.current >= maxRetries) {
         setFailed(true);
@@ -222,6 +249,9 @@ export function useResilientImg(
 
   const onError = useCallback(() => {
     if (failed.current) return;
+    if (originalSrc && retryCount.current === 0) {
+      warmConnection(originalSrc);
+    }
     if (!isInViewport.current) {
       waitingForViewport.current = true;
       return;
