@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Table,
   Button,
@@ -182,7 +182,10 @@ const buildCsvChunks = (rows, headers, maxChunkBytes = CSV_CHUNK_MAX_BYTES) => {
 }
 
 function ProductsList({ mode }) {
-  const { can } = useCan()
+ const { can } = useCan()
+ const searchDebounceRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+
   const canCreate = can(PERMISSIONS.PRODUCT_CREATE)
   const canUpdate = can(PERMISSIONS.PRODUCT_UPDATE)
   const canDelete = can(PERMISSIONS.PRODUCT_DELETE)
@@ -536,13 +539,35 @@ function ProductsList({ mode }) {
   }
 
   const onTableChange = (pag) => {
-    setPagination((prev) => ({
-      ...prev,
-      current: pag.current,
-      pageSize: pag.pageSize,
-    }))
-    fetchProducts(pag.current, pag.pageSize)
-  }
+   setPagination((prev) => ({
+     ...prev,
+     current: pag.current,
+     pageSize: pag.pageSize,
+   }))
+   fetchProducts(pag.current, pag.pageSize)
+    const container =
+      scrollContainerRef.current?.closest('.admin-content-area')
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+ }
+
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      fetchProducts(1, pagination.pageSize)
+    }, 400)
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.search, filters.searchField])
 
   // Handle Excel Export (existing)
   const handleExport = async () => {
@@ -830,11 +855,11 @@ function ProductsList({ mode }) {
   }
 
   return (
-    <div>
-      <div
-        style={{
-          marginBottom: 20,
-          display: 'flex',
+    <div ref={scrollContainerRef}>
+     <div
+       style={{
+         marginBottom: 20,
+         display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexWrap: 'wrap',
@@ -957,8 +982,6 @@ function ProductsList({ mode }) {
             onChange={(e) =>
               setFilters((prev) => ({ ...prev, search: e.target.value }))
             }
-            onPressEnter={() => fetchProducts(1, pagination.pageSize)}
-            onBlur={() => fetchProducts(1, pagination.pageSize)}
           />
         </Input.Group>
         <Select
