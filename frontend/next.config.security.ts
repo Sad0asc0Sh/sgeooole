@@ -76,7 +76,7 @@ const productionHeaders = [
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
             "font-src 'self' https://fonts.gstatic.com data:",
             "img-src 'self' data: https: blob: https://res.cloudinary.com",
-            "connect-src 'self' https://ekgkala.ir https://*.ekgkala.ir https://accounts.google.com",
+            "connect-src 'self' https://ekgkala.ir https://*.ekgkala.ir https://*.parspack.net https://accounts.google.com",
             "frame-ancestors 'self'",
             "base-uri 'self'",
             "form-action 'self'",
