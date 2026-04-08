@@ -1,8 +1,9 @@
 const crypto = require("crypto");
 const path = require("path");
 const axios = require("axios");
+const https = require("https");
 const { execFile } = require("child_process");
-
+const MAX_UPLOAD_RETRIES = 4;
 // ============================================
 // ParsPack S3 Configuration
 // ============================================
@@ -15,13 +16,22 @@ const SERVICE = "s3";
 
 // ParsPack uses virtual-hosted-style routing: the first label of the
 // endpoint hostname (e.g. "c258565" from "c258565.parspack.net") is the
-// real S3 bucket.  The value in PARSPACK_BUCKET_NAME ("ekgkala-uploads")
-// is actually just a key-prefix / folder inside that bucket.
-// The canonical URI that ParsPack validates against is:
-//   /<hostBucket>/<PARSPACK_BUCKET_NAME>/<objectKey>
+// real S3 bucket.
 const HOST_BUCKET = PARSPACK_ENDPOINT.split(".")[0];
 
-const isValidConfig = PARSPACK_BUCKET_NAME && PARSPACK_ACCESS_KEY && PARSPACK_SECRET_KEY;
+const isValidConfig = !!(PARSPACK_BUCKET_NAME && PARSPACK_ACCESS_KEY && PARSPACK_SECRET_KEY);
+
+// TLS debug override — set S3_TLS_REJECT_UNAUTHORIZED=0 ONLY for temporary
+// debugging when the endpoint DNS is misconfigured on the host machine.
+// NEVER use in production.
+const S3_REJECT_UNAUTHORIZED = process.env.S3_TLS_REJECT_UNAUTHORIZED !== "0";
+const s3HttpsAgent = new https.Agent({
+  rejectUnauthorized: S3_REJECT_UNAUTHORIZED,
+  keepAlive: true,
+});
+if (!S3_REJECT_UNAUTHORIZED) {
+  console.warn("[ParspackS3] ⚠ TLS certificate validation DISABLED (S3_TLS_REJECT_UNAUTHORIZED=0). Do NOT use in production.");
+}
 
 if (!isValidConfig) {
   console.warn("[ParspackS3] Missing PARSPACK_BUCKET_NAME, PARSPACK_ACCESS_KEY, or PARSPACK_SECRET_KEY — uploads will fail.");
@@ -299,7 +309,6 @@ const uploadToParsPack = async (buffer, originalName) => {
   const filename = generateSafeFilename(originalName);
   const ext = path.extname(originalName).toLowerCase();
 
-  // --- WebP conversion ---
   let uploadBuffer = buffer;
   let uploadFilename = filename;
   let contentType = MIME_MAP[ext] || "application/octet-stream";
@@ -317,69 +326,85 @@ const uploadToParsPack = async (buffer, originalName) => {
   }
 
   const objectKey = `uploads/${uploadFilename}`;
-
-  const host = PARSPACK_ENDPOINT;
   const urlPath = `/${PARSPACK_BUCKET_NAME}/${objectKey}`;
-  const url = `https://${host}${urlPath}`;
   const canonicalUri = uriEncode(`/${HOST_BUCKET}${urlPath}`);
+  const hostname = PARSPACK_ENDPOINT;
+  const publicUrl = `https://${hostname}${urlPath}`;
 
-  const now = new Date();
-  const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const dateStamp = amzDate.slice(0, 8);
-  const payloadHash = "UNSIGNED-PAYLOAD";
+  let lastError = null;
 
-  const headersObj = {
-    "content-type": contentType,
-    host: host,
-    "x-amz-acl": "public-read",
-    "x-amz-content-sha256": payloadHash,
-    "x-amz-date": amzDate,
-  };
-  headersObj["cache-control"] = "public, max-age=31536000, immutable";
-  const signedHeaders = Object.keys(headersObj).sort();
+  for (let attempt = 1; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
+    console.log(`[ParspackS3] Upload attempt ${attempt}/${MAX_UPLOAD_RETRIES} via ${hostname}`);
 
-  const authorization = buildAuthorizationHeader({
-    method: "PUT",
-    pathname: canonicalUri,
-    queryString: "",
-    headers: headersObj,
-    signedHeaders,
-    payloadHash,
-    accessKey: PARSPACK_ACCESS_KEY,
-    secretKey: PARSPACK_SECRET_KEY,
-    region: PARSPACK_REGION,
-    service: SERVICE,
-    dateStamp,
-    amzDate,
-  });
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    const dateStamp = amzDate.slice(0, 8);
+    const payloadHash = "UNSIGNED-PAYLOAD";
 
-  try {
-    const response = await axios.put(url, uploadBuffer, {
-      headers: {
-        ...headersObj,
-        "content-length": String(uploadBuffer.length),
-        Authorization: authorization,
-      },
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      transformRequest: [(data) => data],
+    const headersObj = {
+      "content-type": contentType,
+      host: hostname,
+      "x-amz-acl": "public-read",
+      "x-amz-content-sha256": payloadHash,
+      "x-amz-date": amzDate,
+    };
+    headersObj["cache-control"] = "public, max-age=31536000, immutable";
+    const signedHeaders = Object.keys(headersObj).sort();
+
+    const authorization = buildAuthorizationHeader({
+      method: "PUT",
+      pathname: canonicalUri,
+      queryString: "",
+      headers: headersObj,
+      signedHeaders,
+      payloadHash,
+      accessKey: PARSPACK_ACCESS_KEY,
+      secretKey: PARSPACK_SECRET_KEY,
+      region: PARSPACK_REGION,
+      service: SERVICE,
+      dateStamp,
+      amzDate,
     });
 
-    const publicUrl = `https://${host}${urlPath}`;
+    const url = `https://${hostname}${urlPath}`;
 
-    return {
-      key: objectKey,
-      filename: uploadFilename,
-      url: publicUrl,
-      etag: response.headers && response.headers.etag,
-    };
-  } catch (error) {
-    logS3Error("Upload", error);
-    const detail = error.response
-      ? `(HTTP ${error.response.status}) ${typeof error.response.data === "string" ? error.response.data.slice(0, 500) : JSON.stringify(error.response.data).slice(0, 500)}`
-      : error.message;
-    throw new Error(`خطا در آپلود روی ParsPack Cloud Storage: ${detail}`);
+    try {
+      const response = await axios.put(url, uploadBuffer, {
+        headers: {
+          ...headersObj,
+          "content-length": String(uploadBuffer.length),
+          Authorization: authorization,
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        transformRequest: [(data) => data],
+        httpsAgent: s3HttpsAgent,
+      });
+
+      console.log(`[ParspackS3] Upload succeeded on attempt ${attempt} via ${hostname}`);
+
+      return {
+        key: objectKey,
+        filename: uploadFilename,
+        url: publicUrl,
+        etag: response.headers && response.headers.etag,
+      };
+    } catch (error) {
+      lastError = error;
+      logS3Error(`Upload attempt ${attempt}`, error);
+
+      if (attempt < MAX_UPLOAD_RETRIES) {
+        const delay = Math.pow(2, attempt - 1) * 500;
+        console.warn(`[ParspackS3] Retrying in ${delay}ms...`);
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
   }
+
+  const detail = lastError.response
+    ? `(HTTP ${lastError.response.status}) ${typeof lastError.response.data === "string" ? lastError.response.data.slice(0, 500) : JSON.stringify(lastError.response.data).slice(0, 500)}`
+    : lastError.message;
+  throw new Error(`خطا در آپلود روی ParsPack Cloud Storage (after ${MAX_UPLOAD_RETRIES} attempts): ${detail}`);
 };
 
 // ============================================
@@ -431,6 +456,7 @@ const deleteFromParsPack = async (key) => {
         ...headersObj,
         Authorization: authorization,
       },
+      httpsAgent: s3HttpsAgent,
     });
     console.log("[ParspackS3] File deleted:", objectKey);
   } catch (error) {
