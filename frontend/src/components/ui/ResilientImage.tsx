@@ -1,17 +1,22 @@
 "use client";
 
-import Image, { ImageProps } from "next/image";
+import Image, { type ImageProps } from "next/image";
 import {
   useState,
   useCallback,
   useRef,
   useEffect,
   forwardRef,
+  useMemo,
 } from "react";
 
 const MAX_RETRIES = 5;
 const RETRY_DELAYS_MS = [300, 800, 2000, 5000, 10000];
 const PLACEHOLDER_SRC = "/placeholder.png";
+
+/* ── Tiny inline SVG placeholder (gray-100) ────────────────── */
+const DEFAULT_BLUR_SVG =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg==";
 
 function getRetryDelay(attempt: number): number {
   const base = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
@@ -30,11 +35,7 @@ function bustCache(src: string): string {
   }
 }
 
-/**
- * Warm the TCP+TLS connection to the image origin so subsequent
- * <img> loads skip the cold-start handshake. Uses a zero-byte
- * HEAD via fetch (no actual image download).
- */
+/* ── Connection warming ────────────────────────────────────── */
 const warmedOrigins = new Set<string>();
 function warmConnection(src: string): void {
   try {
@@ -49,30 +50,31 @@ function warmConnection(src: string): void {
       cache: "no-store",
     }).catch(() => {});
   } catch {
-    // ignore malformed URLs
   }
 }
+
+/* ── Loading state enum ────────────────────────────────────── */
+type LoadPhase = "skeleton" | "loaded" | "error";
 
 export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string;
   maxRetries?: number;
   onRetryExhausted?: () => void;
+  showSkeleton?: boolean;
+  skeletonClassName?: string;
+  transitionDuration?: number;
 }
 
 /**
- * ResilientImage
- * ==============
- * A drop-in replacement for next/image that automatically retries failed
- * image loads with fast progressive backoff, but *only* when the image is
- * inside the viewport (Intersection Observer).
- *
- * Features:
- * - Auto-retry on onerror with fast progressive backoff (300ms → 800ms → 2s → 5s → 10s)
- * - Connection warming via HEAD request on first failure
- * - Viewport-gated retries via IntersectionObserver
- * - Cache-busting query param on each retry
- * - Configurable max retries (default 5)
- * - Falls back to a placeholder after all retries are exhausted
+ * ResilientImage — drop-in next/image replacement
+ * ================================================
+ * ✅ Shimmer skeleton while loading (covers blank white space)
+ * ✅ Smooth fade-in on load (blur-up feel without BlurHash dep)
+ * ✅ Auto-retry with progressive backoff (300ms → 10s)
+ * ✅ Viewport-gated retries via IntersectionObserver
+ * ✅ Connection warming on first failure
+ * ✅ Cache-busting on each retry
+ * ✅ Falls back to placeholder after exhausting retries
  */
 const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
   function ResilientImage(
@@ -82,13 +84,19 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       maxRetries = MAX_RETRIES,
       onRetryExhausted,
       alt,
+      showSkeleton = true,
+      skeletonClassName,
+      transitionDuration = 300,
+      onLoad: onLoadProp,
+      className,
+      style,
       ...rest
     },
     _ref
   ) {
     const originalSrc = src;
     const [currentSrc, setCurrentSrc] = useState<ImageProps["src"]>(src);
-    const [failed, setFailed] = useState(false);
+    const [phase, setPhase] = useState<LoadPhase>("skeleton");
 
     const retryCount = useRef(0);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -99,7 +107,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     useEffect(() => {
       retryCount.current = 0;
       setCurrentSrc(src);
-      setFailed(false);
+      setPhase("skeleton");
     }, [src]);
 
     useEffect(() => {
@@ -127,7 +135,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
 
     const scheduleRetry = useCallback(() => {
       if (retryCount.current >= maxRetries) {
-        setFailed(true);
+        setPhase("error");
         setCurrentSrc(fallbackSrc);
         onRetryExhausted?.();
         return;
@@ -145,14 +153,14 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     }, [maxRetries, fallbackSrc, onRetryExhausted, originalSrc]);
 
     const handleError = useCallback(() => {
-      if (failed) return;
+      if (phase === "error") return;
 
       if (typeof originalSrc === "string" && retryCount.current === 0) {
         warmConnection(originalSrc);
       }
 
       if (retryCount.current >= maxRetries) {
-        setFailed(true);
+        setPhase("error");
         setCurrentSrc(fallbackSrc);
         onRetryExhausted?.();
         return;
@@ -164,17 +172,45 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       }
 
       scheduleRetry();
-    }, [failed, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry]);
+    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, originalSrc]);
+
+    const handleLoad = useCallback(() => {
+      setPhase("loaded");
+      onLoadProp?.({} as any);
+    }, [onLoadProp]);
+
+    const imageStyle = useMemo(
+      () => ({
+        ...style,
+        transition: `opacity ${transitionDuration}ms ease-in-out`,
+        opacity: phase === "loaded" || phase === "error" ? 1 : 0,
+      }),
+      [style, transitionDuration, phase]
+    );
 
     const imageProps: ImageProps = {
       ...rest,
       src: currentSrc,
       alt: alt ?? "",
+      className,
+      style: imageStyle,
       onError: handleError,
+      onLoad: handleLoad,
     };
 
     return (
       <span ref={wrapperRef} className="contents">
+        {/* Skeleton overlay — visible until image loads */}
+        {showSkeleton && phase === "skeleton" && (
+          <span
+            className={
+              skeletonClassName ||
+              "absolute inset-0 z-[1] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+            }
+            style={{ backgroundSize: "200% 100%", borderRadius: "inherit" }}
+            aria-hidden
+          />
+        )}
         <Image {...imageProps} />
       </span>
     );
@@ -184,14 +220,15 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
 export default ResilientImage;
 
 /**
- * useResilientImg
- * ===============
- * A hook for plain <img> tags (e.g. category icons) that provides the
- * same retry-with-backoff logic without requiring next/image.
+ * useResilientImg — hook for plain <img> tags
+ * ============================================
+ * Same retry-with-backoff logic without requiring next/image.
+ * Now also returns `phase` for skeleton/transition control.
  *
  * Usage:
- *   const { src, onError, ref } = useResilientImg(originalUrl);
- *   <img ref={ref} src={src} onError={onError} />
+ *   const { src, onError, onLoad, ref, phase } = useResilientImg(url);
+ *   <img ref={ref} src={src} onError={onError} onLoad={onLoad}
+ *        style={{ opacity: phase === 'loaded' ? 1 : 0 }} />
  */
 export function useResilientImg(
   originalSrc: string | undefined,
@@ -199,6 +236,7 @@ export function useResilientImg(
   maxRetries: number = MAX_RETRIES
 ) {
   const [currentSrc, setCurrentSrc] = useState(originalSrc || fallbackSrc);
+  const [phase, setPhase] = useState<LoadPhase>("skeleton");
   const retryCount = useRef(0);
   const failed = useRef(false);
   const isInViewport = useRef(false);
@@ -210,6 +248,7 @@ export function useResilientImg(
     retryCount.current = 0;
     failed.current = false;
     setCurrentSrc(originalSrc || fallbackSrc);
+    setPhase("skeleton");
   }, [originalSrc, fallbackSrc]);
 
   useEffect(() => {
@@ -237,6 +276,7 @@ export function useResilientImg(
   function doRetry() {
     if (retryCount.current >= maxRetries || failed.current) {
       failed.current = true;
+      setPhase("error");
       setCurrentSrc(fallbackSrc);
       return;
     }
@@ -260,5 +300,9 @@ export function useResilientImg(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [originalSrc, maxRetries, fallbackSrc]);
 
-  return { src: currentSrc, onError, ref };
+  const onLoad = useCallback(() => {
+    setPhase("loaded");
+  }, []);
+
+  return { src: currentSrc, onError, onLoad, ref, phase };
 }

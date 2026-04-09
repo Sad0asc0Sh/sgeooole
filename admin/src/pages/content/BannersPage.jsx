@@ -714,11 +714,10 @@ function BannersPage() {
 
   const handleUploadChange = ({ fileList: newFileList }) => {
     setFileList(newFileList)
-    // نمایش پیش‌نمایش
+    // Instant blob preview (replaces FileReader for zero-latency UX)
     if (newFileList.length > 0 && newFileList[0].originFileObj) {
-      const reader = new FileReader()
-      reader.onload = () => setPreviewImage(reader.result)
-      reader.readAsDataURL(newFileList[0].originFileObj)
+      const blobUrl = URL.createObjectURL(newFileList[0].originFileObj)
+      setPreviewImage(blobUrl)
     }
   }
 

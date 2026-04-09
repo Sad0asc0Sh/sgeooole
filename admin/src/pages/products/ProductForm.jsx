@@ -27,6 +27,7 @@ import RichTextEditor from '../../components/RichTextEditor'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
+import { createBlobPreview, optimizeImageFile } from '../../utils/imageOptimizer'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const modules = {
@@ -415,21 +416,29 @@ function ProductForm() {
     // Generate a unique ID for tracking
     const uid = `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
 
-    // Add file to list with uploading status
+    // ── Instant blob preview (zero-latency UX) ──
+    const blobUrl = createBlobPreview(file)
+
     const newFile = {
       uid,
       name: file.name,
       status: 'uploading',
       originFileObj: file,
       percent: 0,
+      // Show local blob immediately — no white flash
+      url: blobUrl,
+      thumbUrl: blobUrl,
     }
 
     setFiles(prev => [...prev, newFile])
     setUploadingCount(prev => prev + 1)
 
     try {
+      // ── Client-side optimization (WebP/JPEG compression) ──
+      const optimizedFile = await optimizeImageFile(file, { maxWidth: 1920, maxHeight: 1920 })
+
       const formData = new FormData()
-      formData.append('image', file)
+      formData.append('image', optimizedFile)
 
       const response = await api.post('/uploads/image', formData, {
         timeout: 180000, // 3 minutes for slow connections
@@ -443,7 +452,11 @@ function ProductForm() {
 
       if (response.data.success) {
         const { url, public_id } = response.data.data
-        // Update file with uploaded info
+        // ── Smooth transition: blob preview → permanent S3 URL ──
+        // Preload the S3 image in the background before swapping
+        const s3Img = new window.Image()
+        s3Img.src = url
+
         setFiles(prev => prev.map(f =>
           f.uid === uid ? {
             ...f,
@@ -454,6 +467,10 @@ function ProductForm() {
             percent: 100,
           } : f
         ))
+
+        // Revoke the blob URL to free memory
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
+
         message.success(`تصویر ${file.name} آپلود شد`)
       } else {
         throw new Error(response.data.message || 'خطا در آپلود')

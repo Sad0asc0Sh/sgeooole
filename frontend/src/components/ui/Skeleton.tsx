@@ -111,4 +111,23 @@ export const CategoryRailSkeleton = memo(function CategoryRailSkeleton() {
     );
 });
 
+/**
+ * Banner Stack Skeleton for loading states
+ */
+export const BannerStackSkeleton = memo(function BannerStackSkeleton() {
+    return (
+        <div className="container mx-auto px-3 sm:px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[1, 2, 3].map((i) => (
+                    <Skeleton
+                        key={i}
+                        className="w-full rounded-xl"
+                        animate
+                    />
+                ))}
+            </div>
+        </div>
+    );
+});
+
 export default Skeleton;

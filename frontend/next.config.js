@@ -30,6 +30,15 @@ const nextConfig = {
         remotePatterns: [
             {
                 protocol: 'https',
+                hostname: 'c258565.parspack.net',
+                pathname: '/ekgkala-uploads/**',
+            },
+            {
+                protocol: 'https',
+                hostname: 's3.ir-thr-at1.arvanstorage.ir',
+            },
+            {
+                protocol: 'https',
                 hostname: 'res.cloudinary.com',
             },
             {
@@ -39,11 +48,20 @@ const nextConfig = {
             {
                 protocol: 'http',
                 hostname: 'localhost',
-                port: '5000',
+            port: '5000',
             },
         ],
-        // غیرفعال کردن image optimization برای جلوگیری از timeout در SSR
-        unoptimized: true,
+        // Image optimization enabled — AVIF/WebP automatic conversion
+        // (Matches next.config.ts active configuration)
+        formats: ['image/avif', 'image/webp'],
+        deviceSizes: [360, 640, 768, 1024, 1280, 1536],
+        imageSizes: [64, 96, 128, 256, 384],
+        minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+        // SECURITY: SVG disabled to prevent XSS attacks
+        dangerouslyAllowSVG: false,
+        contentDispositionType: 'attachment',
+        contentSecurityPolicy:
+            "default-src 'self'; script-src 'none'; sandbox;",
     },
 
     async headers() {

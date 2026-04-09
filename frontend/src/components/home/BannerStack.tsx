@@ -18,7 +18,23 @@ export default function BannerStack() {
             .finally(() => setLoading(false));
     }, []);
 
-    if (loading || banners.length === 0) return null;
+    if (banners.length === 0 && !loading) return null;
+
+    if (loading) {
+        return (
+            <div className="container mx-auto px-3 sm:px-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+                            style={{ aspectRatio: '16/5', backgroundSize: '200% 100%' }}
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="container mx-auto px-3 sm:px-4">

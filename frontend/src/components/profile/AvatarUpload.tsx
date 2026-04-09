@@ -85,13 +85,10 @@ export default function AvatarUpload({
       return;
     }
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    // Instant preview via blob URL (zero-latency, no base64 encoding)
+    const blobUrl = URL.createObjectURL(file);
+    setPreviewUrl(blobUrl);
+    setError(null);
 
     // Upload immediately
     handleUpload(file);
@@ -109,13 +106,19 @@ export default function AvatarUpload({
         const newAvatar = response.data?.avatar as string | { url: string; public_id: string } | undefined;
         const newAvatarUrl = typeof newAvatar === 'object' && newAvatar !== null ? newAvatar.url : newAvatar;
 
-        // Success callback
         if (newAvatarUrl) {
+          // Preload the S3 image before transitioning
+          const img = new window.Image();
+          img.src = newAvatarUrl;
+
           onUploadSuccess?.(newAvatarUrl);
         }
 
-        // Show success message briefly
+        // Revoke blob and clear preview after S3 URL is active
         setTimeout(() => {
+          if (previewUrl?.startsWith('blob:')) {
+            URL.revokeObjectURL(previewUrl);
+          }
           setPreviewUrl(null);
         }, 1000);
       } else {

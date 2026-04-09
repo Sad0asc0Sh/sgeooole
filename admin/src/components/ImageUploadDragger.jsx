@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, message, Modal, Progress, Card, Row, Col, Button, Space } from 'antd';
+import { createBlobPreview, optimizeImageFile } from '../utils/imageOptimizer';
 import {
   InboxOutlined,
   DeleteOutlined,
@@ -90,9 +91,6 @@ const ImageUploadDragger = ({
         throw new Error('Upload URL not provided');
       }
 
-      const formData = new FormData();
-      formData.append('images', file);
-
       // Add file to list with uploading status
       const newFile = {
         uid: file.uid,
@@ -103,6 +101,15 @@ const ImageUploadDragger = ({
       };
 
       setFileList(prev => [...prev, newFile]);
+
+      // Client-side optimization (WebP/JPEG compression) before upload
+      let uploadFile = file;
+      try {
+        uploadFile = await optimizeImageFile(file, { maxWidth: 1920, maxHeight: 1920 });
+      } catch {}
+
+      const formData = new FormData();
+      formData.append('images', uploadFile);
 
       const response = await api.post(uploadUrl, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },

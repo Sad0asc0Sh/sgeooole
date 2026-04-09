@@ -7,15 +7,29 @@ import { Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
 
 function ResilientCategoryImg({ url, name }: { url: string; name: string }) {
-    const { src, onError, ref } = useResilientImg(url, "/placeholder.png");
+    const { src, onError, onLoad, ref, phase } = useResilientImg(url, "/placeholder.png");
     return (
-        <img
-            ref={ref}
-            src={src}
-            alt={name}
-            onError={onError}
-            className="w-full h-full object-contain"
-        />
+        <div className="relative w-full h-full">
+            {phase === "skeleton" && (
+                <div
+                    className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer rounded-full"
+                    style={{ backgroundSize: "200% 100%" }}
+                    aria-hidden
+                />
+            )}
+            <img
+                ref={ref}
+                src={src}
+                alt={name}
+                onError={onError}
+                onLoad={onLoad}
+                className="w-full h-full object-contain"
+                style={{
+                    transition: "opacity 300ms ease-in-out",
+                    opacity: phase === "loaded" || phase === "error" ? 1 : 0,
+                }}
+            />
+        </div>
     );
 }
 
