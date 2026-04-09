@@ -6,7 +6,6 @@ import {
   Button,
   message,
   Tag,
-  Image,
   Space,
   Input,
   Select,
@@ -14,6 +13,7 @@ import {
 } from 'antd'
 import { SearchOutlined, SaveOutlined, ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import api from '../../api'
+import S3AdminImage from '../../components/S3AdminImage'
 
 function InventoryPage() {
   const [products, setProducts] = useState([])
@@ -158,7 +158,7 @@ function InventoryPage() {
         }
 
         return url ? (
-          <Image src={url} width={50} height={50} style={{ borderRadius: 4 }} />
+          <S3AdminImage src={url} width={50} height={50} />
         ) : (
           <div
             style={{

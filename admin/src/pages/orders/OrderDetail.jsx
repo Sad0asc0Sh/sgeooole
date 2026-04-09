@@ -11,7 +11,6 @@ import {
   Row,
   Col,
   Divider,
-  Image,
   Input,
   Space,
   Alert,
@@ -23,6 +22,7 @@ import api from '../../api'
 import { useNotificationStore } from '../../stores'
 import Countdown from 'react-countdown'
 import { PERMISSIONS } from '../../rbac/permissions'
+import S3AdminImage from '../../components/S3AdminImage'
 import { useCan } from '../../rbac/useCan'
 
 // فعال‌سازی تقویم جلالی
@@ -184,7 +184,7 @@ function OrderDetail() {
           url = typeof first === 'string' ? first : first?.url
         }
         return url ? (
-          <Image src={url} width={50} height={50} style={{ borderRadius: 4 }} />
+          <S3AdminImage src={url} width={50} height={50} />
         ) : (
           <div
             style={{

@@ -8,7 +8,6 @@ import {
   Space,
   Switch,
   Tag,
-  Image,
   Modal,
   message,
   Checkbox,
@@ -34,6 +33,7 @@ import { useCategoryStore } from '../../stores'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
+import S3AdminImage from '../../components/S3AdminImage'
 
 const { Dragger } = Upload
 const CSV_DIRECT_UPLOAD_LIMIT_BYTES = 900 * 1024
@@ -383,7 +383,7 @@ function ProductsList({ mode }) {
         }
 
         return url ? (
-          <Image src={url} width={50} height={50} style={{ borderRadius: 4 }} />
+          <S3AdminImage src={url} width={50} height={50} />
         ) : null
       },
     },
