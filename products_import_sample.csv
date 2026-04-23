@@ -1,9 +1,0 @@
-name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
-ريموت نايس flor,3,simple,4500000,,0,,,ريموت نايس,true,false
-چشم موور چرخشي IR200,5,simple,4800000,2830000,17,,موور,,true,false
-فيشBNC پيچي,7,simple,250000,130000,0,,,,true,false
-اجرت واحد تعميرات 1403,10,simple,1,,0,,,,true,false
-ريموت لرن 433 طرح v2,11,simple,550000,1000000,8,,,,true,false
-مغزي قفل يوتاب,12,simple,2500000,,0,,,,true,false
-فيش سوزني,14,simple,180000,250000,57,,,,true,false
-برد جک درپا eco+,16,simple,22000000,10500000,2,,درپا,,true,false
