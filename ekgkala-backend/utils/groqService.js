@@ -1,34 +1,77 @@
-const Groq = require('groq-sdk');
+const axios = require('axios');
+const AiProvider = require('../models/AiProvider');
 const Settings = require('../models/Settings');
 const dnsAgent = require('./dnsAgent');
 
+/**
+ * Get the active/default AI provider config.
+ * Falls back to legacy Settings.aiConfig if no AiProvider exists.
+ */
+async function getProviderConfig() {
+    // 1. Try AiProvider collection (new system)
+    const provider = await AiProvider.findOne({ isDefault: true, isActive: true }).select('+apiKey');
+    if (provider) {
+        return {
+            source: 'provider',
+            baseUrl: provider.baseUrl.replace(/\/$/, ''),
+            apiKey: provider.apiKey,
+            model: provider.model,
+            maxTokens: provider.maxTokens || 500,
+            temperature: provider.temperature ?? 0.7,
+            headers: provider.headers ? Object.fromEntries(provider.headers) : {},
+        };
+    }
+
+    // 2. Fallback: any active provider
+    const anyActive = await AiProvider.findOne({ isActive: true }).select('+apiKey');
+    if (anyActive) {
+        return {
+            source: 'provider',
+            baseUrl: anyActive.baseUrl.replace(/\/$/, ''),
+            apiKey: anyActive.apiKey,
+            model: anyActive.model,
+            maxTokens: anyActive.maxTokens || 500,
+            temperature: anyActive.temperature ?? 0.7,
+            headers: anyActive.headers ? Object.fromEntries(anyActive.headers) : {},
+        };
+    }
+
+    // 3. Legacy fallback: Settings.aiConfig
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' }).select('+aiConfig.apiKey');
+    const config = settings?.aiConfig || {};
+    const apiKey = config.apiKey || process.env.GROQ_API_KEY;
+    if (apiKey) {
+        return {
+            source: 'legacy',
+            baseUrl: (config.baseUrl || 'https://api.groq.com/openai/v1').replace(/\/$/, ''),
+            apiKey,
+            model: config.groqModel || 'llama-3.3-70b-versatile',
+            maxTokens: config.maxTokens || 500,
+            temperature: config.temperature ?? 0.5,
+            headers: {},
+        };
+    }
+
+    return null;
+}
+
 exports.generateExpertResponse = async (userMessage, productContext, chatHistory = [], storeInfoContext = "") => {
     try {
-        // 1. Load Config
-        // Explicitly select apiKey because it has select: false in schema
-        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).select('+aiConfig.apiKey') || {};
-        const config = settings.aiConfig || {};
+        // 1. Get provider config
+        const providerConfig = await getProviderConfig();
+        if (!providerConfig) return "سیستم هوشمند فعلاً غیرفعال است (هیچ ارائه‌دهنده‌ای تنظیم نشده).";
 
-        // Admin must provide this Key in Panel
-        const apiKey = config.apiKey || process.env.GROQ_API_KEY;
-        if (!apiKey) return "سیستم هوشمند فعلاً غیرفعال است (کلید تنظیم نشده).";
-
-        const groq = new Groq({
-            apiKey,
-            httpAgent: dnsAgent
-        });
+        console.log(`[AI Service] Using ${providerConfig.source} provider | model: ${providerConfig.model} | base: ${providerConfig.baseUrl}`);
 
         // 2. Load Admin-Defined Persona or use Default
+        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean();
+        const config = settings?.aiConfig || {};
         let systemContent;
 
         if (config.customSystemPrompt) {
-            // 🚨 ADMIN OVERRIDE: The user wants full control.
-            // We use the custom prompt exactly as allowed, removing default restrictions.
-            // We only append the dynamic data (Inventory, Store Info) because the AI needs facts to work.
-            console.log('[Groq Service] Using Custom System Prompt (Security Rules Bypassed)');
+            console.log('[AI Service] Using Custom System Prompt');
             systemContent = config.customSystemPrompt;
         } else {
-            // Default Persona & Security Rules
             const defaultPersona = `
       نقش: شما مشاور فروش حرفه‌ای و دلسوز فروشگاه "ای‌کا‌جی کالا" هستید.
       تخصص: دوربین مداربسته، دزدگیر و خانه هوشمند.
@@ -57,21 +100,13 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
             systemContent = defaultPersona + securityRules;
         }
 
-        // 3. Append Dynamic Context (Always needed for the AI to know about the store)
-        // Add store info context (Contact Us, About Us, etc.)
+        // 3. Append Dynamic Context
         if (storeInfoContext) {
             systemContent += `\n\n### 🏪 اطلاعات فروشگاه:\n${storeInfoContext}`;
         }
-
-        // Add product context
         systemContent += `\n\n### 📦 لیست محصولات موجود مرتبط (فقط از این‌ها پیشنهاد دهید):\n${productContext || "هیچ محصول مرتبطی با جستجوی کاربر پیدا نشد."}`;
 
-        const messages = [
-            {
-                role: "system",
-                content: systemContent
-            }
-        ];
+        const messages = [{ role: "system", content: systemContent }];
 
         // Add History (Last 6 messages to save tokens)
         if (chatHistory && Array.isArray(chatHistory)) {
@@ -86,20 +121,32 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
         // Add Current Message
         messages.push({ role: "user", content: userMessage });
 
-        // 4. Call AI - use model from admin settings or fallback to default
-        const modelName = config.groqModel || 'llama-3.3-70b-versatile';
-        console.log('[Groq Service] Using model:', modelName);
+        // 4. Call AI via OpenAI-compatible API
+        const url = `${providerConfig.baseUrl}/chat/completions`;
+        const response = await axios.post(
+            url,
+            {
+                model: providerConfig.model,
+                messages,
+                temperature: providerConfig.temperature,
+                max_tokens: providerConfig.maxTokens,
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${providerConfig.apiKey}`,
+                    'Content-Type': 'application/json',
+                    ...providerConfig.headers,
+                },
+                timeout: 30000,
+                httpsAgent: dnsAgent,
+            }
+        );
 
-        const completion = await groq.chat.completions.create({
-            messages: messages,
-            model: modelName,
-            temperature: 0.5, // Lower temperature for more factual/strict responses
-        });
-
-        return completion.choices[0]?.message?.content || "متاسفانه پاسخی دریافت نشد.";
+        return response.data?.choices?.[0]?.message?.content || "متاسفانه پاسخی دریافت نشد.";
 
     } catch (error) {
-        console.error("Groq API Error:", error);
+        const errMsg = error.response?.data?.error?.message || error.message;
+        console.error("AI Service Error:", errMsg);
         return "مشکلی در ارتباط با مشاور هوشمند پیش آمده است.";
     }
 };

@@ -1,0 +1,301 @@
+import { useState, useEffect, useCallback } from 'react'
+import {
+  Card, Table, Button, Modal, Form, Input, InputNumber, Switch, Space,
+  Tag, Tooltip, message, Popconfirm, Alert, Slider, Typography, Badge, Divider
+} from 'antd'
+import {
+  PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined,
+  ApiOutlined, StarOutlined, StarFilled, ExperimentOutlined,
+  ReloadOutlined, ArrowRightOutlined
+} from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
+import api from '../../api'
+
+const { Text } = Typography
+
+export default function AiProvidersPage() {
+  const [providers, setProviders] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingProvider, setEditingProvider] = useState(null)
+  const [testingId, setTestingId] = useState(null)
+  const [form] = Form.useForm()
+  const navigate = useNavigate()
+
+  const fetchProviders = useCallback(async () => {
+    setLoading(true)
+    try {
+      const { data } = await api.get('/ai-providers')
+      setProviders(data.data || [])
+    } catch (err) {
+      message.error('خطا در دریافت لیست ارائه‌دهندگان')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchProviders() }, [fetchProviders])
+
+  const openCreateModal = () => {
+    setEditingProvider(null)
+    form.resetFields()
+    form.setFieldsValue({ isActive: true, isDefault: false, maxTokens: 500, temperature: 0.7 })
+    setModalOpen(true)
+  }
+
+  const openEditModal = (record) => {
+    setEditingProvider(record)
+    form.setFieldsValue({
+      ...record,
+      apiKey: '****',
+    })
+    setModalOpen(true)
+  }
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields()
+      if (editingProvider) {
+        await api.put(`/ai-providers/${editingProvider._id}`, values)
+        message.success('ارائه‌دهنده به‌روزرسانی شد')
+      } else {
+        await api.post('/ai-providers', values)
+        message.success('ارائه‌دهنده ایجاد شد')
+      }
+      setModalOpen(false)
+      fetchProviders()
+    } catch (err) {
+      if (err.response?.data?.message) {
+        message.error(err.response.data.message)
+      }
+    }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/ai-providers/${id}`)
+      message.success('ارائه‌دهنده حذف شد')
+      fetchProviders()
+    } catch (err) {
+      message.error(err.response?.data?.message || 'خطا در حذف')
+    }
+  }
+
+  const handleSetDefault = async (id) => {
+    try {
+      await api.post(`/ai-providers/${id}/set-default`)
+      message.success('ارائه‌دهنده پیش‌فرض تنظیم شد')
+      fetchProviders()
+    } catch (err) {
+      message.error(err.response?.data?.message || 'خطا')
+    }
+  }
+
+  const handleTest = async (id) => {
+    setTestingId(id)
+    try {
+      const { data } = await api.post(`/ai-providers/${id}/test`)
+      message.success(data.message || 'اتصال موفق')
+      fetchProviders()
+    } catch (err) {
+      message.error(err.response?.data?.message || 'تست ناموفق')
+      fetchProviders()
+    } finally {
+      setTestingId(null)
+    }
+  }
+
+  const columns = [
+    {
+      title: 'نام',
+      dataIndex: 'name',
+      key: 'name',
+      render: (text, record) => (
+        <Space>
+          {record.isDefault && <StarFilled style={{ color: '#faad14' }} />}
+          <Text strong>{text}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'مدل',
+      dataIndex: 'model',
+      key: 'model',
+      render: (text) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: 'آدرس پایه',
+      dataIndex: 'baseUrl',
+      key: 'baseUrl',
+      ellipsis: true,
+      render: (text) => <Text copyable={{ text }} style={{ fontSize: 12 }}>{text}</Text>,
+    },
+    {
+      title: 'وضعیت',
+      key: 'status',
+      width: 100,
+      render: (_, record) => (
+        <Space direction="vertical" size={2}>
+          <Tag color={record.isActive ? 'green' : 'red'}>
+            {record.isActive ? 'فعال' : 'غیرفعال'}
+          </Tag>
+          {record.isDefault && <Tag color="gold">پیش‌فرض</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: 'آخرین تست',
+      key: 'lastTest',
+      width: 120,
+      render: (_, record) => {
+        if (!record.lastTestedAt) return <Text type="secondary">تست نشده</Text>
+        return (
+          <Badge
+            status={record.lastTestResult === 'success' ? 'success' : 'error'}
+            text={record.lastTestResult === 'success' ? 'موفق' : 'ناموفق'}
+          />
+        )
+      },
+    },
+    {
+      title: 'عملیات',
+      key: 'actions',
+      width: 220,
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="تست اتصال">
+            <Button
+              size="small"
+              icon={<ExperimentOutlined />}
+              loading={testingId === record._id}
+              onClick={() => handleTest(record._id)}
+            />
+          </Tooltip>
+          {!record.isDefault && (
+            <Tooltip title="تنظیم به عنوان پیش‌فرض">
+              <Button
+                size="small"
+                icon={<StarOutlined />}
+                onClick={() => handleSetDefault(record._id)}
+              />
+            </Tooltip>
+          )}
+          <Tooltip title="ویرایش">
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => openEditModal(record)}
+            />
+          </Tooltip>
+          {!record.isDefault && (
+            <Popconfirm
+              title="آیا از حذف مطمئن هستید؟"
+              onConfirm={() => handleDelete(record._id)}
+              okText="بله"
+              cancelText="خیر"
+            >
+              <Tooltip title="حذف">
+                <Button size="small" danger icon={<DeleteOutlined />} />
+              </Tooltip>
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ]
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Card
+        title={
+          <Space>
+            <ApiOutlined />
+            <span>مدیریت ارائه‌دهندگان هوش مصنوعی</span>
+          </Space>
+        }
+        extra={
+          <Space>
+            <Button icon={<ArrowRightOutlined />} onClick={() => navigate('/settings')}>
+              بازگشت به تنظیمات
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchProviders} loading={loading}>
+              بارگذاری مجدد
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+              افزودن ارائه‌دهنده
+            </Button>
+          </Space>
+        }
+      >
+        <Alert
+          message="مدیریت ارائه‌دهندگان API هوش مصنوعی"
+          description="هر ارائه‌دهنده‌ای که با فرمت OpenAI سازگار باشد (مانند Groq، OpenRouter، Together AI و ...) قابل اضافه شدن است. ارائه‌دهنده پیش‌فرض برای چت‌بات فروشگاه استفاده می‌شود."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
+        <Table
+          columns={columns}
+          dataSource={providers}
+          rowKey="_id"
+          loading={loading}
+          pagination={false}
+          locale={{ emptyText: 'هیچ ارائه‌دهنده‌ای ثبت نشده. اولین ارائه‌دهنده را اضافه کنید.' }}
+        />
+      </Card>
+
+      <Modal
+        title={editingProvider ? 'ویرایش ارائه‌دهنده' : 'افزودن ارائه‌دهنده جدید'}
+        open={modalOpen}
+        onOk={handleSave}
+        onCancel={() => setModalOpen(false)}
+        okText={editingProvider ? 'به‌روزرسانی' : 'ایجاد'}
+        cancelText="انصراف"
+        width={600}
+        destroyOnClose
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="name" label="نام ارائه‌دهنده" rules={[{ required: true, message: 'نام الزامی است' }]}>
+            <Input placeholder="مثلاً: Groq، OpenRouter، Together AI" />
+          </Form.Item>
+
+          <Form.Item name="baseUrl" label="آدرس پایه API" rules={[{ required: true, message: 'آدرس پایه الزامی است' }]}>
+            <Input placeholder="https://api.groq.com/openai/v1" dir="ltr" />
+          </Form.Item>
+
+          <Form.Item name="apiKey" label="کلید API" rules={[{ required: !editingProvider, message: 'کلید API الزامی است' }]}>
+            <Input.Password placeholder="sk-... یا gsk_..." dir="ltr" />
+          </Form.Item>
+
+          <Form.Item name="model" label="شناسه مدل" rules={[{ required: true, message: 'شناسه مدل الزامی است' }]}>
+            <Input placeholder="llama-3.3-70b-versatile" dir="ltr" />
+          </Form.Item>
+
+          <Form.Item name="description" label="توضیحات">
+            <Input.TextArea rows={2} placeholder="توضیح اختیاری..." />
+          </Form.Item>
+
+          <Divider>تنظیمات پیشرفته</Divider>
+
+          <Form.Item name="maxTokens" label="حداکثر توکن خروجی">
+            <Slider min={100} max={16000} step={100} marks={{ 100: '100', 500: '500', 2000: '2K', 8000: '8K', 16000: '16K' }} />
+          </Form.Item>
+
+          <Form.Item name="temperature" label="دمای مدل (Temperature)">
+            <Slider min={0} max={2} step={0.1} marks={{ 0: 'دقیق', 0.7: 'متعادل', 2: 'خلاق' }} />
+          </Form.Item>
+
+          <Space size="large">
+            <Form.Item name="isActive" label="فعال" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+            <Form.Item name="isDefault" label="پیش‌فرض" valuePropName="checked">
+              <Switch />
+            </Form.Item>
+          </Space>
+        </Form>
+      </Modal>
+    </div>
+  )
+}

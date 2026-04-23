@@ -50,36 +50,29 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
-    // پاک کردن TP های قبلی
     await OTP.cleanupOld(mobile);
 
+    const code = String(Math.floor(1000 + Math.random() * 9000));
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
-    // ارسال پیامک و دریافت کد واقعی
-    const smsResult = await sendOtpSMS(mobile);
-
-    if (!smsResult || !smsResult.code) {
-      return res.status(500).json({
-        success: false,
-        message: 'خطا در ارسال کد تایید'
-      });
-    }
-
-    // ساخت رکورد OTP با کد واقعی
     const otpRecord = new OTP({
       mobile,
-      code: smsResult.code,
+      code,
       expiresAt,
       verified: false,
       attempts: 0
     });
     await otpRecord.save();
-    console.log('[OTP] SMS sent & code saved for ' + mobile);
+    console.log('[OTP] Code saved for ' + mobile);
 
     res.json({
       success: true,
       message: 'کد تایید ارسال شد',
       expiresIn: 120
+    });
+
+    sendOtpSMS(mobile, code).catch((err) => {
+      console.error('[OTP] Background SMS failed for ' + mobile + ':', err.message);
     });
 
   } catch (error) {

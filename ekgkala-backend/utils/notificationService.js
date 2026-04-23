@@ -90,7 +90,7 @@ class NotificationService {
     }
   }
 
-  async sendOtpSMS(phoneNumber) {
+  async sendOtpSMS(phoneNumber, code) {
     if (!this.smsConfig) {
       await this.initialize();
     }
@@ -103,18 +103,18 @@ class NotificationService {
 
     try {
       const response = await axios.post(
-        `https://console.melipayamak.com/api/send/otp/${this.smsConfig.pathToken}`,
-        { to: phoneNumber },
+        `https://console.melipayamak.com/api/send/shared/${this.smsConfig.pathToken}`,
+        { bodyId: Number(process.env.MELIPAYAMAK_OTP_BODY_ID), to: phoneNumber, args: [code] },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 10000
         }
       );
 
-      if (response.data && response.data.code) {
+      if (response.data && response.data.recId) {
         return {
           success: true,
-          code: response.data.code,
+          recId: response.data.recId,
           status: response.data.status,
           provider: 'melipayamak-console'
         };
@@ -182,8 +182,8 @@ async function sendVerificationEmail(email, token) {
   return service.sendEmail(email, 'تأیید ایمیل', html);
 }
 
-async function sendOtpSMS(phoneNumber) {
-  return service.sendOtpSMS(phoneNumber);
+async function sendOtpSMS(phoneNumber, code) {
+  return service.sendOtpSMS(phoneNumber, code);
 }
 
 async function getSmsSettings() {

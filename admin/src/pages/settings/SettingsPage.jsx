@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, Form, Input, Tabs, Button, Space, message, InputNumber, Switch, Alert, Modal, Divider, Select, Slider, Statistic, Row, Col, Tag, Radio } from 'antd'
-import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined, ThunderboltOutlined, SwapOutlined } from '@ant-design/icons'
+import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined, ThunderboltOutlined, SwapOutlined, ApiOutlined } from '@ant-design/icons'
 import api from '../../api'
 
 function SettingsPage() {
+  const navigate = useNavigate()
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1030,7 +1032,7 @@ function SettingsPage() {
         <>
           <Alert
             message="🤖 تنظیمات دستیار فروش هوشمند"
-            description="این بخش برای اتصال به هوش مصنوعی Groq جهت پاسخگویی به مشتریان استفاده می‌شود. شما می‌توانید بین مدل‌های زبانی مختلف سوییچ کنید."
+            description="دستیار هوشمند از ارائه\u200cدهندگان API هوش مصنوعی برای پاسخگویی به مشتریان استفاده می\u200cکند. مدل و ارائه\u200cدهنده پیش\u200cفرض را از بخش مدیریت ارائه\u200cدهندگان تنظیم کنید."
             type="info"
             showIcon
             icon={<RobotOutlined />}
@@ -1039,151 +1041,41 @@ function SettingsPage() {
 
           <Form.Item
             name={['aiConfig', 'enabled']}
-            label="فعال‌سازی دستیار"
+            label="فعال\u200cسازی دستیار"
             valuePropName="checked"
           >
             <Switch />
           </Form.Item>
 
-          <Form.Item
-            name={['aiConfig', 'apiKey']}
-            label="🔑 API Key (کلید Groq)"
-            extra={<a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">دریافت کلید از console.groq.com →</a>}
+          <Divider><ApiOutlined /> ارائه\u200cدهنده هوش مصنوعی</Divider>
+
+          <Card
+            hoverable
+            style={{ marginBottom: 24, cursor: 'pointer' }}
+            onClick={() => navigate('/settings/ai-providers')}
           >
-            <Input.Password placeholder="gsk_..." />
-          </Form.Item>
-
-          <Divider><SwapOutlined /> انتخاب مدل زبانی</Divider>
-
-          <Form.Item
-            name={['aiConfig', 'groqModel']}
-            label="🧠 مدل زبانی فعال"
-            extra="مدل زبانی که دستیار هوشمند از آن برای پاسخگویی استفاده می‌کند (هر دو مدل از Groq)"
-          >
-            <Radio.Group
-              buttonStyle="solid"
-              style={{ width: '100%' }}
-            >
-              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                {/* LLaMA 3.1 8B Model Card */}
-                <Card
-                  hoverable
-                  style={{ flex: 1, minWidth: 250, cursor: 'pointer' }}
-                >
-                  <Radio value="llama-3.1-8b-instant" style={{ width: '100%' }}>
-                    <div style={{ paddingRight: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 20 }}>⚡</span>
-                        <strong style={{ fontSize: 16 }}>LLaMA 3.1 8B</strong>
-                        <Tag color="green">Instant</Tag>
-                      </div>
-                      <div style={{ color: '#666', fontSize: 13, lineHeight: 1.8 }}>
-                        <div>🏢 سازنده: Meta</div>
-                        <div>📊 اندازه: 8 میلیارد پارامتر</div>
-                        <div>⚡ سرعت: بسیار بالا (ارزان)</div>
-                        <div>💡 مناسب: سوالات ساده، پاسخ‌های سریع</div>
-                      </div>
-                    </div>
-                  </Radio>
-                </Card>
-
-                {/* LLaMA 3.3 70B Model Card */}
-                <Card
-                  hoverable
-                  style={{ flex: 1, minWidth: 250, cursor: 'pointer' }}
-                >
-                  <Radio value="llama-3.3-70b-versatile" style={{ width: '100%' }}>
-                    <div style={{ paddingRight: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 20 }}>🦙</span>
-                        <strong style={{ fontSize: 16 }}>LLaMA 3.3 70B</strong>
-                        <Tag color="blue">Versatile</Tag>
-                        <Tag color="gold" style={{ marginRight: 'auto' }}>P</Tag>
-                      </div>
-                      <div style={{ color: '#666', fontSize: 13, lineHeight: 1.8 }}>
-                        <div>🏢 سازنده: Meta</div>
-                        <div>📊 اندازه: 70 میلیارد پارامتر</div>
-                        <div>⚡ سرعت: بالا</div>
-                        <div>💡 مناسب: تعادل عالی بین سرعت و هوش</div>
-                      </div>
-                    </div>
-                  </Radio>
-                </Card>
-
-                {/* GPT OSS 120B Model Card */}
-                <Card
-                  hoverable
-                  style={{ flex: 1, minWidth: 250, cursor: 'pointer' }}
-                >
-                  <Radio value="openai/gpt-oss-120b" style={{ width: '100%' }}>
-                    <div style={{ paddingRight: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontSize: 20 }}>🧠</span>
-                        <strong style={{ fontSize: 16 }}>GPT OSS 120B</strong>
-                        <Tag color="purple">Premium</Tag>
-                      </div>
-                      <div style={{ color: '#666', fontSize: 13, lineHeight: 1.8 }}>
-                        <div>🏢 سازنده: OpenAI (on Groq)</div>
-                        <div>📊 اندازه: 120 میلیارد پارامتر</div>
-                        <div>⚡ سرعت: متوسط</div>
-                        <div>💡 مناسب: استدلال پیچیده و دقیق</div>
-                      </div>
-                    </div>
-                  </Radio>
-                </Card>
-              </div>
-            </Radio.Group>
-          </Form.Item>
-
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, curr) => prev.aiConfig?.groqModel !== curr.aiConfig?.groqModel}
-          >
-            {({ getFieldValue }) => {
-              const selectedModel = getFieldValue(['aiConfig', 'groqModel']) || 'llama-3.3-70b-versatile'
-
-              let alertConfig = {
-                message: '🦙 مدل فعال: LLaMA 3.3 70B Versatile',
-                description: 'مدل استاندارد و قدرتمند با تعادل عالی بین سرعت و هوش.',
-                type: 'info',
-                icon: <RobotOutlined />
-              }
-
-              if (selectedModel === 'llama-3.1-8b-instant') {
-                alertConfig = {
-                  message: '⚡ مدل فعال: LLaMA 3.1 8B Instant',
-                  description: 'مدل سبک و فوق‌سریع. مناسب برای سوالات ساده و کاهش هزینه.',
-                  type: 'success',
-                  icon: <ThunderboltOutlined />
-                }
-              } else if (selectedModel === 'openai/gpt-oss-120b') {
-                alertConfig = {
-                  message: '🧠 مدل فعال: GPT OSS 120B',
-                  description: 'مدل قدرتمند با توانایی استدلال بالا. مناسب برای سوالات پیچیده.',
-                  type: 'warning', // Purple-ish usually isn't standard, using warning for highlighting
-                  icon: <SearchOutlined />
-                }
-              }
-
-              return (
-                <Alert
-                  message={alertConfig.message}
-                  description={alertConfig.description}
-                  type={alertConfig.type}
-                  showIcon
-                  icon={alertConfig.icon}
-                  style={{ marginBottom: 24 }}
-                />
-              )
-            }}
-          </Form.Item>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Space>
+                <ApiOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                <div>
+                  <div style={{ fontWeight: 'bold', fontSize: 16 }}>مدیریت ارائه\u200cدهندگان API</div>
+                  <div style={{ color: '#666', fontSize: 13 }}>
+                    افزودن، ویرایش و مدیریت ارائه\u200cدهندگان هوش مصنوعی (Groq، OpenRouter، Together AI و ...)
+                  </div>
+                </div>
+              </Space>
+              <Button type="primary" icon={<ApiOutlined />} onClick={(e) => { e.stopPropagation(); navigate('/settings/ai-providers') }}>
+                رفتن به مدیریت ارائه\u200cدهندگان
+              </Button>
+            </Space>
+          </Card>
 
           <Divider>⚙️ تنظیمات پیشرفته</Divider>
 
           <Form.Item
             name={['aiConfig', 'userDailyLimit']}
             label="📨 محدودیت پیام روزانه کاربر"
-            extra="تعداد پیام‌هایی که هر کاربر می‌تواند در روز ارسال کند."
+            extra="تعداد پیام\u200cهایی که هر کاربر می\u200cتواند در روز ارسال کند."
           >
             <InputNumber min={1} max={1000} style={{ width: '100%' }} />
           </Form.Item>
@@ -1191,22 +1083,21 @@ function SettingsPage() {
           <Form.Item
             name={['aiConfig', 'customSystemPrompt']}
             label="📝 دستورالعمل سیستم (System Prompt)"
-            extra="شخصیت و رفتار هوش مصنوعی را اینجا تعریف کنید. این متن به عنوان دستور اصلی به مدل ارسال می‌شود."
+            extra="شخصیت و رفتار هوش مصنوعی را اینجا تعریف کنید. این متن به عنوان دستور اصلی به مدل ارسال می\u200cشود."
           >
-            <Input.TextArea rows={10} placeholder="شما مشاور فروش حرفه‌ای فروشگاه ای‌کا‌جی کالا هستید..." />
+            <Input.TextArea rows={10} placeholder="شما مشاور فروش حرفه\u200cای فروشگاه ای\u200cکا\u200cجی کالا هستید..." />
           </Form.Item>
 
           <Alert
-            message="⚠️ نکات مهم"
+            message="💡 راهنما"
             description={
               <ul style={{ margin: 0, paddingRight: 20 }}>
-                <li>هر دو مدل از سرویس Groq استفاده می‌کنند و نیاز به یک API Key دارند</li>
-                <li>API Key را از <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer">console.groq.com</a> دریافت کنید</li>
-                <li>تغییر مدل بلافاصله اعمال می‌شود (پس از ذخیره تنظیمات)</li>
-                <li>مدل بزرگ‌تر (120B) ممکن است زمان پاسخ‌دهی بیشتری داشته باشد</li>
+                <li>ارائه\u200cدهنده پیش\u200cفرض (ستاره طلایی) برای چت\u200cبات فروشگاه استفاده می\u200cشود</li>
+                <li>هر سرویس سازگار با فرمت OpenAI API قابل اضافه شدن است</li>
+                <li>تغییرات پس از ذخیره تنظیمات اعمال می\u200cشود</li>
               </ul>
             }
-            type="warning"
+            type="info"
             showIcon
           />
         </>

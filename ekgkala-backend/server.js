@@ -558,6 +558,10 @@ app.use('/api/uploads', uploadRoutes)
 const newsletterRoutes = require('./routes/newsletter')
 app.use('/api/newsletter', newsletterRoutes)
 
+// AI Providers Routes
+const aiProviderRoutes = require('./routes/aiProviders')
+app.use('/api/ai-providers', aiProviderRoutes)
+
 // Root
 app.get('/', (req, res) => {
   res.json({
