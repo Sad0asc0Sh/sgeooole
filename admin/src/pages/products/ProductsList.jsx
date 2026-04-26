@@ -1243,8 +1243,11 @@ function ProductsList({ mode }) {
                 ✅ اگر محصولی با SKU/کد محصول یافت نشود، به عنوان محصول جدید ایجاد می‌شود.
               </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
-                name,sku,productCode,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
+                name,sku,productCode,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
               </code>
+              <p style={{ fontSize: '0.85em', color: '#666', marginTop: 8 }}>
+                ستون <strong>imageUrls</strong> را با URL کامل تصاویر ابری پر کنید (برای چند تصویر از جداکننده <code>;</code> استفاده کنید).
+              </p>
               <p style={{ fontSize: '0.85em', color: '#999' }}>
                 نکته: ابتدا فایل CSV را از «برون‌ریزی CSV» دانلود کنید، تغییرات لازم را اعمال کرده و مجدداً آپلود کنید.
               </p>
@@ -1255,10 +1258,13 @@ function ProductsList({ mode }) {
                 فایل CSV خود را با فرمت زیر آماده کنید:
               </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
-                name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
+                name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
               </code>
               <p style={{ fontSize: '0.9em', color: '#666' }}>
                 نکته: نام دسته‌بندی و برند باید دقیقاً با نام موجود در سیستم مطابقت داشته باشد.
+              </p>
+              <p style={{ fontSize: '0.9em', color: '#666' }}>
+                برای بازیابی تصاویر، ستون <strong>imageUrls</strong> را با لینک کامل تصاویر ابری تکمیل کنید (چند لینک را با <code>;</code> جدا کنید).
               </p>
             </>
           )}

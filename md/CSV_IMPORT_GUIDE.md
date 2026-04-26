@@ -5,7 +5,7 @@
 فایل CSV شما باید **دقیقاً** با این هدر شروع شود:
 
 ```
-name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
+name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
 ```
 
 ---
@@ -25,6 +25,7 @@ name,sku,productType,price,compareAtPrice,stock,category,brand,description,isAct
 | 9 | `description` | ❌ خیر | متن | توضیحات محصول | `ریموت کنترل با فرکانس 433` |
 | 10 | `isActive` | ❌ خیر | بله/خیر | فعال بودن محصول. مقادیر قابل قبول: `true` / `بله` / `1` | `true` |
 | 11 | `isFeatured` | ❌ خیر | بله/خیر | ویژه بودن محصول. مقادیر قابل قبول: `true` / `بله` / `1` | `false` |
+| 12 | `imageUrls` | ❌ خیر | متن (URL) | لینک کامل تصاویر ابری. برای چند تصویر از `;` یا `,` استفاده کنید | `https://cdn.example.com/a.webp;https://cdn.example.com/b.webp` |
 
 ---
 
@@ -53,20 +54,20 @@ name,sku,productType,price,compareAtPrice,stock,category,brand,description,isAct
 - اگر از Notepad استفاده می‌کنید: `Save As → Encoding: UTF-8`
 
 ### 6. ستون اضافی نگذارید!
-فایل CSV فقط باید **11 ستون** بالا را داشته باشد. ستون‌های اضافی مثل «واحد شمارش»، «دسته‌بندی فرعی» و ... باعث جابجایی مقادیر و خرابی داده می‌شوند.
+فایل CSV فقط باید **12 ستون** بالا را داشته باشد. ستون‌های اضافی مثل «واحد شمارش»، «دسته‌بندی فرعی» و ... باعث جابجایی مقادیر و خرابی داده می‌شوند.
 
 ---
 
 ## 📄 نمونه فایل CSV صحیح
 
 ```csv
-name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured
-ریموت نایس flor,3,simple,4500000,,0,,,ریموت کنترل نایس,true,false
-چشم موور چرخشی IR200,5,simple,4800000,2830000,17,,موور,چشمی حرکتی مادون قرمز,true,false
-فیش BNC پیچی,7,simple,250000,130000,0,,,,true,false
-جک برونو 400 Esp,87,simple,165000000,106000000,3,,,,true,false
-DH-HAC-HFW1200TP,1012,simple,24500000,11000000,7,,داهوا,دوربین بولت داهوا,true,false
-باطری سکه‌ای CR2032,51,simple,350000,140000,81,,,,true,false
+name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
+ریموت نایس flor,3,simple,4500000,,0,,,ریموت کنترل نایس,true,false,https://cdn.example.com/remote-1.webp
+چشم موور چرخشی IR200,5,simple,4800000,2830000,17,,موور,چشمی حرکتی مادون قرمز,true,false,https://cdn.example.com/mover-1.webp;https://cdn.example.com/mover-2.webp
+فیش BNC پیچی,7,simple,250000,130000,0,,,,true,false,
+جک برونو 400 Esp,87,simple,165000000,106000000,3,,,,true,false,https://cdn.example.com/jack-400.webp
+DH-HAC-HFW1200TP,1012,simple,24500000,11000000,7,,داهوا,دوربین بولت داهوا,true,false,https://cdn.example.com/dahua-1200.webp
+باطری سکه‌ای CR2032,51,simple,350000,140000,81,,,,true,false,
 ```
 
 ---
@@ -113,4 +114,4 @@ name,sku,productType,price,compareAtPrice,stock,category,brand,description,isAct
 ## 💡 نکته نهایی
 - **دسته‌بندی و برند** باید از قبل در پنل ادمین ایجاد شده باشند
 - اگر نام دسته‌بندی یا برند اشتباه باشد، محصول بدون دسته‌بندی/برند ذخیره می‌شود (خطا نمی‌دهد)
-- تصاویر محصول از طریق CSV قابل اضافه کردن نیستند — باید بعداً از پنل ادمین اضافه شوند
+- ستون `imageUrls` باید شامل URL کامل (Absolute URL) باشد تا تصاویر ابری به محصول متصل شوند

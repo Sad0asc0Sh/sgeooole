@@ -159,6 +159,76 @@ const parseCsvBoolean = (value) => {
   )
 }
 
+const isAbsoluteHttpUrl = (value) => /^https?:\/\//i.test(String(value || '').trim())
+
+const normalizeCsvImageUrl = (rawUrl, req) => {
+  const trimmed = String(rawUrl || '').trim()
+  if (!trimmed) return null
+
+  if (isAbsoluteHttpUrl(trimmed)) return trimmed
+
+  if (trimmed.startsWith('//')) {
+    return `${req?.protocol || 'https'}:${trimmed}`
+  }
+
+  if (trimmed.startsWith('/')) {
+    const host = req?.get?.('host')
+    if (!host) return null
+    return `${req.protocol || 'https'}://${host}${trimmed}`
+  }
+
+  return null
+}
+
+const extractPublicIdFromImageUrl = (imageUrl) => {
+  try {
+    const parsed = new URL(imageUrl)
+    const filename = decodeURIComponent(parsed.pathname.split('/').pop() || '').trim()
+    return filename || undefined
+  } catch (_) {
+    return undefined
+  }
+}
+
+const parseCsvImageUrls = (row = {}, req) => {
+  const source =
+    row.imageUrls ??
+    row.image_urls ??
+    row.images ??
+    row.imageURLs ??
+    row.ImageUrls ??
+    ''
+
+  if (!source) return []
+
+  const tokens = String(source)
+    .split(/[\n\r,;|]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean)
+
+  const unique = new Set()
+  const images = []
+
+  for (const token of tokens) {
+    const normalizedUrl = normalizeCsvImageUrl(token, req)
+    if (!normalizedUrl || unique.has(normalizedUrl)) continue
+    unique.add(normalizedUrl)
+    images.push({
+      url: normalizedUrl,
+      public_id: extractPublicIdFromImageUrl(normalizedUrl),
+    })
+  }
+
+  return images
+}
+
+const getCsvImageSourceValue = (row = {}) =>
+  row.imageUrls ??
+  row.image_urls ??
+  row.images ??
+  row.imageURLs ??
+  row.ImageUrls
+
 const parseCsvFile = (filePath) => new Promise((resolve, reject) => {
   const rows = []
 
@@ -2099,7 +2169,7 @@ router.get(
         ],
       })
         .select(
-          'name sku productCode productType price compareAtPrice stock category brand description isActive isFeatured',
+          'name sku productCode productType price compareAtPrice stock category brand description isActive isFeatured images',
         )
         .populate('category', 'name')
         .populate('brand', 'name')
@@ -2115,11 +2185,21 @@ router.get(
 
       const headers = [
         'name', 'sku', 'productCode', 'productType', 'price', 'compareAtPrice',
-        'stock', 'category', 'brand', 'description', 'isActive', 'isFeatured',
+        'stock', 'category', 'brand', 'description', 'isActive', 'isFeatured', 'imageUrls',
       ]
       const lines = [headers.join(',')]
 
       products.forEach((product) => {
+        const imageUrls = Array.isArray(product.images)
+          ? product.images
+            .map((img) => {
+              if (!img) return ''
+              if (typeof img === 'string') return img
+              return img.url || ''
+            })
+            .filter((url) => isAbsoluteHttpUrl(url))
+          : []
+
         const row = [
           csvEscape(product.name || ''),
           csvEscape(product.sku || ''),
@@ -2133,6 +2213,7 @@ router.get(
           csvEscape(product.description || ''),
           product.isActive ? 'true' : 'false',
           product.isFeatured ? 'true' : 'false',
+          csvEscape(imageUrls.join(';')),
         ]
         lines.push(row.join(','))
       })
@@ -2180,6 +2261,9 @@ router.post(
       const importMode = (req.query.mode || req.body.mode || 'create').toLowerCase()
       const products = await parseCsvFile(filePath)
       const errors = []
+      const hasImageColumn = products.some((row) =>
+        ['imageUrls', 'image_urls', 'images', 'imageURLs', 'ImageUrls'].some((key) => key in row),
+      )
 
       if (!products.length) {
         safeUnlink(filePath)
@@ -2271,6 +2355,9 @@ router.post(
 
             if (existingProduct) {
               const updateFields = {}
+              const imageSourceValue = hasImageColumn ? getCsvImageSourceValue(row) : undefined
+              const hasExplicitImageValue = imageSourceValue !== undefined && String(imageSourceValue).trim() !== ''
+              const parsedImages = hasExplicitImageValue ? parseCsvImageUrls(row, req) : null
 
               if (row.name !== undefined && row.name !== '') updateFields.name = row.name
               if (row.productType !== undefined && row.productType !== '') updateFields.productType = row.productType
@@ -2283,6 +2370,7 @@ router.post(
               if (row.isActive !== undefined && row.isActive !== '') updateFields.isActive = parseCsvBoolean(row.isActive)
               if (row.isFeatured !== undefined && row.isFeatured !== '') updateFields.isFeatured = parseCsvBoolean(row.isFeatured)
               if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
+              if (parsedImages) updateFields.images = parsedImages
 
               if (Object.keys(updateFields).length > 0) {
                 await Product.updateOne(
@@ -2305,6 +2393,7 @@ router.post(
                 description: row.description || '',
                 isActive: parseCsvBoolean(row.isActive),
                 isFeatured: parseCsvBoolean(row.isFeatured),
+                images: hasImageColumn ? parseCsvImageUrls(row, req) : [],
               }
 
               if (productData.name) {
@@ -2406,6 +2495,7 @@ router.post(
             description: row.description || '',
             isActive: parseCsvBoolean(row.isActive),
             isFeatured: parseCsvBoolean(row.isFeatured),
+            images: hasImageColumn ? parseCsvImageUrls(row, req) : [],
           }
 
           if (productData.name) {
