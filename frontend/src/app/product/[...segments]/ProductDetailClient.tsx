@@ -1,8 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { productService } from "@/services/productService";
 import type { Product, ProductColor } from "@/services/productService";
 import CountdownTimer from "@/components/ui/CountdownTimer";
 import ProductTabs from "@/components/product/ProductTabs";
@@ -22,53 +21,42 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
         product.colors && product.colors.length > 0 ? product.colors[0] : null
     );
-    const [now, setNow] = useState(() => Date.now());
 
-    // Keep state in sync on route transitions (client navigation)
+    // Sync state only when product ID changes (route transitions)
     useEffect(() => {
-        setProduct(initialProduct);
-    }, [initialProduct]);
-
-    // Refresh product once on mount to avoid stale ISR/SSR data (e.g. newly uploaded images)
-    useEffect(() => {
-        let cancelled = false;
-
-        const refresh = async () => {
-            try {
-                const latest = await productService.getById(initialProduct.id);
-                if (!cancelled) {
-                    setProduct(latest);
-                }
-            } catch (error) {
-                // Best-effort; keep initial SSR product if refresh fails
-                if (process.env.NODE_ENV !== "production") {
-                    console.warn("[ProductDetailClient] Failed to refresh product", error);
-                }
+        if (initialProduct.id !== product.id) {
+            setProduct(initialProduct);
+            // Reset color selection for new product
+            if (initialProduct.colors && initialProduct.colors.length > 0) {
+                setSelectedColor(initialProduct.colors[0]);
+            } else {
+                setSelectedColor(null);
             }
-        };
-
-        if (initialProduct?.id) {
-            refresh();
         }
+    }, [initialProduct.id, product.id, initialProduct.colors]);
 
-        return () => {
-            cancelled = true;
-        };
-    }, [initialProduct?.id]);
+    // Memoize flash deal status
+    const isFlashDealActive = useMemo(() => 
+        Boolean(
+            product.isFlashDeal &&
+            product.flashDealEndTime &&
+            new Date(product.flashDealEndTime).getTime() > Date.now()
+        ),
+        [product.isFlashDeal, product.flashDealEndTime]
+    );
 
-    // Update now every second for real-time countdown checks
-    useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
+    const showCampaignBadge = useMemo(() => 
+        Boolean(
+            product.campaignLabel &&
+            !(product.campaignLabel.includes('فلش') && !isFlashDealActive)
+        ),
+        [product.campaignLabel, isFlashDealActive]
+    );
+
+    // Memoize color change handler
+    const handleColorChange = useCallback((color: ProductColor) => {
+        setSelectedColor(color);
     }, []);
-
-    useEffect(() => {
-        if (product.colors && product.colors.length > 0) {
-            setSelectedColor(product.colors[0]);
-        } else {
-            setSelectedColor(null);
-        }
-    }, [product]);
 
     return (
         <div className="min-h-screen bg-white pb-24 pt-14 md:pt-0">
@@ -156,6 +144,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                         {/* Timer for Special Offers */}
                         {(() => {
+                            const now = Date.now();
                             const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
                             const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 
@@ -346,6 +335,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                     {(() => {
                         // Helper logic for offer details - Priority: Campaign Label > Flash Deal > Special Offer
                         // Check if we have an active campaign or time-based offer
+                        const now = Date.now();
                         const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
                         const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 

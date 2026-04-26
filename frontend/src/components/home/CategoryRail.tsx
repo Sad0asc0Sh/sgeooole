@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { useResilientImg } from "@/components/ui/ResilientImage";
+import { useResilientImage } from "@/components/ui/ResilientImage";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
 
 function ResilientCategoryImg({ url, name }: { url: string; name: string }) {
-    const { src, onError, onLoad, ref, phase } = useResilientImg(url, "/placeholder.png");
+    const { src, onError, onLoad, ref, phase } = useResilientImage(url, "/placeholder.png");
     return (
         <div className="relative w-full h-full">
             {phase === "skeleton" && (

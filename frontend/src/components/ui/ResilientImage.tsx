@@ -10,8 +10,8 @@ import {
   useMemo,
 } from "react";
 
-const MAX_RETRIES = 5;
-const RETRY_DELAYS_MS = [300, 800, 2000, 5000, 10000];
+const MAX_RETRIES = 2; // Reduced from 5 to 2
+const RETRY_DELAYS_MS = [500, 1500]; // Simplified delays
 const PLACEHOLDER_SRC = "/placeholder.png";
 
 /* ── Tiny inline SVG placeholder (gray-100) ────────────────── */
@@ -19,9 +19,7 @@ const DEFAULT_BLUR_SVG =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg==";
 
 function getRetryDelay(attempt: number): number {
-  const base = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
-  const jitter = base * 0.2 * Math.random();
-  return base + jitter;
+  return RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
 }
 
 function bustCache(src: string): string {
@@ -35,7 +33,7 @@ function bustCache(src: string): string {
   }
 }
 
-/* ── Connection warming ────────────────────────────────────── */
+/* ── Connection warming (only on first failure) ────────────────────────────────────── */
 const warmedOrigins = new Set<string>();
 function warmConnection(src: string): void {
   try {
@@ -43,14 +41,14 @@ function warmConnection(src: string): void {
     const origin = url.origin;
     if (warmedOrigins.has(origin)) return;
     warmedOrigins.add(origin);
+    // Simple HEAD request without aggressive retries
     fetch(src, {
       method: "HEAD",
       mode: "no-cors",
       credentials: "omit",
-      cache: "no-store",
+      cache: "default", // Changed from "no-store" to allow CDN caching
     }).catch(() => {});
-  } catch {
-  }
+  } catch {}
 }
 
 /* ── Loading state enum ────────────────────────────────────── */
@@ -66,15 +64,13 @@ export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
 }
 
 /**
- * ResilientImage — drop-in next/image replacement
+ * ResilientImage — Optimized for CDN performance
  * ================================================
- * ✅ Shimmer skeleton while loading (covers blank white space)
- * ✅ Smooth fade-in on load (blur-up feel without BlurHash dep)
- * ✅ Auto-retry with progressive backoff (300ms → 10s)
- * ✅ Viewport-gated retries via IntersectionObserver
- * ✅ Connection warming on first failure
- * ✅ Cache-busting on each retry
- * ✅ Falls back to placeholder after exhausting retries
+ * ✅ Reduced retries (2 instead of 5) for faster failure
+ * ✅ Simplified retry delays
+ * ✅ Respects CDN caching
+ * ✅ Smooth fade-in on load
+ * ✅ Viewport-gated retries
  */
 const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
   function ResilientImage(
@@ -145,7 +141,12 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       timerRef.current = setTimeout(() => {
         retryCount.current += 1;
         if (typeof originalSrc === "string") {
-          setCurrentSrc(bustCache(originalSrc));
+          // Only bust cache on second retry to respect CDN
+          if (retryCount.current > 1) {
+            setCurrentSrc(bustCache(originalSrc));
+          } else {
+            setCurrentSrc(originalSrc);
+          }
         } else {
           setCurrentSrc(originalSrc);
         }
@@ -200,15 +201,14 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
 
     return (
       <span ref={wrapperRef} className="contents">
-        {/* Skeleton overlay — visible until image loads */}
         {showSkeleton && phase === "skeleton" && (
           <span
-            className={
-              skeletonClassName ||
-              "absolute inset-0 z-[1] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
-            }
-            style={{ backgroundSize: "200% 100%", borderRadius: "inherit" }}
-            aria-hidden
+            className={skeletonClassName || "absolute inset-0 bg-gray-100 animate-pulse"}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+            }}
           />
         )}
         <Image {...imageProps} />
@@ -217,21 +217,12 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
   }
 );
 
+ResilientImage.displayName = "ResilientImage";
 export default ResilientImage;
 
-/**
- * useResilientImg — hook for plain <img> tags
- * ============================================
- * Same retry-with-backoff logic without requiring next/image.
- * Now also returns `phase` for skeleton/transition control.
- *
- * Usage:
- *   const { src, onError, onLoad, ref, phase } = useResilientImg(url);
- *   <img ref={ref} src={src} onError={onError} onLoad={onLoad}
- *        style={{ opacity: phase === 'loaded' ? 1 : 0 }} />
- */
-export function useResilientImg(
-  originalSrc: string | undefined,
+/* ── Hook variant for advanced use cases ────────────────────────────────────── */
+export function useResilientImage(
+  originalSrc: string | null,
   fallbackSrc: string = PLACEHOLDER_SRC,
   maxRetries: number = MAX_RETRIES
 ) {
@@ -283,7 +274,16 @@ export function useResilientImg(
     const delay = getRetryDelay(retryCount.current);
     timerRef.current = setTimeout(() => {
       retryCount.current += 1;
-      setCurrentSrc(originalSrc ? bustCache(originalSrc) : fallbackSrc);
+      if (originalSrc) {
+        // Only bust cache on second retry
+        if (retryCount.current > 1) {
+          setCurrentSrc(bustCache(originalSrc));
+        } else {
+          setCurrentSrc(originalSrc);
+        }
+      } else {
+        setCurrentSrc(fallbackSrc);
+      }
     }, delay);
   }
 
