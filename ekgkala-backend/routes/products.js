@@ -2156,6 +2156,52 @@ router.get(
 // GET /api/products/export/csv - Export products to CSV
 // ============================================
 router.get(
+  '/export/csv/prices',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_EXPORT),
+  async (req, res) => {
+    try {
+      const products = await Product.find({ sku: { $exists: true, $ne: '' } })
+        .select('sku name price')
+        .lean()
+
+      const csvEscape = (val) => {
+        const str = String(val ?? '')
+        if (/[",\r\n]/.test(str)) {
+          return `"${str.replace(/"/g, '""')}"`
+        }
+        return str
+      }
+
+      const headers = ['sku', 'title', 'price']
+      const lines = [headers.join(',')]
+
+      products.forEach((product) => {
+        const row = [
+          csvEscape(product.sku || ''),
+          csvEscape(product.name || ''),
+          Number.isFinite(Number(product.price)) ? Number(product.price) : 0,
+        ]
+        lines.push(row.join(','))
+      })
+
+      const csvContent = '\uFEFF' + lines.join('\n')
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+      res.setHeader('Content-Disposition', 'attachment; filename=products-prices.csv')
+      res.send(csvContent)
+    } catch (error) {
+      console.error('Error exporting product prices to CSV:', error)
+      res.status(500).json({
+        success: false,
+        message: 'خطا در برون‌ریزی قیمت محصولات به CSV',
+        error: error.message,
+      })
+    }
+  },
+)
+
+router.get(
   '/export/csv',
   protect,
   checkPermission(PERMISSIONS.PRODUCT_EXPORT),
@@ -2264,6 +2310,11 @@ router.post(
       const hasImageColumn = products.some((row) =>
         ['imageUrls', 'image_urls', 'images', 'imageURLs', 'ImageUrls'].some((key) => key in row),
       )
+      const isPriceOnlyCsv = products.length > 0 && products.every((row) => {
+        const keys = Object.keys(row || {}).map((key) => String(key).trim())
+        if (!keys.includes('sku') || !keys.includes('price')) return false
+        return keys.every((key) => ['sku', 'title', 'price'].includes(key))
+      })
 
       if (!products.length) {
         safeUnlink(filePath)
@@ -2359,6 +2410,22 @@ router.post(
               const hasExplicitImageValue = imageSourceValue !== undefined && String(imageSourceValue).trim() !== ''
               const parsedImages = hasExplicitImageValue ? parseCsvImageUrls(row, req) : null
 
+              if (isPriceOnlyCsv) {
+                if (row.price !== undefined && row.price !== '') {
+                  updateFields.price = parseCsvNumber(row.price, existingProduct.price)
+                }
+
+                if (Object.keys(updateFields).length > 0) {
+                  await Product.updateOne(
+                    { _id: existingProduct._id },
+                    { $set: updateFields },
+                    { runValidators: false },
+                  )
+                  totalUpdated++
+                }
+                continue
+              }
+
               if (row.name !== undefined && row.name !== '') updateFields.name = row.name
               if (row.productType !== undefined && row.productType !== '') updateFields.productType = row.productType
               if (row.price !== undefined && row.price !== '') updateFields.price = parseCsvNumber(row.price, existingProduct.price)
@@ -2376,6 +2443,7 @@ router.post(
                 await Product.updateOne(
                   { _id: existingProduct._id },
                   { $set: updateFields },
+                  { runValidators: false },
                 )
                 totalUpdated++
               }

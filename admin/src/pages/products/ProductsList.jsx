@@ -628,6 +628,34 @@ function ProductsList({ mode }) {
     }
   }
 
+  const handleExportPricesOnlyCsv = async () => {
+    if (!canExport) {
+      message.error('شما مجوز برون‌ریزی ندارید.')
+      return
+    }
+
+    try {
+      const response = await api.get('/products/export/csv/prices', {
+        responseType: 'blob',
+        timeout: 0,
+      })
+
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', 'products-prices.csv')
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+
+      message.success('فایل CSV قیمت‌ها با موفقیت دانلود شد')
+    } catch (err) {
+      console.error('Error exporting product prices to CSV:', err)
+      message.error('خطا در برون‌ریزی قیمت محصولات')
+    }
+  }
+
   const importLargeCsvInChunks = async (file, updateMode = false) => {
     const fileText = await file.text()
     const { headers, rows, parseErrors } = parseCsvText(fileText)
@@ -907,6 +935,12 @@ function ProductsList({ mode }) {
                     icon: <ExportOutlined />,
                     label: 'برون‌ریزی CSV',
                     onClick: handleExportCsv,
+                  },
+                  {
+                    key: 'export-csv-prices-only',
+                    icon: <ExportOutlined />,
+                    label: 'Export Prices Only (CSV)',
+                    onClick: handleExportPricesOnlyCsv,
                   },
                 ],
               }}
