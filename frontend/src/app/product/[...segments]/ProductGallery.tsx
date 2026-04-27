@@ -231,7 +231,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     return (
         <>
             <div className="w-full bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
-                <div className="relative w-full aspect-square min-h-0 min-w-0 bg-gradient-to-b from-gray-50 to-white">
+                <div className="relative w-full aspect-[4/3] max-h-[45vh] md:aspect-square md:max-h-none min-h-0 min-w-0 bg-white">
                     <div className="absolute inset-0 min-h-0 min-w-0">
                         <Swiper
                             spaceBetween={10}
@@ -253,7 +253,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             alt={`${product.name} - Image ${index + 1}`}
                                             fill
                                             unoptimized
-                                            className="object-contain object-center !p-4"
+                                            className="object-contain object-center !p-4 mix-blend-multiply"
                                             sizes="(min-width: 1024px) 45vw, 100vw"
                                             priority={index === 0}
                                             loading="eager"
