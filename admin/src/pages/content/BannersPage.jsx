@@ -69,22 +69,30 @@ const formatPersianDate = (date, includeTime = false) => {
 // ⚠️  مهم: این ابعاد باید دقیقاً با aspect-ratio های فرانت‌اند مطابقت داشته باشد
 //     اگر ابعاد فرانت تغییر کرد، اینجا هم باید آپدیت شود
 //
+// 📐 معماری لی‌اوت فرانت‌اند:
+//    - Container: max-w-7xl (1280px) با padding افقی
+//    - Main Slider: aspect-ratio 16:9 (موبایل) → 21:9 (دسکتاپ)
+//    - Middle Banners: aspect-ratio 16:5 ثابت
+//    - Border Radius: rounded-2xl (1rem) با overflow-hidden
+//    - تصاویر: object-fit: cover + object-position: center
+//    - ⚠️ نسبت ابعاد ایده‌آل را رعایت کنید — تصاویر crop می‌شوند
+//
 const BANNER_POSITIONS = {
   'main-slider': {
     label: '🖼️ اسلایدر اصلی',
-    description: 'بنرهای بزرگ بالای صفحه اصلی',
+    description: 'بنرهای بزرگ بالای صفحه اصلی (نسبت تصویر: 21:9 دسکتاپ، 16:9 موبایل)',
     size: '1200×500 پیکسل',
-    aspectRatio: '12:5 (2.4:1)',
+    aspectRatio: '21:9 (2.33:1) دسکتاپ | 16:9 (1.78:1) موبایل',
     width: 1200,
     height: 500,
     minSize: '600×250 پیکسل',
-    mobileTip: '✅ محتوا و متن مهم را در 80% مرکزی تصویر قرار دهید تا در موبایل هم کامل نمایش داده شود',
+    mobileTip: '✅ محتوا و متن مهم را در مرکز تصویر قرار دهید. تصویر در موبایل crop می‌شود (16:9) و در دسکتاپ عریض‌تر نمایش داده می‌شود (21:9)',
     color: 'blue',
-    previewAspect: '12 / 5',
+    previewAspect: '21 / 9',
   },
   'middle-banner': {
     label: '📢 بنرهای تبلیغاتی',
-    description: 'بنرهای میانه صفحه اصلی (حداکثر ۳ عدد)',
+    description: 'بنرهای میانه صفحه اصلی (حداکثر ۳ عدد، نسبت تصویر: 16:5)',
     size: '800×250 پیکسل',
     aspectRatio: '16:5 (3.2:1)',
     width: 800,

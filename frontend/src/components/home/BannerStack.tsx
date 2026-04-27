@@ -22,13 +22,13 @@ export default function BannerStack() {
 
     if (loading) {
         return (
-            <div className="container mx-auto px-3 sm:px-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="w-full max-w-7xl mx-auto px-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[1, 2, 3].map((i) => (
                         <div
                             key={i}
-                            className="w-full rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
-                            style={{ aspectRatio: '16/5', backgroundSize: '200% 100%' }}
+                            className="w-full aspect-[16/5] rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+                            style={{ backgroundSize: '200% 100%' }}
                         />
                     ))}
                 </div>
@@ -37,20 +37,19 @@ export default function BannerStack() {
     }
 
     return (
-        <div className="container mx-auto px-3 sm:px-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="w-full max-w-7xl mx-auto px-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {banners.map((banner) => {
                     const hasLink = !!banner.link?.trim();
                     return (
                         <div
                             key={banner._id}
                             className={`
-                                relative w-full rounded-xl overflow-hidden bg-gray-50
-                                shadow-sm hover:shadow-lg transition-all duration-300
+                                relative w-full aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
+                                shadow-md hover:shadow-lg transition-all duration-300
                                 hover:scale-[1.02] group
                                 ${hasLink ? 'cursor-pointer' : 'cursor-default'}
                             `}
-                            style={{ aspectRatio: '16/5' }}
                             onClick={() => hasLink && navigateHref(router, banner.link)}
                             role={hasLink ? "button" : undefined}
                             tabIndex={hasLink ? 0 : undefined}
@@ -61,14 +60,17 @@ export default function BannerStack() {
                             }}
                             aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
                         >
-                            <ResilientImage
-                                src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
-                                alt={banner.title}
-                                fill
-                                className="object-cover object-center group-hover:brightness-105 transition-all duration-300 pointer-events-none"
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                fallbackSrc="/placeholder-banner.png"
-                            />
+                            <div className="absolute inset-0">
+                                <ResilientImage
+                                    src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
+                                    alt={banner.title}
+                                    fill
+                                    style={{ objectFit: "cover", objectPosition: "center" }}
+                                    className="group-hover:brightness-105 transition-all duration-300 pointer-events-none"
+                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                    fallbackSrc="/placeholder-banner.png"
+                                />
+                            </div>
                         </div>
                     );
                 })}

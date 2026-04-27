@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl, generateBannerBlurPlaceholder } from "@/lib/image";
@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 const SwiperSlider = dynamic(() => import("./SwiperSlider"), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[300px] sm:h-[400px] bg-gray-100 animate-pulse rounded-xl" />
+    <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gray-100 animate-pulse rounded-2xl" />
   ),
 });
 
@@ -21,28 +21,23 @@ type HeroSectionProps = {
 
 /**
  * ============================================================
- *  Hybrid Rendering Hero Section - ArvanCloud Optimized
+ *  Hero Banner Section - Modern E-commerce Layout
  * ============================================================
  *
- *  Performance Strategy:
- *  ┌────────────────────────────────────────────────────────┐
- *  │  LCP Element (SSR): First banner slide rendered        │
- *  │  - server-side rendered in initial HTML                │
- *  │  - priority loading with fetchPriority="high"          │
- *  │  - placeholder blur for visual stability               │
- *  └────────────────────────────────────────────────────────┘
+ *  Layout Architecture:
+ *  - Container: max-w-7xl with horizontal padding
+ *  - Aspect Ratios: Mobile 16:9, Desktop 21:9 (ultrawide)
+ *  - Border Radius: rounded-2xl with overflow-hidden
+ *  - Top Margin: mt-4 for header separation
  *
- *  ┌────────────────────────────────────────────────────────┐
- *  │  Swiper.js (Client-side lazy load):                    │
- *  │  - Dynamic import after hydration                      │
- *  │  - Rest of slides lazy-loaded                          │
- *  │  - No render-blocking JavaScript                       │
- *  └────────────────────────────────────────────────────────┘
+ *  Image Handling:
+ *  - Next.js Image with fill + object-fit: cover
+ *  - Strict aspect ratio enforcement prevents vertical stretch
+ *  - No fixed heights — responsive by design
  *
- *  📐 Banner Dimensions:
- *  - Main slider: 1200 × 500 (2.4:1 aspect ratio)
- *  - Middle banners: 800 × 250 (16:5 aspect ratio)
- *  - Campaign banners: 1200 × 400 (3:1 aspect ratio)
+ *  Performance:
+ *  - LCP optimized with priority loading on first banner
+ *  - Swiper lazy-loaded client-side
  * ============================================================
  */
 
@@ -90,14 +85,11 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
   if (loading) {
     return (
-      <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
-        <div className="w-full h-[300px] sm:h-[400px] bg-gray-200 animate-pulse rounded-xl" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <section className="w-full max-w-7xl mx-auto px-4 mt-4">
+        <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gray-200 animate-pulse rounded-2xl mb-4" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-[150px] sm:h-[200px] bg-gray-200 animate-pulse rounded-xl"
-            />
+            <div key={i} className="w-full aspect-[16/5] bg-gray-200 animate-pulse rounded-xl" />
           ))}
         </div>
       </section>
@@ -112,10 +104,12 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const firstBanner = mainBanners[0];
 
   return (
-    <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4">
+    <section className="w-full max-w-7xl mx-auto px-4 mt-4">
       {/* === Single Banner: SSR Only === */}
       {mainBanners.length === 1 && firstBanner && (
-        <div className="relative w-full rounded-xl overflow-hidden bg-gray-50 shadow-sm">
+        <div
+          className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-2xl overflow-hidden bg-gray-50 shadow-md mb-4"
+        >
           {(() => {
             const imageUrl = resolveImageUrl(
               (firstBanner as any).image,
@@ -123,21 +117,11 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             );
             const bannerLink = firstBanner.link;
             const canNavigate = canNavigateToHref(bannerLink);
-            const width =
-              typeof (firstBanner as any).image === "object" &&
-              (firstBanner as any).image?.width
-                ? (firstBanner as any).image.width
-                : 1200;
-            const height =
-              typeof (firstBanner as any).image === "object" &&
-              (firstBanner as any).image?.height
-                ? (firstBanner as any).image.height
-                : 500;
-            const blurPlaceholder = generateBannerBlurPlaceholder(width, height);
+            const blurPlaceholder = generateBannerBlurPlaceholder(1200, 500);
 
             return (
               <div
-                className={`relative w-full ${canNavigate ? "cursor-pointer" : ""}`}
+                className={`absolute inset-0 ${canNavigate ? "cursor-pointer" : ""}`}
                 onClick={() => canNavigate && navigateHref(router, bannerLink)}
                 role={canNavigate ? "button" : undefined}
                 tabIndex={canNavigate ? 0 : undefined}
@@ -151,16 +135,15 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 <ResilientImage
                   src={imageUrl}
                   alt={firstBanner.title || "بنر اصلی"}
-                  width={width}
-                  height={height}
-                  className="w-full h-auto object-cover"
+                  fill
+                  style={{ objectFit: "cover", objectPosition: "center" }}
                   priority
                   fetchPriority="high"
                   loading="eager"
                   placeholder="blur"
                   blurDataURL={blurPlaceholder}
                   fallbackSrc="/placeholder-banner.png"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 1200px"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 90vw, 1280px"
                 />
               </div>
             );
@@ -170,29 +153,14 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
       {/* === Multiple Banners: LCP first + Swiper for all === */}
       {mainBanners.length > 1 && (
-        <>
-          {/* LCP: First banner SSR-rendered (visible until Swiper loads) */}
-          <noscript>
-            <div className="relative w-full rounded-xl overflow-hidden bg-gray-50 shadow-sm">
-              <ResilientImage
-                src={resolveImageUrl((firstBanner as any).image, "/placeholder-banner.png")}
-                alt={firstBanner.title || "بنر اصلی"}
-                width={1200}
-                height={500}
-                className="w-full h-auto object-cover"
-                priority
-              />
-            </div>
-          </noscript>
-
-          {/* Swiper Carousel — dynamically loaded, no SSR */}
+        <div className="mb-4">
           <SwiperSlider banners={mainBanners} />
-        </>
+        </div>
       )}
 
       {/* Middle Banners Grid */}
       {middleBanners.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {middleBanners.map((banner, index) => {
             const imageUrl = resolveImageUrl(
               (banner as any).image,
@@ -200,24 +168,14 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             );
             const bannerLink = banner.link;
             const hasLink = !!bannerLink?.trim();
-            const width =
-              typeof (banner as any).image === "object" &&
-              (banner as any).image?.width
-                ? (banner as any).image.width
-                : 800;
-            const height =
-              typeof (banner as any).image === "object" &&
-              (banner as any).image?.height
-                ? (banner as any).image.height
-                : 250;
-            const blurPlaceholder = generateBannerBlurPlaceholder(width, height);
+            const blurPlaceholder = generateBannerBlurPlaceholder(800, 250);
 
             return (
               <div
                 key={banner._id}
                 className={`
-                  relative w-full rounded-xl overflow-hidden bg-gray-50
-                  shadow-sm hover:shadow-lg transition-all duration-300
+                  relative w-full aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
+                  shadow-md hover:shadow-lg transition-all duration-300
                   hover:scale-[1.02] group
                   ${hasLink ? "cursor-pointer" : "cursor-default"}
                   ${middleBanners.length === 2 && index === 1 ? "sm:col-span-1" : ""}
@@ -233,17 +191,19 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 }}
                 aria-label={hasLink ? (banner.title || "بنر تبلیغاتی") : undefined}
               >
-                <ResilientImage
-                  src={imageUrl}
-                  alt={banner.title || "بنر تبلیغاتی"}
-                  width={width}
-                  height={height}
-                  className="w-full h-auto group-hover:brightness-105 transition-all duration-300 object-cover"
-                  loading="lazy"
-                  placeholder="blur"
-                  blurDataURL={blurPlaceholder}
-                  fallbackSrc="/placeholder-banner.png"
-                />
+                <div className="absolute inset-0">
+                  <ResilientImage
+                    src={imageUrl}
+                    alt={banner.title || "بنر تبلیغاتی"}
+                    fill
+                    style={{ objectFit: "cover", objectPosition: "center" }}
+                    className="group-hover:brightness-105 transition-all duration-300"
+                    loading="lazy"
+                    placeholder="blur"
+                    blurDataURL={blurPlaceholder}
+                    fallbackSrc="/placeholder-banner.png"
+                  />
+                </div>
               </div>
             );
           })}

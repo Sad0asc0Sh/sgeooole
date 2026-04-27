@@ -180,8 +180,7 @@
 
 /* --- HERO SWIPER STYLES (moved from JSX for Edge Android compat) --- */
 .hero-swiper {
-  border-radius: 1rem;
-  overflow: hidden;
+  /* Border radius and overflow handled by parent wrapper */
 }
 .hero-swiper .swiper-pagination {
   bottom: 12px !important;

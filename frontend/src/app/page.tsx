@@ -99,12 +99,12 @@ const SkeletonRail = ({ title }: { title: string }) => (
 );
 
 const SkeletonHero = () => (
-  <section className="flex flex-col gap-3 px-3 pt-3 sm:px-4 sm:pt-4 animate-pulse">
-    <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-2xl" style={{ aspectRatio: '12/5' }} />
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" style={{ aspectRatio: '16/5' }} />
-      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" style={{ aspectRatio: '16/5' }} />
-      <div className="w-full bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" style={{ aspectRatio: '16/5' }} />
+  <section className="w-full max-w-7xl mx-auto px-4 mt-4 animate-pulse">
+    <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-2xl mb-4" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
+      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" />
+      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" />
     </div>
   </section>
 );
