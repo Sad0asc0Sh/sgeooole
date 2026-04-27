@@ -42,9 +42,10 @@ type HeroSectionProps = {
  */
 
 export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
-  const heroContainerClass = "w-full max-w-7xl mx-auto px-4 mt-4";
+  const heroContainerClass = "w-full max-w-7xl mx-auto px-4";
+  // IMPORTANT: strict wrapper classes must remain EXACTLY as specified
   const heroFrameClass =
-    "relative w-full aspect-[16/9] lg:aspect-[21/9] rounded-2xl overflow-hidden bg-gray-50";
+    "relative w-full aspect-[16/9] md:aspect-[3/1] rounded-2xl overflow-hidden mt-4";
   const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [loading, setLoading] = useState(initialBanners.length === 0);
   const router = useRouter();
@@ -89,7 +90,11 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   if (loading) {
     return (
       <section className={heroContainerClass}>
-        <div className={`${heroFrameClass} bg-gray-200 animate-pulse mb-4`} />
+        <div className="mb-4 animate-pulse">
+          <div className={heroFrameClass}>
+            <div className="absolute inset-0 bg-gray-200" />
+          </div>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="w-full aspect-[16/5] bg-gray-200 animate-pulse rounded-xl" />
@@ -110,52 +115,56 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     <section className={heroContainerClass}>
       {/* === Single Banner: SSR Only === */}
       {mainBanners.length === 1 && firstBanner && (
-        <div className={`${heroFrameClass} shadow-md mb-4`}>
-          {(() => {
-            const imageUrl = resolveImageUrl(
-              (firstBanner as any).image,
-              "/placeholder-banner.png"
-            );
-            const bannerLink = firstBanner.link;
-            const canNavigate = canNavigateToHref(bannerLink);
-            const blurPlaceholder = generateBannerBlurPlaceholder(1200, 500);
+        <div className="mb-4">
+          <div className={heroFrameClass}>
+            {(() => {
+              const imageUrl = resolveImageUrl(
+                (firstBanner as any).image,
+                "/placeholder-banner.png"
+              );
+              const bannerLink = firstBanner.link;
+              const canNavigate = canNavigateToHref(bannerLink);
+              const blurPlaceholder = generateBannerBlurPlaceholder(1200, 500);
 
-            return (
-              <div
-                className={`absolute inset-0 ${canNavigate ? "cursor-pointer" : ""}`}
-                onClick={() => canNavigate && navigateHref(router, bannerLink)}
-                role={canNavigate ? "button" : undefined}
-                tabIndex={canNavigate ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if ((e.key === "Enter" || e.key === " ") && canNavigate) {
-                    navigateHref(router, bannerLink);
-                  }
-                }}
-                aria-label={canNavigate ? (firstBanner.title || "banner") : undefined}
-              >
-                <ResilientImage
-                  src={imageUrl}
-                  alt={firstBanner.title || "بنر اصلی"}
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
-                  priority
-                  fetchPriority="high"
-                  loading="eager"
-                  placeholder="blur"
-                  blurDataURL={blurPlaceholder}
-                  fallbackSrc="/placeholder-banner.png"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1280px) 90vw, 1280px"
-                />
-              </div>
-            );
-          })()}
+              return (
+                <div
+                  className={`absolute inset-0 ${canNavigate ? "cursor-pointer" : ""}`}
+                  onClick={() => canNavigate && navigateHref(router, bannerLink)}
+                  role={canNavigate ? "button" : undefined}
+                  tabIndex={canNavigate ? 0 : undefined}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && canNavigate) {
+                      navigateHref(router, bannerLink);
+                    }
+                  }}
+                  aria-label={canNavigate ? (firstBanner.title || "banner") : undefined}
+                >
+                  <ResilientImage
+                    src={imageUrl}
+                    alt={firstBanner.title || "بنر اصلی"}
+                    fill
+                    className="object-cover object-center"
+                    priority
+                    fetchPriority="high"
+                    loading="eager"
+                    placeholder="blur"
+                    blurDataURL={blurPlaceholder}
+                    fallbackSrc="/placeholder-banner.png"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1280px) 90vw, 1280px"
+                  />
+                </div>
+              );
+            })()}
+          </div>
         </div>
       )}
 
       {/* === Multiple Banners: LCP first + Swiper for all === */}
       {mainBanners.length > 1 && (
-        <div className={`${heroFrameClass} shadow-md mb-4`}>
-          <SwiperSlider banners={mainBanners} />
+        <div className="mb-4">
+          <div className={heroFrameClass}>
+            <SwiperSlider banners={mainBanners} />
+          </div>
         </div>
       )}
 

@@ -99,8 +99,12 @@ const SkeletonRail = ({ title }: { title: string }) => (
 );
 
 const SkeletonHero = () => (
-  <section className="w-full max-w-7xl mx-auto px-4 mt-4 animate-pulse">
-    <div className="w-full aspect-[16/9] lg:aspect-[21/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-2xl mb-4" />
+  <section className="w-full max-w-7xl mx-auto px-4 animate-pulse">
+    <div className="mb-4">
+      <div className="relative w-full aspect-[16/9] md:aspect-[3/1] rounded-2xl overflow-hidden mt-4">
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+      </div>
+    </div>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
       <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" />
