@@ -73,11 +73,11 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8 pt-8">
                 <div className="flex flex-row-reverse gap-10">
                     {/* Right Column - Gallery + Breadcrumb + Title (all sticky together) */}
-                    <div className="w-[45%] flex-shrink-0 self-start sticky top-36 will-change-transform">
+                    <div className="w-[45%] flex-shrink-0 self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)]">
                         <ProductGallery product={product} />
 
                         {/* Breadcrumb - Below Gallery */}
-                        <div className="space-y-1.5 mt-5">
+                        <div className="shrink-0 space-y-1.5 mt-5">
                             {product.categoryPath && product.categoryPath.length > 0 && (
                                 <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
                                     <Link
@@ -120,7 +120,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                         </div>
 
                         {/* Title - Below Breadcrumb */}
-                        <div className="mt-4">
+                        <div className="shrink-0 mt-4">
                             <h1 className="text-xl font-bold text-gray-900 leading-snug mb-1">{product.title}</h1>
                             {product.enTitle && (
                                 <span className="text-sm text-gray-400 font-mono">{product.enTitle}</span>

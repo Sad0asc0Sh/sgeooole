@@ -230,9 +230,9 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
     return (
         <>
-            <div className="w-full bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-                <div className="relative w-full h-[260px] lg:h-[400px] bg-gradient-to-b from-gray-50 to-white">
-                    <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-full bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
+                <div className="relative w-full aspect-square min-h-0 min-w-0 bg-gradient-to-b from-gray-50 to-white">
+                    <div className="absolute inset-0 min-h-0 min-w-0">
                         <Swiper
                             spaceBetween={10}
                             slidesPerView={1}
@@ -243,17 +243,17 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             onSwiper={(swiper) => { swiperRef.current = swiper; }}
                             onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                             onClick={() => openGallery(activeIndex)}
-                            className="w-full h-full cursor-pointer"
+                            className="!w-full !h-full cursor-pointer [&_.swiper-slide]:!h-full"
                         >
                             {product.images.map((img, index) => (
-                                <SwiperSlide key={index} className="w-full h-full">
-                                    <div className="relative w-full h-full">
+                                <SwiperSlide key={index} className="!w-full !h-full">
+                                    <div className="relative w-full h-full min-h-0 min-w-0 overflow-hidden">
                                         <ResilientImage
                                             src={img}
                                             alt={`${product.name} - Image ${index + 1}`}
                                             fill
                                             unoptimized
-                                            className="object-contain p-4"
+                                            className="object-contain object-center !p-4"
                                             sizes="(min-width: 1024px) 45vw, 100vw"
                                             priority={index === 0}
                                             loading="eager"
@@ -282,7 +282,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                     </div>
                 </div>
 
-                <div className="flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
+                <div className="shrink-0 flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
                     {product.images.map((img, index) => (
                         <button
                             key={index}
