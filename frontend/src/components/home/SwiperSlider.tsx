@@ -55,7 +55,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                   src={imageUrl}
                   alt={banner.title || "بنر تبلیغاتی"}
                   fill
-                  style={{ objectFit: "cover", objectPosition: "center" }}
+                  className="object-cover object-center md:object-right"
                   loading={index === 0 ? "eager" : "lazy"}
                   priority={index === 0}
                   placeholder="blur"
