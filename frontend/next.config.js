@@ -43,7 +43,7 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
-                hostname: 'ekgkala.ir',
+                hostname: 'www.ekgkala.ir',
             },
             {
                 protocol: 'http',
@@ -65,7 +65,7 @@ const nextConfig = {
     },
 
     async headers() {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ekgkala.ir'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://www.ekgkala.ir/api'
 
         return [
             {
@@ -92,7 +92,7 @@ const nextConfig = {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://ekgkala.ir https://accounts.google.com https://apis.google.com",
+                            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.ekgkala.ir https://accounts.google.com https://apis.google.com",
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: https: blob:",
@@ -141,13 +141,13 @@ const nextConfig = {
             {
                 source: '/:path*',
                 has: [{ type: 'header', key: 'x-forwarded-proto', value: 'http' }],
-                destination: 'https://ekgkala.ir/:path*',
+                destination: 'https://www.ekgkala.ir/:path*',
                 permanent: true,
             },
             {
                 source: '/:path*',
-                has: [{ type: 'host', value: 'www.ekgkala.ir' }],
-                destination: 'https://ekgkala.ir/:path*',
+                has: [{ type: 'host', value: 'ekgkala.ir' }],
+                destination: 'https://www.ekgkala.ir/:path*',
                 permanent: true,
             },
         ]

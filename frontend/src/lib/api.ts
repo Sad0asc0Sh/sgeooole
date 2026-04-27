@@ -21,6 +21,18 @@ const api = axios.create({
   },
 });
 
+const PROTECTED_ROUTE_PREFIXES = [
+  "/admin",
+  "/checkout",
+  "/complete-profile",
+  "/profile",
+];
+
+const isProtectedRoute = (pathname: string) =>
+  PROTECTED_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  );
+
 // Request interceptor - Add auth token if available
 api.interceptors.request.use(
   (config) => {
@@ -55,9 +67,11 @@ api.interceptors.response.use(
         case 401:
           console.error("Unauthorized - Please login");
           if (typeof window !== "undefined") {
-            const isAuthPage = window.location.pathname.startsWith("/login");
-            if (!isAuthPage) {
-              window.location.href = "/login";
+            const { pathname, search, hash } = window.location;
+            const isAuthPage = pathname.startsWith("/login");
+            if (!isAuthPage && isProtectedRoute(pathname)) {
+              const redirectTo = `${pathname}${search}${hash}`;
+              window.location.href = `/login?redirect=${encodeURIComponent(redirectTo)}`;
             }
           }
           break;

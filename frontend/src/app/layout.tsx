@@ -15,7 +15,7 @@ const PARSPACK_ENDPOINT =
 export const metadata: Metadata = {
   metadataBase: (() => {
     const raw = process.env.NEXT_PUBLIC_SITE_URL;
-    if (!raw) return new URL("https://ekgkala.ir");
+    if (!raw) return new URL("https://www.ekgkala.ir");
 
     try {
       return new URL(raw);
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
           "[metadata] Invalid NEXT_PUBLIC_SITE_URL; falling back to default"
         );
       }
-      return new URL("https://ekgkala.ir");
+      return new URL("https://www.ekgkala.ir");
     }
   })(),
   alternates: {
