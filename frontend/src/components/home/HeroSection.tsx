@@ -45,7 +45,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const heroContainerClass = "w-[96%] md:w-[98%] max-w-screen-2xl mx-auto px-2 md:px-4";
   // IMPORTANT: strict wrapper classes must remain EXACTLY as specified
   const heroFrameClass =
-    "relative w-full aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden mt-4";
+    "relative w-full aspect-[21/9] md:aspect-[4/1] rounded-2xl overflow-hidden mt-4";
   const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [loading, setLoading] = useState(initialBanners.length === 0);
   const router = useRouter();
@@ -143,7 +143,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     src={imageUrl}
                     alt={firstBanner.title || "بنر اصلی"}
                     fill
-                    className="object-cover object-center md:object-right"
+                    className="object-cover object-center"
                     priority
                     fetchPriority="high"
                     loading="eager"
