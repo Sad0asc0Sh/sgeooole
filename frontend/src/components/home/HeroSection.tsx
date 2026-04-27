@@ -11,7 +11,7 @@ import dynamic from "next/dynamic";
 const SwiperSlider = dynamic(() => import("./SwiperSlider"), {
   ssr: false,
   loading: () => (
-    <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gray-100 animate-pulse rounded-2xl" />
+    <div className="w-full h-full bg-gray-100 animate-pulse" />
   ),
 });
 
@@ -42,6 +42,9 @@ type HeroSectionProps = {
  */
 
 export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
+  const heroContainerClass = "w-full max-w-7xl mx-auto px-4 mt-4";
+  const heroFrameClass =
+    "relative w-full aspect-[16/9] lg:aspect-[21/9] rounded-2xl overflow-hidden bg-gray-50";
   const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [loading, setLoading] = useState(initialBanners.length === 0);
   const router = useRouter();
@@ -85,8 +88,8 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
   if (loading) {
     return (
-      <section className="w-full max-w-7xl mx-auto px-4 mt-4">
-        <div className="w-full aspect-[16/9] sm:aspect-[21/9] bg-gray-200 animate-pulse rounded-2xl mb-4" />
+      <section className={heroContainerClass}>
+        <div className={`${heroFrameClass} bg-gray-200 animate-pulse mb-4`} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="w-full aspect-[16/5] bg-gray-200 animate-pulse rounded-xl" />
@@ -104,12 +107,10 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const firstBanner = mainBanners[0];
 
   return (
-    <section className="w-full max-w-7xl mx-auto px-4 mt-4">
+    <section className={heroContainerClass}>
       {/* === Single Banner: SSR Only === */}
       {mainBanners.length === 1 && firstBanner && (
-        <div
-          className="relative w-full aspect-[16/9] sm:aspect-[21/9] rounded-2xl overflow-hidden bg-gray-50 shadow-md mb-4"
-        >
+        <div className={`${heroFrameClass} shadow-md mb-4`}>
           {(() => {
             const imageUrl = resolveImageUrl(
               (firstBanner as any).image,
@@ -153,7 +154,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
       {/* === Multiple Banners: LCP first + Swiper for all === */}
       {mainBanners.length > 1 && (
-        <div className="mb-4">
+        <div className={`${heroFrameClass} shadow-md mb-4`}>
           <SwiperSlider banners={mainBanners} />
         </div>
       )}
