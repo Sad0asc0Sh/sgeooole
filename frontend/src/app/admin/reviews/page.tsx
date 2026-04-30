@@ -10,6 +10,7 @@ import {
 import ResilientImage from "@/components/ui/ResilientImage";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 // Stats Component
 const StatCard = ({ title, value, icon: Icon, color }: any) => (
@@ -233,7 +234,17 @@ export default function ReviewsPage() {
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 bg-gray-100 rounded-lg relative overflow-hidden flex-shrink-0 border border-gray-200">
                                                     {(review.product as any)?.images?.[0] ? (
-                                                        <ResilientImage src={(review.product as any).images[0]} alt="" fill className="object-cover" />
+                                                        <ResilientImage
+                                                            src={(review.product as any).images[0]}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover"
+                                                            sizes="40px"
+                                                            loading="lazy"
+                                                            quality={50}
+                                                            placeholder="blur"
+                                                            blurDataURL={getBlurDataURL()}
+                                                        />
                                                     ) : (
                                                         <ShoppingBag className="m-auto text-gray-300" size={16} />
                                                     )}
@@ -457,6 +468,11 @@ export default function ReviewsPage() {
                                                         alt="Product"
                                                         fill
                                                         className="object-cover"
+                                                        sizes="(max-width: 1024px) 100vw, 320px"
+                                                        loading="lazy"
+                                                        quality={65}
+                                                        placeholder="blur"
+                                                        blurDataURL={getBlurDataURL()}
                                                     />
                                                 ) : (
                                                     <ShoppingBag className="m-auto text-gray-300" size={32} />

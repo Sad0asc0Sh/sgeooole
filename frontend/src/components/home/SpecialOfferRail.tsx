@@ -12,6 +12,7 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import { Product } from "@/services/productService";
 import { useSpecialOffers } from "@/hooks/useProducts";
 import { useCountdown } from "@/hooks/useCountdown";
+import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 /**
  * Special Offer Rail Component
@@ -121,7 +122,7 @@ function SpecialOfferRail() {
             className="w-full !px-4 !pb-2"
             grabCursor
           >
-            {products.map((product) => {
+            {products.map((product, index) => {
               const isOutOfStock = product.countInStock === 0;
               const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
               const hasSpecialOfferCountdown = Boolean(
@@ -152,6 +153,13 @@ function SpecialOfferRail() {
                             alt={product.name}
                             fill
                             className={`object-contain group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                            sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
+                            loading={index < 2 ? "eager" : "lazy"}
+                            priority={index < 2}
+                            fetchPriority={index < 2 ? "high" : "auto"}
+                            quality={70}
+                            placeholder="blur"
+                            blurDataURL={getBlurDataURL()}
                             fallbackSrc="/placeholder.png"
                           />
 

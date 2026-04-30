@@ -691,7 +691,7 @@ function ProductListingContent() {
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5"
               >
                 <AnimatePresence mode="popLayout">
-                  {products.map((product) => (
+                  {products.map((product, index) => (
                     <motion.div
                       key={product.id}
                       layout
@@ -700,7 +700,7 @@ function ProductListingContent() {
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <ProductCard product={product} />
+                      <ProductCard product={product} priority={index < 4} />
                     </motion.div>
                   ))}
                 </AnimatePresence>

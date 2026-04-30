@@ -11,6 +11,7 @@ import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 interface ProductRailProps {
   title: string;
@@ -72,7 +73,7 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
           className="w-full !px-4 !pb-4"
           grabCursor
         >
-          {products.map((product) => {
+          {products.map((product, index) => {
             // Check if flash deal countdown is still active
             const isFlashDealActive = Boolean(
               product.isFlashDeal &&
@@ -191,6 +192,13 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
                           alt={product.name}
                           fill
                           className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
+                          priority={index < 3}
+                          fetchPriority={index < 3 ? "high" : "auto"}
+                          loading={index < 3 ? "eager" : "lazy"}
+                          quality={70}
+                          placeholder="blur"
+                          blurDataURL={getBlurDataURL()}
                           fallbackSrc="/placeholder.png"
                         />
 

@@ -189,12 +189,17 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       [style, transitionDuration, phase]
     );
 
+    const shouldPrioritize = Boolean(rest.priority);
     const imageProps: ImageProps = {
       ...rest,
       src: currentSrc,
       alt: alt ?? "",
       className,
       style: imageStyle,
+      placeholder: rest.placeholder ?? "blur",
+      blurDataURL: rest.blurDataURL ?? DEFAULT_BLUR_SVG,
+      loading: rest.loading ?? (shouldPrioritize ? "eager" : "lazy"),
+      fetchPriority: rest.fetchPriority ?? (shouldPrioritize ? "high" : "auto"),
       onError: handleError,
       onLoad: handleLoad,
     };

@@ -14,6 +14,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TrendingUp, ShoppingCart, Star, AlertCircle } from 'lucide-react'
+import { getBlurDataURL } from '@/lib/blurPlaceholder'
 
 // Types
 interface BestsellerScore {
@@ -240,7 +241,12 @@ export default function BestSellers({
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-300"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                        priority={index < 4}
+                        fetchPriority={index < 4 ? 'high' : 'auto'}
+                        loading={index < 4 ? 'eager' : 'lazy'}
+                        placeholder="blur"
+                        blurDataURL={getBlurDataURL()}
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-200 flex items-center justify-center">

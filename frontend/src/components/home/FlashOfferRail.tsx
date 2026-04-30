@@ -115,7 +115,7 @@ function FlashOfferRail() {
           className="w-full !px-4 !pb-2 relative z-10"
           grabCursor
         >
-          {activeFlashDeals.map((product) => {
+          {activeFlashDeals.map((product, index) => {
             // All products here have active countdowns (filtered by activeFlashDeals)
             // Only need to check special offer countdown for price display logic
             const isSpecialOfferCountdownActive = Boolean(
@@ -180,8 +180,10 @@ function FlashOfferRail() {
                           alt={product.name}
                           fill
                           className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                          loading="lazy"
+                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 140px"
+                          loading={index < 2 ? "eager" : "lazy"}
+                          priority={index < 2}
+                          fetchPriority={index < 2 ? "high" : "auto"}
                           quality={75}
                           placeholder="blur"
                           blurDataURL={getBlurDataURL()}

@@ -17,9 +17,10 @@ import { isFlashDealLabel } from "@/lib/flashDealUtils";
 
 interface ProductCardProps {
     product: Product;
+    priority?: boolean;
 }
 
-export default function ProductCard({ product }: ProductCardProps) {
+export default function ProductCard({ product, priority = false }: ProductCardProps) {
     const { addToCart } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [isHovered, setIsHovered] = useState(false);
@@ -215,8 +216,10 @@ export default function ProductCard({ product }: ProductCardProps) {
                             alt={product.title}
                             fill
                             className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                            loading="lazy"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"
+                            loading={priority ? "eager" : "lazy"}
+                            priority={priority}
+                            fetchPriority={priority ? "high" : "auto"}
                             quality={75}
                             placeholder="blur"
                             blurDataURL={getBlurDataURL()}

@@ -14,6 +14,7 @@ import { Product } from "@/services/productService";
 import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 type ProductGalleryProps = {
     product: Product;
@@ -254,11 +255,14 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             fill
                                             unoptimized
                                             className="object-contain object-center !p-4 mix-blend-multiply"
-                                            sizes="(min-width: 1024px) 45vw, 100vw"
+                                            sizes="(max-width: 1023px) 100vw, 45vw"
                                             priority={index === 0}
+                                            fetchPriority={index === 0 ? "high" : "auto"}
                                             loading="eager"
                                             quality={80}
                                             maxRetries={2}
+                                            placeholder="blur"
+                                            blurDataURL={getBlurDataURL()}
                                         />
 
                                         {showCampaignBadge && index === 0 && (
@@ -301,6 +305,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 sizes="(min-width: 1024px) 56px, 48px"
                                 loading="lazy"
                                 quality={60}
+                                placeholder="blur"
+                                blurDataURL={getBlurDataURL()}
                             />
                         </button>
                     ))}
