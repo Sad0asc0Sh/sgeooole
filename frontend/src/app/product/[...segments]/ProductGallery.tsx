@@ -230,9 +230,9 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
     return (
         <>
-            <div className="w-full bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
-                <div className="relative w-full aspect-[4/3] max-h-[45vh] md:aspect-square md:max-h-none min-h-0 min-w-0 bg-white">
-                    <div className="absolute inset-0 min-h-0 min-w-0">
+            <div className="w-full max-w-full min-w-0 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
+                <div className="relative w-full max-w-full aspect-[4/3] max-h-[45vh] md:aspect-square md:max-h-none min-h-0 min-w-0 overflow-hidden bg-white">
+                    <div className="absolute inset-0 min-h-0 min-w-0 max-w-full overflow-hidden">
                         <Swiper
                             spaceBetween={10}
                             slidesPerView={1}
@@ -243,7 +243,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             onSwiper={(swiper) => { swiperRef.current = swiper; }}
                             onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                             onClick={() => openGallery(activeIndex)}
-                            className="!w-full !h-full cursor-pointer [&_.swiper-slide]:!h-full"
+                            className="!w-full !h-full !max-w-full cursor-pointer [&_.swiper-slide]:!h-full [&_.swiper-wrapper]:!max-w-full"
                         >
                             {product.images.map((img, index) => (
                                 <SwiperSlide key={index} className="!w-full !h-full">
@@ -282,7 +282,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                     </div>
                 </div>
 
-                <div className="shrink-0 flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
+                <div className="shrink-0 min-w-0 flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
                     {product.images.map((img, index) => (
                         <button
                             key={index}

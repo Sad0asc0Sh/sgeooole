@@ -71,9 +71,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
             {/* Desktop Two-Column Layout - With proper header clearance */}
             <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8 pt-8">
-                <div className="flex flex-row-reverse gap-10">
+                <div className="flex flex-row-reverse gap-10 min-w-0">
                     {/* Right Column - Gallery + Breadcrumb + Title (all sticky together) */}
-                    <div className="w-[45%] flex-shrink-0 self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)]">
+                    <div className="w-[45%] max-w-[45%] min-w-0 flex-shrink self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)]">
                         <ProductGallery product={product} />
 
                         {/* Breadcrumb - Below Gallery */}
