@@ -231,7 +231,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     return (
         <>
             <div className="w-full max-w-full min-w-0 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
-                <div className="relative w-full max-w-full aspect-[4/3] max-h-[45vh] md:aspect-square md:max-h-none min-h-0 min-w-0 overflow-hidden bg-white">
+                <div className="relative w-full max-w-full aspect-[4/3] max-h-[45vh] supports-[height:100dvh]:max-h-[45dvh] [@media(pointer:coarse)]:max-h-[42svh] md:aspect-square md:max-h-none [@media(pointer:coarse)]:md:max-h-[42svh] min-h-0 min-w-0 overflow-hidden bg-white">
                     <div className="absolute inset-0 min-h-0 min-w-0 max-w-full overflow-hidden">
                         <Swiper
                             spaceBetween={10}
