@@ -26,7 +26,7 @@ const PAYMENT_METHODS = ['online', 'cod', 'wallet', 'credit'];
  * Create order schema
  */
 const orderCreateSchema = Joi.object({
-    items: Joi.array()
+    orderItems: Joi.array()
         .items(Joi.object({
             product: Joi.string()
                 .pattern(objectIdPattern)
@@ -35,6 +35,7 @@ const orderCreateSchema = Joi.object({
                     'string.pattern.base': 'شناسه محصول نامعتبر است',
                     'any.required': 'شناسه محصول الزامی است',
                 }),
+            name: Joi.string().required(),
             quantity: Joi.number()
                 .integer()
                 .min(1)
@@ -46,12 +47,13 @@ const orderCreateSchema = Joi.object({
                     'any.required': 'تعداد الزامی است',
                 }),
             price: Joi.number()
-                .positive()
-                .optional(), // Server will verify from DB
-            variant: Joi.object({
-                name: Joi.string().trim().max(100).optional(),
-                value: Joi.string().trim().max(100).optional(),
-            }).optional(),
+                .min(0)
+                .required(),
+            image: Joi.string().allow('', null).optional(),
+            variantOptions: Joi.array().items(Joi.object({
+                name: Joi.string().trim().optional(),
+                value: Joi.string().trim().optional(),
+            })).optional(),
         }))
         .min(1)
         .max(100)
@@ -63,13 +65,12 @@ const orderCreateSchema = Joi.object({
         }),
 
     shippingAddress: Joi.object({
-        recipientName: Joi.string()
+        fullName: Joi.string()
             .trim()
             .min(2)
             .max(100)
             .required(),
-        recipientMobile: Joi.string()
-            .pattern(iranMobilePattern)
+        phone: Joi.string()
             .required(),
         province: Joi.string()
             .trim()
@@ -83,12 +84,17 @@ const orderCreateSchema = Joi.object({
             .required(),
         address: Joi.string()
             .trim()
-            .min(10)
-            .max(500)
+            .min(5)
+            .max(1000)
             .required(),
         postalCode: Joi.string()
-            .pattern(/^\d{10}$/)
             .required(),
+        mobile: Joi.string().optional().allow('', null),
+        nationalCode: Joi.string().optional().allow('', null),
+        recipientName: Joi.string().optional().allow('', null),
+        recipientPhone: Joi.string().optional().allow('', null),
+        recipientNationalCode: Joi.string().optional().allow('', null),
+        isDefault: Joi.boolean().optional(),
     }).required().messages({
         'any.required': 'آدرس ارسال الزامی است',
     }),
@@ -101,6 +107,13 @@ const orderCreateSchema = Joi.object({
             'any.required': 'روش پرداخت الزامی است',
         }),
 
+    itemsPrice: Joi.number().min(0).required(),
+    shippingPrice: Joi.number().min(0).required(),
+    shippingMethod: Joi.string().optional().allow('', null),
+    taxPrice: Joi.number().min(0).optional(),
+    totalPrice: Joi.number().min(0).required(),
+    totalDiscount: Joi.number().min(0).optional(),
+
     couponCode: Joi.string()
         .trim()
         .max(50)
@@ -109,19 +122,16 @@ const orderCreateSchema = Joi.object({
 
     note: Joi.string()
         .trim()
-        .max(500)
+        .max(1000)
         .optional()
         .allow('')
         .messages({
-            'string.max': 'یادداشت نباید بیشتر از ۵۰۰ کاراکتر باشد',
+            'string.max': 'یادداشت نباید بیشتر از ۱۰۰۰ کاراکتر باشد',
         }),
 
     addressId: Joi.string()
         .pattern(objectIdPattern)
-        .optional()
-        .messages({
-            'string.pattern.base': 'شناسه آدرس نامعتبر است',
-        }),
+        .optional(),
 });
 
 /**
