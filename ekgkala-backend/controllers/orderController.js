@@ -602,7 +602,14 @@ exports.payOrder = async (req, res) => {
     }
 
     // URL بازگشت بعد از پرداخت
-    const callbackUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/result`
+    let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+    // اطمینان از وجود پروتکل
+    if (!frontendUrl.startsWith('http')) {
+      frontendUrl = `https://${frontendUrl}`
+    }
+    // حذف اسلش اضافه در انتها
+    frontendUrl = frontendUrl.replace(/\/$/, '')
+    const callbackUrl = `${frontendUrl}/payment/result`
 
     // دریافت درگاه انتخابی از درخواست (اگر ارسال شده باشد)
     const selectedGateway = req.body.gateway || req.query.gateway

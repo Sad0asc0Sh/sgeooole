@@ -22,9 +22,10 @@ const isProduction = process.env.NODE_ENV === 'production'
 exports.requestPayment = async ({ amount, callbackUrl, description, email, mobile, config }) => {
   try {
     const { merchantId, isSandbox } = config
+    const trimmedMerchantId = merchantId ? String(merchantId).trim() : null
 
     // بررسی وجود Merchant ID
-    if (!merchantId) {
+    if (!trimmedMerchantId) {
       throw new Error('تنظیمات درگاه زرین‌پال ناقص است. Merchant ID وارد نشده است.')
     }
 
@@ -38,18 +39,29 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
       : 'https://www.zarinpal.com/pg/StartPay/'
 
     // تبدیل تومان به ریال (ZarinPal V4 معمولاً ریال می‌پذیرد)
-    const amountInRials = amount * 10
+    // اطمینان از عدد صحیح بودن مبلغ
+    const amountInRials = Math.round(amount * 10)
+
+    // حداقل مبلغ تراکنش در زرین‌پال ۱۰۰۰ ریال است
+    if (amountInRials < 1000) {
+      throw new Error('مبلغ تراکنش باید حداقل ۱۰۰ تومان (۱۰۰۰ ریال) باشد.')
+    }
 
     // ارسال درخواست به زرین‌پال
     const requestData = {
-      merchant_id: merchantId,
+      merchant_id: trimmedMerchantId,
       amount: amountInRials,
       callback_url: callbackUrl,
       description: description || 'پرداخت سفارش',
-      metadata: {
-        email: email || '',
-        mobile: mobile || '',
-      },
+      metadata: {},
+    }
+
+    if (email) requestData.metadata.email = String(email)
+    if (mobile) requestData.metadata.mobile = String(mobile)
+
+    // اگر متادیتا خالی است، فیلد را حذف می‌کنیم (برخی پیاده‌سازی‌ها اختیاری است)
+    if (Object.keys(requestData.metadata).length === 0) {
+      delete requestData.metadata
     }
 
     // SECURITY: Only log non-sensitive data
@@ -65,10 +77,11 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
       timeout: 15000, // 15 seconds timeout
     })
 
-    const { data } = response.data
+    const responseData = response.data
+    const { data, errors } = responseData
 
     // بررسی کد وضعیت (100 = موفق)
-    if (data.code === 100) {
+    if (data && data.code === 100) {
       logger.payment('ZarinPal payment request successful', {
         authority: data.authority.substring(0, 8) + '***',
       })
@@ -80,21 +93,33 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
         gateway: 'zarinpal',
       }
     } else {
-      const errorMsg = `خطای درگاه زرین‌پال: کد ${data.code}`
-      logger.error(errorMsg)
+      const code = data ? data.code : (errors ? errors.code : 'unknown')
+      const message = errors ? JSON.stringify(errors) : getErrorMessage(code)
+      const errorMsg = `خطای درگاه زرین‌پال: ${message} (کد: ${code})`
+
+      logger.error('ZarinPal Payment Request Failed', { code, errors })
       throw new Error(errorMsg)
     }
   } catch (error) {
-    logger.error('خطا در درخواست پرداخت زرین‌پال', { error: error.message })
-
     if (error.response) {
+      const apiErrors = error.response.data?.errors
+      const apiData = error.response.data?.data
+      const code = apiData?.code || (Array.isArray(apiErrors) ? 'Validation Error' : error.response.status)
+
+      const detailedError = apiErrors
+        ? (Array.isArray(apiErrors) ? apiErrors.join(', ') : JSON.stringify(apiErrors))
+        : error.message
+
       logger.error('ZarinPal API error response', {
         status: error.response.status,
-        // Don't log full response body - may contain sensitive data
+        errors: apiErrors,
+        data: apiData
       })
-      throw new Error(`خطای درگاه زرین‌پال: ${error.response.data.errors || error.message}`)
+
+      throw new Error(`خطای درگاه زرین‌پال: ${detailedError} (کد: ${code})`)
     }
 
+    logger.error('Error in ZarinPal requestPayment:', { error: error.message })
     throw error
   }
 }
@@ -110,6 +135,11 @@ exports.requestPayment = async ({ amount, callbackUrl, description, email, mobil
 exports.verifyPayment = async ({ amount, authority, config }) => {
   try {
     const { merchantId, isSandbox } = config
+    const trimmedMerchantId = merchantId ? String(merchantId).trim() : null
+
+    if (!trimmedMerchantId) {
+      throw new Error('تنظیمات درگاه زرین‌پال ناقص است. Merchant ID وارد نشده است.')
+    }
 
     // تعیین URL بر اساس حالت Sandbox یا Production
     const baseUrl = isSandbox
@@ -117,10 +147,10 @@ exports.verifyPayment = async ({ amount, authority, config }) => {
       : 'https://api.zarinpal.com/pg/v4/payment'
 
     // تبدیل تومان به ریال
-    const amountInRials = amount * 10
+    const amountInRials = Math.round(amount * 10)
 
     const verifyData = {
-      merchant_id: merchantId,
+      merchant_id: trimmedMerchantId,
       amount: amountInRials,
       authority: authority,
     }
