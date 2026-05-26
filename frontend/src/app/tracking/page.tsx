@@ -94,14 +94,14 @@ export default function TrackingPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             {/* Header */}
-            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:static">
-                <Link href="/" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:static md:bg-transparent md:shadow-none md:max-w-4xl md:mx-auto md:px-0 md:pt-8 md:mb-4">
+                <Link href="/" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors md:bg-white md:shadow-sm">
                     <ChevronRight size={24} />
                 </Link>
-                <h1 className="font-bold text-lg text-gray-800">پیگیری سفارش</h1>
+                <h1 className="font-bold text-lg text-gray-800 md:text-2xl md:font-black">پیگیری سفارش</h1>
             </div>
 
-            <div className="p-4 space-y-6">
+            <div className="p-4 space-y-6 md:max-w-4xl md:mx-auto md:px-0">
                 {/* Info Card */}
                 <div className="bg-gradient-to-br from-kala-50 to-blue-50 rounded-2xl p-5 border border-kala-100">
                     <div className="flex items-start gap-3">

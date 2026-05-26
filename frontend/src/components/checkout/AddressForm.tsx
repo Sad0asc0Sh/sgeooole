@@ -60,8 +60,8 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white w-full max-w-lg rounded-t-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/50 backdrop-blur-sm p-0 md:p-4">
+      <div className="bg-white w-full max-w-lg rounded-t-3xl md:rounded-3xl p-6 animate-slide-up max-h-[90vh] overflow-y-auto shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-900">افزودن آدرس جدید</h2>
@@ -205,11 +205,10 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`flex-1 py-3 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${
-                isSubmitting
+              className={`flex-1 py-3 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${isSubmitting
                   ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                   : "bg-amber-600 text-white hover:bg-amber-700"
-              }`}
+                }`}
             >
               {isSubmitting ? (
                 <>

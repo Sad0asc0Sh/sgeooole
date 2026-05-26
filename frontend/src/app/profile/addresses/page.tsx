@@ -316,14 +316,14 @@ export default function AddressesPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24">
             {/* Header */}
-            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:static">
-                <Link href="/profile" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:bg-transparent md:shadow-none md:max-w-4xl md:mx-auto md:px-0 md:pt-8 md:mb-4">
+                <Link href="/profile" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors md:bg-white md:shadow-sm">
                     <ChevronRight size={24} />
                 </Link>
-                <h1 className="font-bold text-lg text-gray-800">مدیریت آدرس‌ها</h1>
+                <h1 className="font-bold text-lg text-gray-800 md:text-2xl md:font-black">مدیریت آدرس‌ها</h1>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 md:max-w-4xl md:mx-auto md:px-0">
                 {addresses.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
@@ -339,7 +339,7 @@ export default function AddressesPage() {
                         </button>
                     </div>
                 ) : (
-                    <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {addresses.map((addr) => (
                             <div key={addr._id} className={`bg-white rounded-2xl p-5 border transition-all ${addr.isDefault ? 'border-kala-500 shadow-md shadow-kala-100' : 'border-gray-100 shadow-sm'}`}>
                                 <div className="flex justify-between items-start mb-4">
@@ -394,12 +394,12 @@ export default function AddressesPage() {
 
                         <button
                             onClick={handleOpenAdd}
-                            className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl hover:border-kala-500 hover:text-kala-600 hover:bg-kala-50 transition-all flex items-center justify-center gap-2"
+                            className="w-full bg-white border-2 border-dashed border-gray-300 text-gray-500 font-bold py-4 rounded-2xl hover:border-kala-500 hover:text-kala-600 hover:bg-kala-50 transition-all flex items-center justify-center gap-2 md:col-span-2"
                         >
                             <Plus size={20} />
                             افزودن آدرس جدید
                         </button>
-                    </>
+                    </div>
                 )}
             </div>
 
