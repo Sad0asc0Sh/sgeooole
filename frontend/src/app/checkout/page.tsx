@@ -367,7 +367,6 @@ export default function CheckoutPage() {
                 recipientName: finalRecipientName,
                 recipientPhone: finalRecipientPhone,
                 recipientNationalCode: finalRecipientNationalCode,
-                phone: finalRecipientPhone // For delivery contact
             };
 
             let response;

@@ -8,9 +8,11 @@ export interface Address {
   user: string;
   recipientName: string;
   recipientPhone: string;
-  province?: string;
+  province: string;
   city: string;
   address: string;
+  plaque: string;
+  unit?: string;
   postalCode: string;
   isDefault: boolean;
   createdAt: string;
@@ -23,9 +25,11 @@ export interface Address {
 export interface CreateAddressRequest {
   recipientName: string;
   recipientPhone: string;
-  province?: string;
+  province: string;
   city: string;
   address: string;
+  plaque: string;
+  unit?: string;
   postalCode: string;
   isDefault?: boolean;
 }
@@ -33,7 +37,7 @@ export interface CreateAddressRequest {
 /**
  * Update Address Request
  */
-export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+export interface UpdateAddressRequest extends Partial<CreateAddressRequest> { }
 
 /**
  * Address Service Response

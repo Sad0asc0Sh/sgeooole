@@ -189,11 +189,11 @@ const addressSchema = Joi.object({
         }),
 
     // Buyer info (optional)
-    fullName: Joi.string().trim().min(2).max(100).optional(),
+    fullName: Joi.string().trim().min(2).max(100).optional().allow(''),
 
-    mobile: Joi.string().pattern(iranMobilePattern).optional(),
+    mobile: Joi.string().pattern(iranMobilePattern).optional().allow(''),
 
-    nationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+    nationalCode: Joi.string().pattern(/^\d{10}$/).optional().allow(''),
 
     recipientName: Joi.string()
         .trim()
@@ -207,17 +207,20 @@ const addressSchema = Joi.object({
         }),
 
     // Recipient phone (accept both legacy `recipientMobile` and canonical `recipientPhone`)
-    recipientPhone: Joi.string().pattern(iranMobilePattern).optional(),
+    recipientPhone: Joi.string().pattern(iranMobilePattern).optional().allow(''),
 
-    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional().allow(''),
 
     recipientMobile: Joi.string()
         .pattern(iranMobilePattern)
         .optional()
+        .allow('')
         .messages({
             'string.pattern.base': 'شماره موبایل گیرنده باید در فرمت 09xxxxxxxxx باشد',
-            'any.required': 'شماره موبایل گیرنده الزامی است',
         }),
+
+    // Extra field sent by some frontend forms
+    phone: Joi.string().pattern(iranMobilePattern).optional().allow(''),
 
     province: Joi.string()
         .trim()
@@ -280,7 +283,7 @@ const addressSchema = Joi.object({
         lat: Joi.number().min(-90).max(90).optional(),
         lng: Joi.number().min(-180).max(180).optional(),
     }).optional(),
-}).or('recipientPhone', 'recipientMobile');
+}).or('recipientPhone', 'recipientMobile', 'phone');
 
 /**
  * Address update schema (all fields optional)

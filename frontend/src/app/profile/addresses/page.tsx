@@ -238,6 +238,9 @@ export default function AddressesPage() {
             // Build payload with ONLY backend-expected fields
             const payload: any = {
                 // Required by backend addressSchema
+                fullName: buyerFullName,
+                mobile: buyerInfo.mobile,
+                nationalCode: buyerInfo.nationalCode,
                 recipientName: finalRecipientName,
                 recipientMobile: finalRecipientMobile,
                 province: addressInfo.province,

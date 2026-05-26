@@ -15,6 +15,8 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
     province: "",
     city: "",
     address: "",
+    plaque: "",
+    unit: "",
     postalCode: "",
     isDefault: false,
   });
@@ -37,7 +39,7 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
     setError(null);
 
     // Validation
-    if (!formData.recipientName || !formData.recipientPhone || !formData.city || !formData.address || !formData.postalCode) {
+    if (!formData.recipientName || !formData.recipientPhone || !formData.province || !formData.city || !formData.address || !formData.plaque || !formData.postalCode) {
       setError("لطفاً تمام فیلدهای الزامی را پر کنید");
       return;
     }
@@ -111,7 +113,7 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                استان
+                استان *
               </label>
               <input
                 type="text"
@@ -120,6 +122,7 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
                 onChange={handleChange}
                 placeholder="تهران"
                 className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                required
               />
             </div>
             <div>
@@ -147,28 +150,57 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
               name="address"
               value={formData.address}
               onChange={handleChange}
-              placeholder="خیابان، کوچه، پلاک، واحد"
+              placeholder="خیابان، کوچه، ..."
               rows={3}
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 resize-none"
               required
             />
           </div>
 
-          {/* Postal Code */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              کد پستی (10 رقم) *
-            </label>
-            <input
-              type="text"
-              name="postalCode"
-              value={formData.postalCode}
-              onChange={handleChange}
-              placeholder="1234567890"
-              maxLength={10}
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-              required
-            />
+          {/* Plaque & Unit & Postal Code */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                پلاک *
+              </label>
+              <input
+                type="text"
+                name="plaque"
+                value={formData.plaque}
+                onChange={handleChange}
+                placeholder="10"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                واحد
+              </label>
+              <input
+                type="text"
+                name="unit"
+                value={formData.unit}
+                onChange={handleChange}
+                placeholder="5"
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                کد پستی *
+              </label>
+              <input
+                type="text"
+                name="postalCode"
+                value={formData.postalCode}
+                onChange={handleChange}
+                placeholder="1234567890"
+                maxLength={10}
+                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                required
+              />
+            </div>
           </div>
 
           {/* Set as Default */}
@@ -206,8 +238,8 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
               type="submit"
               disabled={isSubmitting}
               className={`flex-1 py-3 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 ${isSubmitting
-                  ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                  : "bg-amber-600 text-white hover:bg-amber-700"
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-amber-600 text-white hover:bg-amber-700"
                 }`}
             >
               {isSubmitting ? (
