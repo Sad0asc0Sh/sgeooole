@@ -5,6 +5,7 @@
  */
 
 const Joi = require('joi');
+const { normalizeIranMobile, toEnglishDigits } = require('../../utils/phone');
 
 // MongoDB ObjectId pattern
 const objectIdPattern = /^[0-9a-fA-F]{24}$/;
@@ -17,6 +18,36 @@ const nationalCodePattern = /^\d{10}$/;
 
 // Iranian SHEBA pattern (IR followed by 24 digits)
 const shebaPattern = /^IR\d{24}$/;
+
+const normalizeIranMobileOptionalForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return undefined;
+
+    const normalized = normalizeIranMobile(value);
+    if (!normalized) {
+        return helpers.message('شماره موبایل معتبر نیست (فرمت درست: 09xxxxxxxxx)');
+    }
+    return normalized;
+};
+
+const normalizeNationalCodeOptionalForJoi = (value, helpers) => {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string' && value.trim() === '') return '';
+
+    const normalized = toEnglishDigits(value).replace(/\D/g, '');
+    if (!/^\d{10}$/.test(normalized)) {
+        return helpers.message('کد ملی باید ۱۰ رقم باشد');
+    }
+    return normalized;
+};
+
+const normalizePostalCodeForJoi = (value, helpers) => {
+    const normalized = toEnglishDigits(value).replace(/\D/g, '');
+    if (!/^\d{10}$/.test(normalized)) {
+        return helpers.message('کد پستی باید ۱۰ رقم باشد');
+    }
+    return normalized;
+};
 
 // ============================================
 // User Schemas
@@ -191,9 +222,9 @@ const addressSchema = Joi.object({
     // Buyer info (optional)
     fullName: Joi.string().trim().min(2).max(100).optional().allow(''),
 
-    mobile: Joi.string().pattern(iranMobilePattern).optional().allow(''),
+    mobile: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
-    nationalCode: Joi.string().pattern(/^\d{10}$/).optional().allow(''),
+    nationalCode: Joi.any().custom(normalizeNationalCodeOptionalForJoi, 'national code normalizer').optional(),
 
     recipientName: Joi.string()
         .trim()
@@ -207,20 +238,16 @@ const addressSchema = Joi.object({
         }),
 
     // Recipient phone (accept both legacy `recipientMobile` and canonical `recipientPhone`)
-    recipientPhone: Joi.string().pattern(iranMobilePattern).optional().allow(''),
+    recipientPhone: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
-    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional().allow(''),
+    recipientNationalCode: Joi.any().custom(normalizeNationalCodeOptionalForJoi, 'national code normalizer').optional(),
 
-    recipientMobile: Joi.string()
-        .pattern(iranMobilePattern)
-        .optional()
-        .allow('')
-        .messages({
-            'string.pattern.base': 'شماره موبایل گیرنده باید در فرمت 09xxxxxxxxx باشد',
-        }),
+    recipientMobile: Joi.any()
+        .custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer')
+        .optional(),
 
     // Extra field sent by some frontend forms
-    phone: Joi.string().pattern(iranMobilePattern).optional().allow(''),
+    phone: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
     province: Joi.string()
         .trim()
@@ -269,8 +296,8 @@ const addressSchema = Joi.object({
             'string.max': 'واحد نباید بیشتر از ۲۰ کاراکتر باشد',
         }),
 
-    postalCode: Joi.string()
-        .pattern(/^\d{10}$/)
+    postalCode: Joi.any()
+        .custom(normalizePostalCodeForJoi, 'postal code normalizer')
         .required()
         .messages({
             'string.pattern.base': 'کد پستی باید ۱۰ رقم باشد',
@@ -297,9 +324,9 @@ const addressUpdateSchema = Joi.object({
     // Buyer info (optional)
     fullName: Joi.string().trim().min(2).max(100).optional(),
 
-    mobile: Joi.string().pattern(iranMobilePattern).optional(),
+    mobile: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
-    nationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+    nationalCode: Joi.any().custom(normalizeNationalCodeOptionalForJoi, 'national code normalizer').optional(),
 
     recipientName: Joi.string()
         .trim()
@@ -308,11 +335,11 @@ const addressUpdateSchema = Joi.object({
         .optional(),
 
     // Recipient phone (accept both legacy `recipientMobile` and canonical `recipientPhone`)
-    recipientPhone: Joi.string().pattern(iranMobilePattern).optional(),
+    recipientPhone: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
-    recipientMobile: Joi.string().pattern(iranMobilePattern).optional(),
+    recipientMobile: Joi.any().custom(normalizeIranMobileOptionalForJoi, 'iran mobile normalizer').optional(),
 
-    recipientNationalCode: Joi.string().pattern(/^\d{10}$/).optional(),
+    recipientNationalCode: Joi.any().custom(normalizeNationalCodeOptionalForJoi, 'national code normalizer').optional(),
 
     province: Joi.string()
         .trim()
@@ -343,9 +370,7 @@ const addressUpdateSchema = Joi.object({
         .optional()
         .allow(''),
 
-    postalCode: Joi.string()
-        .pattern(/^\d{10}$/)
-        .optional(),
+    postalCode: Joi.any().custom(normalizePostalCodeForJoi, 'postal code normalizer').optional(),
 
     isDefault: Joi.boolean().optional(),
 
@@ -363,3 +388,4 @@ module.exports = {
     addressSchema,
     addressUpdateSchema,
 };
+

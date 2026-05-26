@@ -540,7 +540,13 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error("Error adding address:", error);
-      throw new Error(error.response?.data?.message || "خطا در ثبت آدرس");
+      const validationMessage = error.response?.data?.errors?.[0]?.message;
+      throw new Error(
+        validationMessage ||
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to save address"
+      );
     }
   },
 
@@ -556,7 +562,13 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       console.error("Error updating address:", error);
-      throw new Error(error.response?.data?.message || "خطا در ویرایش آدرس");
+      const validationMessage = error.response?.data?.errors?.[0]?.message;
+      throw new Error(
+        validationMessage ||
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Failed to update address"
+      );
     }
   },
 
@@ -737,3 +749,4 @@ export const authService = {
 if (typeof window !== "undefined") {
   authService.initializeAuth();
 }
+

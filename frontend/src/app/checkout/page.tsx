@@ -10,6 +10,7 @@ import { authService, User as UserType } from "@/services/authService";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import api from "@/lib/api";
+import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
 
 interface Address {
     _id?: string;
@@ -311,49 +312,69 @@ export default function CheckoutPage() {
     };
 
     const handleSubmitAddress = async () => {
-        // 1. Validate Buyer Info
         if (!buyerInfo.firstName || !buyerInfo.lastName) {
-            alert("لطفا نام و نام خانوادگی خود (خریدار) را وارد کنید");
-            return;
-        }
-        if (!buyerInfo.mobile) {
-            alert("شماره موبایل خریدار الزامی است");
-            return;
-        }
-        if (!buyerInfo.nationalCode || buyerInfo.nationalCode.length !== 10) {
-            alert("کد ملی خریدار الزامی است و باید ۱۰ رقم باشد");
+            alert("Please enter buyer first and last name.");
             return;
         }
 
-        // 2. Validate Address Info
-        if (!addressInfo.province || !addressInfo.city || !addressInfo.address || !addressInfo.plaque || !addressInfo.postalCode) {
-            alert("لطفا اطلاعات آدرس (استان، شهر، آدرس، پلاک، کد پستی) را کامل کنید");
+        const normalizedBuyerMobile = normalizeIranMobile(buyerInfo.mobile);
+        if (!normalizedBuyerMobile) {
+            alert("Buyer mobile number is invalid (example: 09123456789).");
             return;
         }
 
-        // 3. Validate Recipient Info (if !isRecipientMe)
+        const normalizedBuyerNationalCode = toDigitsOnly(buyerInfo.nationalCode);
+        if (!/^\d{10}$/.test(normalizedBuyerNationalCode)) {
+            alert("Buyer national code must be exactly 10 digits.");
+            return;
+        }
+
+        const normalizedProvince = addressInfo.province.trim();
+        const normalizedCity = addressInfo.city.trim();
+        const normalizedAddress = addressInfo.address.trim();
+        const normalizedPlaque = addressInfo.plaque.trim();
+        const normalizedPostalCode = toDigitsOnly(addressInfo.postalCode);
+
+        if (!normalizedProvince || !normalizedCity || !normalizedAddress || !normalizedPlaque || !normalizedPostalCode) {
+            alert("Please complete province, city, address, plaque, and postal code.");
+            return;
+        }
+        if (normalizedAddress.length < 10) {
+            alert("Address must be at least 10 characters.");
+            return;
+        }
+        if (!/^\d{10}$/.test(normalizedPostalCode)) {
+            alert("Postal code must be exactly 10 digits.");
+            return;
+        }
+
         const buyerFullName = `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim();
 
         let finalRecipientName = buyerFullName;
-        let finalRecipientPhone = buyerInfo.mobile;
-        let finalRecipientNationalCode = buyerInfo.nationalCode;
+        let finalRecipientPhone = normalizedBuyerMobile;
+        let finalRecipientNationalCode = normalizedBuyerNationalCode;
 
         if (!isRecipientMe) {
             if (!recipientInfo.firstName || !recipientInfo.lastName) {
-                alert("لطفا نام و نام خانوادگی گیرنده را وارد کنید");
+                alert("Please enter recipient first and last name.");
                 return;
             }
-            if (!recipientInfo.mobile) {
-                alert("شماره موبایل گیرنده الزامی است");
+
+            const normalizedRecipientMobile = normalizeIranMobile(recipientInfo.mobile);
+            if (!normalizedRecipientMobile) {
+                alert("Recipient mobile number is invalid (example: 09123456789).");
                 return;
             }
-            if (!recipientInfo.nationalCode || recipientInfo.nationalCode.length !== 10) {
-                alert("کد ملی گیرنده الزامی است و باید ۱۰ رقم باشد");
+
+            const normalizedRecipientNationalCode = toDigitsOnly(recipientInfo.nationalCode);
+            if (!/^\d{10}$/.test(normalizedRecipientNationalCode)) {
+                alert("Recipient national code must be exactly 10 digits.");
                 return;
             }
+
             finalRecipientName = `${recipientInfo.firstName} ${recipientInfo.lastName}`.trim();
-            finalRecipientPhone = recipientInfo.mobile;
-            finalRecipientNationalCode = recipientInfo.nationalCode;
+            finalRecipientPhone = normalizedRecipientMobile;
+            finalRecipientNationalCode = normalizedRecipientNationalCode;
         }
 
         try {
@@ -361,12 +382,17 @@ export default function CheckoutPage() {
 
             const payload = {
                 ...addressInfo,
-                fullName: buyerFullName, // Always Buyer Name
-                mobile: buyerInfo.mobile, // Always Buyer Mobile
-                nationalCode: buyerInfo.nationalCode, // Always Buyer National Code
+                fullName: buyerFullName,
+                mobile: normalizedBuyerMobile,
+                nationalCode: normalizedBuyerNationalCode,
                 recipientName: finalRecipientName,
                 recipientPhone: finalRecipientPhone,
                 recipientNationalCode: finalRecipientNationalCode,
+                province: normalizedProvince,
+                city: normalizedCity,
+                address: normalizedAddress,
+                plaque: normalizedPlaque,
+                postalCode: normalizedPostalCode,
             };
 
             let response;
@@ -397,7 +423,7 @@ export default function CheckoutPage() {
                 setSheetOpen(false);
             }
         } catch (err: any) {
-            alert(err.message || "خطا در ذخیره آدرس");
+            alert(err.message || "Failed to save address.");
         } finally {
             setSubmitLoading(false);
         }
@@ -1140,3 +1166,5 @@ export default function CheckoutPage() {
         </ProtectedRoute>
     );
 }
+
+
