@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
+import { CheckCircle, XCircle, Loader2, ArrowRight, CreditCard } from "lucide-react";
 import Link from "next/link";
 
 function PaymentResultContent() {
@@ -11,6 +11,38 @@ function PaymentResultContent() {
   const [verifying, setVerifying] = useState(true);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    if (!result?.orderId && !error?.includes("پرداخت توسط کاربر لغو شد")) {
+      // If we don't have orderId, we might need to get it from context or previous state
+      // But usually verify-payment returns orderId even on failure
+      router.push("/profile/orders?status=pending");
+      return;
+    }
+
+    const orderIdToRetry = result?.orderId || searchParams.get("orderId");
+
+    if (!orderIdToRetry) {
+      router.push("/profile/orders?status=pending");
+      return;
+    }
+
+    try {
+      setRetrying(true);
+      const res = await api.post(`/orders/${orderIdToRetry}/pay`);
+      if (res.data.success && res.data.data.paymentUrl) {
+        window.location.href = res.data.data.paymentUrl;
+      } else {
+        setError(res.data.message || "خطا در ایجاد درخواست پرداخت مجدد");
+      }
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "خطا در اتصال به درگاه پرداخت");
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   useEffect(() => {
     verifyPayment();
@@ -27,12 +59,8 @@ function PaymentResultContent() {
         return;
       }
 
-      // Check if user cancelled
-      if (status === "NOK" || status === "Cancel") {
-        setError("پرداخت توسط کاربر لغو شد");
-        setVerifying(false);
-        return;
-      }
+      // NOTE: We don't return early here anymore. 
+      // We let the backend handle Status="NOK" so it can return the orderId for our Retry button.
 
       // Verify payment with backend
       const res = await api.post("/orders/verify-payment", {
@@ -44,6 +72,10 @@ function PaymentResultContent() {
         setResult(res.data.data);
       } else {
         setError(res.data.message || "تایید پرداخت ناموفق بود");
+        // Capture orderId from error response if available for retry
+        if (res.data.orderId) {
+          setResult({ orderId: res.data.orderId });
+        }
       }
     } catch (err: any) {
       console.error("Payment verification error:", err);
@@ -51,6 +83,9 @@ function PaymentResultContent() {
         err?.response?.data?.message ||
         "خطا در تایید پرداخت. لطفاً با پشتیبانی تماس بگیرید"
       );
+      if (err?.response?.data?.orderId) {
+        setResult({ orderId: err.response.data.orderId });
+      }
     } finally {
       setVerifying(false);
     }
@@ -91,6 +126,23 @@ function PaymentResultContent() {
           <p className="text-gray-600 mb-6">{error}</p>
 
           <div className="space-y-3">
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-kala-600 text-white rounded-xl font-bold hover:bg-kala-700 transition-colors disabled:bg-gray-400"
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="animate-spin" size={20} />
+                  در حال اتصال...
+                </>
+              ) : (
+                <>
+                  <CreditCard size={20} />
+                  تلاش مجدد برای پرداخت
+                </>
+              )}
+            </button>
             <Link
               href="/profile/orders"
               className="block w-full px-6 py-3 bg-kala-600 text-white rounded-xl font-bold hover:bg-kala-700 transition-colors"
