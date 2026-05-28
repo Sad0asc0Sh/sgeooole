@@ -24,7 +24,11 @@
     "clean": "npm run clean:backend && npm run clean:frontend && npm run clean:admin",
     "clean:backend": "cd ekgkala-backend && rm -rf node_modules",
     "clean:frontend": "cd frontend && rm -rf node_modules",
-    "clean:admin": "cd admin && rm -rf node_modules"
+    "clean:admin": "cd admin && rm -rf node_modules",
+    "audit:all": "npm run audit:backend && npm run audit:frontend && npm run audit:admin",
+    "audit:backend": "cd ekgkala-backend && npm audit --omit=dev",
+    "audit:frontend": "cd frontend && npm audit --omit=dev",
+    "audit:admin": "cd admin && npm audit --omit=dev"
   },
   "keywords": [
     "ecommerce",

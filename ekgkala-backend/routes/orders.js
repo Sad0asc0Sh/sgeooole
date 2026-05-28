@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const rateLimit = require('express-rate-limit')
+const { getClientIp } = require('../utils/clientIp')
 const {
   createOrder,
   createOrderForUser,
@@ -52,6 +53,7 @@ const trackOrderLimiter = rateLimit({
   max: 60, // 60 requests per 15 minutes per IP
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
   message: { success: false, message: 'تعداد درخواست‌های پیگیری سفارش بیش از حد مجاز است. لطفاً کمی بعد دوباره تلاش کنید.' },
 })
 

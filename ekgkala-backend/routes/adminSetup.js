@@ -9,6 +9,7 @@
 const express = require('express')
 const router = express.Router()
 const rateLimit = require('express-rate-limit')
+const { getClientIp } = require('../utils/clientIp')
 const {
     getSetupStatus,
     setupInitialAdmin,
@@ -33,14 +34,7 @@ const setupLimiter = rateLimit({
         message: 'تعداد درخواست‌های شما بیش از حد مجاز است. لطفاً بعداً تلاش کنید.',
         retryAfter: '1 ساعت'
     },
-    keyGenerator: (req) => {
-        // استفاده از IP واقعی برای rate limiting
-        return req.headers['x-forwarded-for']?.split(',')[0] ||
-            req.headers['x-real-ip'] ||
-            req.connection?.remoteAddress ||
-            req.socket?.remoteAddress ||
-            'unknown'
-    }
+    keyGenerator: (req) => getClientIp(req),
 })
 
 /**
@@ -52,6 +46,7 @@ const statusLimiter = rateLimit({
     max: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req),
     message: {
         success: false,
         message: 'لطفاً کمی صبر کنید'

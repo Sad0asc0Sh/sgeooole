@@ -264,8 +264,9 @@ exports.updateSettings = async (req, res) => {
 
     // For nested objects (Shipping Settings)
     if (updates.shippingSettings) {
-      if (updates.shippingSettings.couriers) {
-        settings.shippingSettings.couriers = updates.shippingSettings.couriers
+      settings.shippingSettings = {
+        ...(settings.shippingSettings?.toObject?.() || {}),
+        ...updates.shippingSettings,
       }
     }
 

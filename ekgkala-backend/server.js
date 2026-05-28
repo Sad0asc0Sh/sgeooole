@@ -5,6 +5,7 @@ const path = require('path')
 const compression = require('compression')
 const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
+const { getClientIp } = require('./utils/clientIp')
 const mongoSanitize = require('express-mongo-sanitize')
 const crypto = require('crypto')
 // SECURITY: xss-clean removed - using express-validator for input validation instead
@@ -151,6 +152,8 @@ app.use(helmet(helmetConfig))
 // 2. Rate Limiting
 // ============================================
 
+const rateLimitKey = (req) => getClientIp(req)
+
 // Generous limiter for product browsing (public read-only endpoints)
 // These endpoints are hit frequently during normal browsing
 // SECURITY: user-agent bypass removed - it's forgeable by attackers
@@ -160,6 +163,7 @@ const productLimiter = rateLimit({
   max: 200, // 200 requests per minute per IP for products
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKey,
   message: { success: false, message: 'لطفاً چند ثانیه صبر کنید و دوباره تلاش کنید.' },
 })
 // Apply to product endpoints before general limiter
@@ -172,6 +176,7 @@ const limiter = rateLimit({
   max: 5000, // increased limit to handle more requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKey,
   skip: (req) => {
     // Skip for product endpoints (already handled by productLimiter)
     if (req.path.startsWith('/products')) return true;
@@ -187,6 +192,7 @@ const loginLimiter = rateLimit({
   max: 5,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKey,
   skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تلاش‌های ورود بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
 })
@@ -200,6 +206,7 @@ const otpLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKey,
   skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تعداد درخواست‌های OTP بیش از حد مجاز است. لطفاً یک ساعت دیگر تلاش کنید.' },
 })
@@ -214,6 +221,7 @@ const passwordResetLimiter = rateLimit({
   max: 3,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: rateLimitKey,
   skip: (req) => req.method === 'OPTIONS', // Allow CORS preflight requests
   message: { success: false, message: 'تعداد درخواست‌های بازنشانی رمز عبور بیش از حد مجاز است.' },
 })

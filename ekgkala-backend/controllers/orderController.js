@@ -416,8 +416,8 @@ exports.updateOrderStatus = async (req, res) => {
         completionDate.setDate(completionDate.getDate() + days)
         updates.autoCompleteAt = completionDate
       }
-    } else if (status !== 'Shipped' && status !== 'Delivered') {
-      // اگر وضعیت از حالت ارسال شده خارج شد و تحویل هم نشده بود، تایمر را پاک کن
+    } else if (status !== 'Shipped') {
+      // پاک کردن تایمر وقتی وضعیت دیگر «ارسال‌شده» نیست (مثلاً Delivered، لغو، در انتظار)
       updates.autoCompleteAt = null
     }
 

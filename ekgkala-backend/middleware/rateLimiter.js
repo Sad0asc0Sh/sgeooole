@@ -14,6 +14,7 @@
 const rateLimit = require('express-rate-limit')
 const redis = require('../utils/redis')
 const logger = require('../utils/logger')
+const { getClientIp } = require('../utils/clientIp')
 
 /**
  * Rate limit configuration
@@ -79,7 +80,7 @@ const MESSAGES = {
  */
 const generateKey = (type = 'ip') => {
     return (req) => {
-        const ip = req.ip || req.connection?.remoteAddress || 'unknown'
+        const ip = getClientIp(req)
 
         switch (type) {
             case 'ip':
@@ -209,7 +210,7 @@ const slidingWindowCheck = async (key, maxRequests, windowSeconds) => {
  */
 const slidingWindowLimiter = (keyPrefix, maxRequests, windowSeconds, getMessage = () => MESSAGES.general) => {
     return async (req, res, next) => {
-        const ip = req.ip || req.connection?.remoteAddress || 'unknown'
+        const ip = getClientIp(req)
         const userId = req.user?._id?.toString() || ''
         const key = userId ? `${keyPrefix}:${ip}:${userId}` : `${keyPrefix}:${ip}`
 
