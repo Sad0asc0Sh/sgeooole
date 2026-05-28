@@ -322,6 +322,16 @@ const settingsSchema = new mongoose.Schema(
         default: true,
       },
     },
+    // تنظیمات حمل و نقل و رهگیری
+    shippingSettings: {
+      couriers: [
+        {
+          name: { type: String, required: true }, // مثل "دیجی‌اکسپرس", "تیپاکس"
+          trackingUrlTemplate: { type: String, required: true }, // مثل "https://tipaxco.com/tracking?id={{code}}"
+          isActive: { type: Boolean, default: true }
+        }
+      ]
+    },
   },
   { timestamps: true },
 )

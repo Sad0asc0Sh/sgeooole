@@ -26,7 +26,7 @@ export interface OrderItem {
   quantity: number;
   image: string;
   price: number;
-  product: string; // Product ID
+  product: string;
 }
 
 /**
@@ -50,7 +50,7 @@ export interface CreateOrderRequest {
 export interface Order {
   _id: string;
   user: string;
-  orderCode?: string; // Human-readable order code (e.g., WV-123456)
+  orderCode?: string;
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
   paymentMethod: string;
@@ -71,96 +71,100 @@ export interface Order {
   orderStatus: string;
   shippedAt?: string;
   deliveredAt?: string;
-  trackingCode?: string; // Postal tracking code
+  trackingCode?: string;
+  courierName?: string;         // نام شرکت حمل‌ونقل
+  preparedTrackingUrl?: string; // لینک آماده رهگیری
   adminNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-/**
- * Order Service Response
- */
 interface OrderResponse {
   success: boolean;
   message?: string;
   data?: Order;
 }
 
-/**
- * Order Service
- *
- * Handles order creation and management for authenticated users.
- *
- * Backend Endpoints:
- * - POST /api/orders - Create new order
- * - GET /api/orders/:id - Get order by ID (future)
- * - GET /api/orders - Get user's orders (future)
- *
- * Status: ✅ Connected to Real Backend API
- */
+export interface UpdateOrderStatusRequest {
+  status: string;
+  trackingCode?: string;
+  courierName?: string;
+  preparedTrackingUrl?: string;
+  adminNotes?: string;
+  deliveryDays?: number;
+}
+
 export const orderService = {
   /**
    * Create New Order
-   * Creates a new order and clears the user's cart
-   *
-   * @param orderData - Order details including items, address, payment method
-   * @returns Promise with created order
    */
   create: async (orderData: CreateOrderRequest): Promise<OrderResponse> => {
     try {
-      console.log("[ORDER] Creating order:", orderData);
-
       const response = await api.post("/orders", orderData);
-
       return response.data;
     } catch (error: any) {
       console.error("Error creating order:", error);
-      throw new Error(
-        error.response?.data?.message || "خطا در ثبت سفارش"
-      );
+      throw new Error(error.response?.data?.message || "خطا در ثبت سفارش");
     }
   },
 
   /**
    * Get Order by ID
-   * Retrieves a specific order by its ID
-   *
-   * @param orderId - Order ID
-   * @returns Promise with order details
    */
   getById: async (orderId: string): Promise<OrderResponse> => {
     try {
-      console.log(`[ORDER] Fetching order ${orderId}`);
-
       const response = await api.get(`/orders/${orderId}`);
-
       return response.data;
     } catch (error: any) {
       console.error("Error fetching order:", error);
-      throw new Error(
-        error.response?.data?.message || "خطا در دریافت اطلاعات سفارش"
-      );
+      throw new Error(error.response?.data?.message || "خطا در دریافت اطلاعات سفارش");
     }
   },
 
   /**
    * Get User's Orders
-   * Retrieves all orders for the authenticated user
-   *
-   * @returns Promise with list of orders
    */
   getMyOrders: async (): Promise<{ success: boolean; data: Order[] }> => {
     try {
-      console.log("[ORDER] Fetching user orders");
-
       const response = await api.get("/orders/my-orders");
-
       return response.data;
     } catch (error: any) {
       console.error("Error fetching user orders:", error);
-      throw new Error(
-        error.response?.data?.message || "خطا در دریافت لیست سفارشات"
-      );
+      throw new Error(error.response?.data?.message || "خطا در دریافت لیست سفارشات");
+    }
+  },
+
+  /**
+   * Update Order Status (Admin)
+   * شامل تغییر وضعیت، کد رهگیری، نام پیک و لینک رهگیری آماده
+   */
+  updateStatus: async (
+    orderId: string,
+    payload: UpdateOrderStatusRequest
+  ): Promise<{ success: boolean; data: Order }> => {
+    try {
+      const response = await api.put(`/orders/${orderId}/status`, payload);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      throw new Error(error.response?.data?.message || "خطا در به‌روزرسانی وضعیت سفارش");
+    }
+  },
+
+  /**
+   * Get All Orders (Admin)
+   */
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    orderStatus?: string;
+    search?: string;
+  }): Promise<{ success: boolean; data: Order[]; pagination: any }> => {
+    try {
+      const response = await api.get("/orders", { params });
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || "خطا در دریافت سفارشات");
     }
   },
 };

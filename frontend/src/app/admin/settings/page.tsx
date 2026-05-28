@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle, ShoppingCart } from "lucide-react";
+import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle, ShoppingCart, Truck, Plus, Trash2, ExternalLink } from "lucide-react";
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
@@ -331,6 +331,100 @@ export default function SettingsPage() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Shipping Couriers Section */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+                    <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 shadow-sm">
+                        <Truck size={24} />
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-gray-800">تنظیمات ارسال (شرکت‌های پیک)</h2>
+                        <p className="text-sm text-gray-500">شرکت‌های حمل‌ونقل مورد استفاده و الگوی لینک رهگیری آن‌ها را تعریف کنید</p>
+                    </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-5 text-sm text-blue-800 flex items-start gap-2">
+                    <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
+                    <span>در قالب URL از <code className="bg-blue-100 px-1 rounded font-mono">{'{{code}}'}</code> برای جایگذاری کد رهگیری استفاده کنید.<br />
+                        مثال: <span className="font-mono text-xs">https://tracking.tipax.com/TrackingTicket?ticket={'{{code}}'}</span>
+                    </span>
+                </div>
+
+                <div className="space-y-3 mb-4">
+                    {(settings?.shippingSettings?.couriers || []).map((courier: any, idx: number) => (
+                        <div key={idx} className="flex gap-3 items-start bg-gray-50 p-4 rounded-xl border border-gray-200">
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">نام شرکت پیک</label>
+                                    <input
+                                        type="text"
+                                        value={courier.name}
+                                        onChange={(e) => {
+                                            const updated = [...(settings.shippingSettings?.couriers || [])];
+                                            updated[idx] = { ...updated[idx], name: e.target.value };
+                                            setSettings({ ...settings, shippingSettings: { ...settings.shippingSettings, couriers: updated } });
+                                        }}
+                                        placeholder="مثال: تیپاکس، چاپار، دکاپست"
+                                        className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">الگوی URL رهگیری</label>
+                                    <input
+                                        type="text"
+                                        value={courier.trackingUrlTemplate}
+                                        onChange={(e) => {
+                                            const updated = [...(settings.shippingSettings?.couriers || [])];
+                                            updated[idx] = { ...updated[idx], trackingUrlTemplate: e.target.value };
+                                            setSettings({ ...settings, shippingSettings: { ...settings.shippingSettings, couriers: updated } });
+                                        }}
+                                        placeholder="https://example.com/track?id={{code}}"
+                                        className="w-full bg-white border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none font-mono"
+                                        dir="ltr"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex gap-2 mt-6">
+                                <label className="flex items-center gap-1.5 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={courier.isActive !== false}
+                                        onChange={(e) => {
+                                            const updated = [...(settings.shippingSettings?.couriers || [])];
+                                            updated[idx] = { ...updated[idx], isActive: e.target.checked };
+                                            setSettings({ ...settings, shippingSettings: { ...settings.shippingSettings, couriers: updated } });
+                                        }}
+                                        className="w-4 h-4 text-purple-600 rounded"
+                                    />
+                                    <span className="text-xs text-gray-600">فعال</span>
+                                </label>
+                                <button
+                                    onClick={() => {
+                                        const updated = (settings.shippingSettings?.couriers || []).filter((_: any, i: number) => i !== idx);
+                                        setSettings({ ...settings, shippingSettings: { ...settings.shippingSettings, couriers: updated } });
+                                    }}
+                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <button
+                    onClick={() => {
+                        const newCourier = { name: "", trackingUrlTemplate: "", isActive: true };
+                        const updated = [...(settings?.shippingSettings?.couriers || []), newCourier];
+                        setSettings({ ...settings, shippingSettings: { ...settings.shippingSettings, couriers: updated } });
+                    }}
+                    className="flex items-center gap-2 text-sm text-purple-700 font-bold border-2 border-dashed border-purple-200 rounded-xl px-4 py-3 hover:bg-purple-50 transition-colors w-full justify-center"
+                >
+                    <Plus size={18} />
+                    افزودن شرکت پیک جدید
+                </button>
             </div>
 
             {/* Info Box */}

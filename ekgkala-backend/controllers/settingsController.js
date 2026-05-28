@@ -49,6 +49,9 @@ exports.getPublicSettings = async (req, res) => {
         telegram: settings.socialLinks?.telegram || '',
         instagram: settings.socialLinks?.instagram || '',
         aparat: settings.socialLinks?.aparat || '',
+      },
+      shippingSettings: {
+        couriers: settings.shippingSettings?.couriers || []
       }
     }
 
@@ -256,6 +259,13 @@ exports.updateSettings = async (req, res) => {
       settings.popularCategoriesSettings = {
         ...settings.popularCategoriesSettings?.toObject?.() || {},
         ...updates.popularCategoriesSettings
+      }
+    }
+
+    // For nested objects (Shipping Settings)
+    if (updates.shippingSettings) {
+      if (updates.shippingSettings.couriers) {
+        settings.shippingSettings.couriers = updates.shippingSettings.couriers
       }
     }
 

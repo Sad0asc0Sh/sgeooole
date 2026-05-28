@@ -201,6 +201,16 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // نام شرکت حمل و نقل (مثل تیپاکس، چاپار و غیره)
+    courierName: {
+      type: String,
+      trim: true,
+    },
+    // لینک رهگیری نهایی شده (که ادمین با الگو ساخته یا دستی وارد کرده)
+    preparedTrackingUrl: {
+      type: String,
+      trim: true,
+    },
     // زمان تقریبی برای تکمیل خودکار سفارش (تبدیل به تحویل شده)
     autoCompleteAt: {
       type: Date,

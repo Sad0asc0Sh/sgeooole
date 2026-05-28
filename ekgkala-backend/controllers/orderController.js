@@ -400,6 +400,14 @@ exports.updateOrderStatus = async (req, res) => {
       updates.trackingCode = req.body.trackingCode
     }
 
+    if (req.body.courierName !== undefined) {
+      updates.courierName = req.body.courierName
+    }
+
+    if (req.body.preparedTrackingUrl !== undefined) {
+      updates.preparedTrackingUrl = req.body.preparedTrackingUrl
+    }
+
     // تنظیم زمان تکمیل خودکار (اگر روز وارد شده باشد)
     if (status === 'Shipped' && req.body.deliveryDays) {
       const days = parseInt(req.body.deliveryDays, 10)
@@ -408,8 +416,8 @@ exports.updateOrderStatus = async (req, res) => {
         completionDate.setDate(completionDate.getDate() + days)
         updates.autoCompleteAt = completionDate
       }
-    } else if (status !== 'Shipped') {
-      // اگر وضعیت از حالت ارسال شده خارج شد، تایمر را پاک کن
+    } else if (status !== 'Shipped' && status !== 'Delivered') {
+      // اگر وضعیت از حالت ارسال شده خارج شد و تحویل هم نشده بود، تایمر را پاک کن
       updates.autoCompleteAt = null
     }
 

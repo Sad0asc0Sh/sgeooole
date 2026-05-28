@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronRight, MapPin, Phone, User, Calendar, CreditCard, Package, CheckCircle2, Circle, Clock, Truck } from "lucide-react";
+import { ChevronRight, MapPin, Phone, User, Calendar, CreditCard, Package, CheckCircle2, Clock, Truck, ExternalLink } from "lucide-react";
 import { authService } from "@/services/authService";
 
 interface OrderDetail {
@@ -21,6 +21,8 @@ interface OrderDetail {
     shippedAt?: string;
     deliveredAt?: string;
     trackingCode?: string;
+    courierName?: string;        // نام شرکت حمل‌ونقل
+    preparedTrackingUrl?: string; // لینک آماده رهگیری
     orderItems: {
         name: string;
         quantity: number;
@@ -166,38 +168,44 @@ export default function OrderDetailsPage() {
                         </div>
                     )}
 
-                    {/* Tracking Code Section - Enhanced */}
+                    {/* Tracking Code Section - Enhanced & Responsive */}
                     {order.trackingCode && (
-                        <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5 shadow-sm">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-full blur-3xl opacity-50 -mr-16 -mt-16"></div>
+                        <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-5 shadow-sm">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-3xl opacity-40 -mr-16 -mt-16" />
 
                             <div className="relative space-y-4">
                                 {/* Header */}
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-600 shrink-0">
+                                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center text-purple-600 shrink-0">
                                         <Truck size={20} />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-800 text-sm mb-0.5">کد رهگیری مرسوله پستی</h3>
-                                        <p className="text-[11px] text-gray-500">برای پیگیری وضعیت مرسوله، از این کد استفاده کنید</p>
+                                        <h3 className="font-bold text-gray-800 text-sm mb-0.5">
+                                            {order.courierName ? `رهگیری از ${order.courierName}` : 'کد رهگیری مرسوله'}
+                                        </h3>
+                                        <p className="text-[11px] text-gray-500">برای پیگیری وضعیت مرسوله، روی دکمه زیر کلیک کنید</p>
                                     </div>
                                 </div>
 
                                 {/* Tracking Code Display */}
-                                <div className="bg-white rounded-xl border border-blue-100 shadow-sm p-4">
+                                <div className="bg-white rounded-xl border border-purple-100 shadow-sm p-4">
                                     <div className="text-center mb-3">
+                                        <p className="text-[10px] text-gray-400 mb-1">کد رهگیری</p>
                                         <span className="font-mono font-black text-base sm:text-lg text-gray-800 tracking-wider select-all break-all leading-relaxed">
                                             {order.trackingCode}
                                         </span>
                                     </div>
+                                    {/* دکمه پیگیری: اگر لینک آماده وجود داشته باشد از آن استفاده می‌شود، وگرنه لینک پیش‌فرض پست */}
                                     <a
-                                        href="https://tracking.post.ir/"
+                                        href={order.preparedTrackingUrl || `https://tracking.post.ir/`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold shadow-blue-200 shadow-lg"
+                                        className="flex items-center justify-center gap-2 w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold shadow-purple-200 shadow-lg"
                                     >
-                                        <span>پیگیری در سایت پست</span>
-                                        <ChevronRight size={16} className="rotate-180" />
+                                        <ExternalLink size={15} />
+                                        <span>
+                                            {order.courierName ? `پیگیری در سایت ${order.courierName}` : 'پیگیری مرسوله'}
+                                        </span>
                                     </a>
                                 </div>
                             </div>
