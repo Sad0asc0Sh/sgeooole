@@ -178,11 +178,6 @@ const baseConfig: NextConfig = {
                     }
                 ],
             },
-            // Static assets - long-term cache
-            {
-                source: "/_next/static/:path*",
-                headers: staticCacheHeaders,
-            },
             // Public static files
             {
                 source: "/static/:path*",
