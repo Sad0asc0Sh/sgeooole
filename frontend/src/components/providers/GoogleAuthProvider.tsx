@@ -7,6 +7,8 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
  * Wraps the application with GoogleOAuthProvider for Google authentication.
  * Requires NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.
  */
+let hasWarnedAboutMissingGoogleClientId = false;
+
 export default function GoogleAuthProvider({
   children,
 }: {
@@ -15,7 +17,10 @@ export default function GoogleAuthProvider({
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   if (!clientId) {
-    console.warn("[GOOGLE AUTH] NEXT_PUBLIC_GOOGLE_CLIENT_ID not configured");
+    if (process.env.NODE_ENV === "development" && !hasWarnedAboutMissingGoogleClientId) {
+      console.warn("[GOOGLE AUTH] NEXT_PUBLIC_GOOGLE_CLIENT_ID not configured");
+      hasWarnedAboutMissingGoogleClientId = true;
+    }
     // Return children without Google OAuth if client ID is not configured
     return <>{children}</>;
   }
