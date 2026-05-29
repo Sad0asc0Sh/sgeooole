@@ -12,7 +12,9 @@ if (!existsSync(viteBin)) {
   process.exit(1)
 }
 
-const requestedHeapMb = process.env.ADMIN_BUILD_MEMORY_MB || '1536'
+// Defaults to 1536MB for small VPS builds; override with ADMIN_BUILD_MEMORY_MB when needed.
+const DEFAULT_ADMIN_BUILD_MEMORY_MB = '1536'
+const requestedHeapMb = process.env.ADMIN_BUILD_MEMORY_MB || DEFAULT_ADMIN_BUILD_MEMORY_MB
 const currentNodeOptions = process.env.NODE_OPTIONS || ''
 const hasHeapLimit = /--max-old-space-size(=|\s+)\d+/.test(currentNodeOptions)
 const nodeOptions = hasHeapLimit
