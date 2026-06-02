@@ -17,7 +17,7 @@ const API_BASE = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL 
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "فروشگاه آنلاین";
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
 const SITE_DESCRIPTION =
   process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "خرید آنلاین کالاهای متنوع با بهترین قیمت و ارسال سریع.";
 const OG_IMAGE = process.env.NEXT_PUBLIC_OG_IMAGE || (SITE_URL ? `${SITE_URL}/og.png` : "/og.png");

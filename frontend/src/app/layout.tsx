@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "./",
   },
-  title: "فروشگاه ای‌کا‌جی کالا | خرید آنلاین محصولات",
+  title: "ای‌کا‌جی کالا",
   description:
     "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
   other: {
