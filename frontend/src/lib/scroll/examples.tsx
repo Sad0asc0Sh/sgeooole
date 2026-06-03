@@ -9,6 +9,7 @@
 
 "use client";
 
+import { useRef } from 'react';
 import { useScrollRestoration as useScroll } from '@/hooks/useScrollRestoration';
 
 export function ProductListExample() {
