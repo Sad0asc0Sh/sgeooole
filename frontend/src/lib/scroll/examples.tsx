@@ -9,11 +9,11 @@
 
 "use client";
 
-import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { useScrollRestoration as useScroll } from '@/hooks/useScrollRestoration';
 
 export function ProductListExample() {
   // Enable automatic scroll restoration
-  useScrollRestoration({
+  useScroll({
     enabled: true,
     restoreOnMount: true,
     saveOnScroll: true,
@@ -35,11 +35,11 @@ export function ProductListExample() {
 // Example 2: Product Detail (No Restoration - Always Top)
 // ============================================================================
 
-import { useDisableScrollRestoration } from '@/hooks/useScrollRestoration';
+import { useDisableScrollRestoration as useDisableScroll } from '@/hooks/useScrollRestoration';
 
 export function ProductDetailExample() {
   // Disable restoration - always start at top
-  useDisableScrollRestoration();
+  useDisableScroll();
 
   return (
     <div>
@@ -53,7 +53,6 @@ export function ProductDetailExample() {
 // Example 3: Infinite Scroll with Restoration
 // ============================================================================
 
-import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { useEffect, useState } from 'react';
 
 export function InfiniteScrollExample() {
@@ -61,7 +60,7 @@ export function InfiniteScrollExample() {
   const [page, setPage] = useState(1);
   
   // Scroll restoration with layout shift observation
-  const { saveScroll } = useScrollRestoration({
+  const { saveScroll } = useScroll({
     enabled: true,
     observeLayoutShifts: true, // Important for infinite scroll
   });
@@ -98,7 +97,7 @@ export function SearchResultsExample() {
   const query = searchParams.get('q');
   
   // Only restore scroll if it's the same search query
-  useScrollRestoration({
+  useScroll({
     enabled: true,
     key: `/search?q=${query}`, // Custom key per search
   });
@@ -119,7 +118,7 @@ export function SearchResultsExample() {
 
 export function ManualControlExample() {
   const [isLoading, setIsLoading] = useState(false);
-  const { saveScroll, restoreScroll, clearScroll } = useScrollRestoration({
+  const { saveScroll, restoreScroll, clearScroll } = useScroll({
     enabled: true,
     restoreOnMount: false, // Manual control
     saveOnScroll: false,   // Manual control
@@ -166,7 +165,7 @@ export function CategoryFilterExample() {
   // Only restore if returning to same category
   const shouldRestore = category === previousCategory.current;
   
-  useScrollRestoration({
+  useScroll({
     enabled: shouldRestore,
     key: `/products?category=${category}`,
   });
@@ -196,7 +195,7 @@ export function TabbedContentExample() {
   const [activeTab, setActiveTab] = useState('all');
   
   // Different scroll position per tab
-  useScrollRestoration({
+  useScroll({
     enabled: true,
     key: `/products?tab=${activeTab}`,
   });
@@ -221,7 +220,7 @@ export function TabbedContentExample() {
 
 export function ModalWithScrollLockExample() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { saveScroll, restoreScroll } = useScrollRestoration({
+  const { saveScroll, restoreScroll } = useScroll({
     enabled: true,
     saveOnScroll: false, // Manual control
   });
@@ -262,7 +261,7 @@ export function ModalWithScrollLockExample() {
 import Image from 'next/image';
 
 export function LazyImageGridExample() {
-  useScrollRestoration({
+  useScroll({
     enabled: true,
     observeLayoutShifts: true, // Critical for lazy images
   });
@@ -293,7 +292,7 @@ export function DynamicContentExample() {
   const [items, setItems] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  useScrollRestoration({
+  useScroll({
     enabled: true,
     observeLayoutShifts: true,
   });
