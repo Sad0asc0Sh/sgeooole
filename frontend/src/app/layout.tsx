@@ -4,6 +4,7 @@ import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";
+import ScrollRestorationProvider from "@/providers/ScrollRestorationProvider";
 import SWRProvider from "@/providers/SWRProvider";
 import { Suspense } from "react";
 
@@ -73,9 +74,11 @@ export default function RootLayout({
       >
         <GoogleAuthProvider>
           <SWRProvider>
-            <Suspense fallback={null}>
-              <ClientLayout>{children}</ClientLayout>
-            </Suspense>
+            <ScrollRestorationProvider>
+              <Suspense fallback={null}>
+                <ClientLayout>{children}</ClientLayout>
+              </Suspense>
+            </ScrollRestorationProvider>
           </SWRProvider>
         </GoogleAuthProvider>
         <ThirdPartyScripts />
