@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import api from '../api'
 
 // ========================
 // Auth store (persisted)
@@ -112,7 +113,6 @@ export const useCategoryStore = create((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const api = (await import('../api')).default
       // Fetch categories tree (browser cache enabled for performance)
       const response = await api.get('/categories/tree')
       const rawData = response?.data?.data || []
@@ -193,7 +193,6 @@ export const useBrandStore = create((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const api = (await import('../api')).default
       const response = await api.get('/brands')
       const rawData = response?.data?.data || []
 
