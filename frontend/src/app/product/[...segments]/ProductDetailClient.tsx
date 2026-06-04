@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useDisableScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import type { Product, ProductColor } from "@/services/productService";
@@ -17,6 +18,9 @@ type ProductDetailClientProps = {
 };
 
 export default function ProductDetailClient({ product: initialProduct }: ProductDetailClientProps) {
+    // Disable scroll restoration for product detail pages - always start at top
+    useDisableScrollRestoration();
+
     const [product, setProduct] = useState<Product>(initialProduct);
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
         product.colors && product.colors.length > 0 ? product.colors[0] : null

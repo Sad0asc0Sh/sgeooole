@@ -320,7 +320,7 @@ export function DynamicContentExample() {
 // Helper Functions
 // ============================================================================
 
-async function loadMoreItems(page: number): Promise<any[]> {
+async function loadMoreItems(_page: number): Promise<any[]> {
   // Simulate API call
   return [];
 }

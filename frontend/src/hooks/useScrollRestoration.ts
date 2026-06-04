@@ -48,7 +48,10 @@ export function useScrollRestoration({
 }: ScrollRestorationOptions = {}): ScrollRestorationControls {
   const pathname = usePathname();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const storageKey = useMemo(() => `${STORAGE_PREFIX}${key || pathname || "default"}`, [key, pathname]);
+  const storageKey = useMemo(
+    () => `${STORAGE_PREFIX}${key || pathname || "default"}`,
+    [key, pathname],
+  );
 
   const saveScroll = useCallback(() => {
     if (!enabled) return;
@@ -80,7 +83,10 @@ export function useScrollRestoration({
       window.scrollTo({ top: y, behavior: "auto" });
 
       if (observeLayoutShifts) {
-        window.setTimeout(() => window.scrollTo({ top: y, behavior: "auto" }), DEFAULT_RESTORE_DELAY_MS);
+        window.setTimeout(
+          () => window.scrollTo({ top: y, behavior: "auto" }),
+          DEFAULT_RESTORE_DELAY_MS,
+        );
       }
     } catch {
       storage?.removeItem(storageKey);

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { motion, AnimatePresence } from "framer-motion";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
@@ -11,6 +12,9 @@ import { Product, productService, CategoryProperty, CategoryDetails } from "@/se
 import { brandService, Brand } from "@/services/brandService";
 
 function ProductListingContent() {
+  // Initialize scroll restoration for back navigation
+  useScrollRestoration({ enabled: true, restoreOnMount: true, saveOnScroll: true });
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
@@ -689,6 +693,7 @@ function ProductListingContent() {
               <motion.div
                 layout
                 className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5"
+                data-scroll-anchor="product-grid"
               >
                 <AnimatePresence mode="popLayout">
                   {products.map((product, index) => (

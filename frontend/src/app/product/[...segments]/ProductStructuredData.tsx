@@ -9,7 +9,7 @@ type ProductStructuredDataProps = {
 export default function ProductStructuredData({ product, relatedProducts = [] }: ProductStructuredDataProps) {
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
     const productUrl = `${siteUrl ? siteUrl : ""}${buildProductUrl(product)}`;
-    const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "فروشگاه";
+    const siteName = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
 
     // Build breadcrumb items based on categoryPath
     const breadcrumbItems = [
