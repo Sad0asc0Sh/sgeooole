@@ -1,17 +1,30 @@
+"use client";
+
 /**
  * Scroll Restoration Examples
  * Demonstrates various use cases and edge cases
  */
 
+import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import {
+  useScrollRestoration as useScroll,
+  useDisableScrollRestoration as useDisableScroll,
+} from '@/hooks/useScrollRestoration';
+
 // ============================================================================
 // Example 1: Basic Product List with Scroll Restoration
 // ============================================================================
 
+<<<<<<< HEAD
 "use client";
 
 import { useRef } from 'react';
 import { useScrollRestoration as useScroll } from '@/hooks/useScrollRestoration';
 
+=======
+>>>>>>> 30d747901f6116394c7d6e72075f633b30d58063
 export function ProductListExample() {
   // Enable automatic scroll restoration
   useScroll({
@@ -36,8 +49,6 @@ export function ProductListExample() {
 // Example 2: Product Detail (No Restoration - Always Top)
 // ============================================================================
 
-import { useDisableScrollRestoration as useDisableScroll } from '@/hooks/useScrollRestoration';
-
 export function ProductDetailExample() {
   // Disable restoration - always start at top
   useDisableScroll();
@@ -54,12 +65,10 @@ export function ProductDetailExample() {
 // Example 3: Infinite Scroll with Restoration
 // ============================================================================
 
-import { useEffect, useState } from 'react';
-
 export function InfiniteScrollExample() {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
-  
+
   // Scroll restoration with layout shift observation
   const { saveScroll } = useScroll({
     enabled: true,
@@ -91,12 +100,10 @@ export function InfiniteScrollExample() {
 // Example 4: Search Results (Conditional Restoration)
 // ============================================================================
 
-import { useSearchParams } from 'next/navigation';
-
 export function SearchResultsExample() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
-  
+
   // Only restore scroll if it's the same search query
   useScroll({
     enabled: true,
@@ -127,16 +134,16 @@ export function ManualControlExample() {
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    
+
     // Save current position before refresh
     saveScroll();
-    
+
     // Load new data
     await fetchNewData();
-    
+
     // Restore position after load
     await restoreScroll();
-    
+
     setIsLoading(false);
   };
 
@@ -162,10 +169,10 @@ export function CategoryFilterExample() {
   const searchParams = useSearchParams();
   const category = searchParams.get('category');
   const previousCategory = useRef<string | null>(null);
-  
+
   // Only restore if returning to same category
   const shouldRestore = category === previousCategory.current;
-  
+
   useScroll({
     enabled: shouldRestore,
     key: `/products?category=${category}`,
@@ -194,7 +201,7 @@ export function CategoryFilterExample() {
 
 export function TabbedContentExample() {
   const [activeTab, setActiveTab] = useState('all');
-  
+
   // Different scroll position per tab
   useScroll({
     enabled: true,
@@ -259,8 +266,6 @@ export function ModalWithScrollLockExample() {
 // Example 9: Lazy Load Images with Scroll Restoration
 // ============================================================================
 
-import Image from 'next/image';
-
 export function LazyImageGridExample() {
   useScroll({
     enabled: true,
@@ -290,9 +295,9 @@ export function LazyImageGridExample() {
 // ============================================================================
 
 export function DynamicContentExample() {
-  const [items, setItems] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
+  const [items] = useState<any[]>([]);
+  const [isLoading] = useState(true);
+
   useScroll({
     enabled: true,
     observeLayoutShifts: true,
@@ -323,7 +328,7 @@ export function DynamicContentExample() {
 // Helper Functions
 // ============================================================================
 
-async function loadMoreItems(page: number): Promise<any[]> {
+async function loadMoreItems(_page: number): Promise<any[]> {
   // Simulate API call
   return [];
 }
