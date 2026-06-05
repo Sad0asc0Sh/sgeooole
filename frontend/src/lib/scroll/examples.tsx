@@ -17,14 +17,6 @@ import {
 // Example 1: Basic Product List with Scroll Restoration
 // ============================================================================
 
-<<<<<<< HEAD
-"use client";
-
-import { useRef } from 'react';
-import { useScrollRestoration as useScroll } from '@/hooks/useScrollRestoration';
-
-=======
->>>>>>> 30d747901f6116394c7d6e72075f633b30d58063
 export function ProductListExample() {
   // Enable automatic scroll restoration
   useScroll({
