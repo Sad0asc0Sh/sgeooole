@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 
 /**
@@ -12,6 +12,17 @@ export default function ScrollRestorationProvider({
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <>
+      {children}
+      <Suspense fallback={null}>
+        <ScrollRestorationController />
+      </Suspense>
+    </>
+  );
+}
+
+function ScrollRestorationController() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const previousPathRef = useRef<string>('');
@@ -75,5 +86,5 @@ export default function ScrollRestorationProvider({
     previousPathRef.current = currentPath;
   }, [pathname, searchParams]);
 
-  return <>{children}</>;
+  return null;
 }

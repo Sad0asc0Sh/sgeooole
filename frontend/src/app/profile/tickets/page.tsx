@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
@@ -40,8 +40,18 @@ interface ToastState {
 export default function SupportMessengerPage() {
     return (
         <ProtectedRoute>
-            <SupportMessenger />
+            <Suspense fallback={<SupportMessengerFallback />}>
+                <SupportMessenger />
+            </Suspense>
         </ProtectedRoute>
+    );
+}
+
+function SupportMessengerFallback() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50/30 flex items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
+        </div>
     );
 }
 
