@@ -6,12 +6,12 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import { Heart, Star, AlertTriangle } from "lucide-react";
 
 import { Product } from "@/services/productService";
-import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import styles from "./ProductCard.module.css";
 
 
 
@@ -21,13 +21,12 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
-    const { addToCart } = useCart();
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [isHovered, setIsHovered] = useState(false);
     const [now, setNow] = useState(() => Date.now());
 
     const isFavorite = isInWishlist(product.id);
-    const discountPercentage = product.discount || 0;
+    const isOutOfStock = product.countInStock <= 0;
 
     // Check if flash deal countdown is still active
     const isFlashDealActive = Boolean(
@@ -64,12 +63,6 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
-
-    const handleAddToCart = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        addToCart(product, 1);
-    };
 
     const handleToggleWishlist = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -165,7 +158,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
     return (
         <div
-            className={`group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-lg border-gray-200' : 'border-gray-100'}`}
+            className={`${styles.card} ${isOutOfStock ? styles.outOfStockCard : ""} group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-lg border-gray-200' : 'border-gray-100'}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
@@ -191,7 +184,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             )}
 
             {/* Image Gallery Slider */}
-            <div className="relative aspect-square bg-gray-50 overflow-hidden">
+            <div className={`${styles.imageFrame} relative aspect-square bg-gray-50 overflow-hidden`}>
                 {/* Timer Overlay (Top Right) */}
                 {(headerConfig?.endTime) && (
                     <ProductTimerBadge
@@ -215,7 +208,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                             src={product.image || "/placeholder.svg"}
                             alt={product.title}
                             fill
-                            className="object-contain p-4 transition-transform duration-500 group-hover:scale-105"
+                            className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} object-contain p-4 transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"
                             loading={priority ? "eager" : "lazy"}
                             priority={priority}
@@ -225,12 +218,17 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                             blurDataURL={getBlurDataURL()}
                             fallbackSrc="/placeholder.svg"
                         />
+                        {isOutOfStock && (
+                            <div className={styles.outOfStockOverlay} aria-label="این کالا ناموجود است">
+                                <span className={styles.outOfStockBadge}>ناموجود</span>
+                            </div>
+                        )}
                     </div>
                 </Link>
             </div>
 
             {/* Content */}
-            <div className="p-4 flex flex-col flex-1 gap-2">
+            <div className={`${styles.content} p-4 flex flex-col flex-1 gap-2`}>
                 {/* Category - only show if it's a valid category name */}
                 {product.category &&
                     product.category !== "عمومی" &&
@@ -254,34 +252,40 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                     <span className="text-[10px] text-gray-400">({product.reviewCount || 0})</span>
                 </div>
 
-                <div className="mt-auto pt-3 flex items-end justify-between">
+                {isOutOfStock && (
+                    <span className={styles.stockStatus}>فعلاً ناموجود</span>
+                )}
+
+                <div className={`${styles.footerRow} mt-auto pt-3`}>
                     {/* Price */}
-                    <div className="flex flex-col">
+                    <div className={`${styles.priceColumn} flex flex-col`}>
                         {product.oldPrice && showSpecialOfferPricing && (
-                            <div className="flex items-center gap-1 mb-1">
+                            <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1`}>
                                 {effectiveDiscount > 0 && (
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                                         {effectiveDiscount}%
                                     </span>
                                 )}
-                                <span className="text-[11px] text-gray-400 line-through decoration-red-500/50">
+                                <span className={`${styles.oldPriceValue} text-[11px] text-gray-400 line-through decoration-red-500/50`}>
                                     {product.oldPrice.toLocaleString("fa-IR")}
                                 </span>
                             </div>
                         )}
-                        <div className="flex items-center gap-1">
-                            <span className="text-base font-black text-gray-900">
+                        <div className={`${styles.priceLine} ${isOutOfStock ? "text-gray-400" : ""}`}>
+                            <span className={`${styles.priceValue} text-base font-black ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}>
                                 {displayPrice.toLocaleString("fa-IR")}
                             </span>
-                            <span className="text-[10px] text-gray-500">تومان</span>
+                            <span className={`${styles.priceCurrency} text-[10px] text-gray-500`}>تومان</span>
                         </div>
                     </div>
 
                     {/* Add to Wishlist Button (Replaces Cart) */}
                     <button
+                        type="button"
                         onClick={handleToggleWishlist}
+                        aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
                         className={`
-              w-9 h-9 rounded-xl flex items-center justify-center transition-all shadow-sm
+              ${styles.wishlistButton} rounded-xl flex items-center justify-center transition-all shadow-sm
               ${isFavorite
                                 ? "bg-red-50 text-red-500 border border-red-100"
                                 : "bg-gray-100 text-gray-500 hover:bg-gray-200"
