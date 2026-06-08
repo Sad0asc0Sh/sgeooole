@@ -1,20 +1,18 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback } from "react";
+import { useEffect, useState, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
+import { useProductListing } from "@/hooks/useProductListing";
 import { motion, AnimatePresence } from "framer-motion";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
 import { Loader2, SlidersHorizontal, X, Search, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
-import { Product, productService, CategoryProperty, CategoryDetails } from "@/services/productService";
+import { productService, CategoryProperty, CategoryDetails } from "@/services/productService";
 import { brandService, Brand } from "@/services/brandService";
 
 function ProductListingContent() {
-  // Initialize scroll restoration for back navigation
-  useScrollRestoration({ enabled: true, restoreOnMount: true, saveOnScroll: true });
-
   const router = useRouter();
   const searchParams = useSearchParams();
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
@@ -28,13 +26,12 @@ function ProductListingContent() {
   const minPriceParam = searchParams.get("minPrice");
   const maxPriceParam = searchParams.get("maxPrice");
   const includeChildrenParam = searchParams.get("includeChildren") === "true";
+  const inStockParam = searchParams.get("inStock") === "true";
+  const listingScrollKey = useMemo(
+    () => `/products${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+    [searchParams],
+  );
 
-  // State
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(pageParam);
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
   const [sliderValue, setSliderValue] = useState<[number, number]>([0, 0]);
   const [showFilters, setShowFilters] = useState(false);
@@ -103,63 +100,68 @@ function ProductListingContent() {
     setSelectedProperties(getPropertyFiltersFromUrl());
   }, [getPropertyFiltersFromUrl]);
 
-  // Sync currentPage with URL param
+  const listingQuery = useMemo(
+    () => ({
+      page: pageParam,
+      sort: sortParam,
+      category: categorySlug || undefined,
+      brand: brandSlug || undefined,
+      search: searchQuery || undefined,
+      minPrice: minPriceParam ? Number(minPriceParam) : undefined,
+      maxPrice: maxPriceParam ? Number(maxPriceParam) : undefined,
+      includeChildren: includeChildrenParam,
+      inStock: inStockParam,
+      properties: getPropertyFiltersFromUrl(),
+    }),
+    [
+      pageParam,
+      sortParam,
+      categorySlug,
+      brandSlug,
+      searchQuery,
+      minPriceParam,
+      maxPriceParam,
+      includeChildrenParam,
+      inStockParam,
+      getPropertyFiltersFromUrl,
+    ],
+  );
+
+  const {
+    products,
+    total,
+    totalPages,
+    currentPage,
+    priceRange: fetchedPriceRange,
+    isLoading,
+    hasCache,
+  } = useProductListing(listingQuery);
+
+  const showInitialLoader = isLoading && !hasCache;
+
+  useScrollRestoration({
+    enabled: true,
+    key: listingScrollKey,
+    restoreOnMount: true,
+    saveOnScroll: true,
+    observeLayoutShifts: true,
+    ready: hasCache || !isLoading,
+  });
+
   useEffect(() => {
-    setCurrentPage(pageParam);
-  }, [pageParam]);
+    if (!fetchedPriceRange) return;
 
-  // Load Products
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const propertyFilters = getPropertyFiltersFromUrl();
-        const ITEMS_PER_PAGE = 24;
+    setPriceRange(fetchedPriceRange);
+    if (!minPriceParam && !maxPriceParam) {
+      setSliderValue([0, fetchedPriceRange.max]);
+      return;
+    }
 
-        const data = await productService.getProducts({
-          page: pageParam,
-          limit: ITEMS_PER_PAGE,
-          sort: sortParam,
-          category: categorySlug || undefined,
-          brand: brandSlug || undefined,
-          search: searchQuery || undefined,
-          minPrice: minPriceParam ? Number(minPriceParam) : undefined,
-          maxPrice: maxPriceParam ? Number(maxPriceParam) : undefined,
-          includeChildren: includeChildrenParam,
-          properties: Object.keys(propertyFilters).length > 0 ? propertyFilters : undefined,
-        });
-
-        let finalProducts = data.products;
-        if (searchParams.get("inStock") === "true") {
-          finalProducts = finalProducts.filter((p) => p.countInStock > 0);
-        }
-
-        setProducts(finalProducts);
-        setTotal(data.total);
-        setTotalPages(data.totalPages || 1);
-        setCurrentPage(data.currentPage || pageParam);
-
-        if (data.priceRange) {
-          setPriceRange(data.priceRange);
-          if (!minPriceParam && !maxPriceParam) {
-            // User requested range to start from 0
-            setSliderValue([0, data.priceRange.max]);
-          } else {
-            setSliderValue([
-              minPriceParam ? Number(minPriceParam) : data.priceRange.min,
-              maxPriceParam ? Number(maxPriceParam) : data.priceRange.max,
-            ]);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [categorySlug, brandSlug, searchQuery, sortParam, pageParam, minPriceParam, maxPriceParam, includeChildrenParam, searchParams, getPropertyFiltersFromUrl]);
+    setSliderValue([
+      minPriceParam ? Number(minPriceParam) : fetchedPriceRange.min,
+      maxPriceParam ? Number(maxPriceParam) : fetchedPriceRange.max,
+    ]);
+  }, [fetchedPriceRange, minPriceParam, maxPriceParam]);
 
   // Handlers
   const handleSortChange = (sort: string) => {
@@ -236,7 +238,7 @@ function ProductListingContent() {
   };
 
   const itemList =
-    !loading && products.length > 0
+    !showInitialLoader && products.length > 0
       ? {
         "@context": "https://schema.org",
         "@type": "ItemList",
@@ -272,7 +274,7 @@ function ProductListingContent() {
                   <span className="text-[#D4AF37]">«{searchQuery}»</span>
                 </h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  {loading ? (
+                  {showInitialLoader ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       در حال جستجو...
@@ -679,7 +681,7 @@ function ProductListingContent() {
             </div>
 
             {/* Products Grid */}
-            {loading ? (
+            {showInitialLoader ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
               </div>
@@ -713,7 +715,7 @@ function ProductListingContent() {
             )}
 
             {/* Pagination */}
-            {!loading && totalPages > 1 && (
+            {!showInitialLoader && totalPages > 1 && (
               <div className="mt-10 mb-6">
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
                   {/* First Page */}

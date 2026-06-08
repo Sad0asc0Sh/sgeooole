@@ -59,37 +59,47 @@ class ScrollManager {
   /**
    * Save current scroll position with layout information
    */
+  private persistScrollState(key: string, state: ScrollState): void {
+    this.cache.set(key, state);
+
+    if (this.cache.size > this.config.maxCacheSize) {
+      const oldestKey = Array.from(this.cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
+      this.cache.delete(oldestKey);
+    }
+
+    try {
+      sessionStorage.setItem(`scroll_${key}`, JSON.stringify(state));
+    } catch {
+      this.cleanupSessionStorage();
+    }
+  }
+
+  private createScrollState(): ScrollState {
+    return {
+      y: window.scrollY || window.pageYOffset,
+      timestamp: Date.now(),
+      url: window.location.href,
+      layoutHash: this.generateLayoutHash(),
+    };
+  }
+
   saveScrollPosition(key: string): void {
     if (this.saveTimeout) {
       clearTimeout(this.saveTimeout);
     }
 
     this.saveTimeout = setTimeout(() => {
-      const y = window.scrollY || window.pageYOffset;
-      const state: ScrollState = {
-        y,
-        timestamp: Date.now(),
-        url: window.location.href,
-        layoutHash: this.generateLayoutHash(),
-      };
-
-      this.cache.set(key, state);
-
-      // Cleanup old entries
-      if (this.cache.size > this.config.maxCacheSize) {
-        const oldestKey = Array.from(this.cache.entries())
-          .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
-        this.cache.delete(oldestKey);
-      }
-
-      // Persist to sessionStorage for resilience
-      try {
-        sessionStorage.setItem(`scroll_${key}`, JSON.stringify(state));
-      } catch (e) {
-        // Storage quota exceeded - clean up old entries
-        this.cleanupSessionStorage();
-      }
+      this.persistScrollState(key, this.createScrollState());
     }, this.config.debounceMs);
+  }
+
+  saveScrollPositionImmediate(key: string): void {
+    if (this.saveTimeout) {
+      clearTimeout(this.saveTimeout);
+      this.saveTimeout = null;
+    }
+    this.persistScrollState(key, this.createScrollState());
   }
 
   /**

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 type ScrollRestorationOptions = {
   enabled?: boolean;
@@ -9,6 +10,7 @@ type ScrollRestorationOptions = {
   restoreOnMount?: boolean;
   saveOnScroll?: boolean;
   observeLayoutShifts?: boolean;
+  ready?: boolean;
 };
 
 type ScrollRestorationControls = {
@@ -17,110 +19,90 @@ type ScrollRestorationControls = {
   clearScroll: () => void;
 };
 
-const STORAGE_PREFIX = "ekgkala:scroll-restoration:";
-const DEFAULT_RESTORE_DELAY_MS = 50;
-
-const getStorage = () => {
-  if (typeof window === "undefined") return null;
-  return window.sessionStorage;
-};
-
-const getScrollY = () => {
-  if (typeof window === "undefined") return 0;
-  return window.scrollY || window.pageYOffset || 0;
-};
-
-const waitForNextFrame = () =>
-  new Promise<void>((resolve) => {
-    if (typeof window === "undefined") {
-      resolve();
-      return;
-    }
-    window.requestAnimationFrame(() => resolve());
-  });
-
 export function useScrollRestoration({
   enabled = true,
   key,
   restoreOnMount = true,
   saveOnScroll = true,
   observeLayoutShifts = false,
+  ready = true,
 }: ScrollRestorationOptions = {}): ScrollRestorationControls {
   const pathname = usePathname();
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const storageKey = useMemo(
-    () => `${STORAGE_PREFIX}${key || pathname || "default"}`,
-    [key, pathname],
-  );
+  const searchParams = useSearchParams();
+  const hasRestoredRef = useRef(false);
+  const scrollKey = useMemo(() => {
+    if (key) return key;
+    const query = searchParams.toString();
+    return query ? `${pathname}?${query}` : pathname || "default";
+  }, [key, pathname, searchParams]);
 
   const saveScroll = useCallback(() => {
-    if (!enabled) return;
-    const storage = getStorage();
-    if (!storage) return;
-
-    storage.setItem(
-      storageKey,
-      JSON.stringify({
-        y: getScrollY(),
-        savedAt: Date.now(),
-      }),
-    );
-  }, [enabled, storageKey]);
+    if (!enabled || typeof window === "undefined") return;
+    getScrollManager().saveScrollPositionImmediate(scrollKey);
+  }, [enabled, scrollKey]);
 
   const restoreScroll = useCallback(async () => {
     if (!enabled || typeof window === "undefined") return;
 
-    const storage = getStorage();
-    const rawValue = storage?.getItem(storageKey);
-    if (!rawValue) return;
-
-    try {
-      const value = JSON.parse(rawValue) as { y?: unknown };
-      const y = Number(value.y);
-      if (!Number.isFinite(y) || y < 0) return;
-
-      await waitForNextFrame();
-      window.scrollTo({ top: y, behavior: "auto" });
-
-      if (observeLayoutShifts) {
-        window.setTimeout(
-          () => window.scrollTo({ top: y, behavior: "auto" }),
-          DEFAULT_RESTORE_DELAY_MS,
-        );
-      }
-    } catch {
-      storage?.removeItem(storageKey);
+    const restored = await getScrollManager().restoreScrollPosition(scrollKey);
+    if (restored && observeLayoutShifts) {
+      getScrollManager().observeLayoutShifts(scrollKey);
     }
-  }, [enabled, observeLayoutShifts, storageKey]);
+  }, [enabled, observeLayoutShifts, scrollKey]);
 
   const clearScroll = useCallback(() => {
-    getStorage()?.removeItem(storageKey);
-  }, [storageKey]);
+    getScrollManager().clearScrollPosition(scrollKey);
+  }, [scrollKey]);
 
   useEffect(() => {
-    if (!enabled || !restoreOnMount) return;
+    hasRestoredRef.current = false;
+  }, [scrollKey]);
+
+  useEffect(() => {
+    if (!enabled || !restoreOnMount || !ready || hasRestoredRef.current) return;
+
+    hasRestoredRef.current = true;
     void restoreScroll();
-  }, [enabled, restoreOnMount, restoreScroll]);
+
+    return () => {
+      getScrollManager().stopObserving();
+    };
+  }, [enabled, ready, restoreOnMount, restoreScroll, scrollKey]);
 
   useEffect(() => {
     if (!enabled || !saveOnScroll || typeof window === "undefined") return;
 
-    const handleScroll = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(saveScroll, 150);
+    const manager = getScrollManager();
+    const handleScroll = () => manager.saveScrollPosition(scrollKey);
+    const handlePageHide = () => manager.saveScrollPositionImmediate(scrollKey);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        manager.saveScrollPositionImmediate(scrollKey);
+      }
     };
-
-    const handlePageHide = () => saveScroll();
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!anchor || !(anchor instanceof HTMLAnchorElement)) return;
+      const href = anchor.getAttribute("href");
+      if (!href || href.startsWith("#")) return;
+      manager.saveScrollPositionImmediate(scrollKey);
+    };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("pagehide", handlePageHide);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("click", handleClick, true);
 
     return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("pagehide", handlePageHide);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("click", handleClick, true);
+      manager.stopObserving();
     };
-  }, [enabled, saveOnScroll, saveScroll]);
+  }, [enabled, saveOnScroll, scrollKey]);
 
   return { saveScroll, restoreScroll, clearScroll };
 }
