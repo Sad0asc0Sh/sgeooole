@@ -13,6 +13,7 @@ import { Product } from "@/services/productService";
 import { useSpecialOffers } from "@/hooks/useProducts";
 import { useCountdown } from "@/hooks/useCountdown";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import imageStyles from "@/components/product/ProductImageFrame.module.css";
 
 /**
  * Special Offer Rail Component
@@ -147,12 +148,12 @@ function SpecialOfferRail() {
 
                       <div className="">
                         {/* Product Image */}
-                        <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md p-2">
+                        <div className={`${imageStyles.frame} mb-3 rounded-md`}>
                           <ResilientImage
                             src={product.image || "/placeholder.png"}
                             alt={product.name}
                             fill
-                            className={`object-contain group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+                            className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
                             sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
                             loading={index < 2 ? "eager" : "lazy"}
                             priority={index < 2}

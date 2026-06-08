@@ -12,6 +12,7 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import imageStyles from "@/components/product/ProductImageFrame.module.css";
 
 interface ProductRailProps {
   title: string;
@@ -186,12 +187,12 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
 
                     <div className={headerConfig ? "px-3 pb-3" : ""}>
                       {/* Image */}
-                      <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                      <div className={`${imageStyles.frame} mb-3 rounded-md`}>
                         <ResilientImage
                           src={product.image || "/placeholder.png"}
                           alt={product.name}
                           fill
-                          className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                          className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
                           priority={index < 3}
                           fetchPriority={index < 3 ? "high" : "auto"}

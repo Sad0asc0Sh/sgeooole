@@ -184,7 +184,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             )}
 
             {/* Image Gallery Slider */}
-            <div className={`${styles.imageFrame} relative aspect-square bg-gray-50 overflow-hidden`}>
+            <div className={`${styles.imageFrame} relative aspect-square overflow-hidden`}>
                 {/* Timer Overlay (Top Right) */}
                 {(headerConfig?.endTime) && (
                     <ProductTimerBadge
@@ -192,6 +192,15 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                         color={headerConfig.color}
                     />
                 )}
+
+                <button
+                    type="button"
+                    onClick={handleToggleWishlist}
+                    aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+                    className={`${styles.wishlistButton} ${isFavorite ? styles.wishlistButtonActive : ""} flex items-center justify-center transition-all`}
+                >
+                    <Heart size={18} className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"} />
+                </button>
 
                 {/* Low Stock Badge (Bottom Left) */}
                 {product.countInStock > 0 && product.countInStock <= 3 && (
@@ -208,7 +217,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                             src={product.image || "/placeholder.svg"}
                             alt={product.title}
                             fill
-                            className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} object-contain p-4 transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}
+                            className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"
                             loading={priority ? "eager" : "lazy"}
                             priority={priority}
@@ -256,8 +265,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                     <span className={styles.stockStatus}>فعلاً ناموجود</span>
                 )}
 
-                <div className={`${styles.footerRow} mt-auto pt-3`}>
-                    {/* Price */}
+                <div className={`${styles.footerRow} mt-auto`}>
                     <div className={`${styles.priceColumn} flex flex-col`}>
                         {product.oldPrice && showSpecialOfferPricing && (
                             <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1`}>
@@ -278,22 +286,6 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                             <span className={`${styles.priceCurrency} text-[10px] text-gray-500`}>تومان</span>
                         </div>
                     </div>
-
-                    {/* Add to Wishlist Button (Replaces Cart) */}
-                    <button
-                        type="button"
-                        onClick={handleToggleWishlist}
-                        aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
-                        className={`
-              ${styles.wishlistButton} rounded-xl flex items-center justify-center transition-all shadow-sm
-              ${isFavorite
-                                ? "bg-red-50 text-red-500 border border-red-100"
-                                : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                            }
-            `}
-                    >
-                        <Heart size={18} className={isFavorite ? "fill-red-500" : ""} />
-                    </button>
                 </div>
             </div>
         </div>

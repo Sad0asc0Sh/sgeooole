@@ -14,6 +14,7 @@ import { buildProductUrl } from "@/lib/paths";
 import { AlertTriangle, ChevronLeft, Flame } from "lucide-react";
 import Link from "next/link";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
+import imageStyles from "@/components/product/ProductImageFrame.module.css";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
@@ -174,12 +175,12 @@ function FlashOfferRail() {
                       </div>
 
                       {/* Image */}
-                      <div className="aspect-square w-full mb-2 relative flex items-center justify-center bg-gray-700/30 rounded-lg overflow-hidden border border-white/5">
+                      <div className={`${imageStyles.frame} mb-2 rounded-lg`}>
                         <ResilientImage
                           src={product.image || "/placeholder.png"}
                           alt={product.name}
                           fill
-                          className={`object-contain p-2 group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
+                          className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                           sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 140px"
                           loading={index < 2 ? "eager" : "lazy"}
                           priority={index < 2}

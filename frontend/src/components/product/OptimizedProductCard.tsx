@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import imageStyles from "./ProductImageFrame.module.css";
 
 interface OptimizedProductCardProps {
     product: Product;
@@ -103,12 +104,12 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
         `}
             >
                 {/* Product Image */}
-                <div className="aspect-square w-full mb-3 relative flex items-center justify-center bg-gray-50 rounded-md overflow-hidden">
+                <div className={`${imageStyles.frame} mb-3 rounded-md`}>
                     <ResilientImage
                         src={product.image || "/placeholder.png"}
                         alt={product.name}
                         fill
-                        className={`object-contain p-2 group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? "grayscale opacity-60" : ""
+                        className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? "grayscale opacity-60" : ""
                             }`}
                         sizes="148px"
                         loading={priority ? "eager" : "lazy"}
