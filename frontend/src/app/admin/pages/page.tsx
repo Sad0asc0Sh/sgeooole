@@ -19,7 +19,7 @@ import {
     Clock,
     ExternalLink
 } from "lucide-react";
-import RichTextEditor from "@/components/admin/RichTextEditor";
+import EnhancedTextEditor from "@/components/admin/EnhancedTextEditor";
 
 export default function AdminPagesPage() {
     const [pages, setPages] = useState<PageData[]>([]);
@@ -401,7 +401,7 @@ export default function AdminPagesPage() {
                                 <label className="block text-sm font-bold text-gray-700">
                                     محتوای صفحه
                                 </label>
-                                <RichTextEditor
+                                <EnhancedTextEditor
                                     value={formData.content}
                                     onChange={(html: string) => setFormData({ ...formData, content: html })}
                                 />
