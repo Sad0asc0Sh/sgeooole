@@ -19,6 +19,7 @@ import {
     Clock,
     ExternalLink
 } from "lucide-react";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 export default function AdminPagesPage() {
     const [pages, setPages] = useState<PageData[]>([]);
@@ -400,13 +401,10 @@ export default function AdminPagesPage() {
                                 <label className="block text-sm font-bold text-gray-700">
                                     محتوای صفحه
                                 </label>
-                                <textarea
+                                <RichTextEditor
                                     value={formData.content}
-                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-kala-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all min-h-[200px] resize-y"
-                                    placeholder="محتوای HTML یا متن ساده..."
+                                    onChange={(html: string) => setFormData({ ...formData, content: html })}
                                 />
-                                <p className="text-xs text-gray-400">می‌توانید از HTML برای فرمت‌دهی استفاده کنید</p>
                             </div>
 
                             {/* Status */}

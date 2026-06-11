@@ -1,6 +1,23 @@
 const Page = require('../models/Page')
 
+// ──────────────────────────────────────────────
+// Helper: sanitize slug
+// ──────────────────────────────────────────────
+function sanitizeSlug(raw) {
+  return raw
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}\-]+/gu, '')
+    .replace(/\-+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
+}
+
+// ──────────────────────────────────────────────
 // دریافت صفحه با slug (عمومی - برای فرانت‌اند)
+// ──────────────────────────────────────────────
 exports.getPageBySlug = async (req, res) => {
   try {
     const { slug } = req.params
@@ -28,7 +45,39 @@ exports.getPageBySlug = async (req, res) => {
   }
 }
 
+// ──────────────────────────────────────────────
+// دریافت صفحه با slug (ادمین - بدون فیلتر وضعیت)
+// ──────────────────────────────────────────────
+exports.getPageBySlugAdmin = async (req, res) => {
+  try {
+    const { slug } = req.params
+
+    const page = await Page.findOne({ slug }).lean()
+
+    if (!page) {
+      return res.status(404).json({
+        success: false,
+        message: 'صفحه یافت نشد',
+      })
+    }
+
+    res.json({
+      success: true,
+      data: page,
+    })
+  } catch (error) {
+    console.error('Error fetching page by slug (admin):', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت صفحه',
+      error: error.message,
+    })
+  }
+}
+
+// ──────────────────────────────────────────────
 // لیست صفحات برای ادمین (با فیلتر و صفحه‌بندی)
+// ──────────────────────────────────────────────
 exports.getAdminPages = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1
@@ -71,7 +120,9 @@ exports.getAdminPages = async (req, res) => {
   }
 }
 
+// ──────────────────────────────────────────────
 // ایجاد صفحه جدید
+// ──────────────────────────────────────────────
 exports.createPage = async (req, res) => {
   try {
     const { title, slug, content, status, meta } = req.body || {}
@@ -83,9 +134,28 @@ exports.createPage = async (req, res) => {
       })
     }
 
+    // Sanitize slug: use provided slug or auto-generate from title
+    const finalSlug = slug ? sanitizeSlug(slug) : sanitizeSlug(title)
+
+    if (!finalSlug) {
+      return res.status(400).json({
+        success: false,
+        message: 'اسلاگ معتبر نیست. لطفاً عنوان یا اسلاگ را اصلاح کنید.',
+      })
+    }
+
+    // Check for duplicate slug before attempting to create
+    const existing = await Page.findOne({ slug: finalSlug }).lean()
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'A page with this slug already exists',
+      })
+    }
+
     const page = await Page.create({
       title,
-      slug,
+      slug: finalSlug,
       content: content || '',
       status: status || 'published',
       meta: meta || {},
@@ -98,6 +168,15 @@ exports.createPage = async (req, res) => {
     })
   } catch (error) {
     console.error('Error creating page:', error)
+
+    // Handle Mongoose duplicate key error (race condition safety net)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'A page with this slug already exists',
+      })
+    }
+
     res.status(500).json({
       success: false,
       message: 'خطا در ایجاد صفحه',
@@ -106,7 +185,9 @@ exports.createPage = async (req, res) => {
   }
 }
 
+// ──────────────────────────────────────────────
 // ویرایش صفحه
+// ──────────────────────────────────────────────
 exports.updatePage = async (req, res) => {
   try {
     const updates = req.body || {}
@@ -120,10 +201,38 @@ exports.updatePage = async (req, res) => {
     }
 
     if (updates.title !== undefined) page.title = updates.title
-    if (updates.slug !== undefined) page.slug = updates.slug
+
+    // Sanitize slug if provided
+    if (updates.slug !== undefined) {
+      const sanitizedSlug = sanitizeSlug(updates.slug)
+      if (!sanitizedSlug) {
+        return res.status(400).json({
+          success: false,
+          message: 'اسلاگ معتبر نیست. لطفاً اسلاگ را اصلاح کنید.',
+        })
+      }
+
+      // Check if another page already uses this slug
+      if (sanitizedSlug !== page.slug) {
+        const existing = await Page.findOne({ slug: sanitizedSlug, _id: { $ne: page._id } }).lean()
+        if (existing) {
+          return res.status(409).json({
+            success: false,
+            message: 'Slug already in use by another page',
+          })
+        }
+      }
+
+      page.slug = sanitizedSlug
+    }
+
     if (updates.content !== undefined) page.content = updates.content
     if (updates.status !== undefined) page.status = updates.status
-    if (updates.meta !== undefined) page.meta = updates.meta || {}
+
+    // FIX 3: Merge meta fields instead of replacing entirely
+    if (updates.meta !== undefined) {
+      page.meta = { ...page.meta, ...updates.meta }
+    }
 
     const saved = await page.save()
 
@@ -134,6 +243,15 @@ exports.updatePage = async (req, res) => {
     })
   } catch (error) {
     console.error('Error updating page:', error)
+
+    // Handle Mongoose duplicate key error (race condition safety net)
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: 'Slug already in use by another page',
+      })
+    }
+
     res.status(500).json({
       success: false,
       message: 'خطا در ویرایش صفحه',
@@ -142,7 +260,9 @@ exports.updatePage = async (req, res) => {
   }
 }
 
+// ──────────────────────────────────────────────
 // حذف صفحه
+// ──────────────────────────────────────────────
 exports.deletePage = async (req, res) => {
   try {
     const page = await Page.findById(req.params.id)
@@ -168,4 +288,3 @@ exports.deletePage = async (req, res) => {
     })
   }
 }
-

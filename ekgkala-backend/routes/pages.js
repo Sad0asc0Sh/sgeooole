@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const { getPageBySlug, getAdminPages, createPage, updatePage, deletePage } = require('../controllers/pageController')
+const { getPageBySlug, getPageBySlugAdmin, getAdminPages, createPage, updatePage, deletePage } = require('../controllers/pageController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
 // ============================================
@@ -16,6 +16,9 @@ router.get('/slug/:slug', getPageBySlug)
 // مجوزهای مورد نیاز: PAGE_READ, PAGE_CREATE, PAGE_UPDATE, PAGE_DELETE
 // ============================================
 
+// GET /api/pages/preview/:slug - پیش‌نمایش صفحه (ادمین - بدون فیلتر وضعیت)
+router.get('/preview/:slug', protect, checkPermission(PERMISSIONS.PAGE_READ), getPageBySlugAdmin)
+
 // GET /api/pages - لیست صفحات (برای پنل ادمین)
 router.get('/', protect, checkPermission(PERMISSIONS.PAGE_READ), getAdminPages)
 
@@ -29,5 +32,3 @@ router.put('/:id', protect, checkPermission(PERMISSIONS.PAGE_UPDATE), updatePage
 router.delete('/:id', protect, checkPermission(PERMISSIONS.PAGE_DELETE), deletePage)
 
 module.exports = router
-
-

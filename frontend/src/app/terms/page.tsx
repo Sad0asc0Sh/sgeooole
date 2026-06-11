@@ -1,80 +1,50 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { pageService, PageData } from "@/services/pageService";
+import { notFound } from "next/navigation";
 import {
     FileText,
     ChevronLeft,
     Shield,
     Clock,
-    AlertCircle,
-    Loader2,
     Home
 } from "lucide-react";
 
-export default function TermsPage() {
-    const [page, setPage] = useState<PageData | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+interface PageData {
+    _id: string;
+    title: string;
+    slug: string;
+    content: string;
+    status: "published" | "hidden";
+    meta?: {
+        title?: string;
+        description?: string;
+    };
+    createdAt: string;
+    updatedAt: string;
+}
 
-    useEffect(() => {
-        const fetchPage = async () => {
-            try {
-                const data = await pageService.getPageBySlug("terms");
-                setPage(data);
-            } catch (err: any) {
-                setError("خطا در دریافت محتوا");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchPage();
-    }, []);
+const API_URL =
+    process.env.INTERNAL_API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:5000/api";
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
-                <div className="text-center">
-                    <Loader2 size={48} className="animate-spin text-kala-500 mx-auto" />
-                    <p className="mt-4 text-gray-500 font-medium">در حال بارگذاری...</p>
-                </div>
-            </div>
-        );
+async function fetchTermsPage(): Promise<PageData | null> {
+    try {
+        const res = await fetch(`${API_URL}/pages/slug/terms`, {
+            next: { revalidate: 3600 },
+        });
+        if (!res.ok) return null;
+        const json = await res.json();
+        return json.data || null;
+    } catch {
+        return null;
     }
+}
 
-    if (error || !page) {
-        return (
-            <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4">
-                <div className="max-w-3xl mx-auto">
-                    {/* Breadcrumb */}
-                    <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-                        <Link href="/" className="hover:text-kala-500 transition-colors flex items-center gap-1">
-                            <Home size={16} />
-                            خانه
-                        </Link>
-                        <ChevronLeft size={16} />
-                        <span className="text-gray-700 font-medium">قوانین و مقررات</span>
-                    </nav>
+export default async function TermsPage() {
+    const page = await fetchTermsPage();
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
-                        <AlertCircle size={64} className="text-amber-500 mx-auto mb-4" />
-                        <h2 className="text-xl font-bold text-gray-800 mb-2">محتوا در دسترس نیست</h2>
-                        <p className="text-gray-600 mb-6">
-                            محتوای این صفحه هنوز توسط مدیریت تنظیم نشده است.
-                            لطفاً بعداً مراجعه کنید.
-                        </p>
-                        <Link
-                            href="/"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-all"
-                        >
-                            <Home size={18} />
-                            بازگشت به خانه
-                        </Link>
-                    </div>
-                </div>
-            </div>
-        );
+    if (!page) {
+        notFound();
     }
 
     return (
@@ -131,7 +101,7 @@ export default function TermsPage() {
 
                     {/* Main Content */}
                     <div
-                        className="prose prose-lg max-w-none p-8 md:p-12 
+                        className="prose prose-lg max-w-none p-8 md:p-12
                             prose-headings:text-gray-800 prose-headings:font-bold
                             prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:border-b prose-h2:border-gray-100 prose-h2:pb-4
                             prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-h3:text-kala-700

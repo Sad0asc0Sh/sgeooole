@@ -627,6 +627,10 @@ const connectDB = async () => {
         console.log('⚠️ Redis not available - system will operate without caching')
       })
 
+      // Seed default pages (safe upsert — never overwrites existing data)
+      const seedPages = require('./seeders/pageSeeder')
+      seedPages()
+
       const server = app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`)
         console.log(`API: http://localhost:${PORT}/api`)
