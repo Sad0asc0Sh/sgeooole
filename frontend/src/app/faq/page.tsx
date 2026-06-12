@@ -16,6 +16,7 @@ import {
     Phone,
     Mail
 } from "lucide-react";
+import { renderContent } from "@/lib/renderContent";
 
 // سوالات متداول پیش‌فرض اگر محتوا تنظیم نشده باشد
 const defaultFAQs = [
@@ -78,8 +79,11 @@ function FAQItem({ question, answer, isOpen, onClick }: {
                 className={`overflow-hidden transition-all duration-300 ${isOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
                     }`}
             >
-                <div className="px-5 md:px-6 pb-5 md:pb-6 pr-[72px] md:pr-[88px]">
-                    <p className="text-gray-600 leading-8 text-base">{answer}</p>
+                <div className="px-5 md:px-6 pb-5 md:pb-6 pr-[72px] md:pr-[88px] text-right" dir="rtl">
+                    <div
+                        className="text-gray-600"
+                        dangerouslySetInnerHTML={{ __html: renderContent(answer) }}
+                    />
                 </div>
             </div>
         </div>

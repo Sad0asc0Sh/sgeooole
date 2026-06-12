@@ -8,6 +8,7 @@ import {
     Home
 } from "lucide-react";
 import PageContent from "@/components/PageContent";
+import { renderContent } from "@/lib/renderContent";
 
 interface PageData {
     _id: string;
@@ -101,7 +102,11 @@ export default async function TermsPage() {
                     </div>
 
                     {/* Main Content */}
-                    <PageContent content={page.content} />
+                    <div
+                        className="p-8 md:p-12 overflow-hidden"
+                        dir="rtl"
+                        dangerouslySetInnerHTML={{ __html: renderContent(page.content) }}
+                    />
                 </article>
 
                 {/* Back to Home */}

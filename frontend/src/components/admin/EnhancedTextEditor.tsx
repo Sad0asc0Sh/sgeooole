@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useMemo } from "react";
+import { renderContent } from "@/lib/renderContent";
 
 interface EnhancedTextEditorProps {
   value: string;
@@ -8,15 +9,12 @@ interface EnhancedTextEditorProps {
 }
 
 const tagInserts: { label: string; insert: string }[] = [
-  { label: "H2", insert: "<h2>Heading</h2>" },
-  { label: "H3", insert: '<h3>Subheading</h3>' },
-  { label: "P", insert: "<p>Paragraph text</p>" },
-  { label: "B", insert: "<strong>Bold text</strong>" },
-  { label: "I", insert: "<em>Italic text</em>" },
-  { label: "UL", insert: "<ul><li>Item 1</li><li>Item 2</li></ul>" },
-  { label: "OL", insert: "<ol><li>First</li><li>Second</li></ol>" },
-  { label: "Link", insert: '<a href="https://example.com">Link text</a>' },
-  { label: "BR", insert: "<br>" },
+  { label: "H2", insert: "## Heading\n\n" },
+  { label: "H3", insert: "### Subheading\n\n" },
+  { label: "Bold", insert: "**Bold text**" },
+  { label: "Italic", insert: "*Italic text*" },
+  { label: "List", insert: "^- Item\n" },
+  { label: "Link", insert: "[Link text](https://example.com)" },
 ];
 
 export default function EnhancedTextEditor({ value, onChange }: EnhancedTextEditorProps) {
@@ -25,7 +23,7 @@ export default function EnhancedTextEditor({ value, onChange }: EnhancedTextEdit
 
   const charCount = value.length;
   const wordCount = useMemo(() => {
-    const text = value.replace(/<[^>]*>/g, " ").trim();
+    const text = value.replace(/(\*\*|\*|## |### |^- |\[.*?\]\(.*?\))/g, "").trim();
     if (!text) return 0;
     return text.split(/\s+/).length;
   }, [value]);
@@ -81,22 +79,20 @@ export default function EnhancedTextEditor({ value, onChange }: EnhancedTextEdit
         <button
           type="button"
           onClick={() => setActiveTab("write")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-t-lg transition-colors ${
-            activeTab === "write"
-              ? "bg-white text-kala-700 border border-gray-200 border-b-white -mb-px"
-              : "text-gray-400 hover:text-gray-600"
-          }`}
+          className={`px-4 py-1.5 text-sm font-medium rounded-t-lg transition-colors ${activeTab === "write"
+            ? "bg-white text-kala-700 border border-gray-200 border-b-white -mb-px"
+            : "text-gray-400 hover:text-gray-600"
+            }`}
         >
           Write
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("preview")}
-          className={`px-4 py-1.5 text-sm font-medium rounded-t-lg transition-colors ${
-            activeTab === "preview"
-              ? "bg-white text-kala-700 border border-gray-200 border-b-white -mb-px"
-              : "text-gray-400 hover:text-gray-600"
-          }`}
+          className={`px-4 py-1.5 text-sm font-medium rounded-t-lg transition-colors ${activeTab === "preview"
+            ? "bg-white text-kala-700 border border-gray-200 border-b-white -mb-px"
+            : "text-gray-400 hover:text-gray-600"
+            }`}
         >
           Preview
         </button>
@@ -113,37 +109,28 @@ export default function EnhancedTextEditor({ value, onChange }: EnhancedTextEdit
           ref={textareaRef}
           value={value}
           onChange={handleTextareaChange}
-          className={`w-full px-4 py-3 font-mono text-sm leading-6 bg-gray-50/50 border-0 focus:outline-none focus:ring-0 resize-y transition-opacity ${
-            activeTab === "write" ? "opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
-          }`}
-          placeholder="محتوای HTML یا متن ساده..."
+          className={`w-full px-4 py-3 font-mono text-sm leading-6 bg-gray-50/50 border-0 focus:outline-none focus:ring-0 resize-y transition-opacity ${activeTab === "write" ? "opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+            }`}
+          placeholder="محتوا را با فرمت ساده وارد کنید... (## برای عنوان، ** برای برجسته)"
           rows={12}
-          dir="ltr"
+          dir="rtl"
           spellCheck={false}
         />
 
         {/* Preview pane */}
         <div
-          className={`transition-opacity ${
-            activeTab === "preview" ? "opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
-          }`}
+          className={`transition-opacity ${activeTab === "preview" ? "opacity-100" : "absolute inset-0 opacity-0 pointer-events-none"
+            }`}
         >
           {value ? (
             <div
-              className="prose prose-sm max-w-none p-4 md:p-6 bg-white min-h-[300px]
-                prose-headings:text-gray-800 prose-headings:font-bold
-                prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-4
-                prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3 prose-h3:text-kala-700
-                prose-p:text-gray-600 prose-p:leading-7
-                prose-ul:space-y-2 prose-li:text-gray-600
-                prose-strong:text-gray-800 prose-strong:font-bold
-                prose-a:text-kala-500 prose-a:no-underline hover:prose-a:underline"
+              className="p-4 md:p-6 bg-white min-h-[300px]"
               dir="rtl"
-              dangerouslySetInnerHTML={{ __html: value }}
+              dangerouslySetInnerHTML={{ __html: renderContent(value) }}
             />
           ) : (
             <div className="flex items-center justify-center h-[300px] text-gray-400 text-sm">
-              Type HTML above to see a live preview here
+              برای مشاهده پیش‌نمایش، متن خود را وارد کنید
             </div>
           )}
         </div>
