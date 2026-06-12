@@ -141,112 +141,107 @@ export default function FAQPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12 px-4">
-            <div className="max-w-4xl mx-auto">
-                {/* Breadcrumb */}
-                <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                    <Link href="/" className="hover:text-kala-500 transition-colors flex items-center gap-1">
-                        <Home size={16} />
-                        خانه
-                    </Link>
-                    <ChevronLeft size={16} />
-                    <span className="text-gray-700 font-medium">سوالات متداول</span>
-                </nav>
+        <div className="min-h-screen bg-[#f1f5f9] pb-16" dir="rtl">
+            {/* Hero Section */}
+            <div className="cms-hero">
+                <div className="container mx-auto px-4 relative z-10 text-center">
+                    <h1 className="text-3xl md:text-5xl font-black mb-4 drop-shadow-lg">
+                        سوالات متداول
+                    </h1>
+                    <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-light leading-relaxed">
+                        هر چیزی که نیاز است درباره خرید، ارسال، پرداخت و ضمانت کالا در ایکیجی کالا بدانید، به صورت یکجا برای شما آماده کرده‌ایم.
+                    </p>
+                </div>
+                {/* Decorative background circle */}
+                <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+            </div>
 
-                {/* Hero Header */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-kala-500 via-kala-600 to-kala-700 rounded-3xl p-8 md:p-12 mb-8 text-white">
-                    {/* Decorative patterns */}
-                    <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/30 rounded-full translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-                        <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-400/30 rounded-full -translate-x-1/2 translate-y-1/2 blur-3xl"></div>
-                    </div>
-
-                    <div className="relative z-10">
-                        <div className="flex items-start gap-6">
-                            <div className="hidden md:flex w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl items-center justify-center border border-white/20">
-                                <MessageCircle size={40} className="text-white" />
-                            </div>
-                            <div className="flex-1">
-                                <h1 className="text-3xl md:text-4xl font-black mb-4">
-                                    سوالات متداول
-                                </h1>
-                                <p className="text-white/80 text-lg leading-relaxed max-w-2xl">
-                                    پاسخ سوالات رایج کاربران را در اینجا بیابید. اگر سوال شما در لیست نیست، با ما تماس بگیرید.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Search Box */}
-                        <div className="mt-8 relative max-w-xl">
-                            <input
-                                type="text"
-                                placeholder="جستجو در سوالات..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full px-6 py-4 pr-14 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 
-                                    text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 focus:border-white/40 transition-all"
-                            />
-                            <Search size={22} className="absolute right-5 top-1/2 -translate-y-1/2 text-white/60" />
-                        </div>
-                    </div>
+            {/* Main Content Container */}
+            <div className="max-w-[850px] mx-auto px-4 -mt-16 relative z-20">
+                {/* Search Box */}
+                <div className="mb-8 relative shadow-2xl shadow-slate-200/50">
+                    <input
+                        type="text"
+                        placeholder="جستجو در سوالات..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full px-8 py-5 pr-16 rounded-[24px] bg-white border border-slate-100 
+                            text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-medium text-lg"
+                    />
+                    <Search size={24} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400" />
                 </div>
 
                 {/* FAQ List */}
                 <div className="space-y-4 mb-12">
                     {filteredFaqs.length > 0 ? (
                         filteredFaqs.map((faq, index) => (
-                            <FAQItem
+                            <div
                                 key={index}
-                                question={faq.question}
-                                answer={faq.answer}
-                                isOpen={openFAQ === index}
-                                onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                            />
+                                className={`bg-white border rounded-[20px] transition-all duration-300 overflow-hidden ${openFAQ === index
+                                        ? "border-blue-500 shadow-2xl shadow-blue-500/10"
+                                        : "border-slate-100 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50"
+                                    }`}
+                            >
+                                <button
+                                    onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                                    className={`w-full flex items-center justify-between p-6 text-right transition-colors ${openFAQ === index ? "bg-blue-50/50" : ""
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${openFAQ === index
+                                                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                                                : "bg-slate-100 text-slate-500"
+                                            }`}>
+                                            <HelpCircle size={24} />
+                                        </div>
+                                        <span className={`font-extrabold text-lg md:text-xl transition-colors ${openFAQ === index ? "text-blue-700" : "text-slate-800"
+                                            }`}>
+                                            {faq.question}
+                                        </span>
+                                    </div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all bg-slate-50 ${openFAQ === index ? "bg-blue-600 rotate-180" : "group-hover:bg-slate-200"
+                                        }`}>
+                                        <ChevronDown
+                                            size={20}
+                                            className={`transition-colors ${openFAQ === index ? "text-white" : "text-slate-400"}`}
+                                        />
+                                    </div>
+                                </button>
+                                <div
+                                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openFAQ === index ? "max-h-[1000px] opacity-100 py-6" : "max-h-0 opacity-0"
+                                        }`}
+                                >
+                                    <div className="px-8 pb-4 pr-[72px] md:pr-[88px]">
+                                        <div
+                                            className="cms-content text-slate-600 !line-height-[2]"
+                                            dangerouslySetInnerHTML={{ __html: renderContent(faq.answer) }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         ))
                     ) : (
-                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-100">
-                            <Search size={48} className="text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500 font-medium">نتیجه‌ای یافت نشد</p>
-                            <p className="text-gray-400 text-sm mt-1">عبارت جستجوی دیگری امتحان کنید</p>
+                        <div className="text-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
+                            <Search size={64} className="text-slate-200 mx-auto mb-6" />
+                            <p className="text-slate-500 text-xl font-bold">نتیجه‌ای یافت نشد</p>
+                            <p className="text-slate-400 mt-2">عبارت جستجوی دیگری را امتحان کنید</p>
                         </div>
                     )}
                 </div>
 
-                {/* Contact Section */}
-                <div className="bg-gradient-to-br from-[#142755] to-[#1a3a7a] rounded-3xl p-8 text-white text-center">
-                    <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-white/20">
-                        <AlertCircle size={32} className="text-kala-400" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-3">پاسخ سوال خود را پیدا نکردید؟</h3>
-                    <p className="text-gray-300 mb-8 max-w-lg mx-auto">
-                        تیم پشتیبانی ما آماده پاسخگویی به سوالات شماست. از طریق راه‌های زیر با ما در تماس باشید.
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-4">
-                        <Link
-                            href="/contact"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-all shadow-lg shadow-kala-500/25"
-                        >
-                            <Mail size={18} />
-                            تماس با ما
-                        </Link>
-                        <a
-                            href="tel:02144556677"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm text-white rounded-xl font-bold hover:bg-white/20 transition-all border border-white/20"
-                        >
-                            <Phone size={18} />
-                            تماس تلفنی
-                        </a>
-                    </div>
+                {/* Categories Wrapper (Inspired by template) */}
+                <div className="mt-16 space-y-12">
+                    {/* This is where dynamic content headings could trigger new categories if needed */}
                 </div>
 
                 {/* Back to Home */}
-                <div className="mt-8 text-center">
+                <div className="mt-12 text-center">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-gray-500 hover:text-kala-500 transition-colors group"
+                        className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-600 rounded-2xl font-bold shadow-xl shadow-slate-200/50 hover:text-blue-600 transition-all border border-slate-100 group"
                     >
-                        <Home size={18} className="group-hover:-translate-x-1 transition-transform" />
-                        <span>بازگشت به صفحه اصلی</span>
+                        <Home className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                        <span>بازگشت به فروشگاه</span>
                     </Link>
                 </div>
             </div>

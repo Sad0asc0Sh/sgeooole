@@ -67,73 +67,55 @@ export default function TermsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-8 md:py-12 px-4">
-            <div className="max-w-4xl mx-auto">
-                {/* Breadcrumb */}
-                <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                    <Link href="/" className="hover:text-kala-500 transition-colors flex items-center gap-1">
-                        <Home size={16} />
-                        خانه
-                    </Link>
-                    <ChevronLeft size={16} />
-                    <span className="text-gray-700 font-medium">قوانین و مقررات</span>
-                </nav>
+        <div className="min-h-screen bg-[#f1f5f9] pb-16" dir="rtl">
+            {/* Hero Section */}
+            <div className="cms-hero">
+                <div className="container mx-auto px-4 relative z-10">
+                    <h1 className="text-3xl md:text-5xl font-black mb-4 drop-shadow-lg">
+                        {page.meta?.title || page.title}
+                    </h1>
+                    <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-light leading-relaxed">
+                        {page.meta?.description || "هر چیزی که نیاز است درباره قوانین و مقررات ایکیجی کالا بدانید، به صورت شفاف برای شما آماده کرده‌ایم."}
+                    </p>
+                </div>
+                {/* Decorative background circle */}
+                <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none"></div>
+            </div>
 
-                {/* Hero Header */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-[#142755] via-[#1a3a7a] to-[#0f1e40] rounded-3xl p-8 md:p-12 mb-8 text-white">
-                    {/* Decorative patterns */}
-                    <div className="absolute inset-0 opacity-10">
-                        <div className="absolute top-0 left-0 w-64 h-64 bg-white/30 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl"></div>
-                        <div className="absolute bottom-0 right-0 w-96 h-96 bg-kala-400/30 rounded-full translate-x-1/2 translate-y-1/2 blur-3xl"></div>
+            {/* Main Content Container */}
+            <div className="max-w-[850px] mx-auto px-4 -mt-16 relative z-20">
+                <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+                    {/* Header Info */}
+                    <div className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-100 px-8 py-6 flex items-center justify-between flex-wrap gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
+                                <Shield className="w-5 h-5 text-white" />
+                            </div>
+                            <span className="font-bold text-slate-800">قوانین و ضوابط رسمی</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
+                            <Clock className="w-4 h-4 text-blue-500" />
+                            آخرین بروزرسانی: {new Date(page.updatedAt).toLocaleDateString("fa-IR")}
+                        </div>
                     </div>
 
-                    <div className="relative z-10 flex items-start gap-6">
-                        <div className="hidden md:flex w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl items-center justify-center border border-white/20">
-                            <Shield size={40} className="text-kala-400" />
-                        </div>
-                        <div className="flex-1">
-                            <h1 className="text-3xl md:text-4xl font-black mb-4">
-                                {page.meta?.title || page.title}
-                            </h1>
-                            <p className="text-gray-300 text-lg leading-relaxed max-w-2xl">
-                                {page.meta?.description || "با مطالعه این قوانین، از حقوق و مسئولیت‌های خود در استفاده از خدمات ما آگاه شوید."}
-                            </p>
-                            <div className="flex items-center gap-4 mt-6 text-sm text-gray-400">
-                                <div className="flex items-center gap-2">
-                                    <Clock size={16} />
-                                    <span>آخرین بروزرسانی: {new Date(page.updatedAt).toLocaleDateString("fa-IR")}</span>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Rendered Content */}
+                    <div className="p-8 md:p-12">
+                        <div
+                            className="cms-content"
+                            dangerouslySetInnerHTML={{ __html: renderContent(page.content) }}
+                        />
                     </div>
                 </div>
 
-                {/* Content Card */}
-                <article className="bg-white rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                    {/* Quick Info Bar */}
-                    <div className="bg-gradient-to-l from-kala-50 to-blue-50 px-6 py-4 border-b border-gray-100 flex items-center gap-3">
-                        <FileText size={20} className="text-kala-500" />
-                        <span className="text-sm text-gray-600 font-medium">
-                            لطفاً قبل از استفاده از خدمات ما، این قوانین را با دقت مطالعه کنید.
-                        </span>
-                    </div>
-
-                    {/* Main Content */}
-                    <div
-                        className="p-8 md:p-12 overflow-hidden"
-                        dir="rtl"
-                        dangerouslySetInnerHTML={{ __html: renderContent(page.content) }}
-                    />
-                </article>
-
-                {/* Back to Home */}
-                <div className="mt-8 text-center">
+                {/* Footer Link */}
+                <div className="mt-12 text-center">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-2 text-gray-500 hover:text-kala-500 transition-colors group"
+                        className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-600 rounded-2xl font-bold shadow-xl shadow-slate-200/50 hover:text-blue-600 transition-all border border-slate-100 group"
                     >
-                        <Home size={18} className="group-hover:-translate-x-1 transition-transform" />
-                        <span>بازگشت به صفحه اصلی</span>
+                        <Home className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                        <span>بازگشت به فروشگاه</span>
                     </Link>
                 </div>
             </div>
