@@ -456,6 +456,66 @@
   color: var(--cms-primary);
 }
 
+/* --- COMPATIBILITY FOR USER-PASTED HTML --- */
+.cms-content .faq-container {
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.cms-content .intro-text {
+  text-align: center;
+  color: var(--cms-text-muted);
+  font-size: 1.1rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--cms-border);
+  line-height: 2;
+}
+
+.cms-content .question {
+  font-weight: 800;
+  color: var(--cms-text-dark);
+  font-size: 1.25rem;
+  margin: 2.5rem 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cms-content .question::before {
+  content: "■";
+  color: var(--cms-accent);
+  font-size: 1rem;
+}
+
+.cms-content .answer {
+  color: var(--cms-text-main);
+  font-size: 1.05rem;
+  text-align: justify;
+  line-height: 2.2;
+  margin-bottom: 1.5rem;
+}
+
+.cms-content h1 {
+  text-align: center;
+  font-size: 2.25rem;
+  font-weight: 900;
+  color: var(--cms-text-dark);
+  margin-bottom: 1rem;
+}
+
+.cms-content ul {
+  list-style-type: disc;
+  padding-right: 2.5rem;
+  margin-bottom: 2rem;
+}
+
+.cms-content li {
+  margin-bottom: 0.75rem;
+  color: var(--cms-text-main);
+}
+
 /* Hero Section Support */
 .cms-hero {
   background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);

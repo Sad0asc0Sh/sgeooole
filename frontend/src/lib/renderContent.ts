@@ -9,19 +9,36 @@ const ICON_PATHS: Record<string, string> = {
 export function renderContent(text: string): string {
     if (!text) return '<div class="cms-content"></div>';
 
-    // 1. Inline patterns
-    let html = text
+    // 0. PRE-PROCESS: Strip HTML boilerplates if pasted
+    let cleaned = text
+        .replace(/<!DOCTYPE.*?>/gi, '')
+        .replace(/<html.*?>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<head>[\s\S]*?<\/head>/gi, '')
+        .replace(/<body.*?>/gi, '')
+        .replace(/<\/body>/gi, '')
+        .replace(/<style>[\s\S]*?<\/style>/gi, '')
+        .trim();
+
+    // 1. Inline patterns (Markdown)
+    let html = cleaned
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
 
-    // 2. Block patterns
+    // 2. Block detection
+    // If it looks like HTML (contains multiple tags), treat it as a single block
+    if (html.includes('<div') || html.includes('<h1') || html.includes('<p ')) {
+        return `<div class="cms-content">${html}</div>`;
+    }
+
     const blocks = html.split(/\n\n+/);
 
     const renderedBlocks = blocks.map(block => {
         const trimmedBlock = block.trim();
+        if (!trimmedBlock) return '';
 
-        // 2a. CATEGORY HEADING with optional Icon: "## [icon-name] Title"
+        // 2a. CATEGORY HEADING
         if (trimmedBlock.startsWith('## ')) {
             let content = trimmedBlock.substring(3);
             let iconHtml = '';
@@ -38,7 +55,7 @@ export function renderContent(text: string): string {
             return `<h2 class="cms-h2">${iconHtml}<span>${content}</span></h2>`;
         }
 
-        // 2b. ACCORDION (Details): Start block with "> Question" and separate answer with newline
+        // 2b. ACCORDION
         if (trimmedBlock.startsWith('> ')) {
             const lines = trimmedBlock.split('\n');
             const question = lines[0].substring(2).trim();
