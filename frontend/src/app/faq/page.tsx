@@ -146,10 +146,10 @@ export default function FAQPage() {
             <div className="cms-hero">
                 <div className="container mx-auto px-4 relative z-10 text-center">
                     <h1 className="text-3xl md:text-5xl font-black mb-4 drop-shadow-lg">
-                        سوالات متداول
+                        قوانین و سوالات متداول
                     </h1>
                     <p className="text-lg md:text-xl text-blue-100 max-w-2xl mx-auto font-light leading-relaxed">
-                        هر چیزی که نیاز است درباره خرید، ارسال، پرداخت و ضمانت کالا در ایکیجی کالا بدانید، به صورت یکجا برای شما آماده کرده‌ایم.
+                        هر چیزی که نیاز است درباره خرید، ارسال، پرداخت و ضمانت کالا در ایکیجی کالا بدانید، به صورت یکجا و شفاف برای شما آماده کرده‌ایم.
                     </p>
                 </div>
                 {/* Decorative background circle */}
@@ -159,7 +159,7 @@ export default function FAQPage() {
             {/* Main Content Container */}
             <div className="max-w-[850px] mx-auto px-4 -mt-16 relative z-20">
                 {/* Search Box */}
-                <div className="mb-8 relative shadow-2xl shadow-slate-200/50">
+                <div className="mb-12 relative shadow-2xl shadow-slate-200/50">
                     <input
                         type="text"
                         placeholder="جستجو در سوالات..."
@@ -171,74 +171,70 @@ export default function FAQPage() {
                     <Search size={24} className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-400" />
                 </div>
 
-                {/* FAQ List */}
-                <div className="space-y-4 mb-12">
-                    {filteredFaqs.length > 0 ? (
-                        filteredFaqs.map((faq, index) => (
-                            <div
-                                key={index}
-                                className={`bg-white border rounded-[20px] transition-all duration-300 overflow-hidden ${openFAQ === index
-                                        ? "border-blue-500 shadow-2xl shadow-blue-500/10"
-                                        : "border-slate-100 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50"
-                                    }`}
-                            >
-                                <button
-                                    onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-                                    className={`w-full flex items-center justify-between p-6 text-right transition-colors ${openFAQ === index ? "bg-blue-50/50" : ""
+                {/* Categories & FAQs */}
+                <div className="space-y-16 mb-12">
+                    {/* Category Title: Purchase Process */}
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-slate-200 border border-slate-50">
+                            <HelpCircle className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <h2 className="text-2xl font-black text-slate-800">فرآیند خرید، قیمت و موجودی کالا</h2>
+                    </div>
+
+                    <div className="space-y-4">
+                        {filteredFaqs.length > 0 ? (
+                            filteredFaqs.map((faq, index) => (
+                                <div
+                                    key={index}
+                                    className={`bg-white border rounded-[22px] transition-all duration-300 overflow-hidden ${openFAQ === index
+                                            ? "border-blue-500 shadow-2xl shadow-blue-500/10 group"
+                                            : "border-slate-200 hover:border-slate-300 hover:shadow-xl hover:shadow-slate-200/50"
                                         }`}
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${openFAQ === index
-                                                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
-                                                : "bg-slate-100 text-slate-500"
-                                            }`}>
-                                            <HelpCircle size={24} />
-                                        </div>
-                                        <span className={`font-extrabold text-lg md:text-xl transition-colors ${openFAQ === index ? "text-blue-700" : "text-slate-800"
+                                    <button
+                                        onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+                                        className={`w-full flex items-center justify-between p-6 text-right transition-colors ${openFAQ === index ? "bg-blue-50/50" : ""
+                                            }`}
+                                    >
+                                        <span className={`font-bold text-lg md:text-xl transition-colors ${openFAQ === index ? "text-blue-700" : "text-slate-700"
                                             }`}>
                                             {faq.question}
                                         </span>
-                                    </div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all bg-slate-50 ${openFAQ === index ? "bg-blue-600 rotate-180" : "group-hover:bg-slate-200"
-                                        }`}>
-                                        <ChevronDown
-                                            size={20}
-                                            className={`transition-colors ${openFAQ === index ? "text-white" : "text-slate-400"}`}
-                                        />
-                                    </div>
-                                </button>
-                                <div
-                                    className={`overflow-hidden transition-all duration-500 ease-in-out ${openFAQ === index ? "max-h-[1000px] opacity-100 py-6" : "max-h-0 opacity-0"
-                                        }`}
-                                >
-                                    <div className="px-8 pb-4 pr-[72px] md:pr-[88px]">
-                                        <div
-                                            className="cms-content text-slate-600 !line-height-[2]"
-                                            dangerouslySetInnerHTML={{ __html: renderContent(faq.answer) }}
-                                        />
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${openFAQ === index ? "bg-blue-600 rotate-180" : "bg-slate-50 text-slate-400"
+                                            }`}>
+                                            <ChevronDown
+                                                size={18}
+                                                className={openFAQ === index ? "text-white" : ""}
+                                            />
+                                        </div>
+                                    </button>
+                                    <div
+                                        className={`overflow-hidden transition-all duration-500 ease-in-out ${openFAQ === index ? "max-h-[1000px] opacity-100 border-t border-dashed border-slate-200" : "max-h-0 opacity-0"
+                                            }`}
+                                    >
+                                        <div className="p-8 pb-10 bg-[#fafafa]">
+                                            <div
+                                                className="cms-content text-slate-600 leading-[2.2] text-justify"
+                                                dangerouslySetInnerHTML={{ __html: renderContent(faq.answer) }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
+                            ))
+                        ) : (
+                            <div className="text-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
+                                <Search size={64} className="text-slate-200 mx-auto mb-6" />
+                                <p className="text-slate-500 text-xl font-bold">نتیجه‌ای یافت نشد</p>
                             </div>
-                        ))
-                    ) : (
-                        <div className="text-center py-20 bg-white rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50">
-                            <Search size={64} className="text-slate-200 mx-auto mb-6" />
-                            <p className="text-slate-500 text-xl font-bold">نتیجه‌ای یافت نشد</p>
-                            <p className="text-slate-400 mt-2">عبارت جستجوی دیگری را امتحان کنید</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Categories Wrapper (Inspired by template) */}
-                <div className="mt-16 space-y-12">
-                    {/* This is where dynamic content headings could trigger new categories if needed */}
+                        )}
+                    </div>
                 </div>
 
                 {/* Back to Home */}
                 <div className="mt-12 text-center">
                     <Link
                         href="/"
-                        className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-600 rounded-2xl font-bold shadow-xl shadow-slate-200/50 hover:text-blue-600 transition-all border border-slate-100 group"
+                        className="inline-flex items-center gap-3 px-10 py-5 bg-white text-slate-500 rounded-[28px] font-bold shadow-xl shadow-slate-200/50 hover:text-blue-600 transition-all border border-slate-100 group"
                     >
                         <Home className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
                         <span>بازگشت به فروشگاه</span>

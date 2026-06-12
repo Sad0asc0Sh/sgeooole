@@ -82,27 +82,12 @@ export default function TermsPage() {
                 <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle,rgba(255,255,255,0.05)_0%,transparent_70%)] pointer-events-none"></div>
             </div>
 
-            {/* Main Content Container */}
-            <div className="max-w-[850px] mx-auto px-4 -mt-16 relative z-20">
-                <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-                    {/* Header Info */}
-                    <div className="bg-slate-50/80 backdrop-blur-sm border-b border-slate-100 px-8 py-6 flex items-center justify-between flex-wrap gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-200">
-                                <Shield className="w-5 h-5 text-white" />
-                            </div>
-                            <span className="font-bold text-slate-800">قوانین و ضوابط رسمی</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                            <Clock className="w-4 h-4 text-blue-500" />
-                            آخرین بروزرسانی: {new Date(page.updatedAt).toLocaleDateString("fa-IR")}
-                        </div>
-                    </div>
-
+            <div className="max-w-[900px] mx-auto px-4 -mt-16 relative z-20">
+                <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-300/50 border border-slate-100 overflow-hidden">
                     {/* Rendered Content */}
-                    <div className="p-8 md:p-12">
+                    <div className="p-10 md:p-14">
                         <div
-                            className="cms-content"
+                            className="cms-content min-h-[400px]"
                             dangerouslySetInnerHTML={{ __html: renderContent(page.content) }}
                         />
                     </div>

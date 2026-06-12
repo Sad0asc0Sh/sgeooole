@@ -15,6 +15,8 @@ const tagInserts: { label: string; insert: string }[] = [
   { label: "Italic", insert: "*Italic text*" },
   { label: "List", insert: "^- Item\n" },
   { label: "Link", insert: "[Link text](https://example.com)" },
+  { label: "Accordion", insert: "> Question\nAnswer\n\n" },
+  { label: "Category", insert: "## [shopping-cart] Title\n\n" },
 ];
 
 export default function EnhancedTextEditor({ value, onChange }: EnhancedTextEditorProps) {
