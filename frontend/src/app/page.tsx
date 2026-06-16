@@ -105,10 +105,10 @@ const SkeletonHero = () => (
         <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
       </div>
     </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
-      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" />
-      <div className="w-full aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" />
+    <div className="flex flex-wrap justify-center gap-4">
+      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
+      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" />
+      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" />
     </div>
   </section>
 );

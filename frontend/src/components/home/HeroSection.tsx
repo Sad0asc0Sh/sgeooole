@@ -95,9 +95,12 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             <div className="absolute inset-0 bg-gray-200" />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="w-full aspect-[16/5] bg-gray-200 animate-pulse rounded-xl" />
+            <div
+              key={i}
+              className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gray-200 animate-pulse rounded-xl"
+            />
           ))}
         </div>
       </section>
@@ -168,10 +171,10 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
         </div>
       )}
 
-      {/* Middle Banners Grid */}
+      {/* Middle Banners — Flex, centered, responsive by count */}
       {middleBanners.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {middleBanners.map((banner, index) => {
+        <div className="flex flex-wrap justify-center gap-4 pb-1">
+          {middleBanners.map((banner) => {
             const imageUrl = resolveImageUrl(
               (banner as any).image,
               "/placeholder-banner.png"
@@ -180,16 +183,26 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             const hasLink = !!bannerLink?.trim();
             const blurPlaceholder = generateBannerBlurPlaceholder(800, 250);
 
+            // Width per screen size, based on total count:
+            // Mobile  : always full-width (stacked vertically)
+            // Tablet  : 50% per banner for 2+  (2 per row, last centered if 1 remains)
+            // Desktop : 33.33% per banner for 3 (all 3 in one row, centered)
+            const widthClass =
+              middleBanners.length === 1
+                ? "w-full"
+                : middleBanners.length === 2
+                  ? "w-full sm:w-[calc(50%-8px)]"
+                  : "w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]";
+
             return (
               <div
                 key={banner._id}
                 className={`
-                  relative w-full aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
+                  relative aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
                   shadow-md hover:shadow-lg transition-all duration-300
                   hover:scale-[1.02] group
+                  ${widthClass}
                   ${hasLink ? "cursor-pointer" : "cursor-default"}
-                  ${middleBanners.length === 2 && index === 1 ? "sm:col-span-1" : ""}
-                  ${middleBanners.length === 1 ? "sm:col-span-2 lg:col-span-3" : ""}
                 `}
                 onClick={() => hasLink && navigateHref(router, bannerLink)}
                 role={hasLink ? "button" : undefined}
@@ -212,6 +225,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                     placeholder="blur"
                     blurDataURL={blurPlaceholder}
                     fallbackSrc="/placeholder-banner.png"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                   />
                 </div>
               </div>
