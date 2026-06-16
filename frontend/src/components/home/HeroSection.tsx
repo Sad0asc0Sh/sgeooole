@@ -95,11 +95,11 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             <div className="absolute inset-0 bg-gray-200" />
           </div>
         </div>
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gray-200 animate-pulse rounded-xl"
+              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gray-200 animate-pulse rounded-xl"
             />
           ))}
         </div>
@@ -187,18 +187,13 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
             // Mobile  : always full-width (stacked vertically)
             // Tablet  : 50% per banner for 2+  (2 per row, last centered if 1 remains)
             // Desktop : 33.33% per banner for 3 (all 3 in one row, centered)
-            const widthClass =
-              middleBanners.length === 1
-                ? "w-full"
-                : middleBanners.length === 2
-                  ? "w-full sm:w-[calc(50%-8px)]"
-                  : "w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]";
+            const widthClass = "w-full md:w-[31%] xl:w-[32%]";
 
             return (
               <div
                 key={banner._id}
                 className={`
-                  relative aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
+                  relative aspect-[16/9] rounded-xl overflow-hidden bg-gray-50
                   shadow-md hover:shadow-lg transition-all duration-300
                   hover:scale-[1.02] group
                   ${widthClass}

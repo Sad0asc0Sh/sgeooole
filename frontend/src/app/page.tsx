@@ -105,10 +105,10 @@ const SkeletonHero = () => (
         <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
       </div>
     </div>
-    <div className="flex flex-wrap justify-center gap-4">
-      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
-      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden sm:block" />
-      <div className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden lg:block" />
+    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />
     </div>
   </section>
 );
