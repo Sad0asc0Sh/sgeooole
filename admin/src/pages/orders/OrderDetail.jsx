@@ -128,6 +128,7 @@ function OrderDetail() {
       })
 
       message.success('وضعیت سفارش با موفقیت به‌روزرسانی شد')
+      setDeliveryDays('')
 
       // نوتیفیکیشن لینک‌دار برای این سفارش
       addNotification({
@@ -428,6 +429,7 @@ function OrderDetail() {
                       <Input
                         type="number"
                         min={1}
+                        value={deliveryDays}
                         placeholder="مثلاً ۳ روز"
                         onChange={(e) => setDeliveryDays(e.target.value)}
                         suffix="روز"

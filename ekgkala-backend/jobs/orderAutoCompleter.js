@@ -19,28 +19,39 @@ const checkAndCompleteOrders = async () => {
             console.log(`[AUTO-COMPLETE] Found ${ordersToComplete.length} orders to complete.`)
 
             for (const order of ordersToComplete) {
-                order.orderStatus = 'Delivered'
-                order.deliveredAt = now
-                order.autoCompleteAt = undefined // Clear the timer
-                await order.save()
+                try {
+                    // Use updateOne to bypass validation and improve performance
+                    await Order.updateOne(
+                        { _id: order._id },
+                        {
+                            $set: {
+                                orderStatus: 'Delivered',
+                                deliveredAt: now
+                            },
+                            $unset: { autoCompleteAt: "" }
+                        }
+                    )
 
-                // Audit Log
-                await logAction({
-                    action: 'AUTO_COMPLETE_ORDER',
-                    entity: 'Order',
-                    entityId: order._id,
-                    userId: null, // System action
-                    details: {
-                        message: 'Order status automatically updated to Delivered due to timer expiration',
-                        previousStatus: 'Shipped'
-                    }
-                })
+                    // Audit Log
+                    await logAction({
+                        action: 'AUTO_COMPLETE_ORDER',
+                        entity: 'Order',
+                        entityId: order._id,
+                        userId: null, // System action
+                        details: {
+                            message: 'Order status automatically updated to Delivered due to timer expiration',
+                            previousStatus: 'Shipped'
+                        }
+                    })
 
-                console.log(`[AUTO-COMPLETE] Order ${order._id} updated to Delivered.`)
+                    console.log(`[AUTO-COMPLETE] Order ${order._id} updated to Delivered.`)
+                } catch (orderError) {
+                    console.error(`[AUTO-COMPLETE] Error processing order ${order._id}:`, orderError)
+                }
             }
         }
     } catch (error) {
-        console.error('[AUTO-COMPLETE] Error processing orders:', error)
+        console.error('[AUTO-COMPLETE] Error fetching orders for auto-completion:', error)
     }
 }
 
