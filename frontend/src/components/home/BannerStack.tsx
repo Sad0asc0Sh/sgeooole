@@ -27,7 +27,7 @@ export default function BannerStack() {
                     {[1, 2, 3].map((i) => (
                         <div
                             key={i}
-                            className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
+                            className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] rounded-xl bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer"
                             style={{ backgroundSize: '200% 100%' }}
                         />
                     ))}
@@ -45,7 +45,7 @@ export default function BannerStack() {
                         <div
                             key={banner._id}
                             className={`
-                                relative w-full md:w-[31%] xl:w-[32%] aspect-[16/9] rounded-xl overflow-hidden bg-gray-50
+                                relative w-full md:w-[31%] xl:w-[32%] aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
                                 shadow-md hover:shadow-lg transition-all duration-300
                                 hover:scale-[1.02] group
                                 ${hasLink ? 'cursor-pointer' : 'cursor-default'}

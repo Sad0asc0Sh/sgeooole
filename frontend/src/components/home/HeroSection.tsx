@@ -99,7 +99,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gray-200 animate-pulse rounded-xl"
+              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gray-200 animate-pulse rounded-xl"
             />
           ))}
         </div>
@@ -193,7 +193,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
               <div
                 key={banner._id}
                 className={`
-                  relative aspect-[16/9] rounded-xl overflow-hidden bg-gray-50
+                  relative aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
                   shadow-md hover:shadow-lg transition-all duration-300
                   hover:scale-[1.02] group
                   ${widthClass}

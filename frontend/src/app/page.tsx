@@ -106,9 +106,9 @@ const SkeletonHero = () => (
       </div>
     </div>
     <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/9] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />
     </div>
   </section>
 );
