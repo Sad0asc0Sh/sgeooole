@@ -110,7 +110,32 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         } catch (error: any) {
             console.error('[AI Chat] Error:', error);
 
-            const errorMessage = error.response?.data?.message || 'متأسفانه در ارتباط با سرور مشکلی پیش آمد. لطفاً دوباره تلاش کنید.';
+            // Smart error detection - distinguish between:
+            // 1. Backend returned an error response (error.response exists)
+            // 2. Network/CORS/Timeout error (error.request exists but no response)
+            // 3. Unknown error (neither exists)
+
+            let errorMessage: string;
+
+            if (error.response) {
+                // Backend responded with an error status code (4xx, 5xx)
+                // Use the backend's error message if available
+                errorMessage = error.response.data?.message
+                    || error.response.data?.error
+                    || `خطای سرور (${error.response.status})`;
+            } else if (error.request) {
+                // Request was made but no response received (network/CORS/timeout)
+                if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+                    errorMessage = 'پاسخ سرور بیش از حد طول کشید. لطفاً دوباره تلاش کنید.';
+                } else if (error.message?.includes('Network Error')) {
+                    errorMessage = 'ارتباط با سرور قطع شده است. لطفاً اتصال اینترنت خود را بررسی کنید.';
+                } else {
+                    errorMessage = 'متأسفانه در ارتباط با سرور مشکلی پیش آمد. لطفاً دوباره تلاش کنید.';
+                }
+            } else {
+                // Something else happened during request setup
+                errorMessage = error.message || 'خطای ناشناخته. لطفاً دوباره تلاش کنید.';
+            }
 
             setMessages((prev) => [...prev, {
                 role: 'ai',

@@ -57,6 +57,17 @@ api.interceptors.request.use(
 // Response interceptor - Handle errors globally
 api.interceptors.response.use(
   (response) => {
+    // SAFETY CHECK: Backend sometimes returns 200 OK with success: false
+    // This ensures such responses still trigger the catch block downstream
+    if (response.data && response.data.success === false) {
+      const error = new Error(response.data.message || 'خطا در سرور');
+      (error as any).response = {
+        status: response.status,
+        data: response.data,
+      };
+      (error as any).isBackendError = true;
+      return Promise.reject(error);
+    }
     return response;
   },
   (error) => {
@@ -75,14 +86,20 @@ api.interceptors.response.use(
             }
           }
           break;
+        case 429:
+          console.error("Rate limited:", data?.message || "Too many requests");
+          break;
         case 404:
           console.error("Resource not found");
           break;
         case 500:
+        case 502:
+        case 503:
+        case 504:
           console.error("Server error:", data?.error || data?.message || "Unknown server error");
           break;
         default:
-          console.error(`Error: ${data?.message || "Something went wrong"}`);
+          console.error(`Error (${status}):`, data?.message || "Something went wrong");
       }
     } else if (error.request) {
       if (process.env.NODE_ENV === 'development') {

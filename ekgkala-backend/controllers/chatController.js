@@ -1,7 +1,7 @@
 const Product = require('../models/Product');
 const ChatHistory = require('../models/ChatHistory');
 const Settings = require('../models/Settings');
-const { generateExpertResponse } = require('../utils/groqService');
+const { generateExpertResponse, AIServiceError } = require('../utils/groqService');
 
 /**
  * Handle incoming chat message
@@ -155,6 +155,7 @@ exports.handleMessage = async (req, res) => {
     }
 
     // 3. Generate Answer (Pass history and store info)
+    // This now throws AIServiceError if something goes wrong
     const reply = await generateExpertResponse(message, productContext, history, storeInfoContext);
 
     // 4. Save History (for ALL users including guests)
@@ -199,6 +200,17 @@ exports.handleMessage = async (req, res) => {
 
   } catch (error) {
     console.error("Chat Error:", error);
+
+    // Handle AI service errors with proper status codes
+    if (error instanceof AIServiceError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        message: error.message,
+        error: process.env.NODE_ENV === 'development' ? error.originalError?.message : undefined
+      });
+    }
+
+    // Handle other errors (database, validation, etc.)
     res.status(500).json({
       success: false,
       message: 'خطایی در پردازش پیام شما رخ داد.',
