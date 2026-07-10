@@ -8,6 +8,7 @@ import ProductRailContainer from "@/components/home/ProductRailContainer";
 import ServicesGrid from "@/components/home/ServicesGrid";
 import BrandsStrip from "@/components/home/BrandsStrip";
 import ValueProposition from "@/components/home/ValueProposition";
+import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
 
@@ -167,51 +168,71 @@ export default async function Home() {
   };
 
   return (
-    <div className="flex flex-col gap-y-2 pb-4">
+    <div className="flex flex-col pb-4">
       <script
         type="application/ld+json"
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <Suspense fallback={<SkeletonHero />}>
-        <HeroSection initialBanners={banners} />
-      </Suspense>
+      <HomeSection variant="hero">
+        <Suspense fallback={<SkeletonHero />}>
+          <HeroSection initialBanners={banners} />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-        <FlashOfferRail />
-      </Suspense>
+      <HomeSection variant="promotion">
+        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
+          <FlashOfferRail />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<SkeletonRail title="دسته‌های ویژه" />}>
-        <CategoryRail title="دسته‌های ویژه" variant="circle" data={featuredCats} />
-      </Suspense>
+      <HomeSection variant="discovery">
+        <Suspense fallback={<SkeletonRail title="دسته‌های ویژه" />}>
+          <CategoryRail title="دسته‌های ویژه" variant="circle" data={featuredCats} />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<SkeletonRail title="دسته‌های محبوب" />}>
-        <CategoryRail title="دسته‌های محبوب" variant="card" data={popularCats} />
-      </Suspense>
+      <HomeSection variant="discovery">
+        <Suspense fallback={<SkeletonRail title="دسته‌های محبوب" />}>
+          <CategoryRail title="دسته‌های محبوب" variant="card" data={popularCats} />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-        <SpecialOfferRail />
-      </Suspense>
+      <HomeSection variant="promotion">
+        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
+          <SpecialOfferRail />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-        <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} />
-      </Suspense>
+      <HomeSection variant="products">
+        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
+          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-        <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} />
-      </Suspense>
+      <HomeSection variant="products">
+        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
+          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
-        <ServicesGrid />
-      </Suspense>
+      <HomeSection variant="trust">
+        <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
+          <ServicesGrid />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
-        <BrandsStrip />
-      </Suspense>
+      <HomeSection variant="trust">
+        <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
+          <BrandsStrip />
+        </Suspense>
+      </HomeSection>
 
-      <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
-        <ValueProposition />
-      </Suspense>
+      <HomeSection variant="trust">
+        <Suspense fallback={<div className="p-4 animate-pulse h-24 bg-white rounded-xl mx-4" />}>
+          <ValueProposition />
+        </Suspense>
+      </HomeSection>
     </div>
   );
 }
