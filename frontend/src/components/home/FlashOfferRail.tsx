@@ -7,14 +7,17 @@ import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/free-mode";
 import ResilientImage from "@/components/ui/ResilientImage";
-import { Product } from "@/services/productService";
 import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { AlertTriangle, ChevronLeft, Flame } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
+import PromotionSection from "@/components/promotion/PromotionSection";
+import PromotionHeader from "@/components/promotion/PromotionHeader";
+import PromotionBadge from "@/components/promotion/PromotionBadge";
+import Countdown from "@/components/ui/Countdown";
+import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
@@ -54,42 +57,15 @@ function FlashOfferRail() {
   }
 
   return (
-    <div
-      className="py-4 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-y border-amber-500/20 shadow-inner relative overflow-hidden"
-      style={{
-        // CSS Mask for Zigzag (Sawtooth) Edges - Adjusted for smaller padding
-        // 20px width => 10px height zigzag. py-4 (16px) leaves 6px visual padding.
-        WebkitMask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x",
-        mask: "conic-gradient(from -45deg at bottom,#0000,#000 1deg 90deg,#0000 91deg) bottom/20px 51% repeat-x, conic-gradient(from 135deg at top,#0000,#000 1deg 90deg,#0000 91deg) top/20px 51% repeat-x"
-      }}
-    >
-      {/* Decorative Background Glow */}
-      <div className="absolute top-0 left-1/4 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+    <PromotionSection>
+      <PromotionHeader
+        title={getPromotionCopy("promotion.section.timed.title")}
+        description={getPromotionCopy("promotion.section.timed.description")}
+        actionHref="/products?sort=flash"
+        actionLabel={getPromotionCopy("promotion.action.viewAll")}
+      />
 
-      {/* Header Section */}
-      <div className="px-4 mb-3 flex items-center justify-between relative z-10">
-        <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-1.5">
-            <Flame className="text-amber-500 w-5 h-5 animate-pulse drop-shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
-            <h3 className="text-base font-black text-transparent bg-clip-text bg-gradient-to-l from-amber-200 via-amber-400 to-amber-500 drop-shadow-sm">
-              پیشنهاد لحظه‌ای
-            </h3>
-          </div>
-          <span className="text-[10px] text-gray-400 font-medium mr-6">
-            فرصت محدود خرید با تخفیف ویژه
-          </span>
-        </div>
-        <Link
-          href="/products?sort=flash"
-          className="flex items-center gap-1 text-amber-400 text-[11px] font-bold hover:text-amber-300 transition-colors bg-gray-800/50 px-2.5 py-1 rounded-full border border-amber-500/20 backdrop-blur-sm"
-        >
-          <span>مشاهده همه</span>
-          <ChevronLeft size={12} />
-        </Link>
-      </div>
-
-      <div className="relative">
+      <div className="relative mt-5">
         <Swiper
           modules={[FreeMode, Navigation]}
           freeMode
@@ -97,7 +73,7 @@ function FlashOfferRail() {
             nextEl: '.swiper-button-next-flash',
             prevEl: '.swiper-button-prev-flash',
           }}
-          spaceBetween={10}
+          spaceBetween={12}
           slidesPerView={2.3}
           breakpoints={{
             640: {
@@ -113,7 +89,7 @@ function FlashOfferRail() {
               slidesPerView: 6,
             },
           }}
-          className="w-full !px-4 !pb-2 relative z-10"
+          className="w-full !pb-2"
           grabCursor
         >
           {activeFlashDeals.map((product, index) => {
@@ -124,15 +100,6 @@ function FlashOfferRail() {
               product.specialOfferEndTime &&
               new Date(product.specialOfferEndTime).getTime() > now
             );
-
-            // Force Gold/Dark Theme for this section
-            const headerConfig = {
-              type: 'flash',
-              title: 'پیشنهاد طلایی',
-              color: 'text-amber-950',
-              borderColor: 'bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500',
-              endTime: product.flashDealEndTime || product.specialOfferEndTime,
-            };
 
             // Flash deals in this section always have discount applied (they're active)
             const effectiveDiscount = product.discount > 0 ? product.discount : 0;
@@ -148,119 +115,90 @@ function FlashOfferRail() {
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
             return (
-              <SwiperSlide key={product.id} style={{ width: "140px", height: "auto" }}>
+              <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
                 <Link href={buildProductUrl(product)} className="block h-full">
-                  <div
-                    className={`
-                      bg-gray-800/70
-                      border border-amber-500/30
-                      h-full flex flex-col justify-between
-                      cursor-pointer
-                      hover:border-amber-400 hover:shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:bg-gray-800/80
-                      transition-all duration-300
-                      relative overflow-hidden group pt-3 pb-3
-                    `}
-                    style={{
-                      clipPath: "polygon(0 0, 50% 12px, 100% 0, 100% 100%, 50% calc(100% - 12px), 0 100%)",
-                      borderRadius: "0" // Remove border radius as clip-path defines shape
-                    }}
-                  >
-
-                    <div className="px-2.5 pb-1 pt-0.5">
-                      {/* Header Title - Centered below the V notch */}
-                      <div className="flex justify-center mb-1.5">
-                        <span className="text-[9px] font-black text-amber-400 bg-amber-950/50 px-1.5 py-0.5 rounded-full border border-amber-500/20">
-                          {headerConfig.title}
-                        </span>
+                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
+                    <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <PromotionBadge label={getPromotionCopy("promotion.reason.timed.label")} tone="timed" />
+                        {isLowStock ? (
+                          <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
+                        ) : product.campaignLabel ? (
+                          <PromotionBadge label={product.campaignLabel} tone="campaign" />
+                        ) : null}
                       </div>
+                    </div>
 
-                      {/* Image */}
-                      <div className={`${imageStyles.frame} mb-2 rounded-lg`}>
-                        <ResilientImage
-                          src={product.image || "/placeholder.png"}
-                          alt={product.name}
-                          fill
-                          className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
-                          sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 140px"
-                          loading={index < 2 ? "eager" : "lazy"}
-                          priority={index < 2}
-                          fetchPriority={index < 2 ? "high" : "auto"}
-                          quality={75}
-                          placeholder="blur"
-                          blurDataURL={getBlurDataURL()}
-                          fallbackSrc="/placeholder.png"
-                        />
+                    <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
+                      <ResilientImage
+                        src={product.image || "/placeholder.png"}
+                        alt={product.name}
+                        fill
+                        className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : "group-hover:scale-105"}`}
+                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
+                        loading={index < 2 ? "eager" : "lazy"}
+                        priority={index < 2}
+                        fetchPriority={index < 2 ? "high" : "auto"}
+                        quality={75}
+                        placeholder="blur"
+                        blurDataURL={getBlurDataURL()}
+                        fallbackSrc="/placeholder.png"
+                      />
 
-                        {/* Timer Overlay (Top Right) */}
-                        {(headerConfig?.endTime) && (
-                          <ProductTimerBadge
-                            targetDate={headerConfig.endTime}
-                            color="text-amber-500"
-                            className="bg-gray-900/90 border border-amber-500/30 backdrop-blur-sm shadow-lg"
-                          />
-                        )}
-
-                        {/* Low Stock Badge */}
-                        {isLowStock && (
-                          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
-                            <AlertTriangle size={12} />
-                            <span>تنها {product.countInStock} عدد</span>
-                          </div>
-                        )}
-
-                        {/* OUT OF STOCK OVERLAY */}
-                        {isOutOfStock && (
-                          <div className="absolute inset-0 bg-gray-900/70 z-10 flex items-center justify-center backdrop-blur-[2px]">
-                            <span className="bg-gray-800 text-gray-300 border border-gray-600 text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
-                              ناموجود
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <h3
-                        className={`text-[11px] font-bold leading-5 line-clamp-2 mb-2 min-h-[40px] ${isOutOfStock ? "text-gray-500" : "text-gray-200"
-                          } group-hover:text-amber-200 transition-colors text-center`}
-                      >
-                        {product.name}
-                      </h3>
-
-                      {/* Price Section */}
-                      <div className="flex flex-col gap-1 mt-auto">
-                        {/* Row 1: Old Price (if discount and in stock) */}
-                        <div className="flex items-center justify-center h-5">
-                          {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
-                            <>
-                              <div className="flex items-center gap-1">
-                                <div className="text-amber-950 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-                                  {effectiveDiscount.toLocaleString("fa-IR")}٪
-                                </div>
-                                <span className="text-[11px] text-gray-500 line-through decoration-gray-500">
-                                  {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="h-5" />
-                          )}
+                      {/* OUT OF STOCK OVERLAY */}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                          <span className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[10px] font-bold text-gray-700 shadow-sm">
+                            ناموجود
+                          </span>
                         </div>
+                      )}
+                    </div>
 
-                        {/* Row 2: Current Price */}
-                        <div
-                          className={`flex items-center justify-center gap-1 ${isOutOfStock ? "text-gray-500" : "text-gray-100"
+                    <div className="mb-2 flex justify-center">
+                      {product.flashDealEndTime && (
+                        <Countdown targetDate={product.flashDealEndTime} variant="compact" />
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <h3
+                      className={`mb-2 min-h-[40px] text-right text-[11px] font-bold leading-5 line-clamp-2 ${isOutOfStock ? "text-gray-400" : "text-gray-700"
+                        }`}
+                    >
+                      {product.name}
+                    </h3>
+
+                    {/* Price Section */}
+                    <div className="mt-auto flex flex-col gap-1">
+                      {/* Row 1: Old Price (if discount and in stock) */}
+                      <div className="flex h-5 items-center justify-between gap-1">
+                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
+                          <>
+                            <PromotionBadge label={`${effectiveDiscount.toLocaleString("fa-IR")}٪`} tone="discount" />
+                            <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
+                              {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
+                            </span>
+                          </>
+                        ) : (
+                          <div className="h-5" />
+                        )}
+                      </div>
+
+                      {/* Row 2: Current Price */}
+                      <div
+                        className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : "text-gray-800"
+                          }`}
+                      >
+                        <span className="text-[15px] font-black tracking-tight">
+                          {displayPrice.toLocaleString("fa-IR")}
+                        </span>
+                        <span
+                          className={`text-[10px] font-medium ${isOutOfStock ? "text-gray-400" : "text-gray-600"
                             }`}
                         >
-                          <span className="text-[15px] font-black tracking-tight text-amber-400 drop-shadow-[0_0_5px_rgba(251,191,36,0.3)]">
-                            {displayPrice.toLocaleString("fa-IR")}
-                          </span>
-                          <span
-                            className={`text-[10px] font-medium ${isOutOfStock ? "text-gray-600" : "text-gray-400"
-                              }`}
-                          >
-                            تومان
-                          </span>
-                        </div>
+                          تومان
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -272,17 +210,15 @@ function FlashOfferRail() {
           {/* "See All" Card (Last Slide) */}
           <SwiperSlide style={{ height: "auto" }}>
             <Link href="/products?sort=flash" className="block h-full">
-              <div
-                className="bg-gradient-to-b from-gray-800/80 to-gray-900/90 h-full rounded-xl border border-amber-500/20 flex flex-col items-center justify-center gap-3 cursor-pointer group hover:border-amber-400/60 hover:shadow-lg hover:shadow-amber-500/10 transition-all duration-300 px-4 py-6 min-h-[200px]"
-              >
-                <div className="w-12 h-12 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400 group-hover:bg-amber-500 group-hover:text-gray-900 group-hover:border-amber-500 group-hover:scale-110 transition-all duration-300 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-                  <ChevronLeft size={22} strokeWidth={2.5} />
+              <div className="flex h-full min-h-[220px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-ekg-200 bg-white/70 px-4 py-6 transition-all duration-300 hover:border-kala-300 hover:bg-white hover:shadow-sm">
+                <div className="flex h-11 w-11 items-center justify-center rounded-full border border-kala-200 bg-kala-50 text-kala-700 transition-colors duration-300">
+                  <ChevronLeft size={20} strokeWidth={2.5} />
                 </div>
-                <span className="text-sm font-bold text-gray-300 group-hover:text-amber-400 transition-colors duration-300">
-                  مشاهده همه
+                <span className="text-sm font-bold text-gray-700">
+                  {getPromotionCopy("promotion.action.viewAll")}
                 </span>
-                <span className="text-[10px] text-gray-500 group-hover:text-amber-500/70 transition-colors duration-300">
-                  مشاهده تمام پیشنهادها
+                <span className="text-center text-[10px] leading-5 text-gray-400">
+                  {getPromotionCopy("promotion.action.viewAllOpportunities")}
                 </span>
               </div>
             </Link>
@@ -290,14 +226,14 @@ function FlashOfferRail() {
         </Swiper>
 
         {/* Navigation Arrows - Desktop Only */}
-        <button className="swiper-button-prev-flash hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg border border-amber-500/30 items-center justify-center text-amber-400 hover:bg-gray-700 hover:scale-110 transition-all">
+        <button className="swiper-button-prev-flash absolute left-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-ekg-100 bg-white/90 text-ekg-700 shadow-sm backdrop-blur-sm transition-all hover:border-kala-200 hover:bg-white md:flex">
           <ChevronLeft className="rotate-180" size={20} />
         </button>
-        <button className="swiper-button-next-flash hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-gray-800/80 backdrop-blur-sm rounded-full shadow-lg border border-amber-500/30 items-center justify-center text-amber-400 hover:bg-gray-700 hover:scale-110 transition-all">
+        <button className="swiper-button-next-flash absolute right-2 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-ekg-100 bg-white/90 text-ekg-700 shadow-sm backdrop-blur-sm transition-all hover:border-kala-200 hover:bg-white md:flex">
           <ChevronLeft size={20} />
         </button>
       </div>
-    </div>
+    </PromotionSection>
   );
 }
 
