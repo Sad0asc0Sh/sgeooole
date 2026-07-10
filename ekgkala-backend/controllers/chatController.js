@@ -1,7 +1,7 @@
 const Product = require('../models/Product');
 const ChatHistory = require('../models/ChatHistory');
 const Settings = require('../models/Settings');
-const { generateExpertResponse, AIServiceError } = require('../utils/groqService');
+const { generateExpertResponse, streamExpertResponse, AIServiceError } = require('../utils/groqService');
 
 /**
  * Handle incoming chat message
@@ -216,6 +216,151 @@ exports.handleMessage = async (req, res) => {
       message: 'خطایی در پردازش پیام شما رخ داد.',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+};
+
+/**
+ * Helper: resolve identity + enforce daily limit (shared by handleMessage and handleStreamMessage)
+ */
+async function resolveIdentity(req) {
+  const rawSessionId = req.headers['x-session-id'] || req.body?.sessionId || null;
+  const sessionId = Array.isArray(rawSessionId) ? rawSessionId[0] : rawSessionId;
+  const normalizedSessionId = typeof sessionId === 'string' ? sessionId.trim() : null;
+
+  const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean();
+  const userLimit = settings?.aiConfig?.userDailyLimit || 20;
+
+  const authenticatedUserId = req.user?._id || null;
+  const ipAddress = req.ip || req.connection?.remoteAddress || null;
+
+  let identityQuery = null;
+  if (authenticatedUserId) {
+    identityQuery = { userId: authenticatedUserId };
+  } else if (normalizedSessionId) {
+    identityQuery = { sessionId: normalizedSessionId };
+  } else if (ipAddress) {
+    identityQuery = { sessionId: `ip:${ipAddress}` };
+  }
+
+  if (!identityQuery) return { error: 'Missing session identifier' };
+
+  let chatSession = await ChatHistory.findOne(identityQuery);
+  if (!chatSession) {
+    chatSession = new ChatHistory({ ...identityQuery, messages: [] });
+  }
+
+  // Daily reset
+  const now = new Date();
+  const lastReset = chatSession.usage?.lastReset ? new Date(chatSession.usage.lastReset) : new Date(0);
+  if (now.getDate() !== lastReset.getDate() || now.getMonth() !== lastReset.getMonth() || now.getFullYear() !== lastReset.getFullYear()) {
+    chatSession.usage = { dailyCount: 0, lastReset: now };
+  }
+
+  const currentDailyCount = Number(chatSession.usage?.dailyCount) || 0;
+  if (currentDailyCount >= userLimit) {
+    return { error: `شما به سقف مجاز ${userLimit} پیام در روز رسیده‌اید. لطفاً فردا مجدداً تلاش کنید.`, status: 429 };
+  }
+
+  const history = chatSession.messages.map(m => ({ role: m.role, content: m.content }));
+
+  return { chatSession, history, userLimit, settings };
+}
+
+/**
+ * Helper: build product + store context
+ */
+async function buildChatContext(message) {
+  const keywords = message.split(" ").filter(w => w.length > 3);
+  let productContext = "";
+
+  if (keywords.length > 0) {
+    const products = await Product.find({
+      $or: keywords.map(k => ({ $or: [{ name: { $regex: k, $options: 'i' } }, { description: { $regex: k, $options: 'i' } }] })),
+      isActive: true
+    }).select('name price stock description').limit(5);
+
+    if (products.length > 0) {
+      productContext = products.map(p =>
+        `- مدل: ${p.name}\n  قیمت: ${p.price.toLocaleString()} تومان\n  وضعیت: ${p.stock > 0 ? 'موجود' : 'ناموجود'}\n  توضیح: ${p.description ? p.description.substring(0, 100) : ''}...`
+      ).join("\n----------------\n");
+    }
+  }
+
+  let storeInfoContext = "";
+  try {
+    const storeSettings = await Settings.findOne({ singletonKey: 'main_settings' })
+      .select('storeName storeEmail storePhone storeAddress socialLinks').lean();
+    const parts = [];
+    parts.push(`📄 درباره ما: شرکت EkgKala از سال ۱۳۹۶ در مشهد فعالیت دارد. تخصص: دوربین مداربسته، دزدگیر و خانه هوشمند.`);
+    parts.push(`📞 شعبه ۱: 05135021720 | شعبه ۲: 05137136355 | شعبه ۳: 09154191788`);
+    if (storeSettings?.socialLinks?.telegram) parts.push(`تلگرام: ${storeSettings.socialLinks.telegram}`);
+    if (storeSettings?.socialLinks?.instagram) parts.push(`اینستاگرام: ${storeSettings.socialLinks.instagram}`);
+    storeInfoContext = parts.join('\n');
+  } catch (_) { /* skip */ }
+
+  return { productContext, storeInfoContext };
+}
+
+/**
+ * Helper: save user message + AI reply to history
+ */
+async function saveHistory(chatSession, userMessage, aiReply) {
+  if (chatSession) {
+    chatSession.messages.push({ role: 'user', content: userMessage });
+    chatSession.messages.push({ role: 'assistant', content: aiReply });
+    if (chatSession.messages.length > 50) chatSession.messages = chatSession.messages.slice(-50);
+    chatSession.lastUpdated = new Date();
+    if (!chatSession.usage) chatSession.usage = { dailyCount: 0, lastReset: new Date() };
+    chatSession.usage.dailyCount = (Number(chatSession.usage.dailyCount) || 0) + 1;
+    await chatSession.save();
+  }
+}
+
+/**
+ * POST /api/chat/stream
+ * SSE streaming endpoint — client receives tokens in real-time
+ */
+exports.handleStreamMessage = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'پیام نمی‌تواند خالی باشد' });
+    }
+
+    // 1. Resolve identity
+    const identity = await resolveIdentity(req);
+    if (identity.error) {
+      return res.status(identity.status || 400).json({ success: false, message: identity.error });
+    }
+
+    // 2. Build context
+    const { productContext, storeInfoContext } = await buildChatContext(message);
+
+    // 3. Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders();
+
+    // 4. Stream the response
+    const fullReply = await streamExpertResponse(
+      res, message, productContext, identity.history, storeInfoContext
+    );
+
+    // 5. Save to history
+    if (fullReply) {
+      await saveHistory(identity.chatSession, message, fullReply);
+    }
+
+  } catch (error) {
+    console.error("[Chat Stream Error]", error);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, message: 'خطا در پردازش پیام.' });
+    }
+    res.write(`data: ${JSON.stringify({ error: 'خطا در پردازش پیام.' })}\n\n`);
+    res.end();
   }
 };
 

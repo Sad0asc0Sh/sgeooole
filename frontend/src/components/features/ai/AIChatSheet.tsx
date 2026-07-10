@@ -2,8 +2,7 @@
 
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, User, AlertCircle } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
-import api from "@/lib/api";
+import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
 import { authService } from "@/services/authService";
 
 interface AIChatSheetProps {
@@ -18,14 +17,21 @@ interface Message {
     isError?: boolean;
 }
 
-export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
-    const [input, setInput] = useState("");
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [isTyping, setIsTyping] = useState(false);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const bottomRef = useRef<HTMLDivElement>(null);
+interface SuggestionItem {
+    icon: typeof Sparkles;
+    label: string;
+    prompt: string;
+}
 
-    const [usage, setUsage] = useState<{ current: number, limit: number, remaining: number } | null>(null);
+export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
+    const [input, setInput] = useState<string>("");
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isTyping, setIsTyping] = useState<boolean>(false);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const bottomRef = useRef<HTMLDivElement | null>(null);
+    const abortRef = useRef<AbortController | null>(null);
+
+    const [usage, setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
 
     // --- Body Scroll Lock ---
     useEffect(() => {
@@ -39,26 +45,24 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         };
     }, [open]);
 
-    const suggestions = [
+    const suggestions: SuggestionItem[] = [
         { icon: Box, label: "پیگیری سفارش", prompt: "سفارش من کجاست؟" },
         { icon: Wrench, label: "خدمات نصب", prompt: "شرایط نصب در محل چیست؟" },
         { icon: ShoppingBag, label: "راهنمای خرید", prompt: "بهترین دوربین مداربسته برای منزل کدام است؟" },
         { icon: Phone, label: "پشتیبانی", prompt: "شماره تماس پشتیبانی چند است؟" },
     ];
 
-    // --- FIXED: Smart Auto-Scroll ---
-    // Previously caused jumping while typing. Now only scrolls on NEW messages.
+    // --- Smart Auto-Scroll ---
     useEffect(() => {
         if (open) {
-            // Use a small timeout to allow layout to paint before scrolling
             const timeoutId = setTimeout(() => {
                 bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
             }, 100);
             return () => clearTimeout(timeoutId);
         }
-    }, [messages.length, open]); // <--- CRITICAL FIX: Removed 'input' from dependencies
+    }, [messages.length, open]);
 
-    const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const handleInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
@@ -66,7 +70,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
@@ -77,104 +81,179 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         if (!input.trim() || isTyping) return;
 
         const userMsg: Message = { role: 'user', content: input };
-        setMessages((prev) => [...prev, userMsg]);
+        setMessages((prev: Message[]) => [...prev, userMsg]);
         const currentInput = input;
         setInput("");
         if (textareaRef.current) textareaRef.current.style.height = "40px";
 
-        // Set typing indicator
+        const aiTempIndex = messages.length + 1;
+        setMessages((prev: Message[]) => [...prev, { role: 'ai', content: '', isLoading: true }]);
         setIsTyping(true);
 
-        try {
-            // Get current user from localStorage
-            const currentUser = authService.getUser();
+        const currentUser = authService.getUser();
+        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-            // Call chat API
-            const response = await api.post('/chat', {
-                message: currentInput,
-                userId: currentUser?.id || undefined
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        headers['x-session-id'] = getSessionId();
+
+        const abortController = new AbortController();
+        abortRef.current = abortController;
+
+        let fullReply = '';
+
+        try {
+            // Use global window object for base URL to avoid process.env issues
+            const baseUrl = getBaseUrl();
+            const apiUrl = `${baseUrl}/api/chat/stream`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    message: currentInput,
+                    userId: currentUser?.id || undefined
+                }),
+                signal: abortController.signal,
             });
 
-            if (response.data.success) {
-                const aiMessage = response.data.data.message;
-                setMessages((prev) => [...prev, {
-                    role: 'ai',
-                    content: aiMessage
-                }]);
-                if (response.data.data.usage) {
-                    setUsage(response.data.data.usage);
-                }
-            } else {
-                throw new Error(response.data.message || 'خطا در دریافت پاسخ');
+            const reader = response.body?.getReader();
+            const decoder = new TextDecoder();
+
+            if (!reader) {
+                throw new Error('No response body');
             }
-        } catch (error: any) {
-            console.error('[AI Chat] Error:', error);
 
-            // Smart error detection - distinguish between:
-            // 1. Backend returned an error response (error.response exists)
-            // 2. Network/CORS/Timeout error (error.request exists but no response)
-            // 3. Unknown error (neither exists)
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
 
-            let errorMessage: string;
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
 
-            if (error.response) {
-                // Backend responded with an error status code (4xx, 5xx)
-                // Use the backend's error message if available
-                errorMessage = error.response.data?.message
-                    || error.response.data?.error
-                    || `خطای سرور (${error.response.status})`;
-            } else if (error.request) {
-                // Request was made but no response received (network/CORS/timeout)
-                if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
-                    errorMessage = 'پاسخ سرور بیش از حد طول کشید. لطفاً دوباره تلاش کنید.';
-                } else if (error.message?.includes('Network Error')) {
-                    errorMessage = 'ارتباط با سرور قطع شده است. لطفاً اتصال اینترنت خود را بررسی کنید.';
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+                    const jsonStr = trimmed.substring(6);
+                    if (jsonStr === '[DONE]') continue;
+
+                    let payload: { token?: string; done?: boolean; error?: string };
+                    try {
+                        payload = JSON.parse(jsonStr);
+                    } catch {
+                        continue;
+                    }
+
+                    if (payload.error) {
+                        throw new Error(payload.error);
+                    }
+
+                    if (payload.token) {
+                        fullReply += payload.token;
+                        setMessages((prev: Message[]) => {
+                            const last = prev[prev.length - 1];
+                            if (last?.role === 'ai') {
+                                const updated = [...prev];
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    content: fullReply,
+                                    isLoading: false,
+                                };
+                                return updated;
+                            }
+                            return prev;
+                        });
+                    }
+
+                    if (payload.done) {
+                        // Stream complete — nothing to do, reader will close
+                    }
+                }
+            }
+
+        } catch (error: unknown) {
+            if ((error as Error)?.name === 'AbortError') {
+                if (fullReply) {
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role === 'ai') {
+                            const updated = [...prev];
+                            updated[updated.length - 1] = {
+                                ...last,
+                                content: fullReply + '\n\n(لغو شد)',
+                                isLoading: false,
+                            };
+                            return updated;
+                        }
+                        return prev;
+                    });
                 } else {
-                    errorMessage = 'متأسفانه در ارتباط با سرور مشکلی پیش آمد. لطفاً دوباره تلاش کنید.';
+                    setMessages((prev: Message[]) => prev.filter((_: Message, i: number) => i !== aiTempIndex));
                 }
-            } else {
-                // Something else happened during request setup
-                errorMessage = error.message || 'خطای ناشناخته. لطفاً دوباره تلاش کنید.';
+                return;
             }
 
-            setMessages((prev) => [...prev, {
-                role: 'ai',
-                content: errorMessage,
-                isError: true
-            }]);
+            console.error('[AI Chat] Error:', error);
+            const errorMessage = (error instanceof Error ? error.message : null) || 'خطای ناشناخته. لطفاً دوباره تلاش کنید.';
+
+            setMessages((prev: Message[]) => {
+                const last = prev[prev.length - 1];
+                if (last?.role === 'ai') {
+                    const updated = [...prev];
+                    updated[updated.length - 1] = {
+                        role: 'ai',
+                        content: errorMessage,
+                        isError: true,
+                    };
+                    return updated;
+                }
+                return [...prev, { role: 'ai', content: errorMessage, isError: true }];
+            });
         } finally {
             setIsTyping(false);
+            abortRef.current = null;
         }
     };
 
-    // Clear chat history from both UI and server
     const handleClearChat = async () => {
-        // Clear UI messages immediately
+        if (abortRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
+        }
         setMessages([]);
+        setIsTyping(false);
 
-        // Clear server-side history if user is logged in
         const currentUser = authService.getUser();
         if (currentUser?.id) {
             try {
-                await api.delete(`/chat/history/${currentUser.id}`);
+                const token = localStorage.getItem("token");
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                headers['x-session-id'] = getSessionId();
+
+                const baseUrl = getBaseUrl();
+
+                await fetch(`${baseUrl}/api/chat/history/${currentUser.id}`, {
+                    method: 'DELETE',
+                    headers,
+                });
             } catch (error) {
                 console.error('[AI Chat] Error clearing history:', error);
-                // Don't show error to user - UI is already cleared
             }
         }
     };
+
+    // Remove dead store warning: `aiTempIndex` was used conditionally
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="bottom"
-                // FIX: 
-                // 1. !h-[100dvh] forces full height.
-                // 2. [&>div>button]:hidden hides the default Shadcn close button which conflicts with ours.
-                // 3. We DO NOT use flex here because the inner div of SheetContent blocks it. We use a wrapper below.
                 className="fixed inset-0 z-[9999] !h-[100dvh] !w-full !p-0 bg-white border-none focus-visible:outline-none [&>div>button]:hidden"
             >
-                {/* --- NEW WRAPPER: Restores Flex Context broken by SheetContent's inner div --- */}
                 <div className="flex flex-col h-full w-full relative">
 
                     {/* 1. Header */}
@@ -211,7 +290,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             <div className={`flex flex-col items-center w-full transition-all duration-500 ease-in-out origin-top ${(input.trim().length > 0 || messages.length > 0) ? "opacity-0 max-h-0 scale-95 -translate-y-4 overflow-hidden" : "opacity-100 max-h-[500px] scale-100 translate-y-0"}`}>
                                 <h2 className="text-xl font-bold text-gray-800 mb-8">چطور می‌توانم کمکتان کنم؟</h2>
                                 <div className="grid grid-cols-2 gap-3 w-full max-w-sm mb-4">
-                                    {suggestions.map((item, idx) => (
+                                    {suggestions.map((item: SuggestionItem, idx: number) => (
                                         <button key={idx} onClick={() => setInput(item.prompt)} className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-kala-300 hover:shadow-md transition-all active:scale-95 cursor-pointer">
                                             <item.icon className="text-kala-500" size={24} />
                                             <span className="text-xs font-medium text-gray-600">{item.label}</span>
@@ -224,7 +303,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         {/* Messages List */}
                         {messages.length > 0 && (
                             <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 mt-4 px-1">
-                                {messages.map((msg, index) => (
+                                {messages.map((msg: Message, index: number) => (
                                     <div key={index} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-1 ${msg.role === 'user' ? 'bg-gray-200' : msg.isError ? 'bg-red-100' : 'bg-kala-100'}`}>
                                             {msg.role === 'user' ? (
@@ -236,7 +315,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                             )}
                                         </div>
                                         <div className={`px-3.5 py-2 rounded-2xl text-[13px] leading-6 shadow-sm max-w-[85%] break-words whitespace-pre-wrap ${msg.role === 'user' ? 'bg-gray-800 text-white rounded-br-sm' : msg.isError ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm' : 'bg-orange-100 border border-orange-200 text-orange-900 rounded-bl-sm'}`}>
-                                            {msg.content}
+                                            {msg.content || (msg.isLoading ? '\u00A0' : '')}
                                         </div>
                                     </div>
                                 ))}
@@ -245,7 +324,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                         <div className="w-6 h-6 rounded-full bg-kala-50 flex items-center justify-center">
                                             <Sparkles size={12} className="text-kala-400" />
                                         </div>
-                                        <span className="text-[10px] text-gray-400 pt-1">در حال نوشتن...</span>
+                                        <span className="text-[10px] text-gray-400 pt-1">در حال فکر کردن...</span>
                                     </div>
                                 )}
                             </div>
@@ -285,4 +364,33 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             </SheetContent>
         </Sheet>
     );
+}
+
+// --- helpers ---
+
+function getSessionId(): string {
+    try {
+        const key = 'ekgkala_session_id';
+        let id = localStorage.getItem(key);
+        if (!id) {
+            id = 'sess_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+            localStorage.setItem(key, id);
+        }
+        return id;
+    } catch {
+        return 'sess_fallback_' + Date.now();
+    }
+}
+
+function getBaseUrl(): string {
+    try {
+        // @ts-ignore — process may not be available in all build configs
+        if (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL) {
+            // @ts-ignore
+            return process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '');
+        }
+    } catch {
+        // ignore
+    }
+    return 'https://www.ekgkala.ir';
 }

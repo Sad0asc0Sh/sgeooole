@@ -5,10 +5,17 @@ const { protect, optional } = require('../middleware/auth');
 
 /**
  * @route   POST /api/chat
- * @desc    Send a message to AI assistant
- * @access  Public (but better with userId for personalized responses)
+ * @desc    Send a message to AI assistant (blocking — fallback)
+ * @access  Public
  */
 router.post('/', optional, chatController.handleMessage);
+
+/**
+ * @route   POST /api/chat/stream
+ * @desc    Send a message to AI assistant (SSE streaming — tokens in real-time)
+ * @access  Public
+ */
+router.post('/stream', optional, chatController.handleStreamMessage);
 
 /**
  * @route   GET /api/chat/suggestions

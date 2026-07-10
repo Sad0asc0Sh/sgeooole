@@ -6,7 +6,7 @@
   "scripts": {
     "install:all": "npm run install:backend && npm run install:frontend && npm run install:admin",
     "install:backend": "cd ekgkala-backend && npm ci --include=dev",
-    "install:frontend": "cd frontend && npm ci --include=dev",
+    "install:frontend": "cd frontend && npm ci --include=dev --legacy-peer-deps",
     "install:admin": "cd admin && npm ci --include=dev",
     "dev": "npm run dev:backend & npm run dev:frontend & npm run dev:admin",
     "dev:backend": "cd ekgkala-backend && npm run dev",
