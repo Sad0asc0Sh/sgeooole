@@ -339,15 +339,18 @@ exports.handleStreamMessage = async (req, res) => {
 
     // 3. Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
     res.flushHeaders();
 
     // 4. Stream the response
+    const startTime = Date.now();
     const fullReply = await streamExpertResponse(
       res, message, productContext, identity.history, storeInfoContext
     );
+    const elapsed = Date.now() - startTime;
+    console.log(`[Chat Stream] Completed in ${elapsed}ms | tokens: ${fullReply?.length || 0} chars`);
 
     // 5. Save to history
     if (fullReply) {

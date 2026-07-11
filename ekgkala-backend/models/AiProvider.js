@@ -32,9 +32,9 @@ const aiProviderSchema = new mongoose.Schema(
     },
     maxTokens: {
       type: Number,
-      default: 500,
+      default: 2048,
       min: 100,
-      max: 16000,
+      max: 32000,
     },
     temperature: {
       type: Number,

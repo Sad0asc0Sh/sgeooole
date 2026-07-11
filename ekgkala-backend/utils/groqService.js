@@ -29,7 +29,7 @@ async function getProviderConfig() {
       baseUrl: provider.baseUrl.replace(/\/$/, ''),
       apiKey: provider.apiKey,
       model: provider.model,
-      maxTokens: provider.maxTokens || 500,
+      maxTokens: provider.maxTokens || 1500,
       temperature: provider.temperature ?? 0.7,
       headers: provider.headers ? Object.fromEntries(provider.headers) : {},
     };
@@ -43,7 +43,7 @@ async function getProviderConfig() {
       baseUrl: anyActive.baseUrl.replace(/\/$/, ''),
       apiKey: anyActive.apiKey,
       model: anyActive.model,
-      maxTokens: anyActive.maxTokens || 500,
+      maxTokens: anyActive.maxTokens || 1500,
       temperature: anyActive.temperature ?? 0.7,
       headers: anyActive.headers ? Object.fromEntries(anyActive.headers) : {},
     };
@@ -59,7 +59,7 @@ async function getProviderConfig() {
       baseUrl: (config.baseUrl || 'https://api.groq.com/openai/v1').replace(/\/$/, ''),
       apiKey,
       model: config.groqModel || 'llama-3.3-70b-versatile',
-      maxTokens: config.maxTokens || 500,
+      maxTokens: config.maxTokens || 1500,
       temperature: config.temperature ?? 0.5,
       headers: {},
     };
@@ -311,6 +311,7 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
         temperature: providerConfig.temperature,
         max_tokens: providerConfig.maxTokens,
         stream: true,
+        stream_options: { include_usage: true },
       },
       {
         headers: {
@@ -345,6 +346,36 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
   const stream = response.data;
   let buffer = '';
 
+  /**
+   * Helper: parse a single SSE line and extract token/error, forwarding to the client.
+   * Returns 'error' if an error was found, 'token' if a token was forwarded, or null if nothing.
+   */
+  function processLine(line) {
+    if (!line || line === 'data: [DONE]') return null;
+
+    if (line.startsWith('data: ')) {
+      try {
+        const data = JSON.parse(line.substring(6));
+
+        // Provider-level error within the router stream (non-fatal)
+        if (data.error) {
+          const errCode = data.error.code || 'unknown';
+          const errMsg = data.error.message || data.error;
+          console.warn(`[AI Service:Stream] In-stream provider error (${errCode}):`, errMsg);
+          return 'error';
+        }
+
+        const token = data.choices?.[0]?.delta?.content;
+        if (token) {
+          fullContent += token;
+          res.write(`data: ${JSON.stringify({ token })}\n\n`);
+          return 'token';
+        }
+      } catch (_) { /* skip malformed */ }
+    }
+    return null;
+  }
+
   try {
     for await (const chunk of stream) {
       buffer += chunk.toString();
@@ -353,31 +384,16 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
       while ((newlineIdx = buffer.indexOf('\n')) !== -1) {
         const line = buffer.substring(0, newlineIdx).trim();
         buffer = buffer.substring(newlineIdx + 1);
-
-        if (!line || line === 'data: [DONE]') continue;
-
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.substring(6));
-
-            // Check for provider-level error events in the stream
-            // (e.g. LLM router reports one provider failed while another is being tried)
-            if (data.error) {
-              const errCode = data.error.code || 'unknown';
-              const errMsg = data.error.message || data.error;
-              // Log as warning — this is a non-fatal provider error within the router stream
-              console.warn(`[AI Service:Stream] In-stream provider error (${errCode}):`, errMsg);
-              continue; // Keep reading — the router may still deliver a successful response
-            }
-
-            const token = data.choices?.[0]?.delta?.content;
-            if (token) {
-              fullContent += token;
-              res.write(`data: ${JSON.stringify({ token })}\n\n`);
-            }
-          } catch (_) { /* skip malformed */ }
-        }
+        processLine(line);
       }
+    }
+
+    // IMPORTANT: Flush any remaining data in the buffer that didn't end with a newline.
+    // This is critical — the last SSE event may arrive without a trailing \n,
+    // and without this, the final token(s) of the response are silently dropped.
+    if (buffer.trim()) {
+      console.log(`[AI Service:Stream] Flushing remaining buffer (${buffer.length} bytes)`);
+      processLine(buffer.trim());
     }
   } catch (streamError) {
     console.error("[AI Service:Stream] Stream read error:", streamError.message);
