@@ -16,7 +16,7 @@ const swrConfig = {
  * Hook for fetching Flash Deals with SWR caching
  * Data is cached and instantly available on subsequent renders
  */
-export function useFlashDeals(limit: number = 10) {
+export function useFlashDeals(limit: number = 10, options?: any) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `flash-deals-${limit}`,
         () => productService.getFlashDeals(limit),
@@ -28,6 +28,7 @@ export function useFlashDeals(limit: number = 10) {
             // Allow refreshInterval to actually fire (avoid 60s dedupe blocking 30s refresh)
             dedupingInterval: 5000,
             refreshInterval: 30000, // Refresh every 30s for time-sensitive deals
+            ...options,
         }
     );
 
@@ -43,7 +44,7 @@ export function useFlashDeals(limit: number = 10) {
 /**
  * Hook for fetching Special Offers with SWR caching
  */
-export function useSpecialOffers(limit: number = 10) {
+export function useSpecialOffers(limit: number = 10, options?: any) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `special-offers-${limit}`,
         () => productService.getSpecialOffers(limit),
@@ -53,6 +54,7 @@ export function useSpecialOffers(limit: number = 10) {
             revalidateOnReconnect: true,
             dedupingInterval: 5000,
             refreshInterval: 30000, // Refresh every 30s for time-sensitive offers
+            ...options,
         }
     );
 
@@ -68,13 +70,14 @@ export function useSpecialOffers(limit: number = 10) {
 /**
  * Hook for fetching Newest Products with SWR caching
  */
-export function useNewestProducts(limit: number = 10) {
+export function useNewestProducts(limit: number = 10, options?: any) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `newest-products-${limit}`,
         () => productService.getNewest(limit),
         {
             ...swrConfig,
             refreshInterval: 120000, // Refresh every 2 minutes
+            ...options,
         }
     );
 
@@ -90,13 +93,14 @@ export function useNewestProducts(limit: number = 10) {
 /**
  * Hook for fetching Best Sellers with SWR caching
  */
-export function useBestSellers(limit: number = 10) {
+export function useBestSellers(limit: number = 10, options?: any) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `best-sellers-${limit}`,
         () => productService.getBestSellers(limit),
         {
             ...swrConfig,
             refreshInterval: 300000, // Refresh every 5 minutes (less volatile)
+            ...options,
         }
     );
 

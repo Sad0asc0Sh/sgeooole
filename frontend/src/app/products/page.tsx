@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import ProductsPageClient from "./ProductsPageClient";
+import { fetchProductsServer } from "@/lib/productData";
 
 export const revalidate = 300;
 
@@ -13,6 +14,7 @@ type SearchParams = {
   page?: string;
   minPrice?: string;
   maxPrice?: string;
+  includeChildren?: string;
 };
 
 const humanizeSlug = (slug: string) => slug.replace(/[-_]/g, " ");
@@ -66,6 +68,38 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   };
 }
 
-export default function ProductListingPage() {
-  return <ProductsPageClient />;
+export default async function ProductListingPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
+  const params = await searchParams;
+  const category = typeof params.category === "string" ? params.category : undefined;
+  const brand = typeof params.brand === "string" ? params.brand : undefined;
+  const search = typeof params.search === "string" ? params.search : undefined;
+  const sort = typeof params.sort === "string" ? params.sort : undefined;
+  const pageParam = typeof params.page === "string" ? Number(params.page) : 1;
+  const minPrice = typeof params.minPrice === "string" ? Number(params.minPrice) : undefined;
+  const maxPrice = typeof params.maxPrice === "string" ? Number(params.maxPrice) : undefined;
+  const includeChildren = params.includeChildren === "true";
+
+  // Parse properties filters prop_XXX
+  const properties: Record<string, string> = {};
+  Object.entries(params).forEach(([key, value]) => {
+    if (key.startsWith("prop_") && typeof value === "string") {
+      const propName = key.replace("prop_", "");
+      properties[propName] = value;
+    }
+  });
+
+  const initialData = await fetchProductsServer({
+    page: pageParam,
+    limit: 24,
+    sort,
+    category,
+    brand,
+    search,
+    minPrice,
+    maxPrice,
+    includeChildren,
+    properties,
+  });
+
+  return <ProductsPageClient initialData={initialData} />;
 }

@@ -18,13 +18,19 @@ import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 
+import type { Product } from "@/types/product";
+
 /**
  * Special Offer Rail Component
  * OPTIMIZED: Uses SWR for caching, useMemo for computed values
  */
-function SpecialOfferRail() {
+interface SpecialOfferRailProps {
+  initialProducts?: Product[];
+}
+
+function SpecialOfferRail({ initialProducts }: SpecialOfferRailProps) {
   // SWR-based fetching with automatic caching
-  const { specialOffers: products, isLoading, error } = useSpecialOffers(10);
+  const { specialOffers: products, isLoading, error } = useSpecialOffers(10, initialProducts ? { fallbackData: initialProducts } : undefined);
   const [now, setNow] = useState(() => Date.now());
 
   // Calculate earliest end time for global countdown

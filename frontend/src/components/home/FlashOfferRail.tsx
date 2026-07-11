@@ -19,6 +19,8 @@ import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 
+import type { Product } from "@/types/product";
+
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
  * OPTIMIZED: Uses SWR for caching, React.memo for card components
@@ -28,9 +30,13 @@ import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
  * - Memoized card components: Prevents unnecessary re-renders
  * - Optimized timer: Only updates active countdown displays
  */
-function FlashOfferRail() {
+interface FlashOfferRailProps {
+  initialProducts?: Product[];
+}
+
+function FlashOfferRail({ initialProducts }: FlashOfferRailProps) {
   // SWR-based fetching with automatic caching
-  const { flashDeals, isLoading } = useFlashDeals(10);
+  const { flashDeals, isLoading } = useFlashDeals(10, initialProducts ? { fallbackData: initialProducts } : undefined);
   const [now, setNow] = useState(() => Date.now());
 
   // Update timer every second - only for countdown display

@@ -5,6 +5,31 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://example.com").rep
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
+      // Explicit rules for Torob Crawler to ensure it can crawl all listing pagination and query variations
+      {
+        userAgent: "Torob",
+        allow: [
+          "/",
+          "/products",
+          "/product/*",
+          "/categories",
+        ],
+        disallow: [
+          "/admin/*",
+          "/admin",
+          "/profile/*",
+          "/profile",
+          "/api/*",
+          "/checkout",
+          "/payment/*",
+          "/order/*",
+          "/login",
+          "/forgot-password",
+          "/reset-password/*",
+          "/complete-profile",
+        ],
+      },
+      // Standard rules for general search engines
       {
         userAgent: "*",
         allow: "/",

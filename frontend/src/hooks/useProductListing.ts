@@ -77,13 +77,14 @@ async function fetchProductListing(query: ProductListingQuery): Promise<ProductL
   };
 }
 
-export function useProductListing(query: ProductListingQuery) {
+export function useProductListing(query: ProductListingQuery, fallbackData?: ProductListingResult) {
   const cacheKey = useMemo(() => buildListingCacheKey(query), [query]);
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     cacheKey,
     () => fetchProductListing(query),
     {
+      fallbackData,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       dedupingInterval: 5 * 60 * 1000,

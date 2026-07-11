@@ -402,10 +402,11 @@ export const fetchProductBySlug = cache(async (slug: string): Promise<(Product &
   return fetchProductById(slug);
 });
 
-export const fetchProductsForStatic = async (limit: number = 100): Promise<(Product & { isActive?: boolean })[]> => {
+export const fetchProductsForStatic = async (limit: number = 100, fields?: string): Promise<(Product & { isActive?: boolean })[]> => {
   try {
+    const fieldsParam = fields ? `&fields=${fields}` : "";
     const response = await fetchWithRetry(
-      `${apiBaseUrl}/products?limit=${limit}&nocache=true`,
+      `${apiBaseUrl}/products?limit=${limit}${fieldsParam}&nocache=true`,
       {
         next: { revalidate: 3600 },
       } as RequestInit,
@@ -488,6 +489,239 @@ export const fetchRelatedProducts = cache(async (
       console.warn(`[productData] Error fetching related products`);
     }
     return []; // Return empty array instead of throwing to prevent page crash
+  }
+});
+
+export type FetchProductsParams = {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  category?: string;
+  brand?: string;
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  includeChildren?: boolean;
+  properties?: Record<string, string>;
+};
+
+export type FetchProductsResponse = {
+  products: Product[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  priceRange?: { min: number; max: number };
+};
+
+export const fetchProductsServer = cache(async (params: FetchProductsParams): Promise<FetchProductsResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    if (params.page) queryParams.set("page", params.page.toString());
+    if (params.limit) queryParams.set("limit", params.limit.toString());
+    if (params.sort) queryParams.set("sort", params.sort);
+    if (params.category) queryParams.set("category", params.category);
+    if (params.brand) queryParams.set("brand", params.brand);
+    if (params.search) queryParams.set("search", params.search);
+    if (params.minPrice !== undefined && params.minPrice !== null) {
+      queryParams.set("minPrice", params.minPrice.toString());
+    }
+    if (params.maxPrice !== undefined && params.maxPrice !== null) {
+      queryParams.set("maxPrice", params.maxPrice.toString());
+    }
+    if (params.includeChildren) queryParams.set("includeChildren", "true");
+
+    if (params.properties) {
+      Object.entries(params.properties).forEach(([key, value]) => {
+        queryParams.set(`properties[${key}]`, value);
+      });
+    }
+
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?${queryParams.toString()}`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2, // retries
+      1000 // initial delay
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products on server (${response.status})`);
+    }
+
+    const data = await response.json() as any;
+    const rawProducts = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+    const products = rawProducts.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+
+    const pagination = data.pagination || {};
+    const total = pagination.totalItems || data.total || products.length;
+    const totalPages = pagination.totalPages || Math.ceil(total / (params.limit || 24)) || 1;
+    const currentPage = pagination.currentPage || params.page || 1;
+
+    return {
+      products,
+      total,
+      totalPages,
+      currentPage,
+      priceRange: data.priceRange,
+    };
+  } catch (error) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[fetchProductsServer] failed", error);
+    } else {
+      console.warn("[fetchProductsServer] failed");
+    }
+    return {
+      products: [],
+      total: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
+  }
+});
+
+export const fetchNewestProductsServer = cache(async (limit: number = 10): Promise<Product[]> => {
+  try {
+    const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime';
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?sort=-createdAt&limit=${limit}&fields=${fields}&nocache=true`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json() as any;
+    const rawProducts = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+    return rawProducts.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+  } catch (error) {
+    console.error("[fetchNewestProductsServer] failed", error);
+    return [];
+  }
+});
+
+export const fetchBestSellersProductsServer = cache(async (limit: number = 10): Promise<Product[]> => {
+  try {
+    // Primary: Try bestsellers scoring engine
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/bestsellers?limit=${limit}&in_stock=true&nocache=true`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (response.ok) {
+      const payload = await response.json() as any;
+      if (payload?.success && Array.isArray(payload.data) && payload.data.length > 0) {
+        return payload.data.map((item: any) => {
+          const normalizeImage = (img: any): string | null => {
+            if (!img) return null;
+            let url: string | null = null;
+            if (typeof img === "string" && img.trim() !== "") url = img.trim();
+            else if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim() !== "") {
+              url = img.url.trim();
+            }
+            if (url && url.startsWith("/")) {
+              return `${apiBaseUrl.replace(/\/api\/?$/, "")}${url}`;
+            }
+            return url;
+          };
+
+          const imageUrl = normalizeImage(item.image) || "/placeholder.svg";
+          const stock = typeof item.stock === 'number' ? item.stock : 0;
+
+          return {
+            id: item._id,
+            name: item.name || "",
+            title: item.name || "",
+            slug: item.slug || "",
+            price: item.price || 0,
+            oldPrice: item.discount > 0 ? Math.round(item.price / (1 - item.discount / 100)) : undefined,
+            discount: item.discount || 0,
+            image: imageUrl,
+            images: [imageUrl],
+            category: item.category?.name || "عمومی",
+            categoryPath: item.category ? [{ id: item.category._id || "", name: item.category.name || "", slug: item.category.slug || "" }] : [],
+            rating: item.average_rating || 0,
+            reviewCount: item.review_count || 0,
+            countInStock: stock,
+            isFlashDeal: false,
+            isSpecialOffer: false,
+          } as Product;
+        });
+      }
+    }
+
+    // Fallback: Sales count sort
+    const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,average_rating,review_count,rating,numReviews';
+    const fallbackResponse = await fetchWithRetry(
+      `${apiBaseUrl}/products?sort=-salesCount&minSalesCount=1&limit=${limit}&fields=${fields}&nocache=true`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (fallbackResponse.ok) {
+      const payload = await fallbackResponse.json() as any;
+      const rawProducts = Array.isArray(payload.data) ? payload.data : (payload.data?.data || []);
+      return rawProducts.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+    }
+    return [];
+  } catch (error) {
+    console.error("[fetchBestSellersProductsServer] failed", error);
+    return [];
+  }
+});
+
+export const fetchFlashDealsProductsServer = cache(async (limit: number = 10): Promise<Product[]> => {
+  try {
+    const now = new Date().toISOString();
+    const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json() as any;
+    const rawProducts = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+    return rawProducts.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+  } catch (error) {
+    console.error("[fetchFlashDealsProductsServer] failed", error);
+    return [];
+  }
+});
+
+export const fetchSpecialOffersProductsServer = cache(async (limit: number = 10): Promise<Product[]> => {
+  try {
+    const now = new Date().toISOString();
+    const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
+    const response = await fetchWithRetry(
+      `${apiBaseUrl}/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`,
+      {
+        next: { revalidate: PRODUCT_REVALIDATE },
+      } as RequestInit,
+      2,
+      1000
+    );
+
+    if (!response.ok) return [];
+    const data = await response.json() as any;
+    const rawProducts = Array.isArray(data.data) ? data.data : (data.data?.data || []);
+    return rawProducts.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
+  } catch (error) {
+    console.error("[fetchSpecialOffersProductsServer] failed", error);
+    return [];
   }
 });
 

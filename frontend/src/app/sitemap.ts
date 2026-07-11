@@ -1,13 +1,18 @@
 import type { MetadataRoute } from "next";
+import { buildProductUrl, buildCategoryUrl } from "@/lib/paths";
 
 type ProductItem = {
   _id: string;
+  id?: string;
   slug?: string;
+  productCode?: string;
   updatedAt?: string;
+  isActive?: boolean;
 };
 
 type CategoryItem = {
   _id: string;
+  id?: string;
   slug?: string;
   updatedAt?: string;
 };
@@ -40,8 +45,9 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
 
 async function fetchProducts(): Promise<ProductItem[]> {
   try {
+    // Increase limit to fetch all active products for sitemap with strict fields projection to avoid OOM
     const json = await fetchJsonWithTimeout(
-      `${API_BASE}/products?limit=1000&isActive=true`,
+      `${API_BASE}/products?limit=50000&isActive=true&fields=_id,slug,productCode,updatedAt,isActive`,
       { next: { revalidate: 3600 } },
       IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
@@ -94,29 +100,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const categoryPages: MetadataRoute.Sitemap = categories.map((category) => {
     const slug = category.slug || category._id;
     return {
-      url: `${SITE_URL}/products?category=${slug}`,
+      url: `${SITE_URL}${buildCategoryUrl(slug)}`,
       lastModified: category.updatedAt ? new Date(category.updatedAt) : now,
       changeFrequency: "weekly" as const,
       priority: 0.8,
     };
   });
 
-  const productPages: MetadataRoute.Sitemap = products.map((product: any) => {
-    // Build product URL with categoryPath if available
-    const buildProductUrl = (p: any): string => {
-      const path = Array.isArray(p?.categoryPath)
-        ? p.categoryPath.map((c: any) => c.slug).filter(Boolean).join("/")
-        : "product";
-      return `${SITE_URL}/${path}/${p.slug || p._id || p.id}`;
-    };
+  const productPages: MetadataRoute.Sitemap = products
+    .filter((product) => product.isActive !== false) // Only map active products
+    .map((product) => {
+      // Map MongoDB _id to id to be compatible with buildProductUrl signature
+      const compatibleProduct = {
+        id: product._id || product.id || "",
+        slug: product.slug,
+        productCode: product.productCode || `KY-${(product._id || "").slice(-7).toUpperCase() || "0000000"}`,
+      } as any;
 
-    return {
-      url: buildProductUrl(product),
-      lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    };
-  });
+      const productPath = buildProductUrl(compatibleProduct);
+
+      return {
+        url: `${SITE_URL}${productPath}`,
+        lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
+        changeFrequency: "daily" as const, // Daily to keep prices updated in Google index
+        priority: 0.7,
+      };
+    });
 
   return [...staticPages, ...categoryPages, ...productPages];
 }

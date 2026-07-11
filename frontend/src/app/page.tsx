@@ -11,6 +11,12 @@ import ValueProposition from "@/components/home/ValueProposition";
 import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
+import {
+  fetchNewestProductsServer,
+  fetchBestSellersProductsServer,
+  fetchFlashDealsProductsServer,
+  fetchSpecialOffersProductsServer
+} from "@/lib/productData";
 
 export const revalidate = 60;
 
@@ -128,10 +134,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [featuredCats, popularCats, banners] = await Promise.all([
+  const [featuredCats, popularCats, banners, newestProducts, bestSellersProducts, flashDeals, specialOffers] = await Promise.all([
     fetchFeaturedCategories(),
     fetchPopularCategories(),
     fetchBanners(),
+    fetchNewestProductsServer(10),
+    fetchBestSellersProductsServer(10),
+    fetchFlashDealsProductsServer(10),
+    fetchSpecialOffersProductsServer(10),
   ]);
 
   const structuredData = {
@@ -182,7 +192,7 @@ export default async function Home() {
 
       <HomeSection variant="promotion">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <FlashOfferRail />
+          <FlashOfferRail initialProducts={flashDeals} />
         </Suspense>
       </HomeSection>
 
@@ -200,19 +210,19 @@ export default async function Home() {
 
       <HomeSection variant="promotion">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <SpecialOfferRail />
+          <SpecialOfferRail initialProducts={specialOffers} />
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="products">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} />
+          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} initialProducts={bestSellersProducts} />
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="products">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} />
+          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} initialProducts={newestProducts} />
         </Suspense>
       </HomeSection>
 

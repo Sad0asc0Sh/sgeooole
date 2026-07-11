@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useProductListing } from "@/hooks/useProductListing";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,7 +13,7 @@ import ProductCard from "@/components/product/ProductCard";
 import { productService, CategoryProperty, CategoryDetails } from "@/services/productService";
 import { brandService, Brand } from "@/services/brandService";
 
-function ProductListingContent() {
+function ProductListingContent({ initialData }: { initialData?: any }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
@@ -135,7 +136,7 @@ function ProductListingContent() {
     priceRange: fetchedPriceRange,
     isLoading,
     hasCache,
-  } = useProductListing(listingQuery);
+  } = useProductListing(listingQuery, initialData);
 
   const showInitialLoader = isLoading && !hasCache;
 
@@ -190,6 +191,16 @@ function ProductListingContent() {
     router.push(`/products?${params.toString()}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const getPageHref = useCallback((page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (page === 1) {
+      params.delete("page");
+    } else {
+      params.set("page", page.toString());
+    }
+    return `/products?${params.toString()}`;
+  }, [searchParams]);
 
   // Generate page numbers to display (with ellipsis)
   const getPageNumbers = (): (number | "...")[] => {
@@ -719,30 +730,48 @@ function ProductListingContent() {
               <div className="mt-10 mb-6">
                 <div className="flex items-center justify-center gap-1.5 flex-wrap">
                   {/* First Page */}
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={currentPage === 1}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === 1
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                      }`}
-                    aria-label="صفحه اول"
-                  >
-                    <ChevronsLeft size={18} />
-                  </button>
+                  {currentPage === 1 ? (
+                    <span
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-300 cursor-not-allowed text-sm"
+                      aria-label="صفحه اول"
+                    >
+                      <ChevronsLeft size={18} />
+                    </span>
+                  ) : (
+                    <Link
+                      href={getPageHref(1)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(1);
+                      }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-sm"
+                      aria-label="صفحه اول"
+                    >
+                      <ChevronsLeft size={18} />
+                    </Link>
+                  )}
 
                   {/* Previous Page */}
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === 1
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                      }`}
-                    aria-label="صفحه قبل"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
+                  {currentPage === 1 ? (
+                    <span
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-300 cursor-not-allowed text-sm"
+                      aria-label="صفحه قبل"
+                    >
+                      <ChevronLeft size={18} />
+                    </span>
+                  ) : (
+                    <Link
+                      href={getPageHref(currentPage - 1)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(currentPage - 1);
+                      }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-sm"
+                      aria-label="صفحه قبل"
+                    >
+                      <ChevronLeft size={18} />
+                    </Link>
+                  )}
 
                   {/* Page Numbers */}
                   {getPageNumbers().map((pageNum, idx) =>
@@ -754,9 +783,13 @@ function ProductListingContent() {
                         ...
                       </span>
                     ) : (
-                      <button
+                      <Link
                         key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
+                        href={getPageHref(pageNum)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handlePageChange(pageNum);
+                        }}
                         className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm font-bold ${pageNum === currentPage
                           ? "bg-kala-500 text-white shadow-md shadow-kala-200"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -765,35 +798,53 @@ function ProductListingContent() {
                         aria-current={pageNum === currentPage ? "page" : undefined}
                       >
                         {pageNum}
-                      </button>
+                      </Link>
                     )
                   )}
 
                   {/* Next Page */}
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === totalPages
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                      }`}
-                    aria-label="صفحه بعد"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+                  {currentPage === totalPages ? (
+                    <span
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-300 cursor-not-allowed text-sm"
+                      aria-label="صفحه بعد"
+                    >
+                      <ChevronRight size={18} />
+                    </span>
+                  ) : (
+                    <Link
+                      href={getPageHref(currentPage + 1)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(currentPage + 1);
+                      }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-sm"
+                      aria-label="صفحه بعد"
+                    >
+                      <ChevronRight size={18} />
+                    </Link>
+                  )}
 
                   {/* Last Page */}
-                  <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all text-sm ${currentPage === totalPages
-                      ? "text-gray-300 cursor-not-allowed"
-                      : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
-                      }`}
-                    aria-label="صفحه آخر"
-                  >
-                    <ChevronsRight size={18} />
-                  </button>
+                  {currentPage === totalPages ? (
+                    <span
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-300 cursor-not-allowed text-sm"
+                      aria-label="صفحه آخر"
+                    >
+                      <ChevronsRight size={18} />
+                    </span>
+                  ) : (
+                    <Link
+                      href={getPageHref(totalPages)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handlePageChange(totalPages);
+                      }}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-all text-sm"
+                      aria-label="صفحه آخر"
+                    >
+                      <ChevronsRight size={18} />
+                    </Link>
+                  )}
                 </div>
 
                 {/* Page Info */}
@@ -865,7 +916,7 @@ function ProductListingContent() {
   );
 }
 
-export default function ProductsPageClient() {
+export default function ProductsPageClient({ initialData }: { initialData?: any }) {
   return (
     <Suspense
       fallback={
@@ -874,7 +925,7 @@ export default function ProductsPageClient() {
         </div>
       }
     >
-      <ProductListingContent />
+      <ProductListingContent initialData={initialData} />
     </Suspense>
   );
 }

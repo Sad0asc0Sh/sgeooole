@@ -3,11 +3,13 @@
 import { memo, useMemo } from "react";
 import ProductRail from "./ProductRail";
 import { useNewestProducts, useBestSellers } from "@/hooks/useProducts";
+import type { Product } from "@/types/product";
 
 interface ProductRailContainerProps {
   title: string;
   fetchType: "newest" | "bestSellers" | "discounted" | "all";
   limit?: number;
+  initialProducts?: Product[];
 }
 
 /**
@@ -18,10 +20,17 @@ function ProductRailContainer({
   title,
   fetchType,
   limit = 10,
+  initialProducts,
 }: ProductRailContainerProps) {
   // Use appropriate SWR hook based on fetchType
-  const newestHook = useNewestProducts(fetchType === "newest" ? limit : 0);
-  const bestSellersHook = useBestSellers(fetchType === "bestSellers" ? limit : 0);
+  const newestHook = useNewestProducts(
+    fetchType === "newest" ? limit : 0,
+    fetchType === "newest" && initialProducts ? { fallbackData: initialProducts } : undefined
+  );
+  const bestSellersHook = useBestSellers(
+    fetchType === "bestSellers" ? limit : 0,
+    fetchType === "bestSellers" && initialProducts ? { fallbackData: initialProducts } : undefined
+  );
 
   // Select the appropriate data based on fetchType
   const { products, isLoading, error } = useMemo(() => {
