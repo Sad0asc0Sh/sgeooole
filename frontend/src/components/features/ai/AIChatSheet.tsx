@@ -52,15 +52,15 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         { icon: Phone, label: "پشتیبانی", prompt: "شماره تماس پشتیبانی چند است؟" },
     ];
 
-    // --- Smart Auto-Scroll ---
+    // --- Smart Auto-Scroll: scroll to bottom when messages update or when typing ---
     useEffect(() => {
         if (open) {
-            const timeoutId = setTimeout(() => {
-                bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-            }, 100);
-            return () => clearTimeout(timeoutId);
+            const el = bottomRef.current;
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "end" });
+            }
         }
-    }, [messages.length, open]);
+    }, [messages, open, isTyping]);
 
     const handleInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
@@ -77,8 +77,20 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
+    // Prevent duplicate requests (React StrictMode / double-fire protection)
+    const pendingRequestRef = useRef<boolean>(false);
+
+    // Ref for accumulated reply to avoid stale closure issues
+    const fullReplyRef = useRef<string>('');
+
     const handleSend = async () => {
         if (!input.trim() || isTyping) return;
+        // Guard against duplicate requests
+        if (pendingRequestRef.current) {
+            console.warn('[AI Chat] Duplicate request blocked');
+            return;
+        }
+        pendingRequestRef.current = true;
 
         const userMsg: Message = { role: 'user', content: input };
         setMessages((prev: Message[]) => [...prev, userMsg]);
@@ -86,7 +98,6 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         setInput("");
         if (textareaRef.current) textareaRef.current.style.height = "40px";
 
-        const aiTempIndex = messages.length + 1;
         setMessages((prev: Message[]) => [...prev, { role: 'ai', content: '', isLoading: true }]);
         setIsTyping(true);
 
@@ -103,10 +114,10 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         abortRef.current = abortController;
 
         let fullReply = '';
+        fullReplyRef.current = '';
         let lastError: string | null = null;
 
         try {
-            // Use global window object for base URL to avoid process.env issues
             const baseUrl = getBaseUrl();
             const apiUrl = `${baseUrl}/api/chat/stream`;
 
@@ -127,6 +138,32 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                 throw new Error('No response body');
             }
 
+            // Buffer tokens and flush at ~60fps for smooth typing animation
+            let tokenBuffer = '';
+            let rafId: number | null = null;
+
+            const flushBuffer = () => {
+                rafId = null;
+                if (tokenBuffer) {
+                    fullReply += tokenBuffer;
+                    fullReplyRef.current = fullReply;
+                    tokenBuffer = '';
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role === 'ai') {
+                            const updated = [...prev];
+                            updated[updated.length - 1] = {
+                                ...last,
+                                content: fullReply,
+                                isLoading: false,
+                            };
+                            return updated;
+                        }
+                        return prev;
+                    });
+                }
+            };
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -141,41 +178,36 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     const jsonStr = trimmed.substring(6);
                     if (jsonStr === '[DONE]') continue;
 
-                    let payload: { token?: string; done?: boolean; error?: string; warning?: string };
+                    let payload: { token?: string; done?: boolean; error?: string };
                     try {
                         payload = JSON.parse(jsonStr);
                     } catch {
                         continue;
                     }
 
-                    // Provider-level errors (e.g. rate limit on one provider in a multi-provider router)
-                    // should NOT kill the stream — the router may retry with another provider.
+                    // Provider-level errors: non-fatal, keep reading for fallback providers
                     if (payload.error) {
                         console.warn('[AI Chat] Provider error (non-fatal):', payload.error);
                         lastError = payload.error;
-                        // Continue listening for tokens from fallback providers
                         continue;
                     }
 
                     if (payload.token) {
-                        fullReply += payload.token;
-                        setMessages((prev: Message[]) => {
-                            const last = prev[prev.length - 1];
-                            if (last?.role === 'ai') {
-                                const updated = [...prev];
-                                updated[updated.length - 1] = {
-                                    ...last,
-                                    content: fullReply,
-                                    isLoading: false,
-                                };
-                                return updated;
-                            }
-                            return prev;
-                        });
+                        tokenBuffer += payload.token;
+                        // Throttle DOM updates to ~60fps for smooth animation
+                        if (rafId === null) {
+                            rafId = requestAnimationFrame(flushBuffer);
+                        }
                     }
 
                     if (payload.done) {
-                        // Stream complete — if no tokens received and no prior error, show a fallback
+                        // Flush any remaining buffered tokens immediately
+                        if (rafId !== null) {
+                            cancelAnimationFrame(rafId);
+                            rafId = null;
+                        }
+                        flushBuffer();
+
                         if (!fullReply && !lastError) {
                             setMessages((prev: Message[]) => {
                                 const last = prev[prev.length - 1];
@@ -195,7 +227,14 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                 }
             }
 
-            // Stream ended normally — if no tokens were received, show error to user
+            // Final flush — ensures no tokens are lost
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+            flushBuffer();
+
+            // Stream ended normally — show error if no tokens were received
             if (!fullReply && lastError) {
                 setMessages((prev: Message[]) => {
                     const last = prev[prev.length - 1];
@@ -214,14 +253,16 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
         } catch (error: unknown) {
             if ((error as Error)?.name === 'AbortError') {
-                if (fullReply) {
+                // Flush any buffered tokens on abort
+                if (fullReplyRef.current) {
+                    const savedReply = fullReplyRef.current;
                     setMessages((prev: Message[]) => {
                         const last = prev[prev.length - 1];
                         if (last?.role === 'ai') {
                             const updated = [...prev];
                             updated[updated.length - 1] = {
                                 ...last,
-                                content: fullReply + '\n\n(لغو شد)',
+                                content: savedReply + '\n\n(لغو شد)',
                                 isLoading: false,
                             };
                             return updated;
@@ -229,7 +270,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         return prev;
                     });
                 } else {
-                    setMessages((prev: Message[]) => prev.filter((_: Message, i: number) => i !== aiTempIndex));
+                    setMessages((prev: Message[]) => prev.slice(0, prev.length - 2));
                 }
                 return;
             }
@@ -253,6 +294,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         } finally {
             setIsTyping(false);
             abortRef.current = null;
+            pendingRequestRef.current = false;
         }
     };
 

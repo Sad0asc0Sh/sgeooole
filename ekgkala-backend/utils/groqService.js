@@ -285,7 +285,7 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
     return "";
   }
 
-  console.log(`[AI Service:Stream] Using ${providerConfig.source} | model: ${providerConfig.model} | base: ${providerConfig.baseUrl}`);
+  console.log(`[AI Service:Stream] Using ${providerConfig.source} | model: ${providerConfig.model} | maxTokens: ${providerConfig.maxTokens} | base: ${providerConfig.baseUrl}`);
 
   // 2. Build prompt
   const { systemContent } = await buildSystemPrompt(productContext, storeInfoContext);
