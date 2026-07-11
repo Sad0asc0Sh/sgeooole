@@ -359,7 +359,9 @@ exports.handleStreamMessage = async (req, res) => {
     if (!res.headersSent) {
       return res.status(500).json({ success: false, message: 'خطا در پردازش پیام.' });
     }
+    // Always send done signal so frontend doesn't hang in loading state
     res.write(`data: ${JSON.stringify({ error: 'خطا در پردازش پیام.' })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   }
 };

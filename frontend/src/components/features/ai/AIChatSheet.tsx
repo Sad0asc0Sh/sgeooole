@@ -103,6 +103,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         abortRef.current = abortController;
 
         let fullReply = '';
+        let lastError: string | null = null;
 
         try {
             // Use global window object for base URL to avoid process.env issues
@@ -140,15 +141,20 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     const jsonStr = trimmed.substring(6);
                     if (jsonStr === '[DONE]') continue;
 
-                    let payload: { token?: string; done?: boolean; error?: string };
+                    let payload: { token?: string; done?: boolean; error?: string; warning?: string };
                     try {
                         payload = JSON.parse(jsonStr);
                     } catch {
                         continue;
                     }
 
+                    // Provider-level errors (e.g. rate limit on one provider in a multi-provider router)
+                    // should NOT kill the stream — the router may retry with another provider.
                     if (payload.error) {
-                        throw new Error(payload.error);
+                        console.warn('[AI Chat] Provider error (non-fatal):', payload.error);
+                        lastError = payload.error;
+                        // Continue listening for tokens from fallback providers
+                        continue;
                     }
 
                     if (payload.token) {
@@ -169,9 +175,41 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     }
 
                     if (payload.done) {
-                        // Stream complete — nothing to do, reader will close
+                        // Stream complete — if no tokens received and no prior error, show a fallback
+                        if (!fullReply && !lastError) {
+                            setMessages((prev: Message[]) => {
+                                const last = prev[prev.length - 1];
+                                if (last?.role === 'ai' && last.isLoading) {
+                                    const updated = [...prev];
+                                    updated[updated.length - 1] = {
+                                        role: 'ai',
+                                        content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
+                                        isError: true,
+                                    };
+                                    return updated;
+                                }
+                                return prev;
+                            });
+                        }
                     }
                 }
+            }
+
+            // Stream ended normally — if no tokens were received, show error to user
+            if (!fullReply && lastError) {
+                setMessages((prev: Message[]) => {
+                    const last = prev[prev.length - 1];
+                    if (last?.role === 'ai' && last.isLoading) {
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            role: 'ai',
+                            content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
+                            isError: true,
+                        };
+                        return updated;
+                    }
+                    return prev;
+                });
             }
 
         } catch (error: unknown) {

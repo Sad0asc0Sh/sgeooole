@@ -324,9 +324,18 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
       }
     );
   } catch (error) {
+    const status = error.response?.status;
     const errMsg = error.response?.data?.error?.message || error.message;
-    console.error("[AI Service:Stream] Connection error:", errMsg);
-    res.write(`data: ${JSON.stringify({ error: "خطا در اتصال به سرویس هوش مصنوعی." })}\n\n`);
+
+    // Log with appropriate severity based on error type
+    if (status === 429 || status === 400) {
+      console.warn(`[AI Service:Stream] Provider rejected request (${status}):`, errMsg);
+    } else {
+      console.error("[AI Service:Stream] Connection error:", errMsg);
+    }
+
+    res.write(`data: ${JSON.stringify({ error: "خطا در اتصال به سرویس هوش مصنوعی. لطفاً دوباره تلاش کنید." })}\n\n`);
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
     return "";
   }
@@ -350,6 +359,17 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.substring(6));
+
+            // Check for provider-level error events in the stream
+            // (e.g. LLM router reports one provider failed while another is being tried)
+            if (data.error) {
+              const errCode = data.error.code || 'unknown';
+              const errMsg = data.error.message || data.error;
+              // Log as warning — this is a non-fatal provider error within the router stream
+              console.warn(`[AI Service:Stream] In-stream provider error (${errCode}):`, errMsg);
+              continue; // Keep reading — the router may still deliver a successful response
+            }
+
             const token = data.choices?.[0]?.delta?.content;
             if (token) {
               fullContent += token;
@@ -363,9 +383,12 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
     console.error("[AI Service:Stream] Stream read error:", streamError.message);
     if (!fullContent) {
       res.write(`data: ${JSON.stringify({ error: "خطا در خواندن پاسخ هوش مصنوعی." })}\n\n`);
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
       return "";
     }
+    // If we already have partial content, the stream was likely truncated
+    console.warn("[AI Service:Stream] Stream truncated after", fullContent.length, "chars");
   }
 
   // 5. Done signal
