@@ -38,26 +38,19 @@ const mapSpecifications = (product, variant) => {
   return specs
 }
 
+const { computeItemPricing } = require('../services/pricingService')
+
 const getPricing = (product, variant, now = new Date()) => {
-  const basePrice = Number((variant && variant.price) ?? product?.price ?? 0) || 0
-  const rawDiscount = Number(product?.discount) || 0
-  const flashEnd = product?.flashDealEndTime ? new Date(product.flashDealEndTime) : null
-  const specialEnd = product?.specialOfferEndTime ? new Date(product.specialOfferEndTime) : null
-  const flashActive = Boolean(product?.isFlashDeal && (!flashEnd || flashEnd > now))
-  const specialActive = Boolean(product?.isSpecialOffer && (!specialEnd || specialEnd > now))
-  const appliedDiscount = (flashActive || specialActive || (!product?.isFlashDeal && !product?.isSpecialOffer && rawDiscount > 0))
-    ? rawDiscount
-    : 0
-  const currentPrice = appliedDiscount > 0
-    ? Math.max(0, Math.round(basePrice - (basePrice * appliedDiscount) / 100))
-    : Math.round(basePrice)
-  const compareAtPrice = Number(product?.compareAtPrice)
+  const item = { product, variantOptions: variant?.options || [], price: variant?.price };
+  const pricing = computeItemPricing(item, now);
+  const currentPrice = Math.round(pricing.finalPrice);
+  const compareAtPrice = Number(product?.compareAtPrice);
 
   return {
     currentPrice,
     oldPrice: compareAtPrice > currentPrice
       ? Math.round(compareAtPrice)
-      : (appliedDiscount > 0 ? Math.round(basePrice) : null),
+      : (pricing.discount > 0 ? Math.round(pricing.basePrice) : null),
   }
 }
 
