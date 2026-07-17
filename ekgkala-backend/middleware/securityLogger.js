@@ -31,7 +31,7 @@ const REDACTED_FIELDS = [
  * Headers that should be redacted
  */
 const REDACTED_HEADERS = [
-    'authorization', 'cookie', 'x-api-key', 'x-auth-token',
+    'authorization', 'cookie', 'x-api-key', 'x-auth-token', 'x-torob-token',
 ]
 
 /**
