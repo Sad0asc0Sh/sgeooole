@@ -220,6 +220,19 @@ const ProductSchema = new mongoose.Schema(
       default: true,
     },
 
+    // Torob feed controls and optional seller guarantee.
+    excludeFromTorob: {
+      type: Boolean,
+      default: false,
+    },
+
+    guarantee: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: '',
+    },
+
     // ============================================
     // Time-Based Promotion Fields
     // ============================================

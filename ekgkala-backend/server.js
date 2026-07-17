@@ -169,6 +169,16 @@ const productLimiter = rateLimit({
 // Apply to product endpoints before general limiter
 app.use('/api/products', productLimiter)
 
+// Torob crawler traffic has its own limiter and is excluded from the general API bucket.
+const torobLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: rateLimitKey,
+  message: { error: 'too many torob requests' },
+})
+
 // General API limiter
 // SECURITY: user-agent bypass removed - it's forgeable
 const limiter = rateLimit({
@@ -179,7 +189,7 @@ const limiter = rateLimit({
   keyGenerator: rateLimitKey,
   skip: (req) => {
     // Skip for product endpoints (already handled by productLimiter)
-    if (req.path.startsWith('/products')) return true;
+    if (req.path.startsWith('/products') || req.path.startsWith('/torob')) return true;
     return false;
   },
   message: { success: false, message: 'تعداد درخواست‌های شما بیش از حد مجاز است، لطفاً ۱۵ دقیقه دیگر تلاش کنید.' },
@@ -444,6 +454,11 @@ app.use('/api/brands', brandsRoutes)
 // Bestsellers Routes
 const bestsellersRoutes = require('./routes/bestsellers')
 app.use('/api', bestsellersRoutes)
+
+// Torob API V3 Routes (server-to-server crawler integration)
+const { torobAuth } = require('./middleware/torobAuth')
+const torobRoutes = require('./routes/torob')
+app.use('/api/torob', torobLimiter, torobAuth, torobRoutes)
 
 // Products Routes
 // SECURITY: checkProductAccess blocks non-admin access to admin-only filters
@@ -720,9 +735,23 @@ process.on('SIGTERM', async () => {
     // Ignore Redis disconnect errors
   }
 
-  // Then close MongoDB
-  mongoose.connection.close(false, () => {
-    console.log('MongoDB connection closed')
-    process.exit(0)
-  })
+  // Then close MongoDB. Mongoose 7 returns a promise and does not accept a callback.
+  try {
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.close()
+      console.log('MongoDB connection closed')
+    } else if (mongoose.connection.readyState === 2) {
+      // A failed/unreachable initial connection can otherwise keep shutdown waiting.
+      void mongoose.connection.close(true).catch((error) => {
+        console.error('MongoDB connection close failed:', error.message)
+      })
+      console.log('MongoDB connection was still opening; forced close initiated')
+    } else {
+      console.log('MongoDB connection was already closed')
+    }
+  } catch (error) {
+    console.error('MongoDB connection close failed:', error.message)
+  }
+
+  process.exit(0)
 })
