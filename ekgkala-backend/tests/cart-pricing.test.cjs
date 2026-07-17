@@ -1,28 +1,6 @@
 const assert = require('assert')
-const fs = require('fs')
-const path = require('path')
-const vm = require('vm')
+const { computeItemPricing } = require('../services/pricingService')
 
-const controllerPath = path.join(__dirname, '../controllers/cartController.js')
-const source = `${fs.readFileSync(controllerPath, 'utf8')}\nmodule.exports = { computeItemPricing }\n`
-const sandboxModule = { exports: {} }
-
-vm.runInNewContext(source, {
-  module: sandboxModule,
-  exports: sandboxModule.exports,
-  require: () => ({}),
-  console: { log() {}, error() {} },
-  Date,
-  Number,
-  Boolean,
-  String,
-  Math,
-  Array,
-  Object,
-  JSON,
-}, { filename: controllerPath })
-
-const { computeItemPricing } = sandboxModule.exports
 const now = new Date('2026-07-17T00:00:00.000Z')
 
 const cases = [
