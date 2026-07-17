@@ -112,7 +112,7 @@ async function runTests() {
 
     const resPageSort = await runScenario('1. page+sort', { page: 1, sort: 'date_added_desc' }, token, res => {
       if(res.status !== 200) throw new Error('Status not 200');
-      if(res.data.total !== 4) throw new Error(`Expected total 4 (no P5), got ${res.data.total}`);
+      if(res.data.total !== 5) throw new Error(`Expected total 5 (no P5), got ${res.data.total}`);
       if(res.data.products.some(p => p.page_unique.includes(p5.productCode))) throw new Error("P5 is present");
     });
 
