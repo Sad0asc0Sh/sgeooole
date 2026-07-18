@@ -1,11 +1,18 @@
 const assert = require('assert')
 const crypto = require('crypto')
-const jwt = require('jsonwebtoken')
 const { flattenProduct, mapTorobProduct } = require('../utils/torobMapper')
 const { extractProductCode, parsePageUnique, validateRequest } = require('../controllers/torobController')
 const { torobAuth } = require('../middleware/torobAuth')
 
 process.env.FRONTEND_URL = 'https://www.ekgkala.ir/'
+
+const signEdDsaJwt = (payload, privateKey, header = { alg: 'EdDSA', typ: 'JWT', v: 1 }) => {
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url')
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const signingInput = Buffer.from(`${encodedHeader}.${encodedPayload}`)
+  const signature = crypto.sign(null, signingInput, privateKey).toString('base64url')
+  return `${encodedHeader}.${encodedPayload}.${signature}`
+}
 
 const product = {
   _id: '123', productCode: 'KY-0000001', slug: 'test-product', name: 'Test product',
@@ -37,14 +44,19 @@ assert.strictEqual(validateRequest({ page: 1, sort: 'date_added_desc' }), null)
 assert.deepStrictEqual(parsePageUnique('ky-0000001_507f1f77bcf86cd799439011'), { productCode: 'KY-0000001', variantId: '507f1f77bcf86cd799439011' })
 assert.strictEqual(extractProductCode('https://www.ekgkala.ir/product/ky-0000001/test-product'), 'KY-0000001')
 
-const keys = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 })
+const keys = crypto.generateKeyPairSync('ed25519')
 process.env.TOROB_PUBLIC_KEY = keys.publicKey.export({ type: 'spki', format: 'pem' })
-const token = jwt.sign({ sub: 'torob' }, keys.privateKey.export({ type: 'pkcs8', format: 'pem' }), { algorithm: 'RS256', expiresIn: '1h' })
+const now = Math.floor(Date.now() / 1000)
+const token = signEdDsaJwt({ aud: 'www.ekgkala.ir', exp: now + 3600, nbf: now - 60 }, keys.privateKey)
 let status = null
 let payload = null
-torobAuth({ headers: { 'x-torob-token': token }, ip: '127.0.0.1' }, { status(code) { status = code; return this }, json(value) { payload = value } }, () => { status = 200 })
+torobAuth({ headers: { 'x-torob-token': token, 'x-torob-token-version': '1' }, hostname: 'www.ekgkala.ir', ip: '127.0.0.1' }, { status(code) { status = code; return this }, json(value) { payload = value } }, () => { status = 200 })
 assert.strictEqual(status, 200)
-torobAuth({ headers: {} }, { status(code) { status = code; return this }, json(value) { payload = value } }, () => {})
+const wrongAudienceToken = signEdDsaJwt({ aud: 'other.example.com', exp: now + 3600, nbf: now - 60 }, keys.privateKey)
+torobAuth({ headers: { 'x-torob-token': wrongAudienceToken }, hostname: 'www.ekgkala.ir', ip: '127.0.0.1' }, { status(code) { status = code; return this }, json(value) { payload = value } }, () => { status = 200 })
+assert.strictEqual(status, 401)
+assert.deepStrictEqual(payload, { error: 'invalid or expired torob token' })
+torobAuth({ headers: {}, hostname: 'www.ekgkala.ir' }, { status(code) { status = code; return this }, json(value) { payload = value } }, () => {})
 assert.strictEqual(status, 401)
 assert.deepStrictEqual(payload, { error: 'X-Torob-Token header is missing' })
 console.log('Torob API V3 unit tests passed')

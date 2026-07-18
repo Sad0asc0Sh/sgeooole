@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -11,12 +10,11 @@ if (!MONGODB_URI.includes('127.0.0.1') && !MONGODB_URI.includes('localhost') && 
   process.exit(1);
 }
 
-const privateKeyPath = process.env.TOROB_TEST_PRIVATE_KEY_PATH;
 const PORT = 54321;
 const BASE_URL = `http://127.0.0.1:${PORT}/api/torob`;
+const TEST_AUDIENCE = '127.0.0.1';
 
 async function fetchJSON(url, options = {}) {
-  const fetch = require('node-fetch') || global.fetch; // Use global.fetch in Node 18+
   const res = await global.fetch(url, options);
   const text = await res.text();
   let data;
@@ -24,15 +22,22 @@ async function fetchJSON(url, options = {}) {
   return { status: res.status, data };
 }
 
+function signEdDsaJwt(payload, privateKey, header = { alg: 'EdDSA', typ: 'JWT', v: 1 }) {
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64url');
+  const encodedPayload = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signingInput = Buffer.from(`${encodedHeader}.${encodedPayload}`);
+  const signature = crypto.sign(null, signingInput, privateKey).toString('base64url');
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
 const { computeItemPricing } = require('../services/pricingService');
 
 async function runTests() {
   let serverProcess;
   try {
-    if (!privateKeyPath || !fs.existsSync(privateKeyPath)) {
-      throw new Error(`TOROB_TEST_PRIVATE_KEY_PATH is invalid: ${privateKeyPath}`);
-    }
-    const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
+    const keys = crypto.generateKeyPairSync('ed25519');
+    const publicKey = keys.publicKey.export({ type: 'spki', format: 'pem' });
+    const otherKeys = crypto.generateKeyPairSync('ed25519');
 
     await mongoose.connect(MONGODB_URI);
     await mongoose.connection.db.dropDatabase();
@@ -74,27 +79,37 @@ async function runTests() {
 
     serverProcess = spawn('node', ['server.js'], {
       cwd: path.join(__dirname, '..'),
-      env: { ...process.env, PORT: String(PORT), MONGODB_URI }
+      env: {
+        ...process.env,
+        PORT: String(PORT),
+        MONGODB_URI,
+        FRONTEND_URL: process.env.FRONTEND_URL || 'https://www.ekgkala.ir',
+        TOROB_PUBLIC_KEY: publicKey,
+      }
     });
 
     await new Promise((resolve, reject) => {
       serverProcess.stdout.on('data', d => {
-        if(d.toString().includes(`🚀 Server running on port ${PORT}`)) resolve();
+        const output = d.toString();
+        process.stdout.write(output);
+        if(output.includes(`🚀 Server running on port ${PORT}`)) resolve();
       });
       serverProcess.stderr.on('data', d => console.error('SERVER ERR:', d.toString()));
       setTimeout(() => reject(new Error("Timeout waiting for server")), 15000);
     });
     console.log("Server is running.");
 
-    const token = jwt.sign({ sub: 'torob' }, privateKey, { algorithm: 'RS256', expiresIn: '1h' });
-    const wrongToken = jwt.sign({ sub: 'torob' }, crypto.generateKeyPairSync('rsa', {modulusLength:2048}).privateKey.export({type:'pkcs8',format:'pem'}), { algorithm: 'RS256' });
+    const now = Math.floor(Date.now() / 1000);
+    const token = signEdDsaJwt({ aud: TEST_AUDIENCE, exp: now + 3600, nbf: now - 60 }, keys.privateKey);
+    const wrongToken = signEdDsaJwt({ aud: TEST_AUDIENCE, exp: now + 3600, nbf: now - 60 }, otherKeys.privateKey);
+    const wrongAudienceToken = signEdDsaJwt({ aud: 'other.example.com', exp: now + 3600, nbf: now - 60 }, keys.privateKey);
 
     const results = [];
     let allPassed = true;
 
     const runScenario = async (name, payload, tokenToUse, validator) => {
       console.log(`Running: ${name}`);
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = { 'Content-Type': 'application/json', 'X-Torob-Token-Version': '1' };
       if (tokenToUse) headers['X-Torob-Token'] = tokenToUse;
       const res = await fetchJSON(`${BASE_URL}/products`, {
         method: 'POST', headers, body: JSON.stringify(payload)
@@ -127,7 +142,9 @@ async function runTests() {
     });
 
     await runScenario('4. page_uniques fake', { page_uniques: ['KY-9999999'] }, token, res => {
+      if(res.status !== 200) throw new Error('Status not 200');
       if(res.data.products.length !== 0) throw new Error('Expected empty products');
+      if(res.data.total !== 0) throw new Error('Expected total 0');
     });
 
     await runScenario('5. body ناقص', { page: 1 }, token, res => {
@@ -150,12 +167,15 @@ async function runTests() {
       if(var2.availability !== false) throw new Error('Variant 2 should be unavailable');
     });
 
-    const now = new Date();
+    await runScenario('9. wrong audience', { page: 1, sort: 'date_added_desc' }, wrongAudienceToken, res => {
+      if(res.status !== 401) throw new Error('Expected 401');
+    });
+
     const pricingTable = [];
     const torobProducts = resPageSort?.data?.products || [];
     
     for (const p of [p1, p2, p3]) {
-      const cartPrice = computeItemPricing({ product: p }, now).finalPrice;
+      const cartPrice = computeItemPricing({ product: p }, new Date()).finalPrice;
       const torobP = torobProducts.find(x => x.page_unique === p.productCode);
       const torobPrice = torobP ? torobP.current_price : null;
       pricingTable.push({
