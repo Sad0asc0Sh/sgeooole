@@ -152,7 +152,7 @@ export default function Countdown({
       <div className="inline-flex items-center gap-1 rounded-full border border-ekg-100 bg-white/90 px-2 py-1 text-[10px] font-bold text-ekg-700" dir="rtl">
         {compactUnits.map((unit, index) => (
           <span key={unit.key} className="inline-flex items-center gap-0.5 whitespace-nowrap">
-            {index > 0 && <span className="text-ekg-300">•</span>}
+            {index > 0 && <span className="text-ekg-300">|</span>}
             <span>{formatFa(unit.value, unit.digits)}</span>
             <span className="font-medium text-ekg-500">{unit.label}</span>
           </span>
