@@ -46,6 +46,13 @@ const verifyEdDsaJwt = (token, publicKeyPem, reqHostname) => {
   const normalizedHost = String(reqHostname || '').replace(/^www\./i, '')
   const normalizedAud = String(payload.aud || '').replace(/^www\./i, '')
 
+  console.error("[TOROB DEBUG]", {
+    host: reqHostname,
+    normalizedHost,
+    aud: payload.aud,
+    normalizedAud
+  });
+
   if (normalizedAud !== normalizedHost)
     throw new Error('jwt audience mismatch')
 
