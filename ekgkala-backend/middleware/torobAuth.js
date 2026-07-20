@@ -53,6 +53,7 @@ function torobAuth(req, res, next) {
     req.torob = { payload, tokenVersion }
     return next()
   } catch (err) {
+    console.error("[TOROB AUTH]", err.message)
     return res.status(401).json({ error: 'invalid or expired torob token' })
   }
 }
