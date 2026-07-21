@@ -13,29 +13,19 @@ const imageUrls = (images) => (Array.isArray(images) ? images : [])
   .map((image) => (typeof image === 'string' ? image : image?.url))
   .filter((url) => typeof url === 'string' && url.trim())
 
-const mapSpecifications = (product, variant) => {
-  const specs = []
+const mapSpecifications = (product) => {
+  const spec = {}
   const productSpecs = product?.specifications
 
-  if (Array.isArray(productSpecs)) {
-    for (const spec of productSpecs) {
-      if (spec?.label != null && spec?.value != null) specs.push({ name: String(spec.label), value: String(spec.value) })
-      else if (spec?.name != null && spec?.value != null) specs.push({ name: String(spec.name), value: String(spec.value) })
-    }
-  } else if (productSpecs && typeof productSpecs === 'object') {
+  // specifications در مدل Product از نوع Mixed است و مدیر آن را به صورت
+  // Key/Value در پنل ادمین ثبت می‌کند (مثلاً: {"رزولوشن": "5MP", "نوع لنز": "ثابت"})
+  if (productSpecs && typeof productSpecs === 'object' && !Array.isArray(productSpecs)) {
     for (const [name, value] of Object.entries(productSpecs)) {
-      if (value != null) specs.push({ name: String(name), value: String(value) })
+      if (value != null && value !== '') spec[String(name)] = String(value)
     }
   }
 
-  for (const property of Array.isArray(product?.properties) ? product.properties : []) {
-    if (property?.label != null && property?.value != null) specs.push({ name: String(property.label), value: String(property.value) })
-  }
-  for (const option of Array.isArray(variant?.options) ? variant.options : []) {
-    if (option?.name != null && option?.value != null) specs.push({ name: String(option.name), value: String(option.value) })
-  }
-
-  return specs
+  return spec
 }
 
 const { computeItemPricing } = require('../services/pricingService')
@@ -80,7 +70,7 @@ const mapTorobProduct = (product, variant = null) => {
     old_price: pricing.oldPrice,
     availability: Boolean(product?.isActive === true && (isVariable ? Number(variant?.stock) > 0 : Number(product?.stock) > 0)),
     image_links: images,
-    specs: mapSpecifications(product, variant),
+    spec: mapSpecifications(product),
     date_added: asIsoDate(product?.createdAt),
     date_updated: asIsoDate(product?.updatedAt),
   }
