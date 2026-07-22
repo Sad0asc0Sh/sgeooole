@@ -44,9 +44,11 @@ class NotificationService {
       }
 
       // SMS config - کنسول جدید ملی پیامک
+      const bodyIdVal = Number(settings?.notificationSettings?.smsPatternId || process.env.MELIPAYAMAK_OTP_BODY_ID || process.env.MELIPAYAMAK_PATTERN_OTP || 434916);
       this.smsConfig = {
-        pathToken: (settings.notificationSettings && settings.notificationSettings.smsApiKey) || 'f95527ef2fa7498dbad9a0d09f2bbad2',
-        enabled: !!(settings.notificationSettings && (settings.notificationSettings.smsApiKey || settings.notificationSettings.smsUsername))
+        pathToken: (settings?.notificationSettings?.smsApiKey) || process.env.MELIPAYAMAK_API_KEY || 'f95527ef2fa7498dbad9a0d09f2bbad2',
+        bodyId: isNaN(bodyIdVal) ? 434916 : bodyIdVal,
+        enabled: true
       };
 
     } catch (error) {
@@ -95,16 +97,11 @@ class NotificationService {
       await this.initialize();
     }
 
-    if (!this.smsConfig.enabled) {
-      const err = new Error('سرویس پیامک فعال نیست');
-      err.code = 'SMS_NOT_CONFIGURED';
-      throw err;
-    }
-
     try {
+      const bodyId = this.smsConfig.bodyId || 434916;
       const response = await axios.post(
         `https://console.melipayamak.com/api/send/shared/${this.smsConfig.pathToken}`,
-        { bodyId: Number(process.env.MELIPAYAMAK_OTP_BODY_ID), to: phoneNumber, args: [code] },
+        { bodyId: bodyId, to: phoneNumber, args: [String(code)] },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 10000
