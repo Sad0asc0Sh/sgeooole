@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { Search, Sparkles, ShoppingCart, User } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
 import { useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import { useCart } from "@/hooks/useCart";
 import DesktopMegaMenu from "./DesktopMegaMenu";
 import DesktopSearch from "@/components/features/search/DesktopSearch";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 interface HeaderProps {
     isAIOpen: boolean;
@@ -18,6 +20,8 @@ interface HeaderProps {
 }
 
 export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
+    const pathname = usePathname();
+    const router = useRouter();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const { user } = useAuth();
     const { itemCount } = useCart();
@@ -28,6 +32,16 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
         transitionMs: 350,
     });
     const [spacerReady, setSpacerReady] = useState(false);
+
+    const handleHomeClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (pathname === "/" || pathname === "") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+            getScrollManager().clear("/");
+            router.push("/");
+        }
+    };
 
     useEffect(() => {
         const id = requestAnimationFrame(() => setSpacerReady(true));
@@ -62,7 +76,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             {/* MOBILE HEADER */}
             <div className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}
-                <Link href="/" className="shrink-0">
+                <Link href="/" onClick={handleHomeClick} className="shrink-0">
                     <Logo />
                 </Link>
 
@@ -98,7 +112,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     {/* Top Row: Logo - Search - Actions */}
                     <div className="flex items-center h-20 gap-4 pl-4">
                         {/* Right: Logo */}
-                        <Link href="/" className="flex-shrink-0">
+                        <Link href="/" onClick={handleHomeClick} className="flex-shrink-0">
                             <Logo />
                         </Link>
 
@@ -161,6 +175,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                                 <Link
                                     key={link.href}
                                     href={link.href}
+                                    onClick={link.href === "/" ? handleHomeClick : undefined}
                                     className="text-sm font-medium text-ekg-700 hover:text-kala-600 transition-colors relative group whitespace-nowrap"
                                 >
                                     {link.label}

@@ -1,10 +1,11 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Home, LayoutGrid, ShoppingCart, BookOpen, User } from "lucide-react";
 import CategoriesSheet from "@/components/features/categories/CategoriesSheet";
 import { useAuth } from "@/hooks/useAuth";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 interface BottomNavProps {
     onNavClick: () => void;
@@ -13,11 +14,25 @@ interface BottomNavProps {
 
 export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
     const { user } = useAuth();
 
     // Hide BottomNav on Product Detail Page
     if (pathname.startsWith("/product/")) return null;
+
+    const handleHomeClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        setTimeout(() => setIsCategoriesOpen(false), 500);
+        onNavClick();
+
+        if (pathname === "/" || pathname === "") {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } else {
+            getScrollManager().clear("/");
+            router.push("/");
+        }
+    };
 
     const navItems = [
         { href: "/", label: "خانه", icon: Home },
@@ -33,6 +48,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                 <div className="flex justify-between items-center px-4 h-16">
                     {navItems.map((item) => {
                         const isCat = item.href === "/categories";
+                        const isHome = item.href === "/";
 
                         // Active State Logic
                         let isActive = false;
@@ -59,9 +75,13 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => {
-                                    setTimeout(() => setIsCategoriesOpen(false), 500);
-                                    onNavClick();
+                                onClick={(e) => {
+                                    if (isHome) {
+                                        handleHomeClick(e);
+                                    } else {
+                                        setTimeout(() => setIsCategoriesOpen(false), 500);
+                                        onNavClick();
+                                    }
                                 }}
                                 className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                             >
