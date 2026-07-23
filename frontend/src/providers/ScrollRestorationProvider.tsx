@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { NAV_STACK_KEY } from '@/hooks/useSmartBack';
 
 /**
  * Global scroll restoration provider
@@ -62,9 +63,40 @@ function ScrollRestorationController() {
     };
   }, []);
 
-  // Handle scroll behavior based on navigation type
+  // Handle scroll behavior and session navigation stack tracking
   useEffect(() => {
     const currentPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+
+    // Track internal navigation in sessionStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(NAV_STACK_KEY);
+        let stack: string[] = raw ? JSON.parse(raw) : [];
+
+        if (navigationTypeRef.current === 'pop') {
+          // On back/forward (popstate), adjust the stack if current path exists in stack
+          if (stack.length > 0 && stack[stack.length - 1] !== currentPath) {
+            const existingIndex = stack.lastIndexOf(currentPath);
+            if (existingIndex !== -1) {
+              stack = stack.slice(0, existingIndex + 1);
+            } else {
+              stack.pop();
+            }
+          }
+        } else {
+          // Push navigation or initial mount
+          if (stack.length === 0 || stack[stack.length - 1] !== currentPath) {
+            stack.push(currentPath);
+            if (stack.length > 25) {
+              stack = stack.slice(stack.length - 25);
+            }
+          }
+        }
+        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(stack));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
 
     // Skip on initial mount
     if (navigationTypeRef.current === 'initial') {
@@ -88,3 +120,4 @@ function ScrollRestorationController() {
 
   return null;
 }
+

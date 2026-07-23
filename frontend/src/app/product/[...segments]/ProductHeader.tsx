@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Heart, ShoppingCart, Search, X, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Product } from "@/services/productService";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
+import { useSmartBack } from "@/hooks/useSmartBack";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
 
@@ -14,7 +14,7 @@ type ProductHeaderProps = {
 };
 
 export default function ProductHeader({ product }: ProductHeaderProps) {
-    const router = useRouter();
+    const handleSmartBack = useSmartBack();
     const { itemCount } = useCart();
     const [isAiOpen, setIsAiOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -27,8 +27,10 @@ export default function ProductHeader({ product }: ProductHeaderProps) {
             <div className="fixed top-0 left-0 w-full z-50 bg-white shadow-sm flex justify-between items-center px-4 py-3 border-b border-gray-100 md:hidden">
                 {/* Right: Close Button */}
                 <button
-                    onClick={() => router.back()}
+                    onClick={() => handleSmartBack("/")}
                     className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-colors"
+                    title="بستن"
+                    aria-label="بستن صفحه محصول"
                 >
                     <X size={24} />
                 </button>
