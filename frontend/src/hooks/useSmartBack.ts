@@ -76,23 +76,24 @@ export function useSmartBack() {
                     router.push(fallbackUrl);
                 }
 
-                // Failsafe timer: If router.back() didn't change the path within 250ms
-                // (e.g. in restrictive mobile webviews), force navigate to fallbackUrl
+                // Failsafe timer: If router.back() didn't change the path within 1200ms
+                // (e.g. in restrictive mobile webviews), force navigate to target fallback
                 setTimeout(() => {
                     const currentPath = window.location.pathname + window.location.search;
                     if (currentPath === initialPath) {
+                        const targetUrl = stack.length > 0 ? stack[stack.length - 1] : fallbackUrl;
                         try {
-                            router.push(fallbackUrl);
+                            router.push(targetUrl);
                         } catch {
-                            window.location.href = fallbackUrl;
+                            window.location.href = targetUrl;
                         }
                         setTimeout(() => {
-                            if (window.location.pathname !== fallbackUrl) {
-                                window.location.href = fallbackUrl;
+                            if (window.location.pathname + window.location.search === initialPath) {
+                                window.location.href = targetUrl;
                             }
-                        }, 150);
+                        }, 300);
                     }
-                }, 250);
+                }, 1200);
             } else {
                 // Direct landing (e.g. Torob, direct link, external referrer)
                 try {

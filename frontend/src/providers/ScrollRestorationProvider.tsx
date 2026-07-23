@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { NAV_STACK_KEY } from '@/hooks/useSmartBack';
+import { getScrollManager } from '@/lib/scroll/ScrollManager';
 
 /**
  * Global scroll restoration provider
- * Disables browser's automatic scroll restoration and sets up manual control
+ * Disables browser's automatic scroll restoration and provides universal,
+ * seamless scroll position tracking and restoration across all pages.
  */
 export default function ScrollRestorationProvider({
   children,
@@ -27,23 +29,25 @@ function ScrollRestorationController() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const previousPathRef = useRef<string>('');
+  const currentPathRef = useRef<string>('');
   const navigationTypeRef = useRef<'push' | 'pop' | 'initial'>('initial');
 
-  // Disable browser's automatic scroll restoration
+  // Compute full current path key
+  const fullPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+  currentPathRef.current = fullPath;
+
+  // 1. Disable browser automatic scroll restoration & intercept history events
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
-      // Set to manual to take full control
       window.history.scrollRestoration = 'manual';
     }
 
-    // Listen for popstate (back/forward navigation)
     const handlePopState = () => {
       navigationTypeRef.current = 'pop';
     };
 
     window.addEventListener('popstate', handlePopState);
 
-    // Intercept pushState and replaceState to track navigation type
     const originalPushState = window.history.pushState;
     const originalReplaceState = window.history.replaceState;
 
@@ -63,18 +67,62 @@ function ScrollRestorationController() {
     };
   }, []);
 
-  // Handle scroll behavior and session navigation stack tracking
+  // 2. Universal global scroll position listener (captures scroll for ALL routes)
   useEffect(() => {
-    const currentPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    if (typeof window === 'undefined') return;
 
-    // Track internal navigation in sessionStorage
+    const manager = getScrollManager();
+
+    const handleScroll = () => {
+      if (currentPathRef.current) {
+        manager.saveScrollPosition(currentPathRef.current);
+      }
+    };
+
+    const handleImmediateSave = () => {
+      if (currentPathRef.current) {
+        manager.saveScrollPositionImmediate(currentPathRef.current);
+      }
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as Element | null;
+      if (!target) return;
+      const anchor = target.closest('a[href], button, [role="button"]');
+      if (anchor) {
+        handleImmediateSave();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('pagehide', handleImmediateSave);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        handleImmediateSave();
+      }
+    });
+    document.addEventListener('click', handleClick, true);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('pagehide', handleImmediateSave);
+      document.removeEventListener('click', handleClick, true);
+    };
+  }, []);
+
+  // 3. Navigation change handler & Scroll Restoration / Stack tracking
+  useEffect(() => {
+    const currentPath = fullPath;
+    const isPop = navigationTypeRef.current === 'pop';
+    const isInitial = navigationTypeRef.current === 'initial';
+
+    // Session navigation stack tracking
     if (typeof window !== 'undefined') {
       try {
         const raw = sessionStorage.getItem(NAV_STACK_KEY);
         let stack: string[] = raw ? JSON.parse(raw) : [];
 
-        if (navigationTypeRef.current === 'pop') {
-          // On back/forward (popstate), adjust the stack if current path exists in stack
+        if (isPop) {
           if (stack.length > 0 && stack[stack.length - 1] !== currentPath) {
             const existingIndex = stack.lastIndexOf(currentPath);
             if (existingIndex !== -1) {
@@ -84,11 +132,10 @@ function ScrollRestorationController() {
             }
           }
         } else {
-          // Push navigation or initial mount
           if (stack.length === 0 || stack[stack.length - 1] !== currentPath) {
             stack.push(currentPath);
-            if (stack.length > 25) {
-              stack = stack.slice(stack.length - 25);
+            if (stack.length > 30) {
+              stack = stack.slice(stack.length - 30);
             }
           }
         }
@@ -98,26 +145,31 @@ function ScrollRestorationController() {
       }
     }
 
-    // Skip on initial mount
-    if (navigationTypeRef.current === 'initial') {
+    if (isInitial) {
       navigationTypeRef.current = 'push';
       previousPathRef.current = currentPath;
       return;
     }
 
-    // Only scroll to top on push navigation (not back/forward)
-    if (navigationTypeRef.current === 'push' && previousPathRef.current !== currentPath) {
-      // Small delay to ensure navigation is complete
+    if (isPop) {
+      // POP Navigation (Back/Forward): Restore scroll position dynamically
+      void getScrollManager().restoreScrollPosition(currentPath);
+    } else if (previousPathRef.current !== currentPath) {
+      // PUSH Navigation (Forward): Scroll to top unless disabled by detail page
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+        // Check if page is not product detail which handles top scroll itself
+        if (!pathname.startsWith('/product/')) {
+          window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+        }
       });
     }
 
-    // Reset navigation type for next navigation
+    // Reset navigation state for subsequent route updates
     navigationTypeRef.current = 'push';
     previousPathRef.current = currentPath;
-  }, [pathname, searchParams]);
+  }, [fullPath, pathname, searchParams]);
 
   return null;
 }
+
 
