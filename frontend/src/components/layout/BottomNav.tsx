@@ -23,13 +23,16 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
 
     const handleHomeClick = (e: React.MouseEvent) => {
         e.preventDefault();
-        setTimeout(() => setIsCategoriesOpen(false), 500);
+        e.stopPropagation();
+        setIsCategoriesOpen(false);
         onNavClick();
 
         if (pathname === "/" || pathname === "") {
+            getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
             getScrollManager().clear("/");
+            window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
             router.push("/");
         }
     };
@@ -62,7 +65,22 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                             return (
                                 <button
                                     key={item.href}
+                                    type="button"
                                     onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
+                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                >
+                                    <item.icon size={20} />
+                                    <span className="text-[10px] font-medium">{item.label}</span>
+                                </button>
+                            );
+                        }
+
+                        if (isHome) {
+                            return (
+                                <button
+                                    key={item.href}
+                                    type="button"
+                                    onClick={handleHomeClick}
                                     className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                                 >
                                     <item.icon size={20} />
@@ -75,13 +93,9 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={(e) => {
-                                    if (isHome) {
-                                        handleHomeClick(e);
-                                    } else {
-                                        setTimeout(() => setIsCategoriesOpen(false), 500);
-                                        onNavClick();
-                                    }
+                                onClick={() => {
+                                    setTimeout(() => setIsCategoriesOpen(false), 500);
+                                    onNavClick();
                                 }}
                                 className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                             >

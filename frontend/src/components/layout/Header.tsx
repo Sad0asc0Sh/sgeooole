@@ -35,10 +35,14 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
     const handleHomeClick = (e: React.MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+
         if (pathname === "/" || pathname === "") {
+            getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
             getScrollManager().clear("/");
+            window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
             router.push("/");
         }
     };
