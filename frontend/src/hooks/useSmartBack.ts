@@ -59,6 +59,8 @@ export function useSmartBack() {
             const hasInternalHistory =
                 stackLength > 1 || (isInternalReferrer && window.history.length > 1);
 
+            const initialPath = window.location.pathname + window.location.search;
+
             if (hasInternalHistory) {
                 // Remove current page from session stack before popping back
                 try {
@@ -68,10 +70,43 @@ export function useSmartBack() {
                     }
                 } catch {}
 
-                router.back();
+                try {
+                    router.back();
+                } catch {
+                    router.push(fallbackUrl);
+                }
+
+                // Failsafe timer: If router.back() didn't change the path within 250ms
+                // (e.g. in restrictive mobile webviews), force navigate to fallbackUrl
+                setTimeout(() => {
+                    const currentPath = window.location.pathname + window.location.search;
+                    if (currentPath === initialPath) {
+                        try {
+                            router.push(fallbackUrl);
+                        } catch {
+                            window.location.href = fallbackUrl;
+                        }
+                        setTimeout(() => {
+                            if (window.location.pathname !== fallbackUrl) {
+                                window.location.href = fallbackUrl;
+                            }
+                        }, 150);
+                    }
+                }, 250);
             } else {
                 // Direct landing (e.g. Torob, direct link, external referrer)
-                router.push(fallbackUrl);
+                try {
+                    router.push(fallbackUrl);
+                } catch {
+                    window.location.href = fallbackUrl;
+                }
+
+                // Failsafe timer: Guarantee navigation even in mobile webview / in-app browsers
+                setTimeout(() => {
+                    if (window.location.pathname !== fallbackUrl) {
+                        window.location.href = fallbackUrl;
+                    }
+                }, 150);
             }
         },
         [router]

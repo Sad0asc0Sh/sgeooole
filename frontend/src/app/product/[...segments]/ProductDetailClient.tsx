@@ -12,6 +12,7 @@ import ColorSelector from "./ColorSelector";
 import ProductActions from "./ProductActions";
 import ProductHistoryTracker from "./ProductHistoryTracker";
 import ProductSocialActions from "./ProductSocialActions";
+import { useLayoutState } from "@/providers/LayoutStateProvider";
 
 type ProductDetailClientProps = {
     product: Product;
@@ -20,6 +21,13 @@ type ProductDetailClientProps = {
 export default function ProductDetailClient({ product: initialProduct }: ProductDetailClientProps) {
     // Disable scroll restoration for product detail pages - always start at top
     useDisableScrollRestoration();
+
+    const { setIsProductPage } = useLayoutState();
+
+    useEffect(() => {
+        setIsProductPage(true);
+        return () => setIsProductPage(false);
+    }, [setIsProductPage]);
 
     const [product, setProduct] = useState<Product>(initialProduct);
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(

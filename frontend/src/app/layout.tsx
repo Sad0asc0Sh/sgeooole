@@ -6,6 +6,7 @@ import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import ScrollRestorationProvider from "@/providers/ScrollRestorationProvider";
 import SWRProvider from "@/providers/SWRProvider";
+import LayoutStateProvider from "@/providers/LayoutStateProvider";
 import { Suspense } from "react";
 
 // Parspack Cloud Storage — DNS preconnect
@@ -75,9 +76,11 @@ export default function RootLayout({
         <GoogleAuthProvider>
           <SWRProvider>
             <ScrollRestorationProvider>
-              <Suspense fallback={null}>
-                <ClientLayout>{children}</ClientLayout>
-              </Suspense>
+              <LayoutStateProvider>
+                <Suspense fallback={null}>
+                  <ClientLayout>{children}</ClientLayout>
+                </Suspense>
+              </LayoutStateProvider>
             </ScrollRestorationProvider>
           </SWRProvider>
         </GoogleAuthProvider>

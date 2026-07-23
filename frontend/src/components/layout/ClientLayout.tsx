@@ -8,6 +8,7 @@ import BottomNav from "@/components/layout/BottomNav";
 import Footer from "@/components/layout/Footer";
 import ServicesWidget from "@/components/features/services/ServicesWidget";
 import AuthModalProvider from "@/providers/AuthModalProvider";
+import { useLayoutState } from "@/providers/LayoutStateProvider";
 
 export default function ClientLayout({
     children,
@@ -15,11 +16,12 @@ export default function ClientLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const { isProductPage: isProductPageFromContext } = useLayoutState();
     const [isAIOpen, setIsAIOpen] = useState(false);
     const [isServicesOpen, setIsServicesOpen] = useState(false);
 
     const isLoginPage = pathname?.startsWith("/login");
-    const isProductPage = pathname?.startsWith("/product/");
+    const isProductPage = pathname?.startsWith("/product/") || isProductPageFromContext;
 
     // Profile sub-pages: show header on desktop, hide on mobile
     const isProfileSubPage = pathname?.startsWith("/profile/") && pathname !== "/profile";
