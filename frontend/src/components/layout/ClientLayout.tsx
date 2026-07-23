@@ -51,7 +51,7 @@ export default function ClientLayout({
                     </div>
                 )}
 
-                <div className={`flex-grow ${showChrome ? "pb-32" : ""}`}>
+                <div className={`flex-grow min-h-[80vh] ${showChrome ? "pb-32" : ""}`}>
                     {children}
                 </div>
 
