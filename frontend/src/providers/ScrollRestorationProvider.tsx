@@ -30,40 +30,28 @@ function ScrollRestorationController() {
   const searchParams = useSearchParams();
   const previousPathRef = useRef<string>('');
   const currentPathRef = useRef<string>('');
-  const navigationTypeRef = useRef<'push' | 'pop' | 'initial'>('initial');
+  const lastPopTimeRef = useRef<number>(0);
+  const isPopNavigationRef = useRef<boolean>(false);
 
   // Compute full current path key
   const fullPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   currentPathRef.current = fullPath;
 
-  // 1. Disable browser automatic scroll restoration & intercept history events
+  // 1. Disable browser automatic scroll restoration & intercept history popstate
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
 
     const handlePopState = () => {
-      navigationTypeRef.current = 'pop';
+      lastPopTimeRef.current = Date.now();
+      isPopNavigationRef.current = true;
     };
 
     window.addEventListener('popstate', handlePopState);
 
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-
-    window.history.pushState = function (...args) {
-      navigationTypeRef.current = 'push';
-      return originalPushState.apply(this, args);
-    };
-
-    window.history.replaceState = function (...args) {
-      return originalReplaceState.apply(this, args);
-    };
-
     return () => {
       window.removeEventListener('popstate', handlePopState);
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
     };
   }, []);
 
@@ -75,13 +63,15 @@ function ScrollRestorationController() {
 
     const handleScroll = () => {
       if (currentPathRef.current) {
-        manager.saveScrollPosition(currentPathRef.current);
+        const y = window.scrollY || window.pageYOffset || 0;
+        manager.saveScrollPosition(currentPathRef.current, y);
       }
     };
 
     const handleImmediateSave = () => {
       if (currentPathRef.current) {
-        manager.saveScrollPositionImmediate(currentPathRef.current);
+        const y = window.scrollY || window.pageYOffset || 0;
+        manager.saveScrollPositionImmediate(currentPathRef.current, y);
       }
     };
 
@@ -110,13 +100,16 @@ function ScrollRestorationController() {
     };
   }, []);
 
-  // 3. Navigation change handler & Scroll Restoration / Stack tracking
+  // 3. Navigation lifecycle & Restoration Controller
   useEffect(() => {
     const currentPath = fullPath;
-    const isPop = navigationTypeRef.current === 'pop';
-    const isInitial = navigationTypeRef.current === 'initial';
+    const timeSincePop = Date.now() - lastPopTimeRef.current;
+    const isPop = isPopNavigationRef.current || timeSincePop < 1500;
 
-    // Session navigation stack tracking
+    // Reset pop flag after evaluation
+    isPopNavigationRef.current = false;
+
+    // Navigation Stack tracking
     if (typeof window !== 'undefined') {
       try {
         const raw = sessionStorage.getItem(NAV_STACK_KEY);
@@ -145,31 +138,29 @@ function ScrollRestorationController() {
       }
     }
 
-    if (isInitial) {
-      navigationTypeRef.current = 'push';
+    if (previousPathRef.current === '') {
+      // Initial page mount
       previousPathRef.current = currentPath;
       return;
     }
 
     if (isPop) {
-      // POP Navigation (Back/Forward): Restore scroll position dynamically
+      // POP Navigation (Back/Forward): Restore scroll position with dynamic height locking
       void getScrollManager().restoreScrollPosition(currentPath);
     } else if (previousPathRef.current !== currentPath) {
-      // PUSH Navigation (Forward): Scroll to top unless disabled by detail page
+      // PUSH Navigation (Forward Link Click): Scroll to top unless disabled by product detail page
       requestAnimationFrame(() => {
-        // Check if page is not product detail which handles top scroll itself
         if (!pathname.startsWith('/product/')) {
           window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
         }
       });
     }
 
-    // Reset navigation state for subsequent route updates
-    navigationTypeRef.current = 'push';
     previousPathRef.current = currentPath;
   }, [fullPath, pathname, searchParams]);
 
   return null;
 }
+
 
 

@@ -18,14 +18,15 @@ interface ScrollManagerConfig {
 class ScrollManager {
   private cache: Map<string, ScrollState> = new Map();
   private saveTimeout: NodeJS.Timeout | null = null;
-  private restorationRafId: number | null = null;
   private restorationIntervalId: NodeJS.Timeout | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private mutationObserver: MutationObserver | null = null;
   private config: Required<ScrollManagerConfig>;
   private isRestoring = false;
 
   constructor(config: ScrollManagerConfig = {}) {
     this.config = {
-      debounceMs: config.debounceMs ?? 80,
+      debounceMs: config.debounceMs ?? 50,
       maxCacheSize: config.maxCacheSize ?? 100,
       cacheExpiryMs: config.cacheExpiryMs ?? 60 * 60 * 1000, // 60 minutes
     };
@@ -100,7 +101,7 @@ class ScrollManager {
   }
 
   /**
-   * Restore scroll position with frame-based auto-adjustment as DOM expands
+   * Restore scroll position with dynamic height locking as DOM expands
    */
   async restoreScrollPosition(key: string): Promise<boolean> {
     if (typeof window === 'undefined') return false;
@@ -122,9 +123,9 @@ class ScrollManager {
         behavior: 'instant' as ScrollBehavior,
       });
 
-      // Step 2: Frame-based restoration loop as DOM expands (e.g. SWR hydration / image loads)
+      // Step 2: Continuous dynamic height locking loop
       const startTime = Date.now();
-      const maxDuration = 1200; // max 1.2s monitoring window
+      const maxDuration = 2500; // monitor for up to 2.5s while SWR/images load
 
       const checkAndAdjustScroll = () => {
         const currentY = window.scrollY || window.pageYOffset || 0;
@@ -132,10 +133,9 @@ class ScrollManager {
           document.body.scrollHeight,
           document.documentElement.scrollHeight
         );
-        const viewportHeight = window.innerHeight;
 
-        // If targetY is reachable and we haven't reached it yet, re-apply scrollTo
-        if (currentY < targetY - 2 && currentDocHeight > viewportHeight) {
+        // Re-apply scroll if targetY hasn't been reached yet and document is scrollable
+        if (Math.abs(currentY - targetY) > 5 && currentDocHeight > window.innerHeight) {
           window.scrollTo({
             top: targetY,
             behavior: 'instant' as ScrollBehavior,
@@ -145,17 +145,37 @@ class ScrollManager {
         const updatedY = window.scrollY || window.pageYOffset || 0;
         const elapsedTime = Date.now() - startTime;
 
-        // Stop loop if target position reached or timeout exceeded
+        // Stop monitoring if target position reached or timeout reached
         if (Math.abs(updatedY - targetY) <= 5 || elapsedTime >= maxDuration) {
           this.cancelRestorationLoop();
           this.isRestoring = false;
         }
       };
 
-      // Run interval every 35ms during layout mount
-      this.restorationIntervalId = setInterval(checkAndAdjustScroll, 35);
-      checkAndAdjustScroll();
+      // Set up high-frequency interval check (every 25ms)
+      this.restorationIntervalId = setInterval(checkAndAdjustScroll, 25);
 
+      // Set up MutationObserver to re-scroll instantly whenever DOM nodes change
+      if (typeof MutationObserver !== 'undefined') {
+        this.mutationObserver = new MutationObserver(() => {
+          checkAndAdjustScroll();
+        });
+        this.mutationObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: false,
+        });
+      }
+
+      // Set up ResizeObserver to re-scroll on body resize
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => {
+          checkAndAdjustScroll();
+        });
+        this.resizeObserver.observe(document.body);
+      }
+
+      checkAndAdjustScroll();
       return true;
     } catch (error) {
       console.error('[ScrollManager] Restore error:', error);
@@ -169,14 +189,18 @@ class ScrollManager {
       clearInterval(this.restorationIntervalId);
       this.restorationIntervalId = null;
     }
-    if (this.restorationRafId) {
-      cancelAnimationFrame(this.restorationRafId);
-      this.restorationRafId = null;
+    if (this.mutationObserver) {
+      this.mutationObserver.disconnect();
+      this.mutationObserver = null;
+    }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
     }
   }
 
   observeLayoutShifts(_key: string): void {
-    // No-op for backward compatibility, handled dynamically by restoreScrollPosition frame loop
+    // Handled dynamically by restoreScrollPosition
   }
 
   stopObserving(): void {
@@ -245,4 +269,5 @@ export function getScrollManager(): ScrollManager {
 }
 
 export default ScrollManager;
+
 
