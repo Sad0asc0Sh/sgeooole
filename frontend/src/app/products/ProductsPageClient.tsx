@@ -11,6 +11,7 @@ import { Loader2, SlidersHorizontal, X, Search, ArrowUpDown, Check, ChevronDown,
 import ProductCard from "@/components/product/ProductCard";
 import { productService, CategoryProperty, CategoryDetails } from "@/services/productService";
 import { brandService, Brand } from "@/services/brandService";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 function ProductListingContent() {
   const router = useRouter();
@@ -168,7 +169,10 @@ function ProductListingContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sort", sort);
     params.delete("page"); // Reset to page 1 on sort change
-    router.push(`/products?${params.toString()}`);
+    const targetPath = `/products?${params.toString()}`;
+    getScrollManager().clear(targetPath);
+    router.push(targetPath);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   const handlePriceFilter = () => {
@@ -176,7 +180,10 @@ function ProductListingContent() {
     params.set("minPrice", sliderValue[0].toString());
     params.set("maxPrice", sliderValue[1].toString());
     params.delete("page"); // Reset to page 1 on filter change
-    router.push(`/products?${params.toString()}`);
+    const targetPath = `/products?${params.toString()}`;
+    getScrollManager().clear(targetPath);
+    router.push(targetPath);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   const handlePageChange = (page: number) => {
@@ -187,8 +194,10 @@ function ProductListingContent() {
     } else {
       params.set("page", page.toString());
     }
-    router.push(`/products?${params.toString()}`);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const targetPath = `/products${params.toString() ? `?${params.toString()}` : ""}`;
+    getScrollManager().clear(targetPath);
+    router.push(targetPath);
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   };
 
   // Generate page numbers to display (with ellipsis)

@@ -55,8 +55,8 @@ function ScrollRestorationController() {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Element | null;
       if (!target) return;
-      // Save scroll whenever user clicks on any link or clickable element
-      const anchor = target.closest('a[href], button, [role="button"]');
+      // Save scroll when user clicks on product links or navigation links
+      const anchor = target.closest('a[href]');
       if (anchor) {
         saveCurrentScroll();
       }
