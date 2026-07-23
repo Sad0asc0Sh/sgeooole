@@ -59,21 +59,6 @@ function ScrollRestorationController() {
       const anchor = target.closest('a[href]');
       if (anchor instanceof HTMLAnchorElement) {
         saveCurrentScroll();
-
-        // Check target link destination
-        const href = anchor.getAttribute('href');
-        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
-          try {
-            const url = new URL(href, window.location.origin);
-            const targetKey = `${url.pathname}${url.search}`;
-
-            // If navigating to a product page OR a new page with no saved scroll, pre-scroll to top immediately
-            const savedTargetY = manager.getSavedY(targetKey);
-            if (url.pathname.startsWith('/product/') || savedTargetY === null || savedTargetY <= 0) {
-              window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
-            }
-          } catch (err) {}
-        }
       }
     };
 
