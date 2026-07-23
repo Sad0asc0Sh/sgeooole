@@ -103,12 +103,24 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     useEffect(() => {
       retryCount.current = 0;
       setCurrentSrc(src);
-      setPhase("skeleton");
+
+      const node = wrapperRef.current;
+      const imgEl = node?.querySelector("img");
+      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+        setPhase("loaded");
+      } else {
+        setPhase("skeleton");
+      }
     }, [src]);
 
     useEffect(() => {
       const node = wrapperRef.current;
       if (!node) return;
+
+      const imgEl = node.querySelector("img");
+      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
+        setPhase("loaded");
+      }
 
       const observer = new IntersectionObserver(
         ([entry]) => {
@@ -244,11 +256,19 @@ export function useResilientImage(
     retryCount.current = 0;
     failed.current = false;
     setCurrentSrc(originalSrc || fallbackSrc);
-    setPhase("skeleton");
+
+    if (ref.current && ref.current.complete && ref.current.naturalWidth > 0) {
+      setPhase("loaded");
+    } else {
+      setPhase("skeleton");
+    }
   }, [originalSrc, fallbackSrc]);
 
   useEffect(() => {
     const node = ref.current;
+    if (node && node.complete && node.naturalWidth > 0) {
+      setPhase("loaded");
+    }
     if (!node) return;
 
     const observer = new IntersectionObserver(
