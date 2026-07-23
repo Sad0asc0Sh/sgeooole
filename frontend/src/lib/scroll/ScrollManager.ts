@@ -1,193 +1,139 @@
 /**
  * ScrollManager - Production-grade, high-performance scroll position persistence
- * Supports instant restoration, dynamic layout expansion, and SessionStorage fallback.
+ * Simple, rock-solid, interactive scroll position caching with SessionStorage fallback.
  */
 
 interface ScrollState {
   y: number;
   timestamp: number;
-  url: string;
-}
-
-interface ScrollManagerConfig {
-  debounceMs?: number;
-  maxCacheSize?: number;
-  cacheExpiryMs?: number;
 }
 
 class ScrollManager {
   private cache: Map<string, ScrollState> = new Map();
-  private saveTimeout: NodeJS.Timeout | null = null;
-  private restorationIntervalId: NodeJS.Timeout | null = null;
+  private restorationTimer: NodeJS.Timeout | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private mutationObserver: MutationObserver | null = null;
-  private config: Required<ScrollManagerConfig>;
-  private isRestoring = false;
-
-  constructor(config: ScrollManagerConfig = {}) {
-    this.config = {
-      debounceMs: config.debounceMs ?? 50,
-      maxCacheSize: config.maxCacheSize ?? 100,
-      cacheExpiryMs: config.cacheExpiryMs ?? 60 * 60 * 1000, // 60 minutes
-    };
-  }
 
   /**
-   * Save current scroll position to memory cache and SessionStorage
+   * Save current scroll position for a page key
    */
-  private persistScrollState(key: string, state: ScrollState): void {
-    if (!key) return;
+  save(key: string, overrideY?: number): void {
+    if (!key || typeof window === 'undefined') return;
+    const y = typeof overrideY === 'number' ? overrideY : (window.scrollY || window.pageYOffset || 0);
+
+    const state = { y: Math.max(0, y), timestamp: Date.now() };
     this.cache.set(key, state);
 
-    if (this.cache.size > this.config.maxCacheSize) {
-      const oldestKey = Array.from(this.cache.entries())
-        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0][0];
-      this.cache.delete(oldestKey);
-    }
-
     try {
-      sessionStorage.setItem(`scroll_${key}`, JSON.stringify(state));
+      sessionStorage.setItem(`scroll_pos_${key}`, JSON.stringify(state));
     } catch (e) {
-      this.cleanupSessionStorage();
+      // Storage quota or error fallback
     }
-  }
-
-  private createScrollState(overrideY?: number): ScrollState {
-    const y = typeof overrideY === 'number' ? overrideY : (window.scrollY || window.pageYOffset || 0);
-    return {
-      y: Math.max(0, y),
-      timestamp: Date.now(),
-      url: typeof window !== 'undefined' ? window.location.href : '',
-    };
-  }
-
-  saveScrollPosition(key: string, overrideY?: number): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-
-    this.saveTimeout = setTimeout(() => {
-      this.persistScrollState(key, this.createScrollState(overrideY));
-    }, this.config.debounceMs);
-  }
-
-  saveScrollPositionImmediate(key: string, overrideY?: number): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-      this.saveTimeout = null;
-    }
-    this.persistScrollState(key, this.createScrollState(overrideY));
-  }
-
-  getSavedPosition(key: string): number | null {
-    let state = this.cache.get(key);
-
-    if (!state && typeof window !== 'undefined') {
-      try {
-        const stored = sessionStorage.getItem(`scroll_${key}`);
-        if (stored) {
-          state = JSON.parse(stored);
-          if (state && Date.now() - state.timestamp > this.config.cacheExpiryMs) {
-            sessionStorage.removeItem(`scroll_${key}`);
-            return null;
-          }
-        }
-      } catch (e) {
-        return null;
-      }
-    }
-
-    return state ? state.y : null;
   }
 
   /**
-   * Restore scroll position with dynamic height locking as DOM expands
+   * Retrieve saved scroll position for a page key
    */
-  async restoreScrollPosition(key: string): Promise<boolean> {
-    if (typeof window === 'undefined') return false;
+  getSavedY(key: string): number | null {
+    if (!key || typeof window === 'undefined') return null;
 
-    this.cancelRestorationLoop();
-    this.isRestoring = true;
+    // Check memory first
+    const memory = this.cache.get(key);
+    if (memory && typeof memory.y === 'number') {
+      return memory.y;
+    }
 
+    // Fallback to SessionStorage
     try {
-      const targetY = this.getSavedPosition(key);
-
-      if (targetY === null || targetY <= 0) {
-        this.isRestoring = false;
-        return false;
-      }
-
-      // Step 1: Immediate scroll attempt
-      window.scrollTo({
-        top: targetY,
-        behavior: 'instant' as ScrollBehavior,
-      });
-
-      // Step 2: Continuous dynamic height locking loop
-      const startTime = Date.now();
-      const maxDuration = 2500; // monitor for up to 2.5s while SWR/images load
-
-      const checkAndAdjustScroll = () => {
-        const currentY = window.scrollY || window.pageYOffset || 0;
-        const currentDocHeight = Math.max(
-          document.body.scrollHeight,
-          document.documentElement.scrollHeight
-        );
-
-        // Re-apply scroll if targetY hasn't been reached yet and document is scrollable
-        if (Math.abs(currentY - targetY) > 5 && currentDocHeight > window.innerHeight) {
-          window.scrollTo({
-            top: targetY,
-            behavior: 'instant' as ScrollBehavior,
-          });
+      const raw = sessionStorage.getItem(`scroll_pos_${key}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.y === 'number') {
+          this.cache.set(key, parsed);
+          return parsed.y;
         }
-
-        const updatedY = window.scrollY || window.pageYOffset || 0;
-        const elapsedTime = Date.now() - startTime;
-
-        // Stop monitoring if target position reached or timeout reached
-        if (Math.abs(updatedY - targetY) <= 5 || elapsedTime >= maxDuration) {
-          this.cancelRestorationLoop();
-          this.isRestoring = false;
-        }
-      };
-
-      // Set up high-frequency interval check (every 25ms)
-      this.restorationIntervalId = setInterval(checkAndAdjustScroll, 25);
-
-      // Set up MutationObserver to re-scroll instantly whenever DOM nodes change
-      if (typeof MutationObserver !== 'undefined') {
-        this.mutationObserver = new MutationObserver(() => {
-          checkAndAdjustScroll();
-        });
-        this.mutationObserver.observe(document.body, {
-          childList: true,
-          subtree: true,
-          attributes: false,
-        });
       }
+    } catch (e) {
+      // Ignore parse error
+    }
 
-      // Set up ResizeObserver to re-scroll on body resize
-      if (typeof ResizeObserver !== 'undefined') {
-        this.resizeObserver = new ResizeObserver(() => {
-          checkAndAdjustScroll();
-        });
-        this.resizeObserver.observe(document.body);
-      }
+    return null;
+  }
 
-      checkAndAdjustScroll();
-      return true;
-    } catch (error) {
-      console.error('[ScrollManager] Restore error:', error);
-      this.isRestoring = false;
-      return false;
+  /**
+   * Clear scroll position for a key (e.g. when user explicitly navigates forward via menu)
+   */
+  clear(key: string): void {
+    if (!key) return;
+    this.cache.delete(key);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(`scroll_pos_${key}`);
+      } catch (e) {}
     }
   }
 
-  private cancelRestorationLoop(): void {
-    if (this.restorationIntervalId) {
-      clearInterval(this.restorationIntervalId);
-      this.restorationIntervalId = null;
+  /**
+   * Restore scroll position for a page key with continuous frame-locking
+   */
+  restore(key: string): boolean {
+    if (typeof window === 'undefined') return false;
+
+    this.stopRestoration();
+
+    const targetY = this.getSavedY(key);
+    if (targetY === null || targetY <= 0) {
+      return false;
+    }
+
+    // Step 1: Immediate scroll
+    window.scrollTo({ top: targetY, behavior: 'instant' as ScrollBehavior });
+
+    // Step 2: High-frequency frame restoration loop as DOM nodes / SWR data render
+    const startTime = Date.now();
+    const maxDuration = 2500; // 2.5s maximum retry window
+
+    const applyScroll = () => {
+      const currentY = window.scrollY || window.pageYOffset || 0;
+      const docHeight = Math.max(
+        document.body.scrollHeight,
+        document.documentElement.scrollHeight
+      );
+
+      // Re-apply if not reached target yet
+      if (Math.abs(currentY - targetY) > 5 && docHeight > window.innerHeight) {
+        window.scrollTo({ top: targetY, behavior: 'instant' as ScrollBehavior });
+      }
+
+      const newY = window.scrollY || window.pageYOffset || 0;
+      if (Math.abs(newY - targetY) <= 5 || Date.now() - startTime >= maxDuration) {
+        this.stopRestoration();
+      }
+    };
+
+    // Frame interval check every 20ms
+    this.restorationTimer = setInterval(applyScroll, 20);
+
+    // MutationObserver for DOM changes
+    if (typeof MutationObserver !== 'undefined') {
+      this.mutationObserver = new MutationObserver(applyScroll);
+      this.mutationObserver.observe(document.body, { childList: true, subtree: true });
+    }
+
+    // ResizeObserver for element resizes
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(applyScroll);
+      this.resizeObserver.observe(document.body);
+    }
+
+    applyScroll();
+    return true;
+  }
+
+  stopRestoration(): void {
+    if (this.restorationTimer) {
+      clearInterval(this.restorationTimer);
+      this.restorationTimer = null;
     }
     if (this.mutationObserver) {
       this.mutationObserver.disconnect();
@@ -199,75 +145,49 @@ class ScrollManager {
     }
   }
 
-  observeLayoutShifts(_key: string): void {
-    // Handled dynamically by restoreScrollPosition
+  // Backward compatibility alias methods
+  saveScrollPosition(key: string, overrideY?: number): void {
+    this.save(key, overrideY);
   }
 
-  stopObserving(): void {
-    this.cancelRestorationLoop();
+  saveScrollPositionImmediate(key: string, overrideY?: number): void {
+    this.save(key, overrideY);
+  }
+
+  restoreScrollPosition(key: string): Promise<boolean> {
+    return Promise.resolve(this.restore(key));
   }
 
   clearScrollPosition(key: string): void {
-    this.cache.delete(key);
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem(`scroll_${key}`);
-    }
+    this.clear(key);
   }
 
   clearAll(): void {
     this.cache.clear();
     if (typeof window !== 'undefined') {
-      const keys = Object.keys(sessionStorage);
-      keys.forEach(key => {
-        if (key.startsWith('scroll_')) {
-          sessionStorage.removeItem(key);
-        }
-      });
-    }
-  }
-
-  private cleanupSessionStorage(): void {
-    if (typeof window === 'undefined') return;
-    const keys = Object.keys(sessionStorage);
-    const scrollKeys = keys.filter(k => k.startsWith('scroll_'));
-
-    scrollKeys.forEach(key => {
       try {
-        const stored = sessionStorage.getItem(key);
-        if (stored) {
-          const state = JSON.parse(stored);
-          if (Date.now() - state.timestamp > this.config.cacheExpiryMs) {
-            sessionStorage.removeItem(key);
-          }
-        }
-      } catch (e) {
-        sessionStorage.removeItem(key);
-      }
-    });
-  }
-
-  destroy(): void {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
+        const keys = Object.keys(sessionStorage);
+        keys.forEach((k) => {
+          if (k.startsWith('scroll_pos_')) sessionStorage.removeItem(k);
+        });
+      } catch (e) {}
     }
-    this.cancelRestorationLoop();
   }
 }
 
-// Singleton instance
-let scrollManagerInstance: ScrollManager | null = null;
+let instance: ScrollManager | null = null;
 
 export function getScrollManager(): ScrollManager {
   if (typeof window === 'undefined') {
     return new ScrollManager();
   }
-
-  if (!scrollManagerInstance) {
-    scrollManagerInstance = new ScrollManager();
+  if (!instance) {
+    instance = new ScrollManager();
   }
-  return scrollManagerInstance;
+  return instance;
 }
 
 export default ScrollManager;
+
 
 

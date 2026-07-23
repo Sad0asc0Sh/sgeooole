@@ -9,17 +9,17 @@ describe("ScrollManager", () => {
 
   test("saves and retrieves scroll position from memory and sessionStorage", () => {
     const manager = getScrollManager();
-    manager.saveScrollPositionImmediate("/", 1450);
+    manager.save("/", 1450);
 
-    const pos = manager.getSavedPosition("/");
+    const pos = manager.getSavedY("/");
     expect(pos).toBe(1450);
   });
 
   test("persists scroll position into sessionStorage", () => {
     const manager = getScrollManager();
-    manager.saveScrollPositionImmediate("/products?category=tech", 2100);
+    manager.save("/products?category=tech", 2100);
 
-    const stored = sessionStorage.getItem("scroll_/products?category=tech");
+    const stored = sessionStorage.getItem("scroll_pos_/products?category=tech");
     expect(stored).not.toBeNull();
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -29,9 +29,9 @@ describe("ScrollManager", () => {
 
   test("clears scroll position correctly", () => {
     const manager = getScrollManager();
-    manager.saveScrollPositionImmediate("/cart", 500);
-    manager.clearScrollPosition("/cart");
+    manager.save("/cart", 500);
+    manager.clear("/cart");
 
-    expect(manager.getSavedPosition("/cart")).toBeNull();
+    expect(manager.getSavedY("/cart")).toBeNull();
   });
 });
