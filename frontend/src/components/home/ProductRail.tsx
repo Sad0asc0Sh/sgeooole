@@ -13,6 +13,7 @@ import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 interface ProductRailProps {
   title: string;
@@ -54,6 +55,15 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
           navigation={{
             nextEl: '.swiper-button-next-custom',
             prevEl: '.swiper-button-prev-custom',
+          }}
+          onSwiper={(swiper) => {
+            const saved = getScrollManager().getHorizontal("rail_" + title);
+            if (typeof saved === "number" && saved > 0) {
+              swiper.slideTo(saved, 0);
+            }
+          }}
+          onSlideChange={(swiper) => {
+            getScrollManager().saveHorizontal("rail_" + title, swiper.activeIndex);
           }}
           spaceBetween={12}
           slidesPerView={2.3}

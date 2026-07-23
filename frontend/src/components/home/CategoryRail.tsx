@@ -5,6 +5,7 @@ import { useResilientImage } from "@/components/ui/ResilientImage";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 function ResilientCategoryImg({ url, name }: { url: string; name: string }) {
     const { src, onError, onLoad, ref, phase } = useResilientImage(url, "/placeholder.png");
@@ -49,6 +50,27 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
     const PAUSE_DURATION = 6000;
     // Item width + gap
     const ITEM_WIDTH = variant === 'circle' ? 96 : 126; // 80px/110px + 16px gap
+
+    // Restore horizontal scroll position on mount & track scroll changes
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const railKey = `cats_${variant}`;
+        const saved = getScrollManager().getHorizontal(railKey);
+        if (typeof saved === 'number' && saved > 0) {
+            container.scrollLeft = saved;
+        }
+
+        const handleScroll = () => {
+            getScrollManager().saveHorizontal(railKey, container.scrollLeft);
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            container.removeEventListener('scroll', handleScroll);
+        };
+    }, [variant]);
 
     // Track views when component mounts
     useEffect(() => {

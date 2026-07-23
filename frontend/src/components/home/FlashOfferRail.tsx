@@ -18,15 +18,11 @@ import PromotionHeader from "@/components/promotion/PromotionHeader";
 import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
  * OPTIMIZED: Uses SWR for caching, React.memo for card components
- * 
- * PERFORMANCE IMPROVEMENTS:
- * - SWR caching: Instant data on subsequent renders
- * - Memoized card components: Prevents unnecessary re-renders
- * - Optimized timer: Only updates active countdown displays
  */
 function FlashOfferRail() {
   // SWR-based fetching with automatic caching
@@ -39,19 +35,14 @@ function FlashOfferRail() {
     return () => clearInterval(id);
   }, []);
 
-
   // Filter products with active countdown - removes expired products in real-time
   const activeFlashDeals = useMemo(() => {
     return flashDeals.filter((product) => {
-      // Strict filter: must have isFlashDeal=true AND valid flashDealEndTime
       if (!product.isFlashDeal || !product.flashDealEndTime) return false;
-      // Only include products where countdown hasn't expired yet
       return new Date(product.flashDealEndTime).getTime() > now;
     });
   }, [flashDeals, now]);
 
-  // Hide entire section during loading AND when no active flash deals remain
-  // This prevents the section from appearing momentarily during load
   if (isLoading || activeFlashDeals.length === 0) {
     return null;
   }
@@ -72,6 +63,15 @@ function FlashOfferRail() {
           navigation={{
             nextEl: '.swiper-button-next-flash',
             prevEl: '.swiper-button-prev-flash',
+          }}
+          onSwiper={(swiper) => {
+            const saved = getScrollManager().getHorizontal("flash_deals");
+            if (typeof saved === "number" && saved > 0) {
+              swiper.slideTo(saved, 0);
+            }
+          }}
+          onSlideChange={(swiper) => {
+            getScrollManager().saveHorizontal("flash_deals", swiper.activeIndex);
           }}
           spaceBetween={12}
           slidesPerView={2.3}

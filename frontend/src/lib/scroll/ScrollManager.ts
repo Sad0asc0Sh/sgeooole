@@ -145,6 +145,31 @@ class ScrollManager {
     }
   }
 
+  /**
+   * Save horizontal scroll / slider index for a rail key
+   */
+  saveHorizontal(railKey: string, val: number): void {
+    if (!railKey || typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(`swiper_rail_${railKey}`, String(val));
+    } catch (e) {}
+  }
+
+  /**
+   * Retrieve saved horizontal scroll / slider index for a rail key
+   */
+  getHorizontal(railKey: string): number | null {
+    if (!railKey || typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem(`swiper_rail_${railKey}`);
+      if (raw !== null) {
+        const parsed = Number(raw);
+        return isNaN(parsed) ? null : parsed;
+      }
+    } catch (e) {}
+    return null;
+  }
+
   // Backward compatibility alias methods
   saveScrollPosition(key: string, overrideY?: number): void {
     this.save(key, overrideY);

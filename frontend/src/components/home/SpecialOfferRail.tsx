@@ -17,6 +17,7 @@ import PromotionHeader from "@/components/promotion/PromotionHeader";
 import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
+import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 /**
  * Special Offer Rail Component
@@ -67,6 +68,15 @@ function SpecialOfferRail() {
           navigation={{
             nextEl: '.swiper-button-next-special',
             prevEl: '.swiper-button-prev-special',
+          }}
+          onSwiper={(swiper) => {
+            const saved = getScrollManager().getHorizontal("special_offers");
+            if (typeof saved === "number" && saved > 0) {
+              swiper.slideTo(saved, 0);
+            }
+          }}
+          onSlideChange={(swiper) => {
+            getScrollManager().saveHorizontal("special_offers", swiper.activeIndex);
           }}
           spaceBetween={12}
           slidesPerView={2.3}
