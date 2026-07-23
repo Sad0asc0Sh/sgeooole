@@ -162,6 +162,14 @@ class ScrollManager {
     this.clear(key);
   }
 
+  observeLayoutShifts(_key: string): void {
+    // Handled dynamically by restore
+  }
+
+  stopObserving(): void {
+    this.stopRestoration();
+  }
+
   clearAll(): void {
     this.cache.clear();
     if (typeof window !== 'undefined') {
