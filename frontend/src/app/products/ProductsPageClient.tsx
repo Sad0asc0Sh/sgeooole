@@ -22,7 +22,13 @@ function ProductListingContent() {
   const categorySlug = searchParams.get("category");
   const brandSlug = searchParams.get("brand");
   const searchQuery = searchParams.get("search");
-  const sortParam = searchParams.get("sort") || "newest";
+  const rawSort = searchParams.get("sort");
+  const sortParam = useMemo(() => {
+    if (!rawSort) return "newest";
+    if (rawSort === "bestseller" || rawSort === "bestSellers") return "bestSelling";
+    if (rawSort === "flash" || rawSort === "special") return "discount";
+    return rawSort;
+  }, [rawSort]);
   const pageParam = parseInt(searchParams.get("page") || "1", 10) || 1;
   const minPriceParam = searchParams.get("minPrice");
   const maxPriceParam = searchParams.get("maxPrice");

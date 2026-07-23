@@ -47,7 +47,7 @@ function ProductRailContainer({
   const viewAllHref = useMemo(() => {
     switch (fetchType) {
       case "bestSellers":
-        return "/products?sort=bestseller";
+        return "/products?sort=bestSelling";
       case "newest":
         return "/products?sort=newest";
       default:
