@@ -13,7 +13,7 @@ const LayoutStateContext = createContext<LayoutStateContextType>({
     setIsProductPage: () => {},
 });
 
-export function LayoutStateProvider({ children }: { children: React.ReactNode }) {
+export default function LayoutStateProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [isProductPage, setIsProductPage] = useState(false);
 
@@ -32,3 +32,4 @@ export function LayoutStateProvider({ children }: { children: React.ReactNode })
 export function useLayoutState() {
     return useContext(LayoutStateContext);
 }
+
