@@ -42,10 +42,17 @@ export function useSmartBack() {
             }
 
             const stack = getInternalNavStack();
-            const hasInternalHistory = stack.length > 1 || (isInternalReferrer && window.history.length > 1);
+            const hasInternalHistory =
+                stack.length > 1 ||
+                isInternalReferrer ||
+                (typeof window !== "undefined" && window.history && window.history.length > 1);
 
             if (hasInternalHistory) {
                 try {
+                    if (stack.length > 1) {
+                        stack.pop();
+                        sessionStorage.setItem(NAV_STACK_KEY, JSON.stringify(stack));
+                    }
                     router.back();
                 } catch {
                     router.push(fallbackUrl);

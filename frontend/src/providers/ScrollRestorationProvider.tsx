@@ -27,12 +27,25 @@ function ScrollRestorationController() {
   const key = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   currentKeyRef.current = key;
 
-  // 1. Disable browser's internal jumpy scroll restoration
+  // 1. Disable browser's internal jumpy scroll restoration & track nav stack
   useEffect(() => {
     if (typeof window !== 'undefined' && 'scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('ekg_internal_nav_stack');
+      const stack: string[] = raw ? JSON.parse(raw) : [];
+      if (stack.length === 0 || stack[stack.length - 1] !== key) {
+        stack.push(key);
+        if (stack.length > 20) stack.shift();
+        sessionStorage.setItem('ekg_internal_nav_stack', JSON.stringify(stack));
+      }
+    } catch (e) {}
+  }, [key]);
 
   // 2. Global Scroll & Click Tracker: Continuously save position for the active page
   useEffect(() => {
