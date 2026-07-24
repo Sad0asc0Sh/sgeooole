@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode, Navigation } from "swiper/modules";
+import { Navigation } from "swiper/modules";
 import "swiper/css";
-import "swiper/css/free-mode";
 import "swiper/css/navigation";
 import { AlertTriangle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -14,6 +13,7 @@ import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
+import type { Swiper as SwiperClass } from "swiper";
 
 interface ProductRailProps {
   title: string;
@@ -24,10 +24,41 @@ interface ProductRailProps {
 export default function ProductRail({ title, products, viewAllHref = "/products" }: ProductRailProps) {
   const [now, setNow] = useState(() => Date.now());
 
+  // Velocity tracking refs
+  const touchStartX = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);
+  const touchStartIndex = useRef<number>(0);
+
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
+
+  const handleTouchStart = (swiper: SwiperClass) => {
+    const touch = swiper.touches.startX;
+    touchStartX.current = touch;
+    touchStartTime.current = performance.now();
+    touchStartIndex.current = swiper.activeIndex;
+  };
+
+  const handleTouchEnd = (swiper: SwiperClass) => {
+    const deltaX = touchStartX.current - swiper.touches.currentX;
+    const deltaTime = performance.now() - touchStartTime.current;
+
+    // velocity = px per ms
+    const velocity = Math.abs(deltaX) / Math.max(deltaTime, 1);
+    const direction = deltaX > 0 ? 1 : -1;
+
+    // Only act on meaningful swipes (min 8px movement)
+    if (Math.abs(deltaX) < 8) return;
+
+    // Velocity threshold: > 0.4 px/ms = fast (2 cards), otherwise 1 card
+    const cardsToAdvance = velocity > 0.4 ? 2 : 1;
+    const targetIndex = Math.max(0, touchStartIndex.current + direction * cardsToAdvance);
+
+    // Cancel any in-progress transition and snap to target
+    swiper.slideTo(targetIndex, 280, false);
+  };
 
   return (
     <div className="py-4 bg-white border-b border-gray-100">
@@ -50,11 +81,10 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
 
       <div className="relative">
         <Swiper
-          modules={[FreeMode, Navigation]}
-          freeMode
+          modules={[Navigation]}
           navigation={{
-            nextEl: '.swiper-button-next-custom',
-            prevEl: '.swiper-button-prev-custom',
+            nextEl: `.swiper-button-next-custom-${title.replace(/\s/g, '')}`,
+            prevEl: `.swiper-button-prev-custom-${title.replace(/\s/g, '')}`,
           }}
           onSwiper={(swiper) => {
             const saved = getScrollManager().getHorizontal("rail_" + title);
@@ -65,6 +95,13 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
           onSlideChange={(swiper) => {
             getScrollManager().saveHorizontal("rail_" + title, swiper.activeIndex);
           }}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          threshold={6}
+          touchRatio={1}
+          resistance={true}
+          resistanceRatio={0}
+          speed={280}
           spaceBetween={12}
           slidesPerView={2.3}
           breakpoints={{
@@ -315,10 +352,10 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
         </Swiper>
 
         {/* Navigation Arrows - Desktop Only */}
-        <button className="swiper-button-prev-custom hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all">
+        <button className={`swiper-button-prev-custom-${title.replace(/\s/g, '')} hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all`}>
           <ChevronLeft className="rotate-180" size={20} />
         </button>
-        <button className="swiper-button-next-custom hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all">
+        <button className={`swiper-button-next-custom-${title.replace(/\s/g, '')} hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg items-center justify-center text-gray-700 hover:bg-white hover:scale-110 transition-all`}>
           <ChevronLeft size={20} />
         </button>
       </div>
