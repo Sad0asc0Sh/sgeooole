@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode, Navigation } from "swiper/modules";
+import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import "swiper/css/free-mode";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
@@ -19,6 +18,7 @@ import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
+import { useVelocitySnap } from "@/hooks/useVelocitySnap";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
@@ -28,6 +28,7 @@ function FlashOfferRail() {
   // SWR-based fetching with automatic caching
   const { flashDeals, isLoading } = useFlashDeals(10);
   const [now, setNow] = useState(() => Date.now());
+  const { onTouchStart, onTouchEnd } = useVelocitySnap();
 
   // Update timer every second - only for countdown display
   useEffect(() => {
@@ -58,8 +59,7 @@ function FlashOfferRail() {
 
       <div className="relative mt-5">
         <Swiper
-          modules={[FreeMode, Navigation]}
-          freeMode
+          modules={[Navigation]}
           navigation={{
             nextEl: '.swiper-button-next-flash',
             prevEl: '.swiper-button-prev-flash',
@@ -73,6 +73,12 @@ function FlashOfferRail() {
           onSlideChange={(swiper) => {
             getScrollManager().saveHorizontal("flash_deals", swiper.activeIndex);
           }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          shortSwipes={false}
+          longSwipes={false}
+          followFinger={true}
+          speed={300}
           spaceBetween={12}
           slidesPerView={2.3}
           breakpoints={{

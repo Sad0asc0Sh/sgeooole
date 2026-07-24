@@ -2,10 +2,9 @@
 
 import { useEffect, useState, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode, Navigation } from "swiper/modules";
+import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import "swiper/css/free-mode";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -18,6 +17,7 @@ import PromotionBadge from "@/components/promotion/PromotionBadge";
 import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
+import { useVelocitySnap } from "@/hooks/useVelocitySnap";
 
 /**
  * Special Offer Rail Component
@@ -27,6 +27,7 @@ function SpecialOfferRail() {
   // SWR-based fetching with automatic caching
   const { specialOffers: products, isLoading, error } = useSpecialOffers(10);
   const [now, setNow] = useState(() => Date.now());
+  const { onTouchStart, onTouchEnd } = useVelocitySnap();
 
   // Calculate earliest end time for global countdown
   const earliestEndTime = useMemo(() => {
@@ -63,8 +64,7 @@ function SpecialOfferRail() {
 
       <div className="relative mt-5">
         <Swiper
-          modules={[FreeMode, Navigation]}
-          freeMode
+          modules={[Navigation]}
           navigation={{
             nextEl: '.swiper-button-next-special',
             prevEl: '.swiper-button-prev-special',
@@ -78,6 +78,12 @@ function SpecialOfferRail() {
           onSlideChange={(swiper) => {
             getScrollManager().saveHorizontal("special_offers", swiper.activeIndex);
           }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          shortSwipes={false}
+          longSwipes={false}
+          followFinger={true}
+          speed={300}
           spaceBetween={12}
           slidesPerView={2.3}
           breakpoints={{
