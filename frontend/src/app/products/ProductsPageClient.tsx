@@ -1092,15 +1092,15 @@ function ProductListingContent() {
             <DesktopSortBar currentSort={sortParam} onSort={handleSortChange} />
 
             {/* Mobile Filter & Sort Bar */}
-            <div className="lg:hidden flex items-center justify-between mb-4">
+            <div className="lg:hidden flex items-center justify-between mb-4 gap-2">
               <div className="flex items-center gap-2">
                 {/* Mobile Sort Button */}
                 <button
                   onClick={() => setShowSortSheet(true)}
-                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
+                  aria-label="مرتب‌سازی"
                 >
-                  <ArrowUpDown size={15} className="text-kala-500" />
-                  <span className="text-gray-500">مرتب‌سازی:</span>
+                  <ArrowUpDown size={15} className="text-kala-500 flex-shrink-0" />
                   <span className="text-kala-600">
                     {SORT_OPTIONS.find((o) => o.value === sortParam)?.label || "جدیدترین"}
                   </span>
@@ -1109,9 +1109,9 @@ function ProductListingContent() {
                 {/* Mobile Filter Button */}
                 <button
                   onClick={() => setShowFilters(true)}
-                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300 relative"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300 relative"
                 >
-                  <SlidersHorizontal size={15} className="text-gray-600" />
+                  <SlidersHorizontal size={15} className="text-gray-600 flex-shrink-0" />
                   فیلترها
                   {activeFilterCount > 0 && (
                     <span className="bg-kala-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
@@ -1121,7 +1121,7 @@ function ProductListingContent() {
                 </button>
               </div>
 
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">
                 <span className="font-bold text-gray-800">{total}</span> محصول
               </div>
             </div>
