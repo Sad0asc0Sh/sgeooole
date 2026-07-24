@@ -23,6 +23,8 @@ import {
   Tag,
   LayoutGrid,
   Sparkles,
+  Flame,
+  TrendingUp,
 } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
 import { productService, CategoryProperty, CategoryDetails } from "@/services/productService";
@@ -32,15 +34,15 @@ import { getScrollManager } from "@/lib/scroll/ScrollManager";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
-  { value: "newest", label: "جدیدترین" },
-  { value: "priceAsc", label: "ارزان‌ترین" },
-  { value: "priceDesc", label: "گران‌ترین" },
-  { value: "popularity", label: "محبوب‌ترین" },
-  { value: "bestSelling", label: "پرفروش‌ترین" },
-  { value: "discount", label: "بیشترین تخفیف" },
+  { value: "newest", label: "جدیدترین", icon: Sparkles },
+  { value: "bestSelling", label: "پرفروش‌ترین", icon: TrendingUp },
+  { value: "priceAsc", label: "ارزان‌ترین", icon: ArrowUpDown },
+  { value: "priceDesc", label: "گران‌ترین", icon: ArrowUpDown },
+  { value: "popularity", label: "محبوب‌ترین", icon: LayoutGrid },
+  { value: "discount", label: "بیشترین تخفیف", icon: Flame },
 ] as const;
 
-// ─── CategoryTreeItem: Recursive dropdown for categories ─────────
+// ─── CategoryTreeItem: Accordion drawer for categories ─────────
 function CategoryTreeItem({
   category,
   level = 0,
@@ -61,38 +63,71 @@ function CategoryTreeItem({
 
   const hasChildren = category.children && category.children.length > 0;
   const isActive = category.slug === currentSlug;
+  const hasActiveChild = category.children?.some((c) => c.slug === currentSlug);
 
   return (
-    <div>
+    <div className="mb-1">
       <div
-        className={`flex items-center gap-2 rounded-xl cursor-pointer transition-all duration-200 group
-          ${level === 0 ? "py-2.5 px-3" : "py-2 px-3"}
+        className={`flex items-center justify-between gap-2 rounded-xl cursor-pointer transition-all duration-200 group py-2.5 px-3
           ${isActive
-            ? "bg-kala-50 text-kala-700 font-bold"
-            : "hover:bg-gray-50 text-gray-700"
+            ? "bg-kala-50 text-kala-700 font-bold border border-kala-200/60 shadow-xs"
+            : hasActiveChild
+            ? "bg-amber-50/60 text-gray-800 font-semibold"
+            : "hover:bg-gray-50 text-gray-700 font-medium"
           }`}
-        style={{ paddingRight: `${12 + level * 16}px` }}
-        onClick={() => {
-          if (hasChildren) setExpanded(!expanded);
-          onSelect(category.slug);
+        style={{ paddingRight: `${12 + level * 14}px` }}
+        onClick={(e) => {
+          if (hasChildren) {
+            e.stopPropagation();
+            setExpanded(!expanded);
+          } else {
+            onSelect(category.slug);
+          }
         }}
       >
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {hasChildren ? (
+            <span
+              className={`w-6 h-6 rounded-lg bg-gray-100/80 flex items-center justify-center text-gray-500 group-hover:bg-gray-200/80 transition-transform duration-200 flex-shrink-0 ${
+                expanded ? "rotate-180 text-kala-600 bg-kala-100/80" : ""
+              }`}
+            >
+              <ChevronDown size={14} />
+            </span>
+          ) : (
+            <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isActive ? "bg-kala-500 scale-125 ring-4 ring-kala-100" : "bg-gray-300"
+                }`}
+              />
+            </span>
+          )}
+          <span className={`text-sm truncate ${level === 0 ? "font-bold text-gray-900" : "text-gray-700"}`}>
+            {category.name}
+          </span>
+        </div>
+
+        {/* Quick select badge for parent categories */}
         {hasChildren && (
-          <ChevronDown
-            size={14}
-            className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ${
-              expanded ? "rotate-180" : ""
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(category.slug);
+            }}
+            className={`text-[11px] px-2 py-0.5 rounded-lg font-bold transition-all flex-shrink-0 ${
+              isActive
+                ? "bg-kala-500 text-white shadow-xs"
+                : "bg-gray-100 text-gray-500 hover:bg-kala-100 hover:text-kala-700"
             }`}
-          />
-        )}
-        {!hasChildren && <span className="w-3.5" />}
-        <span className={`text-sm flex-1 ${level === 0 ? "font-bold" : "font-medium"}`}>
-          {category.name}
-        </span>
-        {isActive && (
-          <span className="w-1.5 h-1.5 rounded-full bg-kala-500 flex-shrink-0" />
+            title={`فیلتر بر اساس کل ${category.name}`}
+          >
+            {isActive ? "انتخاب شده" : "همه"}
+          </button>
         )}
       </div>
+
       <AnimatePresence initial={false}>
         {expanded && hasChildren && (
           <motion.div
@@ -100,8 +135,24 @@ function CategoryTreeItem({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden"
+            className="overflow-hidden mr-3 pr-2 border-r-2 border-kala-200/60 my-1 space-y-1"
           >
+            {/* Direct option to select "All products in [Category]" inside accordion */}
+            <div
+              onClick={() => onSelect(category.slug)}
+              className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs cursor-pointer transition-colors ${
+                isActive
+                  ? "bg-kala-100/80 text-kala-800 font-bold"
+                  : "bg-gray-50/70 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-kala-500" />
+                <span>همه محصولات {category.name}</span>
+              </div>
+              {isActive && <Check size={13} className="text-kala-600" />}
+            </div>
+
             {category.children!.map((child) => (
               <CategoryTreeItem
                 key={child._id}
@@ -169,78 +220,42 @@ function FilterSection({
   );
 }
 
-// ─── Desktop Sort Dropdown ───────────────────────────────────────
-function SortDropdown({
+// ─── Desktop Horizontal Sort Bar ─────────────────────────────────
+function DesktopSortBar({
   currentSort,
   onSort,
 }: {
   currentSort: string;
   onSort: (sort: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const currentLabel =
-    SORT_OPTIONS.find((o) => o.value === currentSort)?.label || "جدیدترین";
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex items-center gap-2 bg-white border text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-all
-          ${open ? "border-kala-300 shadow-sm shadow-kala-100" : "border-gray-200 hover:border-gray-300"}`}
-      >
-        <ArrowUpDown size={15} className="text-gray-500" />
-        <span className="hidden sm:inline text-gray-500">مرتب‌سازی:</span>
-        <span className="text-kala-600">{currentLabel}</span>
-        <ChevronDown
-          size={14}
-          className={`text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.96 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-0 top-full mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl shadow-black/8 z-50 min-w-[200px] py-2 overflow-hidden"
-          >
-            {SORT_OPTIONS.map((option) => {
-              const isActive = currentSort === option.value;
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => {
-                    onSort(option.value);
-                    setOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors
-                    ${isActive
-                      ? "bg-kala-50 text-kala-700 font-bold"
-                      : "text-gray-600 hover:bg-gray-50 font-medium"
-                    }`}
-                >
-                  <span>{option.label}</span>
-                  {isActive && <Check size={15} className="text-kala-500" />}
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="hidden lg:flex items-center justify-between bg-white border border-gray-100 p-2 rounded-2xl shadow-sm mb-4">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 text-xs font-bold border-l border-gray-100 ml-1">
+          <ArrowUpDown size={15} className="text-kala-500" />
+          <span className="text-gray-600">مرتب‌سازی:</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {SORT_OPTIONS.map((option) => {
+            const isActive = currentSort === option.value;
+            const Icon = option.icon;
+            return (
+              <button
+                key={option.value}
+                onClick={() => onSort(option.value)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  isActive
+                    ? "bg-kala-500 text-white shadow-md shadow-kala-200 scale-[1.02]"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 font-medium"
+                }`}
+              >
+                <Icon size={13} className={isActive ? "text-white" : "text-gray-400"} />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -277,6 +292,17 @@ function ProductListingContent() {
   const [sliderValue, setSliderValue] = useState<[number, number]>([0, 0]);
   const [showFilters, setShowFilters] = useState(false);
   const [showSortSheet, setShowSortSheet] = useState(false);
+
+  // ─── Freeze underlying page when modals are open ───
+  useEffect(() => {
+    if (showFilters || showSortSheet) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [showFilters, showSortSheet]);
 
   // Category/Brand data for filters
   const { categoryTree } = useCategoryTree();
@@ -680,7 +706,7 @@ function ProductListingContent() {
           defaultOpen={true}
           badge={categorySlug ? 1 : 0}
         >
-          <div className="max-h-[280px] overflow-y-auto -mx-1 px-1 custom-scrollbar">
+          <div className="max-h-[320px] overflow-y-auto -mx-1 px-1 custom-scrollbar">
             {categoryTree.map((cat) => (
               <CategoryTreeItem
                 key={cat._id}
@@ -688,7 +714,6 @@ function ProductListingContent() {
                 currentSlug={categorySlug}
                 onSelect={(slug) => {
                   handleCategorySelect(slug);
-                  if (isMobile) setShowFilters(false);
                 }}
               />
             ))}
@@ -1001,17 +1026,16 @@ function ProductListingContent() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="fixed inset-0 bg-black/50 z-[10003] lg:hidden"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10003] lg:hidden"
                   onClick={() => setShowFilters(false)}
                 />
-                {/* Sheet */}
+                {/* Full-height Sheet Modal */}
                 <motion.div
                   initial={{ y: "100%" }}
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 z-[10004] lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col"
-                  style={{ maxHeight: "90vh" }}
+                  className="fixed inset-x-0 bottom-0 top-12 sm:top-16 z-[10004] lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
                 >
                   {/* Drag Handle */}
                   <div className="flex justify-center pt-3 pb-1">
@@ -1064,20 +1088,19 @@ function ProductListingContent() {
 
           {/* Main Content (Grid) - 9 cols on desktop */}
           <main className="lg:col-span-9">
-            {/* Filter & Sort Bar */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                {/* Desktop Sort Dropdown */}
-                <div className="hidden lg:block">
-                  <SortDropdown currentSort={sortParam} onSort={handleSortChange} />
-                </div>
+            {/* Desktop Sort Bar */}
+            <DesktopSortBar currentSort={sortParam} onSort={handleSortChange} />
 
+            {/* Mobile Filter & Sort Bar */}
+            <div className="lg:hidden flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
                 {/* Mobile Sort Button */}
                 <button
                   onClick={() => setShowSortSheet(true)}
-                  className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
                 >
-                  <ArrowUpDown size={15} />
+                  <ArrowUpDown size={15} className="text-kala-500" />
+                  <span className="text-gray-500">مرتب‌سازی:</span>
                   <span className="text-kala-600">
                     {SORT_OPTIONS.find((o) => o.value === sortParam)?.label || "جدیدترین"}
                   </span>
@@ -1086,12 +1109,12 @@ function ProductListingContent() {
                 {/* Mobile Filter Button */}
                 <button
                   onClick={() => setShowFilters(true)}
-                  className="lg:hidden flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300 relative"
+                  className="flex items-center gap-2 bg-white border border-gray-200 text-gray-800 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors hover:border-gray-300 relative"
                 >
-                  <SlidersHorizontal size={15} />
+                  <SlidersHorizontal size={15} className="text-gray-600" />
                   فیلترها
                   {activeFilterCount > 0 && (
-                    <span className="absolute -top-1.5 -left-1.5 bg-kala-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                    <span className="bg-kala-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
                       {activeFilterCount}
                     </span>
                   )}
@@ -1239,15 +1262,15 @@ function ProductListingContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 z-[10003]"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10003]"
               onClick={() => setShowSortSheet(false)}
             />
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] shadow-2xl"
+              transition={{ type: "spring", damping: 28, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] shadow-2xl overflow-hidden overscroll-contain"
             >
               {/* Drag Handle */}
               <div className="flex justify-center pt-3 pb-1">
@@ -1255,8 +1278,8 @@ function ProductListingContent() {
               </div>
               <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
-                  <ArrowUpDown size={18} className="text-gray-600" />
-                  <h3 className="font-bold text-lg text-gray-800">مرتب‌سازی</h3>
+                  <ArrowUpDown size={18} className="text-kala-500" />
+                  <h3 className="font-bold text-lg text-gray-800">مرتب‌سازی بر اساس</h3>
                 </div>
                 <button
                   onClick={() => setShowSortSheet(false)}
@@ -1265,23 +1288,37 @@ function ProductListingContent() {
                   <X size={18} className="text-gray-600" />
                 </button>
               </div>
-              <div className="p-4 pb-8 space-y-1.5">
-                {SORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      handleSortChange(option.value);
-                      setShowSortSheet(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl text-sm font-bold transition-all duration-200 ${sortParam === option.value
-                      ? "bg-kala-50 text-kala-700 border border-kala-200"
-                      : "bg-gray-50 text-gray-700 hover:bg-gray-100 border border-transparent"
+              <div className="p-4 pb-8 space-y-2">
+                {SORT_OPTIONS.map((option) => {
+                  const isActive = sortParam === option.value;
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        handleSortChange(option.value);
+                        setShowSortSheet(false);
+                      }}
+                      className={`w-full flex items-center justify-between p-3.5 rounded-2xl text-sm font-bold transition-all duration-200 ${
+                        isActive
+                          ? "bg-kala-50 text-kala-700 border border-kala-200 shadow-xs"
+                          : "bg-gray-50/80 text-gray-700 hover:bg-gray-100 border border-transparent"
                       }`}
-                  >
-                    {option.label}
-                    {sortParam === option.value && <Check size={18} className="text-kala-500" />}
-                  </button>
-                ))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                            isActive ? "bg-kala-500 text-white shadow-xs" : "bg-gray-200/70 text-gray-500"
+                          }`}
+                        >
+                          <Icon size={15} />
+                        </span>
+                        <span>{option.label}</span>
+                      </div>
+                      {isActive && <Check size={18} className="text-kala-600" />}
+                    </button>
+                  );
+                })}
               </div>
             </motion.div>
           </>
