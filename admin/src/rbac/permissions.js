@@ -118,4 +118,7 @@ export const PERMISSIONS = {
   // Cart
   CART_READ: 'cart:read',
   CART_MANAGE: 'cart:manage',
+
+  // Newsletter
+  NEWSLETTER_READ: 'newsletter:read',
 }

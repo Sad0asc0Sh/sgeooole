@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Row, Col, Card, Statistic, Table, Tag, Button } from 'antd'
+import { Row, Col, Card, Statistic, Table, Tag, Button, message } from 'antd'
 import {
   DollarOutlined,
   ShoppingCartOutlined,
   ShoppingOutlined,
-  ArrowUpOutlined,
   UserAddOutlined,
 } from '@ant-design/icons'
 import {
@@ -16,11 +15,13 @@ import {
   ResponsiveContainer,
   Line,
 } from 'recharts'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import api from '../api'
+import { getStatusColor, getStatusLabel, formatCurrency } from '../utils/formatters'
 
 function Dashboard() {
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalSales: 0,
     newOrders: 0,
@@ -39,37 +40,31 @@ function Dashboard() {
       title: 'شماره سفارش',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
+      render: (val, record) => val || record.orderCode || `#${(record._id || '').slice(-8)}`,
     },
     {
       title: 'مشتری',
       dataIndex: ['customer', 'name'],
       key: 'customer',
+      render: (name, record) => name || record.customer?.email || record.user?.name || '—',
     },
     {
       title: 'مبلغ کل',
       dataIndex: 'totalAmount',
       key: 'total',
-      render: (val) =>
-        `${new Intl.NumberFormat('fa-IR').format(val || 0)} تومان`,
+      render: (val, record) => formatCurrency(val || record.totalPrice || 0),
     },
     {
       title: 'وضعیت',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
-        const colors = {
-          Pending: 'orange',
-          Processing: 'blue',
-          Shipped: 'purple',
-          Delivered: 'green',
-          Cancelled: 'red',
-          pending: 'orange',
-          processing: 'blue',
-          shipped: 'purple',
-          delivered: 'green',
-          cancelled: 'red',
-        }
-        return <Tag color={colors[status] || 'default'}>{status}</Tag>
+      render: (status, record) => {
+        const resolvedStatus = status || record.orderStatus
+        return (
+          <Tag color={getStatusColor(resolvedStatus)}>
+            {getStatusLabel(resolvedStatus)}
+          </Tag>
+        )
       },
     },
   ]
@@ -83,17 +78,21 @@ function Dashboard() {
         totalSales: data.totalSales || 0,
         newOrders: data.newOrders || 0,
         pendingOrders: data.pendingOrders || 0,
-        lowStockProducts: data.lowStockProducts || [],
+        lowStockProducts: Array.isArray(data.lowStockProducts) ? data.lowStockProducts : [],
         newCustomers: data.newCustomers || 0,
-        recentOrders: data.recentOrders || [],
-        salesChart: data.salesChart || [],
+        recentOrders: Array.isArray(data.recentOrders) ? data.recentOrders : [],
+        salesChart: Array.isArray(data.salesChart) ? data.salesChart : [],
         openTickets: data.openTickets || 0,
         salesGrowth: data.salesGrowth || 0,
         averageOrderValue: data.averageOrderValue || 0,
       })
     } catch (err) {
-      // در صورت خطا، مقادیر فعلی را حفظ می‌کنیم
-      setStats((s) => ({ ...s }))
+      console.error('Dashboard fetch error:', err)
+      message.error(
+        err?.response?.data?.message ||
+        err?.message ||
+        'خطا در دریافت اطلاعات داشبورد'
+      )
     } finally {
       setLoading(false)
     }
@@ -179,7 +178,11 @@ function Dashboard() {
         <Col xs={24} lg={16}>
           <Card
             title="روند فروش (۷ روز گذشته)"
-            extra={<Button type="link">گزارش فروش</Button>}
+            extra={
+              <Button type="link" onClick={() => navigate('/reports/sales')}>
+                گزارش فروش
+              </Button>
+            }
             loading={loading}
           >
             <ResponsiveContainer width="100%" height={300}>
@@ -202,12 +205,16 @@ function Dashboard() {
         <Col xs={24} lg={8}>
           <Card
             title="محصولات با موجودی کم"
-            extra={<Button type="link">مدیریت موجودی</Button>}
+            extra={
+              <Button type="link" onClick={() => navigate('/inventory')}>
+                مدیریت موجودی
+              </Button>
+            }
             loading={loading}
           >
-            {stats.lowStockProducts.map((product) => (
+            {stats.lowStockProducts.map((product, index) => (
               <div
-                key={product.id}
+                key={product._id || product.id || index}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -216,7 +223,7 @@ function Dashboard() {
                 }}
               >
                 <span>{product.name}</span>
-                <Tag color="red">{product.stock} عدد</Tag>
+                <Tag color="red">{product.stock ?? product.countInStock ?? 0} عدد</Tag>
               </div>
             ))}
             {!loading && stats.lowStockProducts.length === 0 && (
@@ -230,14 +237,19 @@ function Dashboard() {
         <Col xs={24}>
           <Card
             title="سفارش‌های اخیر"
-            extra={<Button type="link">مشاهده همه سفارش‌ها</Button>}
+            extra={
+              <Button type="link" onClick={() => navigate('/orders')}>
+                مشاهده همه سفارش‌ها
+              </Button>
+            }
             loading={loading}
           >
             <Table
               columns={orderColumns}
               dataSource={stats.recentOrders}
-              rowKey="id"
+              rowKey={(r) => r._id || r.id || r.orderNumber}
               pagination={false}
+              scroll={{ x: 'max-content' }}
             />
           </Card>
         </Col>
@@ -247,4 +259,3 @@ function Dashboard() {
 }
 
 export default Dashboard
-

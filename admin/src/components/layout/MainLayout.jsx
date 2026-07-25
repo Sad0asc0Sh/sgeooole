@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -24,7 +24,6 @@ import {
 } from '../../stores'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { hasAnyPermission, hasPermission } from '../../rbac/access'
-import ProfileModal from './ProfileModal'
 import './MainLayout.css'
 
 const { Header, Sider, Content } = Layout
@@ -32,7 +31,6 @@ const { Header, Sider, Content } = Layout
 function MainLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const location = useLocation()
   const { user, permissions, logout } = useAuthStore()
   const { notifications, markAllAsRead, deleteNotification } = useNotificationStore()
@@ -60,7 +58,7 @@ function MainLayout({ children }) {
     '/abandoned-carts': PERMISSIONS.CART_READ,
 
     '/customers': PERMISSIONS.USER_READ_ALL,
-    '/customers-list': PERMISSIONS.USER_READ_ALL,
+
 
     '/coupons': PERMISSIONS.COUPON_READ,
     '/sales': PERMISSIONS.SALE_READ,
@@ -158,7 +156,7 @@ function MainLayout({ children }) {
       label: 'مشتریان',
       children: [
         {
-          key: '/customers-list',
+          key: '/customers',
           label: <Link to="/customers">لیست مشتریان</Link>,
         },
       ],
@@ -259,6 +257,42 @@ function MainLayout({ children }) {
       : []),
   ]
   const filteredMenuItems = filterMenuItems(menuItems)
+
+  // Map pathname to the correct parent menu key for auto-expanding
+  const getOpenKeys = useMemo(() => {
+    if (collapsed) return []
+    const path = location.pathname
+    const pathToParent = {
+      '/products': 'products-menu',
+      '/products/new': 'products-menu',
+      '/products/variable': 'products-menu',
+      '/categories': 'products-menu',
+      '/brands': 'products-menu',
+      '/inventory': 'products-menu',
+      '/reviews': 'products-menu',
+      '/orders': 'orders-menu',
+      '/abandoned-carts': 'orders-menu',
+      '/customers': '/customers',
+      '/coupons': '/finance',
+      '/sales': '/finance',
+      '/shipping': '/finance',
+      '/pages': '/content',
+      '/blog/posts': '/content',
+      '/banners': '/content',
+      '/announcements': '/content',
+      '/newsletter': '/content',
+      '/reports/sales': '/reports',
+      '/reports/products': '/reports',
+      '/reports/customers': '/reports',
+      '/reports/audit-logs': '/reports',
+    }
+    // Check for exact match first, then prefix match
+    const parentKey = pathToParent[path]
+    if (parentKey) return [parentKey]
+    // Fallback: try matching by prefix (e.g. /products/edit/123)
+    const matchedKey = Object.keys(pathToParent).find(k => path.startsWith(k + '/'))
+    return matchedKey ? [pathToParent[matchedKey]] : []
+  }, [location.pathname, collapsed])
 
   const formatRelativeTime = (timestamp) => {
     if (!timestamp) return ''
@@ -391,9 +425,7 @@ function MainLayout({ children }) {
               theme="dark"
               mode="inline"
               selectedKeys={[location.pathname]}
-              defaultOpenKeys={
-                collapsed ? [] : ['/' + location.pathname.split('/')[1]]
-              }
+              defaultOpenKeys={getOpenKeys}
               items={filteredMenuItems}
             />
           </div>
@@ -411,7 +443,7 @@ function MainLayout({ children }) {
         <Menu
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['/' + location.pathname.split('/')[1]]}
+          defaultOpenKeys={getOpenKeys}
           items={filteredMenuItems}
           onClick={() => setMobileDrawerOpen(false)}
         />
@@ -466,11 +498,6 @@ function MainLayout({ children }) {
         </Content>
       </Layout>
 
-      {/* Profile Modal */}
-      <ProfileModal
-        open={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-      />
     </Layout>
   )
 }

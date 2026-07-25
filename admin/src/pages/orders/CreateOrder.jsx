@@ -486,7 +486,7 @@ function CreateOrderPage() {
                             >
                                 <Select>
                                     <Option value="online">پرداخت آنلاین</Option>
-                                    <Option value="cod">پرداخت در محل</Option>
+                                    <Option value="cod">پرداخت در محل فقط ویژه مشهد</Option>
                                 </Select>
                             </Form.Item>
 
