@@ -75,10 +75,10 @@ const computeItemPricing = (item, now = new Date()) => {
 
   if (flashActive) {
     appliedDiscount = rawDiscount
-    campaignLabel = campaignLabel || 'پیشنهاد شگفت انگیز'
+    campaignLabel = campaignLabel || 'پیشنهاد لحظه‌ای'
   } else if (specialActive) {
     appliedDiscount = rawDiscount
-    campaignLabel = campaignLabel || 'فروش ویژه'
+    campaignLabel = campaignLabel || 'پیشنهاد شگفت‌انگیز'
   } else if (!product.isFlashDeal && !product.isSpecialOffer && rawDiscount > 0) {
     // Non-timer discounts remain valid when no countdown flags are set
     appliedDiscount = rawDiscount

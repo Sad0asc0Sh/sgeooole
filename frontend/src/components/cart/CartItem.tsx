@@ -12,6 +12,10 @@ interface CartItemProps {
         qty: number;
         discount?: number;
         campaignLabel?: string;
+        isFlashDeal?: boolean;
+        flashDealEndTime?: string;
+        isSpecialOffer?: boolean;
+        specialOfferEndTime?: string;
     };
     onIncrease: () => void;
     onDecrease: () => void;
@@ -23,7 +27,19 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
     const computedDiscount = priceDrop && basePrice > 0 ? Math.max(0, Math.round((1 - item.price / basePrice) * 100)) : 0;
     const discountValue = computedDiscount || item.discount || 0;
     const hasDiscount = priceDrop && discountValue > 0;
-    const cleanLabel = item.campaignLabel?.replace(/\?/g, "").trim();
+    const now = Date.now();
+    const isFlashActive = Boolean(
+        item.isFlashDeal &&
+        (!item.flashDealEndTime || new Date(item.flashDealEndTime).getTime() > now)
+    );
+    const isSpecialActive = Boolean(
+        item.isSpecialOffer &&
+        (!item.specialOfferEndTime || new Date(item.specialOfferEndTime).getTime() > now)
+    );
+    const effectiveLabel =
+        item.campaignLabel ||
+        (isFlashActive ? "پیشنهاد لحظه‌ای" : isSpecialActive ? "پیشنهاد شگفت‌انگیز" : undefined);
+    const cleanLabel = effectiveLabel?.replace(/\?/g, "").trim();
     const campaignBadge = cleanLabel
         ? `${cleanLabel}${discountValue ? ` • ${discountValue}%` : ""}`
         : discountValue
