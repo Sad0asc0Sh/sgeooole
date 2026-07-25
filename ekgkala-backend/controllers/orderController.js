@@ -348,6 +348,9 @@ exports.getOrderById = async (req, res) => {
       })
     }
 
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
+
     res.json({
       success: true,
       data: canReadAllOrders ? order : sanitizeOrderForCustomer(order),
@@ -510,10 +513,13 @@ exports.getMyOrders = async (req, res) => {
     // 🚀 OPTIMIZATION: Only select fields needed for display
     // This reduces data transfer and speeds up the query
     const orders = await Order.find({ user: req.user._id })
-      .select('_id orderCode orderStatus totalPrice createdAt isPaid itemsPrice shippingPrice orderItems')
+      .select('_id orderCode orderStatus totalPrice createdAt isPaid itemsPrice shippingPrice orderItems courierName trackingCode preparedTrackingUrl shippedAt deliveredAt')
       .sort({ createdAt: -1 })
       .limit(50) // Limit to last 50 orders for performance
       .lean()
+
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+    res.setHeader('Pragma', 'no-cache')
 
     res.json({
       success: true,

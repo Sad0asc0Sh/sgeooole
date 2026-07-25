@@ -595,7 +595,7 @@ export const authService = {
   getMyOrders: async (): Promise<{ success: boolean; data: any[] }> => {
     try {
       console.log("[AUTH] Fetching my orders");
-      const response = await api.get("/orders/my-orders");
+      const response = await api.get(`/orders/my-orders?_t=${Date.now()}`);
       return response.data;
     } catch (error: any) {
       console.error("Error fetching my orders:", error);
@@ -609,7 +609,7 @@ export const authService = {
    */
   getMyOrderStats: async (): Promise<{ success: boolean; data: { pending: number; processing: number; delivered: number; cancelled: number; total: number } }> => {
     try {
-      const response = await api.get("/orders/my-stats");
+      const response = await api.get(`/orders/my-stats?_t=${Date.now()}`);
       return response.data;
     } catch (error: any) {
       console.error("Error fetching order stats:", error);
@@ -624,7 +624,7 @@ export const authService = {
   getOrder: async (id: string): Promise<{ success: boolean; data: any }> => {
     try {
       console.log("[AUTH] Fetching order:", id);
-      const response = await api.get(`/orders/${id}`);
+      const response = await api.get(`/orders/${id}?_t=${Date.now()}`);
       return response.data;
     } catch (error: any) {
       console.error("Error fetching order:", error);

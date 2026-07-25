@@ -52,6 +52,14 @@ export default function OrderDetailsPage() {
     useEffect(() => {
         if (params.id) {
             loadOrderDetails(params.id as string);
+
+            const handleFocus = () => {
+                loadOrderDetails(params.id as string);
+            };
+            window.addEventListener("focus", handleFocus);
+            return () => {
+                window.removeEventListener("focus", handleFocus);
+            };
         }
     }, [params.id]);
 
