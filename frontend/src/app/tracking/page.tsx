@@ -14,6 +14,8 @@ interface OrderTrackingResult {
     createdAt: string;
     totalPrice: number;
     trackingCode?: string;
+    courierName?: string;
+    preparedTrackingUrl?: string;
 }
 
 export default function TrackingPage() {
