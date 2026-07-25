@@ -4,6 +4,14 @@ const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
 
+// Helper for converting Persian/Arabic digits to English
+const convertPersianToEnglishDigits = (str) => {
+  if (str === null || str === undefined) return ''
+  return String(str)
+    .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+}
+
 // ============================================
 // Helper: Record SalesEvents for Bestsellers Engine
 // This feeds the ProductScore scoring system
@@ -410,7 +418,8 @@ exports.updateOrderStatus = async (req, res) => {
 
     // تنظیم زمان تکمیل خودکار (اگر روز وارد شده باشد)
     if (status === 'Shipped' && req.body.deliveryDays) {
-      const days = parseInt(req.body.deliveryDays, 10)
+      const normalizedDaysStr = convertPersianToEnglishDigits(req.body.deliveryDays)
+      const days = parseInt(normalizedDaysStr, 10)
       if (!isNaN(days) && days > 0) {
         const completionDate = new Date()
         completionDate.setDate(completionDate.getDate() + days)
@@ -624,11 +633,11 @@ exports.payOrder = async (req, res) => {
 
     // درخواست پرداخت از درگاه فعال
     const paymentRequest = await paymentService.requestPayment({
-      amount: order.totalPrice, // مبلغ به تومان
+      amount: Math.round(order.totalPrice), // مبلغ به تومان
       callbackUrl: callbackUrl,
       description: `پرداخت سفارش #${order._id.toString().substring(0, 8)}`,
-      email: order.user.email || '',
-      mobile: order.user.mobile || order.shippingAddress.phone || '',
+      email: order.user?.email || '',
+      mobile: order.user?.mobile || order.shippingAddress?.phone || '',
       orderId: order._id.toString(), // برای Sadad الزامی
       gatewayName: selectedGateway, // ارسال نام درگاه انتخابی
     })

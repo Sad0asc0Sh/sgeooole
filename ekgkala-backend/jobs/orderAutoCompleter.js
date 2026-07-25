@@ -9,10 +9,10 @@ const checkAndCompleteOrders = async () => {
     try {
         const now = new Date()
 
-        // Find orders that are 'Shipped', have an autoCompleteAt date in the past
+        // Find orders that are 'Shipped' and have a valid autoCompleteAt date in the past
         const ordersToComplete = await Order.find({
             orderStatus: 'Shipped',
-            autoCompleteAt: { $lte: now }
+            autoCompleteAt: { $exists: true, $ne: null, $lte: now }
         })
 
         if (ordersToComplete.length > 0) {
@@ -20,17 +20,27 @@ const checkAndCompleteOrders = async () => {
 
             for (const order of ordersToComplete) {
                 try {
-                    // Use updateOne to bypass validation and improve performance
-                    await Order.updateOne(
-                        { _id: order._id },
+                    // Atomically update only if status is still 'Shipped' to prevent race conditions in PM2 cluster mode
+                    const updatedOrder = await Order.findOneAndUpdate(
+                        {
+                            _id: order._id,
+                            orderStatus: 'Shipped',
+                            autoCompleteAt: { $exists: true, $ne: null, $lte: now }
+                        },
                         {
                             $set: {
                                 orderStatus: 'Delivered',
                                 deliveredAt: now
                             },
                             $unset: { autoCompleteAt: "" }
-                        }
+                        },
+                        { new: true }
                     )
+
+                    if (!updatedOrder) {
+                        // Already completed or modified by another worker
+                        continue
+                    }
 
                     // Audit Log
                     await logAction({
@@ -44,7 +54,7 @@ const checkAndCompleteOrders = async () => {
                         }
                     })
 
-                    console.log(`[AUTO-COMPLETE] Order ${order._id} updated to Delivered.`)
+                    console.log(`[AUTO-COMPLETE] Order ${order._id} updated to Delivered successfully.`)
                 } catch (orderError) {
                     console.error(`[AUTO-COMPLETE] Error processing order ${order._id}:`, orderError)
                 }

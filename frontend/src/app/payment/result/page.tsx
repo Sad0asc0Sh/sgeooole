@@ -50,22 +50,25 @@ function PaymentResultContent() {
 
   const verifyPayment = async () => {
     try {
-      const authority = searchParams.get("Authority");
-      const status = searchParams.get("Status");
+      const authority = searchParams.get("Authority") || searchParams.get("authority");
+      const status = searchParams.get("Status") || searchParams.get("status");
+      const token = searchParams.get("Token") || searchParams.get("token");
+      const resCode = searchParams.get("ResCode") || searchParams.get("resCode");
+      const orderId = searchParams.get("OrderId") || searchParams.get("orderId");
 
-      if (!authority) {
+      if (!authority && !token && !orderId) {
         setError("کد تراکنش یافت نشد");
         setVerifying(false);
         return;
       }
 
-      // NOTE: We don't return early here anymore. 
-      // We let the backend handle Status="NOK" so it can return the orderId for our Retry button.
-
-      // Verify payment with backend
+      // Verify payment with backend (supports both ZarinPal and Sadad)
       const res = await api.post("/orders/verify-payment", {
         Authority: authority,
         Status: status,
+        Token: token,
+        ResCode: resCode,
+        OrderId: orderId,
       });
 
       if (res.data.success) {

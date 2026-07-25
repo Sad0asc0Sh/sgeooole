@@ -431,7 +431,12 @@ function OrderDetail() {
                         min={1}
                         value={deliveryDays}
                         placeholder="مثلاً ۳ روز"
-                        onChange={(e) => setDeliveryDays(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value
+                            .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+                            .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+                          setDeliveryDays(val)
+                        }}
                         suffix="روز"
                         disabled={!canUpdateStatus}
                       />
