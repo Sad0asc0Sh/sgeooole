@@ -46,6 +46,11 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
             ? `${discountValue}%`
             : null;
 
+    const isFlashBadge = isFlashActive || Boolean(cleanLabel && (cleanLabel.includes("پیشنهاد لحظه‌ای") || cleanLabel.includes("زمان‌دار")));
+    const badgeClass = isFlashBadge
+        ? "bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm"
+        : "bg-red-500 text-white";
+
     return (
         <div className="bg-white p-3 rounded-2xl shadow-sm flex gap-3">
             {/* Image */}
@@ -77,7 +82,7 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
                             <>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {campaignBadge && (
-                                        <span className="text-[10px] text-white bg-red-500 px-2 py-0.5 rounded-full font-bold">
+                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold ${badgeClass}`}>
                                             {campaignBadge}
                                         </span>
                                     )}

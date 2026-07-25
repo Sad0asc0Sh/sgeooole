@@ -77,9 +77,9 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
         (!hasFlashLabel || isFlashDealActive);
 
     if (isFlashDealActive) {
-        // Default Flash Deal Style (Amber)
-        let themeColor = 'text-amber-500';
-        let themeBorder = 'bg-amber-500';
+        // Default Flash Deal Style (Amber/Orange/Red Gradient)
+        let themeColor = 'text-orange-600';
+        let themeBorder = 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600';
         let themeTitle = 'پیشنهاد لحظه‌ای';
 
         // If Campaign Theme is present, override with Campaign Style
