@@ -169,7 +169,7 @@ export default function OrderDetailsPage() {
                     )}
 
                     {/* Tracking Code Section - Enhanced & Responsive */}
-                    {order.trackingCode && (
+                    {(order.trackingCode || order.courierName || order.orderStatus === 'Shipped') && (
                         <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-5 shadow-sm">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-3xl opacity-40 -mr-16 -mt-16" />
 
@@ -181,32 +181,41 @@ export default function OrderDetailsPage() {
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-800 text-sm mb-0.5">
-                                            {order.courierName ? `رهگیری از ${order.courierName}` : 'کد رهگیری مرسوله'}
+                                            {order.courierName ? `ارسال با ${order.courierName}` : 'اطلاعات ارسال مرسوله'}
                                         </h3>
-                                        <p className="text-[11px] text-gray-500">برای پیگیری وضعیت مرسوله، روی دکمه زیر کلیک کنید</p>
+                                        <p className="text-[11px] text-gray-500">
+                                            {order.preparedTrackingUrl ? 'برای پیگیری وضعیت مرسوله، روی دکمه زیر کلیک کنید' : 'تحویل به سفیر و پیک اختصاصی در شهر مبدا'}
+                                        </p>
                                     </div>
                                 </div>
 
                                 {/* Tracking Code Display */}
                                 <div className="bg-white rounded-xl border border-purple-100 shadow-sm p-4">
-                                    <div className="text-center mb-3">
-                                        <p className="text-[10px] text-gray-400 mb-1">کد رهگیری</p>
-                                        <span className="font-mono font-black text-base sm:text-lg text-gray-800 tracking-wider select-all break-all leading-relaxed">
-                                            {order.trackingCode}
-                                        </span>
-                                    </div>
-                                    {/* دکمه پیگیری: اگر لینک آماده وجود داشته باشد از آن استفاده می‌شود، وگرنه لینک پیش‌فرض پست */}
-                                    <a
-                                        href={order.preparedTrackingUrl || `https://tracking.post.ir/`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold shadow-purple-200 shadow-lg"
-                                    >
-                                        <ExternalLink size={15} />
-                                        <span>
-                                            {order.courierName ? `پیگیری در سایت ${order.courierName}` : 'پیگیری مرسوله'}
-                                        </span>
-                                    </a>
+                                    {order.trackingCode && (
+                                        <div className="text-center mb-3">
+                                            <p className="text-[10px] text-gray-400 mb-1">کد رهگیری / مرسوله</p>
+                                            <span className="font-mono font-black text-base sm:text-lg text-gray-800 tracking-wider select-all break-all leading-relaxed">
+                                                {order.trackingCode}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {order.preparedTrackingUrl && order.preparedTrackingUrl.trim().length > 0 ? (
+                                        <a
+                                            href={order.preparedTrackingUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold shadow-purple-200 shadow-lg"
+                                        >
+                                            <ExternalLink size={15} />
+                                            <span>
+                                                {order.courierName ? `پیگیری در سایت ${order.courierName}` : 'پیگیری آنلاین مرسوله'}
+                                            </span>
+                                        </a>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2 w-full bg-purple-50 text-purple-800 border border-purple-200 px-4 py-2.5 rounded-lg text-xs sm:text-sm font-bold text-center">
+                                            <span>🚀 تحویل سفیر/پیک اختصاصی (ارسال در شهر مبدا - بدون لینک آنلاین)</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

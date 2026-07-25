@@ -78,6 +78,34 @@ function OrderDetail() {
 
   const [trackingCode, setTrackingCode] = useState('')
   const [deliveryDays, setDeliveryDays] = useState('')
+  const [courierName, setCourierName] = useState('')
+  const [preparedTrackingUrl, setPreparedTrackingUrl] = useState('')
+  const [couriersList, setCouriersList] = useState([])
+
+  const defaultCouriers = [
+    { name: 'پست پیشتاز', trackingUrlTemplate: 'https://tracking.post.ir/?id={{code}}' },
+    { name: 'تیپاکس', trackingUrlTemplate: 'https://tipaxco.com/tracking?id={{code}}' },
+    { name: 'چاپار', trackingUrlTemplate: 'https://chaparnet.com/tracking/?tracking_code={{code}}' },
+    { name: 'پیک اختصاصی (ارسال درون‌شهری)', trackingUrlTemplate: '' },
+  ]
+
+  const fetchCouriers = async () => {
+    try {
+      const res = await api.get('/settings/public')
+      const fetchedCouriers = res?.data?.data?.shippingSettings?.couriers
+      if (Array.isArray(fetchedCouriers) && fetchedCouriers.length > 0) {
+        setCouriersList(fetchedCouriers)
+      } else {
+        setCouriersList(defaultCouriers)
+      }
+    } catch {
+      setCouriersList(defaultCouriers)
+    }
+  }
+
+  useEffect(() => {
+    fetchCouriers()
+  }, [])
 
   const fetchOrder = async () => {
     setLoading(true)
@@ -88,6 +116,8 @@ function OrderDetail() {
       setStatus(data?.orderStatus || '')
       setAdminNotes(data?.adminNotes || '')
       setTrackingCode(data?.trackingCode || '')
+      setCourierName(data?.courierName || '')
+      setPreparedTrackingUrl(data?.preparedTrackingUrl || '')
     } catch (err) {
       const errorMsg =
         err?.response?.data?.message || err?.message || 'خطا در دریافت جزئیات سفارش'
@@ -102,6 +132,35 @@ function OrderDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  const handleCourierSelect = (selectedName) => {
+    setCourierName(selectedName)
+    const courierObj = couriersList.find((c) => c.name === selectedName)
+    if (courierObj && courierObj.trackingUrlTemplate && trackingCode) {
+      const generated = courierObj.trackingUrlTemplate
+        .replace('{{code}}', trackingCode.trim())
+        .replace('{code}', trackingCode.trim())
+      setPreparedTrackingUrl(generated)
+    } else if (courierObj && !courierObj.trackingUrlTemplate) {
+      setPreparedTrackingUrl('')
+    }
+  }
+
+  const handleTrackingCodeChange = (codeVal) => {
+    const val = codeVal
+      .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+      .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    setTrackingCode(val)
+
+    // Auto-update prepared tracking url if template exists
+    const courierObj = couriersList.find((c) => c.name === courierName)
+    if (courierObj && courierObj.trackingUrlTemplate && val.trim()) {
+      const generated = courierObj.trackingUrlTemplate
+        .replace('{{code}}', val.trim())
+        .replace('{code}', val.trim())
+      setPreparedTrackingUrl(generated)
+    }
+  }
+
   const handleStatusUpdate = async () => {
     if (!canUpdateStatus) {
       message.error('شما مجوز تغییر وضعیت سفارش را ندارید.')
@@ -113,7 +172,14 @@ function OrderDetail() {
       return
     }
 
-    if (status === order?.orderStatus && adminNotes === (order?.adminNotes || '') && trackingCode === (order?.trackingCode || '') && !deliveryDays) {
+    if (
+      status === order?.orderStatus &&
+      adminNotes === (order?.adminNotes || '') &&
+      trackingCode === (order?.trackingCode || '') &&
+      courierName === (order?.courierName || '') &&
+      preparedTrackingUrl === (order?.preparedTrackingUrl || '') &&
+      !deliveryDays
+    ) {
       message.info('تغییری برای ذخیره وجود ندارد')
       return
     }
@@ -124,6 +190,8 @@ function OrderDetail() {
         status,
         adminNotes: adminNotes || undefined,
         trackingCode: trackingCode,
+        courierName: courierName || undefined,
+        preparedTrackingUrl: preparedTrackingUrl,
         deliveryDays: deliveryDays || undefined,
       })
 
@@ -320,9 +388,25 @@ function OrderDetail() {
                   <Descriptions.Item label="روش پرداخت" span={2}>
                     {order.paymentMethod || '—'}
                   </Descriptions.Item>
+                  {order.courierName && (
+                    <Descriptions.Item label="شرکت حمل‌ونقل" span={1}>
+                      <strong>{order.courierName}</strong>
+                    </Descriptions.Item>
+                  )}
                   {order.trackingCode && (
-                    <Descriptions.Item label="کد رهگیری پستی" span={2}>
+                    <Descriptions.Item label="کد رهگیری مرسوله" span={1}>
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{order.trackingCode}</span>
+                    </Descriptions.Item>
+                  )}
+                  {order.preparedTrackingUrl ? (
+                    <Descriptions.Item label="لینک رهگیری آنلاین" span={2}>
+                      <a href={order.preparedTrackingUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'monospace' }}>
+                        {order.preparedTrackingUrl}
+                      </a>
+                    </Descriptions.Item>
+                  ) : order.orderStatus === 'Shipped' && (
+                    <Descriptions.Item label="نوع ارسال" span={2}>
+                      <Tag color="purple">پیک اختصاصی / ارسال درون‌شهری (بدون لینک آنلاین)</Tag>
                     </Descriptions.Item>
                   )}
                 </Descriptions>
@@ -409,15 +493,56 @@ function OrderDetail() {
                       <label
                         style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}
                       >
-                        کد رهگیری پستی:
+                        شرکت حمل‌ونقل / روش ارسال:
+                      </label>
+                      <Select
+                        value={courierName || undefined}
+                        onChange={handleCourierSelect}
+                        placeholder="انتخاب یا وارد کردن شرکت پستی"
+                        style={{ width: '100%' }}
+                        disabled={!canUpdateStatus}
+                        allowClear
+                      >
+                        {couriersList.map((c, idx) => (
+                          <Select.Option key={idx} value={c.name}>
+                            {c.name} {c.trackingUrlTemplate ? '' : ' (بدون لینک / پیک شهری)'}
+                          </Select.Option>
+                        ))}
+                      </Select>
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                      <label
+                        style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}
+                      >
+                        کد رهگیری مرسوله / پستی:
                       </label>
                       <Input
                         value={trackingCode}
-                        onChange={(e) => setTrackingCode(e.target.value)}
-                        placeholder="کد ۲۴ رقمی پست"
+                        onChange={(e) => handleTrackingCodeChange(e.target.value)}
+                        placeholder="کد ۲۴ رقمی پست یا کد رهگیری"
                         style={{ fontFamily: 'monospace' }}
                         disabled={!canUpdateStatus}
                       />
+                    </div>
+
+                    <div style={{ marginTop: 16 }}>
+                      <label
+                        style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}
+                      >
+                        لینک مستقیم رهگیری مرسوله (اختیاری):
+                      </label>
+                      <Input
+                        value={preparedTrackingUrl}
+                        onChange={(e) => setPreparedTrackingUrl(e.target.value)}
+                        placeholder="https://tracking.post.ir/?id=..."
+                        style={{ fontFamily: 'monospace' }}
+                        disabled={!canUpdateStatus}
+                        allowClear
+                      />
+                      <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                        در صورت خالی بودن لینک، در فرانت‌اند کاربر به عنوان تحویل با پیک شهری/اختصاصی (بدون لینک آنلاین) نمایش داده می‌شود.
+                      </div>
                     </div>
 
                     <div style={{ marginTop: 16 }}>
@@ -434,7 +559,7 @@ function OrderDetail() {
                         onChange={(e) => {
                           const val = e.target.value
                             .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
-                            .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+                            .replace(/[٠-٩]/g, (d) => '٠١٢٣٥٦٧٨٩'.indexOf(d))
                           setDeliveryDays(val)
                         }}
                         suffix="روز"

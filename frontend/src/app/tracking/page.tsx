@@ -191,23 +191,33 @@ export default function TrackingPage() {
                                 <span className="text-sm font-bold text-gray-800">{result.totalPrice.toLocaleString('fa-IR')} تومان</span>
                             </div>
 
-                            {result.trackingCode && (
+                            {(result.trackingCode || result.courierName || result.preparedTrackingUrl) && (
                                 <div className="bg-blue-50 rounded-xl p-4 mt-4">
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-sm text-blue-700 font-bold">کد رهگیری پستی</span>
+                                        <span className="text-sm text-blue-700 font-bold">
+                                            {result.courierName ? `ارسال با ${result.courierName}` : 'اطلاعات ارسال مرسوله'}
+                                        </span>
                                     </div>
-                                    <p className="font-mono font-bold text-blue-800 text-center py-2 bg-white rounded-lg">
-                                        {result.trackingCode}
-                                    </p>
-                                    <a
-                                        href="https://tracking.post.ir/"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-3 flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold"
-                                    >
-                                        <span>پیگیری در سایت پست</span>
-                                        <ChevronRight size={16} className="rotate-180" />
-                                    </a>
+                                    {result.trackingCode && (
+                                        <p className="font-mono font-bold text-blue-800 text-center py-2 bg-white rounded-lg mb-2">
+                                            {result.trackingCode}
+                                        </p>
+                                    )}
+                                    {result.preparedTrackingUrl && result.preparedTrackingUrl.trim().length > 0 ? (
+                                        <a
+                                            href={result.preparedTrackingUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-3 flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold"
+                                        >
+                                            <span>{result.courierName ? `پیگیری در سایت ${result.courierName}` : 'پیگیری آنلاین مرسوله'}</span>
+                                            <ChevronRight size={16} className="rotate-180" />
+                                        </a>
+                                    ) : (
+                                        <div className="mt-3 text-center py-2 px-3 bg-white text-blue-900 rounded-lg text-xs font-bold border border-blue-200">
+                                            🚀 ارسال با پیک اختصاصی درون‌شهری (بدون نیاز به لینک آنلاین)
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

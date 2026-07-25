@@ -51,7 +51,14 @@ exports.getPublicSettings = async (req, res) => {
         aparat: settings.socialLinks?.aparat || '',
       },
       shippingSettings: {
-        couriers: settings.shippingSettings?.couriers || []
+        couriers: (settings.shippingSettings?.couriers && settings.shippingSettings.couriers.length > 0)
+          ? settings.shippingSettings.couriers
+          : [
+              { name: 'پست پیشتاز', trackingUrlTemplate: 'https://tracking.post.ir/?id={{code}}', isActive: true },
+              { name: 'تیپاکس', trackingUrlTemplate: 'https://tipaxco.com/tracking?id={{code}}', isActive: true },
+              { name: 'چاپار', trackingUrlTemplate: 'https://chaparnet.com/tracking/?tracking_code={{code}}', isActive: true },
+              { name: 'پیک اختصاصی (ارسال درون‌شهری)', trackingUrlTemplate: '', isActive: true },
+            ]
       }
     }
 

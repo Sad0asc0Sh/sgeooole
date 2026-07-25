@@ -842,8 +842,8 @@ exports.trackOrder = async (req, res) => {
     const order = await (shouldVerifyPhone
       ? orderQuery
         .populate('user', 'mobile')
-        .select('_id orderCode orderStatus createdAt totalPrice trackingCode shippingAddress user')
-      : orderQuery.select('_id orderCode orderStatus createdAt totalPrice trackingCode')
+        .select('_id orderCode orderStatus createdAt totalPrice trackingCode courierName preparedTrackingUrl shippingAddress user')
+      : orderQuery.select('_id orderCode orderStatus createdAt totalPrice trackingCode courierName preparedTrackingUrl')
     )
       .lean()
 
@@ -888,6 +888,8 @@ exports.trackOrder = async (req, res) => {
         createdAt: order.createdAt,
         totalPrice: order.totalPrice,
         trackingCode: order.trackingCode || null,
+        courierName: order.courierName || null,
+        preparedTrackingUrl: order.preparedTrackingUrl || null,
       },
     })
   } catch (error) {
