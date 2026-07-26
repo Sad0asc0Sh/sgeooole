@@ -177,7 +177,7 @@ export default function OrderDetailsPage() {
                     )}
 
                     {/* Tracking Code Section - Enhanced & Responsive */}
-                    {(order.trackingCode || order.courierName || order.orderStatus === 'Shipped') && (
+                    {(order.trackingCode || order.courierName || ['Shipped', 'Delivered'].includes(order.orderStatus)) && (
                         <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-5 shadow-sm">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-3xl opacity-40 -mr-16 -mt-16" />
 
@@ -199,7 +199,7 @@ export default function OrderDetailsPage() {
 
                                 {/* Tracking Code Display */}
                                 <div className="bg-white rounded-xl border border-purple-100 shadow-sm p-4">
-                                    {order.trackingCode && (
+                                    {order.trackingCode && order.trackingCode !== order.courierName && (
                                         <div className="text-center mb-3">
                                             <p className="text-[10px] text-gray-400 mb-1">کد رهگیری / مرسوله</p>
                                             <span className="font-mono font-black text-base sm:text-lg text-gray-800 tracking-wider select-all break-all leading-relaxed">

@@ -27,11 +27,12 @@ export default function AdminOrderDetailsPage() {
     const [status, setStatus] = useState("");
     const [trackingCode, setTrackingCode] = useState("");
     const [selectedCourier, setSelectedCourier] = useState<CourierTemplate | null>(null);
-    const [adminNotes, setAdminNotes] = useState("");
+    // پیک فعال یا انتخاب شده
+    const activeCourier = selectedCourier || couriers.find(c => c.name === order?.courierName) || null;
 
     // لینک پیش‌نمایش که با درج کد رهگیری ساخته می‌شود
-    const previewTrackingUrl = selectedCourier && trackingCode
-        ? selectedCourier.trackingUrlTemplate.replace("{{code}}", trackingCode)
+    const previewTrackingUrl = activeCourier && trackingCode && activeCourier.trackingUrlTemplate
+        ? activeCourier.trackingUrlTemplate.replace("{{code}}", trackingCode.trim()).replace("{code}", trackingCode.trim())
         : "";
 
     useEffect(() => {
@@ -79,12 +80,12 @@ export default function AdminOrderDetailsPage() {
             setUpdating(true);
 
             // ساخت لینک رهگیری نهایی
-            const finalTrackingUrl = previewTrackingUrl || order.preparedTrackingUrl || "";
+            const finalTrackingUrl = previewTrackingUrl || (order.preparedTrackingUrl && trackingCode === order.trackingCode ? order.preparedTrackingUrl : "");
 
             await orderService.updateStatus(order._id, {
                 status,
                 trackingCode: trackingCode || undefined,
-                courierName: selectedCourier?.name || order.courierName || undefined,
+                courierName: activeCourier?.name || order.courierName || undefined,
                 preparedTrackingUrl: finalTrackingUrl || undefined,
                 adminNotes: adminNotes || undefined,
             });
@@ -297,8 +298,8 @@ export default function AdminOrderDetailsPage() {
                             </select>
                         </div>
 
-                        {/* بخش اطلاعات ارسال (فقط وقتی Shipped انتخاب شده) */}
-                        {status === 'Shipped' && (
+                        {/* بخش اطلاعات ارسال (جهت ثبت یا ویرایش رهگیری) */}
+                        {(['Shipped', 'Delivered', 'Processing'].includes(status) || trackingCode || order.courierName) && (
                             <div className="space-y-4 mb-5 p-4 bg-purple-50 border border-purple-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
                                 <h3 className="text-xs font-bold text-purple-700 flex items-center gap-1.5">
                                     <Truck size={14} />

@@ -246,7 +246,15 @@ function OrderDetail() {
       return
     }
 
-    const finalUrl = deliveryMode === 'local' ? '' : preparedTrackingUrl
+    let finalUrl = deliveryMode === 'local' ? '' : preparedTrackingUrl
+    if (deliveryMode === 'online' && (!finalUrl || finalUrl.trim() === '') && courierName && trackingCode) {
+      const courierObj = couriersList.find((c) => c.name === courierName)
+      if (courierObj && courierObj.trackingUrlTemplate) {
+        finalUrl = courierObj.trackingUrlTemplate
+          .replace('{{code}}', trackingCode.trim())
+          .replace('{code}', trackingCode.trim())
+      }
+    }
 
     setSaving(true)
     try {

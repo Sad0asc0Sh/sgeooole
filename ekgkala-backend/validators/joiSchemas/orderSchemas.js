@@ -150,13 +150,35 @@ const orderStatusUpdateSchema = Joi.object({
         .trim()
         .max(100)
         .optional()
-        .allow(''),
+        .allow('', null),
+
+    courierName: Joi.string()
+        .trim()
+        .max(150)
+        .optional()
+        .allow('', null),
+
+    preparedTrackingUrl: Joi.string()
+        .trim()
+        .max(2000)
+        .optional()
+        .allow('', null),
+
+    adminNotes: Joi.string()
+        .trim()
+        .max(2000)
+        .optional()
+        .allow('', null),
+
+    deliveryDays: Joi.any()
+        .optional()
+        .allow('', null),
 
     note: Joi.string()
         .trim()
-        .max(500)
+        .max(1000)
         .optional()
-        .allow(''),
+        .allow('', null),
 });
 
 /**

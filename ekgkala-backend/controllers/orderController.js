@@ -348,6 +348,23 @@ exports.getOrderById = async (req, res) => {
       })
     }
 
+    // Auto-resolve preparedTrackingUrl from Settings if missing
+    if ((!order.preparedTrackingUrl || String(order.preparedTrackingUrl).trim() === '') && order.courierName && order.trackingCode) {
+      try {
+        const Settings = require('../models/Settings')
+        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+        const couriers = settings?.shippingSettings?.couriers || []
+        const matched = couriers.find((c) => c.name === order.courierName)
+        if (matched && matched.trackingUrlTemplate) {
+          order.preparedTrackingUrl = matched.trackingUrlTemplate
+            .replace('{{code}}', String(order.trackingCode).trim())
+            .replace('{code}', String(order.trackingCode).trim())
+        }
+      } catch (err) {
+        console.error('Error resolving tracking URL in getOrderById:', err)
+      }
+    }
+
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
     res.setHeader('Pragma', 'no-cache')
 
@@ -417,6 +434,28 @@ exports.updateOrderStatus = async (req, res) => {
 
     if (req.body.preparedTrackingUrl !== undefined) {
       updates.preparedTrackingUrl = req.body.preparedTrackingUrl
+    }
+
+    // Auto-generate preparedTrackingUrl if courierName and trackingCode are present but preparedTrackingUrl is empty
+    const currentCourier = updates.courierName !== undefined ? updates.courierName : order.courierName
+    const currentCode = updates.trackingCode !== undefined ? updates.trackingCode : order.trackingCode
+    let currentUrl = updates.preparedTrackingUrl !== undefined ? updates.preparedTrackingUrl : order.preparedTrackingUrl
+
+    if ((!currentUrl || String(currentUrl).trim() === '') && currentCourier && currentCode && String(currentCode).trim() !== '') {
+      try {
+        const Settings = require('../models/Settings')
+        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+        const couriers = settings?.shippingSettings?.couriers || []
+        const matched = couriers.find((c) => c.name === currentCourier)
+        if (matched && matched.trackingUrlTemplate) {
+          const codeVal = String(currentCode).trim()
+          updates.preparedTrackingUrl = matched.trackingUrlTemplate
+            .replace('{{code}}', codeVal)
+            .replace('{code}', codeVal)
+        }
+      } catch (err) {
+        console.error('Error resolving template in updateOrderStatus:', err)
+      }
     }
 
     // تنظیم زمان تکمیل خودکار (اگر روز وارد شده باشد)
