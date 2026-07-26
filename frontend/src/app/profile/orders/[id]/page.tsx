@@ -150,29 +150,47 @@ export default function OrderDetailsPage() {
                             این سفارش لغو شده است
                         </div>
                     ) : (
-                        <div className="relative flex justify-between items-center px-2">
+                        <div className="relative pt-2 pb-1">
                             {/* Progress Bar Background */}
-                            <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-100 -z-10 mx-4" />
+                            <div className="absolute top-[18px] left-[12.5%] right-[12.5%] h-1 bg-gray-100 rounded-full z-0" />
                             {/* Active Progress Bar */}
                             <div
-                                className="absolute top-1/2 right-0 h-1 bg-kala-500 -z-10 mx-4 transition-all duration-500"
-                                style={{ width: `${(currentStepIndex / (steps.length - 1)) * 100}%` }}
+                                className="absolute top-[18px] right-[12.5%] h-1 bg-gradient-to-l from-kala-500 to-amber-500 rounded-full z-0 transition-all duration-500"
+                                style={{ width: `${(currentStepIndex / (steps.length - 1)) * 75}%` }}
                             />
 
-                            {steps.map((step, idx) => {
-                                const isActive = idx <= currentStepIndex;
-                                const isCurrent = idx === currentStepIndex;
-                                const Icon = step.icon;
+                            <div className="relative z-10 flex justify-between items-start">
+                                {steps.map((step, idx) => {
+                                    const isActive = idx <= currentStepIndex;
+                                    const isCurrent = idx === currentStepIndex;
+                                    const Icon = step.icon;
 
-                                return (
-                                    <div key={idx} className="flex flex-col items-center gap-2 bg-white px-1">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isActive ? 'bg-kala-500 border-kala-500 text-white' : 'bg-white border-gray-200 text-gray-300'}`}>
-                                            <Icon size={14} />
+                                    return (
+                                        <div key={idx} className="flex flex-col items-center text-center w-1/4">
+                                            {/* Circle Icon Wrapper */}
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white ${
+                                                isCurrent
+                                                    ? 'bg-kala-600 border-kala-600 text-white shadow-md shadow-kala-200 ring-4 ring-kala-100'
+                                                    : isActive
+                                                        ? 'bg-kala-500 border-kala-500 text-white shadow-sm'
+                                                        : 'border-gray-200 text-gray-300'
+                                            }`}>
+                                                <Icon size={16} />
+                                            </div>
+                                            {/* Text Label */}
+                                            <span className={`mt-2.5 text-[11px] sm:text-xs font-bold leading-snug text-center px-0.5 ${
+                                                isCurrent
+                                                    ? 'text-kala-700 font-black'
+                                                    : isActive
+                                                        ? 'text-gray-800'
+                                                        : 'text-gray-400'
+                                            }`}>
+                                                {step.label}
+                                            </span>
                                         </div>
-                                        <span className={`text-[10px] font-bold ${isActive ? 'text-gray-800' : 'text-gray-400'}`}>{step.label}</span>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 
