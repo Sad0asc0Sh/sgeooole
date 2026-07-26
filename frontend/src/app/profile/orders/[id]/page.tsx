@@ -168,12 +168,12 @@ export default function OrderDetailsPage() {
                                     return (
                                         <div key={idx} className="flex flex-col items-center text-center w-1/4">
                                             {/* Circle Icon Wrapper */}
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 bg-white ${
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                                                 isCurrent
-                                                    ? 'bg-kala-600 border-kala-600 text-white shadow-md shadow-kala-200 ring-4 ring-kala-100'
+                                                    ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200 ring-4 ring-amber-100'
                                                     : isActive
                                                         ? 'bg-kala-500 border-kala-500 text-white shadow-sm'
-                                                        : 'border-gray-200 text-gray-300'
+                                                        : 'bg-white border-gray-200 text-gray-400'
                                             }`}>
                                                 <Icon size={16} />
                                             </div>
