@@ -27,6 +27,7 @@ export default function AdminOrderDetailsPage() {
     const [status, setStatus] = useState("");
     const [trackingCode, setTrackingCode] = useState("");
     const [selectedCourier, setSelectedCourier] = useState<CourierTemplate | null>(null);
+    const [adminNotes, setAdminNotes] = useState("");
     // پیک فعال یا انتخاب شده
     const activeCourier = selectedCourier || couriers.find(c => c.name === order?.courierName) || null;
 
