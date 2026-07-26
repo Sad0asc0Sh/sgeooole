@@ -9,14 +9,14 @@ type LogoProps = {
 export const Logo = ({ className }: LogoProps) => {
     return (
         /* w-28 = 112px on mobile, w-40 = 160px on md+ — replaces clamp() for Edge Android compat */
-        <div className={cn("h-10 w-28 xs:w-32 md:h-16 md:w-auto flex-shrink-0", className)}>
-            <picture className="block h-full w-full">
+        <div className={cn("h-10 xs:h-11 md:h-14 w-auto flex-shrink-0 flex items-center justify-center", className)}>
+            <picture className="block h-full w-auto">
                 <source srcSet="/logo-text-dark.png" media="(prefers-color-scheme: dark)" />
                 <img
                     src="/logo-text.png"
                     alt="EKGKala Logo"
-                    width={256}
-                    height={64}
+                    width={280}
+                    height={100}
                     className="block h-full w-auto object-contain object-right"
                     loading="eager"
                     fetchPriority="high"

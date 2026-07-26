@@ -114,9 +114,9 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             <div className="hidden md:block">
                 <div className="w-full max-w-[1440px] mx-auto">
                     {/* Top Row: Logo - Search - Actions */}
-                    <div className="flex items-center h-20 gap-4 pl-4">
+                    <div className="flex items-center h-20 gap-4 px-4 lg:px-6">
                         {/* Right: Logo */}
-                        <Link href="/" onClick={handleHomeClick} className="flex-shrink-0">
+                        <Link href="/" onClick={handleHomeClick} className="flex-shrink-0 flex items-center">
                             <Logo />
                         </Link>
 
