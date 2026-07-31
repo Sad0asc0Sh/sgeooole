@@ -21,169 +21,58 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const transformQuillHtml = (html: string) => {
         if (!html) return "";
 
-        // First decode HTML entities (e.g. &lt; &gt; &quot;) if encoded
-        let decoded = html;
-        if (typeof window !== 'undefined') {
-            try {
-                const txt = document.createElement("textarea");
-                txt.innerHTML = html;
-                decoded = txt.value || html;
-            } catch (e) {
-                decoded = html;
-            }
-        }
+        let cleaned = html;
 
-        if (typeof window === 'undefined') return decoded; // SSR fallback
+        // 1. Decode HTML entities if string is double encoded
+        cleaned = cleaned
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/&amp;/g, '&');
 
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(decoded, 'text/html');
+        // 2. Remove inline background-color, color, font-family styles from Quill paste
+        cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
+            const cleanStyle = p1
+                .replace(/background-color\s*:\s*[^;"]*;?/gi, '')
+                .replace(/color\s*:\s*[^;"]*;?/gi, '')
+                .replace(/font-family\s*:\s*[^;"]*;?/gi, '')
+                .trim();
+            return cleanStyle ? `style="${cleanStyle}"` : '';
+        });
 
-            // 1. Remove inline style attributes (especially background-color and color)
-            // that Quill creates when pasting text with custom background highlight
-            const allElements = doc.querySelectorAll('*');
-            allElements.forEach((el) => {
-                el.removeAttribute('style');
-            });
+        // 3. Transform 3-paragraph feature cards (01..99):
+        // <p...>01</p> <p...>Title</p> <p...>Desc</p>
+        const featureCardRegex = /<p[^>]*>\s*(?:<[^>]+>)*\s*(\d{2})\s*(?:<\/[^>]+>)*\s*<\/p>\s*<p[^>]*>(.*?)<\/p>\s*<p[^>]*>(.*?)<\/p>/gi;
 
-            // 2. Transform numbered feature cards (01, 02, 03...)
-            // Pattern in Quill HTML:
-            // p(01) -> p(Title) -> p(Description)
-            // OR
-            // p(Title) -> p(Description) -> p(01)
-            const ps = Array.from(doc.querySelectorAll('p'));
-            let i = 0;
-            while (i < ps.length) {
-                const p = ps[i];
-                const text = p.textContent?.trim() || "";
+        cleaned = cleaned.replace(featureCardRegex, (match, num, title, desc) => {
+            const cleanTitle = title.replace(/^<(?:strong|span)[^>]*>(.*?)<\/(?:strong|span)>$/gi, '$1');
+            const cleanDesc = desc.replace(/^<(?:strong|span)[^>]*>(.*?)<\/(?:strong|span)>$/gi, '$1');
 
-                // Case A: 01 comes FIRST (p=01, p+1=Title, p+2=Desc)
-                if (/^\d{2}$/.test(text)) {
-                    const numP = p;
-                    const titleP = ps[i + 1];
-                    const descP = ps[i + 2];
+            return `
+            <div class="my-3 p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm text-right dir-rtl" dir="rtl">
+                <div class="flex-1 text-right">
+                    <div class="font-bold text-slate-900 text-base mb-1">${cleanTitle}</div>
+                    <div class="text-slate-600 text-sm leading-relaxed">${cleanDesc}</div>
+                </div>
+                <span class="bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0">${num}</span>
+            </div>
+            `.trim();
+        });
 
-                    if (titleP && descP && !/^\d{2}$/.test(titleP.textContent?.trim() || "")) {
-                        const card = doc.createElement('div');
-                        card.className = 'my-3 p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm dir-rtl';
+        // 4. Transform Specs pairs: <p...><strong>Label</strong></p> <p...><span>Value</span></p>
+        const specsPairRegex = /<p[^>]*>\s*<strong[^>]*>(.*?)<\/strong>\s*<\/p>\s*<p[^>]*>\s*<span[^>]*>(.*?)<\/span>\s*<\/p>/gi;
 
-                        const textContainer = doc.createElement('div');
-                        textContainer.className = 'flex-1 text-right';
+        cleaned = cleaned.replace(specsPairRegex, (match, label, value) => {
+            return `
+            <div class="flex flex-col sm:flex-row justify-between p-3.5 bg-slate-50/60 border border-slate-100 rounded-lg my-1.5 text-sm text-right dir-rtl" dir="rtl">
+                <span class="font-bold text-slate-800 mb-1 sm:mb-0">${label}</span>
+                <span class="text-slate-600">${value}</span>
+            </div>
+            `.trim();
+        });
 
-                        const titleEl = doc.createElement('div');
-                        titleEl.className = 'font-bold text-slate-900 text-base mb-1';
-                        titleEl.innerHTML = titleP.innerHTML;
-
-                        const descEl = doc.createElement('div');
-                        descEl.className = 'text-slate-600 text-sm leading-relaxed';
-                        descEl.innerHTML = descP.innerHTML;
-
-                        textContainer.appendChild(titleEl);
-                        textContainer.appendChild(descEl);
-
-                        const badge = doc.createElement('span');
-                        badge.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0';
-                        badge.textContent = text;
-
-                        card.appendChild(textContainer);
-                        card.appendChild(badge);
-
-                        numP.parentNode?.insertBefore(card, numP);
-                        numP.remove();
-                        titleP.remove();
-                        descP.remove();
-
-                        i += 3;
-                        continue;
-                    }
-                }
-
-                // Case B: 01 comes LAST (p=Title, p+1=Desc, p+2=01) - Quill paste format in screenshot!
-                const next2Text = ps[i + 2]?.textContent?.trim() || "";
-                if (/^\d{2}$/.test(next2Text)) {
-                    const titleP = p;
-                    const descP = ps[i + 1];
-                    const numP = ps[i + 2];
-
-                    if (titleP && descP && numP) {
-                        const card = doc.createElement('div');
-                        card.className = 'my-3 p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm dir-rtl';
-
-                        const textContainer = doc.createElement('div');
-                        textContainer.className = 'flex-1 text-right';
-
-                        const titleEl = doc.createElement('div');
-                        titleEl.className = 'font-bold text-slate-900 text-base mb-1';
-                        titleEl.innerHTML = titleP.innerHTML;
-
-                        const descEl = doc.createElement('div');
-                        descEl.className = 'text-slate-600 text-sm leading-relaxed';
-                        descEl.innerHTML = descP.innerHTML;
-
-                        textContainer.appendChild(titleEl);
-                        textContainer.appendChild(descEl);
-
-                        const badge = doc.createElement('span');
-                        badge.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0';
-                        badge.textContent = next2Text;
-
-                        card.appendChild(textContainer);
-                        card.appendChild(badge);
-
-                        titleP.parentNode?.insertBefore(card, titleP);
-                        titleP.remove();
-                        descP.remove();
-                        numP.remove();
-
-                        i += 3;
-                        continue;
-                    }
-                }
-
-                i++;
-            }
-
-            // 3. Transform key-value specs pairs (Strong title P + Span value P)
-            const remainingPs = Array.from(doc.querySelectorAll('p'));
-            let j = 0;
-            while (j < remainingPs.length - 1) {
-                const p1 = remainingPs[j];
-                const p2 = remainingPs[j + 1];
-
-                const p1HasStrongOnly = p1.querySelector('strong') && p1.children.length === 1 && !p1.textContent?.match(/^\d{2}$/);
-                const p2HasSpanOrText = p2 && !p2.querySelector('strong');
-
-                // If p1 is a title label and p2 is its value
-                if (p1HasStrongOnly && p2HasSpanOrText && p1.parentElement === p2.parentElement) {
-                    const row = doc.createElement('div');
-                    row.className = 'flex flex-col sm:flex-row justify-between p-3.5 bg-slate-50/60 border border-slate-100 rounded-lg my-1.5 text-sm dir-rtl';
-
-                    const label = doc.createElement('span');
-                    label.className = 'font-bold text-slate-800 mb-1 sm:mb-0';
-                    label.innerHTML = p1.innerHTML;
-
-                    const val = doc.createElement('span');
-                    val.className = 'text-slate-600';
-                    val.innerHTML = p2.innerHTML;
-
-                    row.appendChild(label);
-                    row.appendChild(val);
-
-                    p1.parentNode?.insertBefore(row, p1);
-                    p1.remove();
-                    p2.remove();
-
-                    j += 2;
-                    continue;
-                }
-                j++;
-            }
-
-            return doc.body.innerHTML;
-        } catch (e) {
-            console.error("Quill transform error", e);
-            return html;
-        }
+        return cleaned;
     };
 
 
