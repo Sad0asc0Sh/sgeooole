@@ -80,7 +80,6 @@ export default function AddressesPage() {
             setLoading(true);
             const profileData = await authService.getProfile();
             setUser(profileData);
-            // @ts-ignore
             const userAddresses = (profileData.addresses || []).map((addr: any) => ({
                 ...addr,
                 // Map backend fields to our interface

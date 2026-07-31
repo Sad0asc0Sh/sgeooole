@@ -6,7 +6,7 @@
   "scripts": {
     "install:all": "npm run install:backend && npm run install:frontend && npm run install:admin",
     "install:backend": "cd ekgkala-backend && npm ci --include=dev",
-    "install:frontend": "cd frontend && npm ci --include=dev --legacy-peer-deps",
+    "install:frontend": "cd frontend && npm ci --include=dev",
     "install:admin": "cd admin && npm ci --include=dev",
     "dev": "npm run dev:backend & npm run dev:frontend & npm run dev:admin",
     "dev:backend": "cd ekgkala-backend && npm run dev",
@@ -19,16 +19,22 @@
     "build": "npm run build:frontend && npm run build:admin",
     "build:frontend": "cd frontend && npm run build",
     "build:admin": "cd admin && npm run build",
-    "test": "./test-connections.sh",
+    "lint": "npm run lint:frontend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "typecheck": "npm run typecheck:frontend",
+    "typecheck:frontend": "cd frontend && npm run typecheck",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd ekgkala-backend && npm test",
+    "test:frontend": "cd frontend && npm test",
     "setup": "./setup.sh",
     "clean": "npm run clean:backend && npm run clean:frontend && npm run clean:admin",
     "clean:backend": "cd ekgkala-backend && rm -rf node_modules",
     "clean:frontend": "cd frontend && rm -rf node_modules",
     "clean:admin": "cd admin && rm -rf node_modules",
     "audit:all": "npm run audit:backend && npm run audit:frontend && npm run audit:admin",
-    "audit:backend": "cd ekgkala-backend && npm audit --omit=dev",
-    "audit:frontend": "cd frontend && npm audit --omit=dev",
-    "audit:admin": "cd admin && npm audit --omit=dev"
+    "audit:backend": "cd ekgkala-backend && npm audit",
+    "audit:frontend": "cd frontend && npm audit",
+    "audit:admin": "cd admin && npm audit"
   },
   "keywords": [
     "ecommerce",
@@ -43,5 +49,9 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "overrides": {
+    "cross-spawn": "^7.0.6",
+    "shell-quote": "^1.8.5"
   }
 }

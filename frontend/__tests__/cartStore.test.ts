@@ -1,4 +1,4 @@
-import { act } from "react-dom/test-utils";
+import { act } from "react";
 import { useCartStore } from "@/store/cartStore";
 import type { Product } from "@/services/productService";
 

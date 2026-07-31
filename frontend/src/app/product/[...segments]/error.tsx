@@ -28,17 +28,6 @@ export default function ProductError({ error, reset }: ProductErrorProps) {
         }
     }, [error]);
 
-    // Countdown timer
-    useEffect(() => {
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0 && isRetrying) {
-            // Countdown finished, do the actual retry
-            performRetry();
-        }
-    }, [countdown, isRetrying]);
-
     const performRetry = useCallback(() => {
         setIsRetrying(false);
         setRetryCount(prev => prev + 1);
@@ -51,6 +40,17 @@ export default function ProductError({ error, reset }: ProductErrorProps) {
             reset();
         }, 100);
     }, [router, reset]);
+
+    // Countdown timer
+    useEffect(() => {
+        if (countdown > 0) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0 && isRetrying) {
+            // Countdown finished, do the actual retry
+            performRetry();
+        }
+    }, [countdown, isRetrying, performRetry]);
 
     const handleRetry = useCallback(() => {
         if (is429Error) {

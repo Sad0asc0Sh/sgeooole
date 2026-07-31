@@ -464,9 +464,7 @@ function getSessionId(): string {
 
 function getBaseUrl(): string {
     try {
-        // @ts-ignore — process may not be available in all build configs
         if (typeof process !== 'undefined' && process?.env?.NEXT_PUBLIC_API_URL) {
-            // @ts-ignore
             return process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '');
         }
     } catch {

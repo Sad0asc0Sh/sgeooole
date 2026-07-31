@@ -42,6 +42,9 @@ const ARVAN_BUCKET_NAME =
   process.env.NEXT_PUBLIC_ARVAN_BUCKET_NAME || "";
 
 const baseConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
   reactCompiler: true,
   experimental: {
     optimizePackageImports: ["lucide-react", "framer-motion"],

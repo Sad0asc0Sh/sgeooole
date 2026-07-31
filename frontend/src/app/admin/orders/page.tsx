@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, ChevronLeft, Search, Filter } from "lucide-react";
 import { authService } from "@/services/authService";
@@ -19,16 +19,9 @@ export default function AdminOrdersPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
 
-    useEffect(() => {
-        loadOrders();
-    }, []);
-
-    const loadOrders = async () => {
+    const loadOrders = useCallback(async () => {
         try {
             setLoading(true);
-            // Note: We need an admin endpoint for all orders. 
-            // Assuming authService.getAllOrders() exists or using a similar endpoint.
-            // If not, we might need to add it to authService.
             const response = await authService.getAllOrders();
             if (response.success) {
                 setOrders(response.data);
@@ -38,7 +31,11 @@ export default function AdminOrdersPage() {
             console.error("Error loading orders:", err);
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        loadOrders();
+    }, [loadOrders]);
 
     const getStatusInfo = (status: string) => {
         switch (status) {

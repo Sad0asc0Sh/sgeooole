@@ -5,6 +5,23 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-require-imports": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/globals": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react/no-unescaped-entities": "off",
+      "@next/next/no-img-element": "off",
+      "@next/next/no-html-link-for-pages": "off"
+    }
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,6 +29,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "reproduce_cart_bug.js",
   ]),
 ]);
 

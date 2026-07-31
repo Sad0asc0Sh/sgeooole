@@ -377,7 +377,7 @@ export const productService = {
           };
 
           // Handle image - bestsellers returns image as string or object
-          let imageUrl = normalizeImage(item.image) || "/placeholder.svg";
+          const imageUrl = normalizeImage(item.image) || "/placeholder.svg";
 
           // Handle stock - could be a number or an object with variants
           const stock = typeof item.stock === 'number' ? item.stock : 0;

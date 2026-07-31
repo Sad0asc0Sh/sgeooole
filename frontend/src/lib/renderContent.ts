@@ -10,7 +10,7 @@ export function renderContent(text: string): string {
     if (!text) return '<div class="cms-content"></div>';
 
     // 0. PRE-PROCESS: Strip HTML boilerplates if pasted
-    let cleaned = text
+    const cleaned = text
         .replace(/<!DOCTYPE.*?>/gi, '')
         .replace(/<html.*?>/gi, '')
         .replace(/<\/html>/gi, '')
@@ -21,7 +21,7 @@ export function renderContent(text: string): string {
         .trim();
 
     // 1. Inline patterns (Markdown)
-    let html = cleaned
+    const html = cleaned
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');

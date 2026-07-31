@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -36,12 +36,7 @@ export default function AdminOrderDetailsPage() {
         ? activeCourier.trackingUrlTemplate.replace("{{code}}", trackingCode.trim()).replace("{code}", trackingCode.trim())
         : "";
 
-    useEffect(() => {
-        loadOrder();
-        loadCouriers();
-    }, []);
-
-    const loadOrder = async () => {
+    const loadOrder = useCallback(async () => {
         try {
             setLoading(true);
             const response = await orderService.getById(params.id as string);
@@ -56,9 +51,9 @@ export default function AdminOrderDetailsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [params.id]);
 
-    const loadCouriers = async () => {
+    const loadCouriers = useCallback(async () => {
         try {
             const res = await fetch("/api/settings/public");
             const data = await res.json();
@@ -68,7 +63,12 @@ export default function AdminOrderDetailsPage() {
         } catch (err) {
             console.error("Error loading couriers:", err);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        loadOrder();
+        loadCouriers();
+    }, [loadOrder, loadCouriers]);
 
     const handleCourierChange = (courierName: string) => {
         const courier = couriers.find(c => c.name === courierName) || null;
