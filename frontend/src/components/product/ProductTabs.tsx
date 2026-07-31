@@ -17,17 +17,18 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });
 
-    // Helper to decode HTML entities (Robust version)
-    const decodeHtml = (html: string) => {
+    // Helper to format Quill/RichText HTML automatically into structured layout
+    const transformQuillHtml = (html: string) => {
         if (!html) return "";
-        if (typeof window === 'undefined') return html; // Server-side fallback
-        try {
-            const txt = document.createElement("textarea");
-            txt.innerHTML = html;
-            return txt.value;
-        } catch (e) {
-            return html;
-        }
+        let decoded = decodeHtml(html);
+
+        // Strip inline background-color and color styles coming from editor paste/selection
+        // so global Tailwind and theme styles apply cleanly
+        decoded = decoded.replace(/style="[^"]*background-color:[^";]*;?[^"]*"/gi, (match) => {
+            return match.replace(/background-color:[^";]*;?/gi, '');
+        });
+
+        return decoded;
     };
 
 
@@ -142,8 +143,11 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                 [&_blockquote]:border-r-4 [&_blockquote]:border-gray-200 [&_blockquote]:pr-4 [&_blockquote]:py-2 [&_blockquote]:my-4 [&_blockquote]:text-gray-500 [&_blockquote]:italic
                                 [&_pre]:bg-gray-50 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:text-sm [&_pre]:font-mono
                                 [&_code]:bg-gray-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-pink-500
+                                [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-left]:text-left [&_.ql-align-justify]:text-justify
+                                [&_.ql-direction-rtl]:dir-rtl
+                                [&_p:has(strong:only-child)]:bg-slate-50 [&_p:has(strong:only-child)]:p-3.5 [&_p:has(strong:only-child)]:rounded-xl [&_p:has(strong:only-child)]:border [&_p:has(strong:only-child)]:border-slate-200/60 [&_p:has(strong:only-child)]:my-2
                                 "
-                                dangerouslySetInnerHTML={{ __html: decodeHtml(product.description || "") }}
+                                dangerouslySetInnerHTML={{ __html: transformQuillHtml(product.description || "") }}
                             />
                         ) : (
                             <p className="text-gray-400 text-center py-8">توضیحاتی ثبت نشده است.</p>
