@@ -20,15 +20,112 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     // Helper to format Quill/RichText HTML automatically into structured layout
     const transformQuillHtml = (html: string) => {
         if (!html) return "";
-        let decoded = decodeHtml(html);
 
-        // Strip inline background-color and color styles coming from editor paste/selection
-        // so global Tailwind and theme styles apply cleanly
-        decoded = decoded.replace(/style="[^"]*background-color:[^";]*;?[^"]*"/gi, (match) => {
-            return match.replace(/background-color:[^";]*;?/gi, '');
-        });
+        if (typeof window === 'undefined') return html; // SSR fallback
 
-        return decoded;
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // 1. Remove inline style attributes (especially background-color and color)
+            // that Quill creates when pasting text with custom background highlight
+            const allElements = doc.querySelectorAll('*');
+            allElements.forEach((el) => {
+                el.removeAttribute('style');
+            });
+
+            // 2. Transform numbered feature cards (01, 02, 03...)
+            const ps = Array.from(doc.querySelectorAll('p'));
+            let i = 0;
+            while (i < ps.length) {
+                const p = ps[i];
+                const text = p.textContent?.trim() || "";
+
+                // Check if paragraph is a 2-digit number badge like "01", "02", "09"
+                if (/^\d{2}$/.test(text)) {
+                    const numP = p;
+                    const titleP = ps[i + 1];
+                    const descP = ps[i + 2];
+
+                    if (titleP && descP) {
+                        const card = doc.createElement('div');
+                        card.className = 'my-3 p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm dir-rtl';
+
+                        const textContainer = doc.createElement('div');
+                        textContainer.className = 'flex-1 text-right';
+
+                        const titleEl = doc.createElement('div');
+                        titleEl.className = 'font-bold text-slate-900 text-base mb-1';
+                        titleEl.innerHTML = titleP.innerHTML;
+
+                        const descEl = doc.createElement('div');
+                        descEl.className = 'text-slate-600 text-sm leading-relaxed';
+                        descEl.innerHTML = descP.innerHTML;
+
+                        textContainer.appendChild(titleEl);
+                        textContainer.appendChild(descEl);
+
+                        const badge = doc.createElement('span');
+                        badge.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0';
+                        badge.textContent = text;
+
+                        card.appendChild(textContainer);
+                        card.appendChild(badge);
+
+                        numP.parentNode?.insertBefore(card, numP);
+                        numP.remove();
+                        titleP.remove();
+                        descP.remove();
+
+                        i += 3;
+                        continue;
+                    }
+                }
+                i++;
+            }
+
+            // 3. Transform key-value specs pairs (Strong title P + Span value P)
+            // if present under headings
+            const remainingPs = Array.from(doc.querySelectorAll('p'));
+            let j = 0;
+            while (j < remainingPs.length - 1) {
+                const p1 = remainingPs[j];
+                const p2 = remainingPs[j + 1];
+
+                const p1HasStrongOnly = p1.querySelector('strong') && p1.children.length === 1 && !p1.textContent?.match(/^\d{2}$/);
+                const p2HasSpanOrText = p2 && !p2.querySelector('strong');
+
+                // If p1 is a title label and p2 is its value
+                if (p1HasStrongOnly && p2HasSpanOrText && p1.parentElement === p2.parentElement) {
+                    const row = doc.createElement('div');
+                    row.className = 'flex flex-col sm:flex-row justify-between p-3.5 bg-slate-50/60 border border-slate-100 rounded-lg my-1.5 text-sm dir-rtl';
+
+                    const label = doc.createElement('span');
+                    label.className = 'font-bold text-slate-800 mb-1 sm:mb-0';
+                    label.innerHTML = p1.innerHTML;
+
+                    const val = doc.createElement('span');
+                    val.className = 'text-slate-600';
+                    val.innerHTML = p2.innerHTML;
+
+                    row.appendChild(label);
+                    row.appendChild(val);
+
+                    p1.parentNode?.insertBefore(row, p1);
+                    p1.remove();
+                    p2.remove();
+
+                    j += 2;
+                    continue;
+                }
+                j++;
+            }
+
+            return doc.body.innerHTML;
+        } catch (e) {
+            console.error("Quill transform error", e);
+            return html;
+        }
     };
 
 
@@ -144,8 +241,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                 [&_pre]:bg-gray-50 [&_pre]:p-4 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:text-sm [&_pre]:font-mono
                                 [&_code]:bg-gray-100 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_code]:text-pink-500
                                 [&_.ql-align-center]:text-center [&_.ql-align-right]:text-right [&_.ql-align-left]:text-left [&_.ql-align-justify]:text-justify
-                                [&_.ql-direction-rtl]:dir-rtl
-                                [&_p:has(strong:only-child)]:bg-slate-50 [&_p:has(strong:only-child)]:p-3.5 [&_p:has(strong:only-child)]:rounded-xl [&_p:has(strong:only-child)]:border [&_p:has(strong:only-child)]:border-slate-200/60 [&_p:has(strong:only-child)]:my-2
+                                [&_.ql-direction-rtl]:[direction:rtl]
                                 "
                                 dangerouslySetInnerHTML={{ __html: transformQuillHtml(product.description || "") }}
                             />
