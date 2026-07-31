@@ -21,11 +21,23 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const transformQuillHtml = (html: string) => {
         if (!html) return "";
 
-        if (typeof window === 'undefined') return html; // SSR fallback
+        // First decode HTML entities (e.g. &lt; &gt; &quot;) if encoded
+        let decoded = html;
+        if (typeof window !== 'undefined') {
+            try {
+                const txt = document.createElement("textarea");
+                txt.innerHTML = html;
+                decoded = txt.value || html;
+            } catch (e) {
+                decoded = html;
+            }
+        }
+
+        if (typeof window === 'undefined') return decoded; // SSR fallback
 
         try {
             const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
+            const doc = parser.parseFromString(decoded, 'text/html');
 
             // 1. Remove inline style attributes (especially background-color and color)
             // that Quill creates when pasting text with custom background highlight
@@ -35,19 +47,23 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             });
 
             // 2. Transform numbered feature cards (01, 02, 03...)
+            // Pattern in Quill HTML:
+            // p(01) -> p(Title) -> p(Description)
+            // OR
+            // p(Title) -> p(Description) -> p(01)
             const ps = Array.from(doc.querySelectorAll('p'));
             let i = 0;
             while (i < ps.length) {
                 const p = ps[i];
                 const text = p.textContent?.trim() || "";
 
-                // Check if paragraph is a 2-digit number badge like "01", "02", "09"
+                // Case A: 01 comes FIRST (p=01, p+1=Title, p+2=Desc)
                 if (/^\d{2}$/.test(text)) {
                     const numP = p;
                     const titleP = ps[i + 1];
                     const descP = ps[i + 2];
 
-                    if (titleP && descP) {
+                    if (titleP && descP && !/^\d{2}$/.test(titleP.textContent?.trim() || "")) {
                         const card = doc.createElement('div');
                         card.className = 'my-3 p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm dir-rtl';
 
@@ -81,11 +97,53 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                         continue;
                     }
                 }
+
+                // Case B: 01 comes LAST (p=Title, p+1=Desc, p+2=01) - Quill paste format in screenshot!
+                const next2Text = ps[i + 2]?.textContent?.trim() || "";
+                if (/^\d{2}$/.test(next2Text)) {
+                    const titleP = p;
+                    const descP = ps[i + 1];
+                    const numP = ps[i + 2];
+
+                    if (titleP && descP && numP) {
+                        const card = doc.createElement('div');
+                        card.className = 'my-3 p-4 bg-slate-50/80 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm dir-rtl';
+
+                        const textContainer = doc.createElement('div');
+                        textContainer.className = 'flex-1 text-right';
+
+                        const titleEl = doc.createElement('div');
+                        titleEl.className = 'font-bold text-slate-900 text-base mb-1';
+                        titleEl.innerHTML = titleP.innerHTML;
+
+                        const descEl = doc.createElement('div');
+                        descEl.className = 'text-slate-600 text-sm leading-relaxed';
+                        descEl.innerHTML = descP.innerHTML;
+
+                        textContainer.appendChild(titleEl);
+                        textContainer.appendChild(descEl);
+
+                        const badge = doc.createElement('span');
+                        badge.className = 'bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0';
+                        badge.textContent = next2Text;
+
+                        card.appendChild(textContainer);
+                        card.appendChild(badge);
+
+                        titleP.parentNode?.insertBefore(card, titleP);
+                        titleP.remove();
+                        descP.remove();
+                        numP.remove();
+
+                        i += 3;
+                        continue;
+                    }
+                }
+
                 i++;
             }
 
             // 3. Transform key-value specs pairs (Strong title P + Span value P)
-            // if present under headings
             const remainingPs = Array.from(doc.querySelectorAll('p'));
             let j = 0;
             while (j < remainingPs.length - 1) {
