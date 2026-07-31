@@ -31,7 +31,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             .replace(/&#39;/g, "'")
             .replace(/&amp;/g, '&');
 
-        // 2. Remove inline background-color, color, font-family styles from Quill paste
+        // 2. Strip inline background-color and color styles completely
         cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
             const cleanStyle = p1
                 .replace(/background-color\s*:\s*[^;"]*;?/gi, '')
@@ -41,14 +41,22 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             return cleanStyle ? `style="${cleanStyle}"` : '';
         });
 
-        // 3. Transform 3-paragraph feature cards (01..99):
-        // <p...>01</p> <p...>Title</p> <p...>Desc</p>
-        const featureCardRegex = /<p[^>]*>\s*(?:<[^>]+>)*\s*(\d{2})\s*(?:<\/[^>]+>)*\s*<\/p>\s*<p[^>]*>(.*?)<\/p>\s*<p[^>]*>(.*?)<\/p>/gi;
+        // Also clean style inside inner tags like <span style="..."> or <strong style="...">
+        cleaned = cleaned
+            .replace(/<span[^>]*style="[^"]*"[^>]*>/gi, '<span>')
+            .replace(/<strong[^>]*style="[^"]*"[^>]*>/gi, '<strong>');
 
-        cleaned = cleaned.replace(featureCardRegex, (match, num, title, desc) => {
-            const cleanTitle = title.replace(/^<(?:strong|span)[^>]*>(.*?)<\/(?:strong|span)>$/gi, '$1');
-            const cleanDesc = desc.replace(/^<(?:strong|span)[^>]*>(.*?)<\/(?:strong|span)>$/gi, '$1');
+        // 3. Match 3-element pattern in Quill HTML (01..99):
+        // Pattern 1: <p...>01</p> <p...>Title</p> <p...>Desc</p>
+        const pattern1 = /<p[^>]*>\s*(?:<[^>]+>)*\s*(\d{2})\s*(?:<\/[^>]+>)*\s*<\/p>\s*<p[^>]*>(.*?)<\/p>\s*<p[^>]*>(.*?)<\/p>/gi;
 
+        // Pattern 2: <p...>Title</p> <p...>Desc</p> <p...>01</p>
+        const pattern2 = /<p[^>]*>(.*?)<\/p>\s*<p[^>]*>(.*?)<\/p>\s*<p[^>]*>\s*(?:<[^>]+>)*\s*(\d{2})\s*(?:<\/[^>]+>)*\s*<\/p>/gi;
+
+        const renderCard = (num: string, title: string, desc: string) => {
+            const cleanTitle = title.replace(/<\/?(?:strong|span|p)[^>]*>/gi, '').trim();
+            const cleanDesc = desc.replace(/<\/?(?:span|p)[^>]*>/gi, '').trim();
+            if (!cleanTitle || !cleanDesc) return '';
             return `
             <div class="my-3 p-4 bg-slate-50 border border-slate-200/80 rounded-xl flex justify-between items-start gap-4 shadow-sm text-right dir-rtl" dir="rtl">
                 <div class="flex-1 text-right">
@@ -58,7 +66,13 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                 <span class="bg-slate-200 text-slate-700 font-bold text-xs px-2.5 py-1 rounded-md shrink-0">${num}</span>
             </div>
             `.trim();
-        });
+        };
+
+        if (pattern1.test(cleaned)) {
+            cleaned = cleaned.replace(pattern1, (m, num, title, desc) => renderCard(num, title, desc) || m);
+        } else {
+            cleaned = cleaned.replace(pattern2, (m, title, desc, num) => renderCard(num, title, desc) || m);
+        }
 
         // 4. Transform Specs pairs: <p...><strong>Label</strong></p> <p...><span>Value</span></p>
         const specsPairRegex = /<p[^>]*>\s*<strong[^>]*>(.*?)<\/strong>\s*<\/p>\s*<p[^>]*>\s*<span[^>]*>(.*?)<\/span>\s*<\/p>/gi;
