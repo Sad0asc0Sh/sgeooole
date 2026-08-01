@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import { ProductColor } from "@/services/productService";
 
 type ColorSelectorProps = {

@@ -390,7 +390,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
   // Fallback: try by ID (for backward compatibility with old URLs)
   try {
     return await fetchProductById(code);
-  } catch (e) {
+  } catch {
     console.warn('[productData] ID fallback also failed');
   }
 

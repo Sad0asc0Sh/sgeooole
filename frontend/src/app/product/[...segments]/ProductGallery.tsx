@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Pagination, Zoom, Navigation } from "swiper/modules";
 import "swiper/css";

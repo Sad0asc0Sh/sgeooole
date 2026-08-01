@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, Search, CreditCard, Filter, Loader2 } from "lucide-react";
+import { ChevronRight, Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, Search, CreditCard, Loader2 } from "lucide-react";
 import { authService } from "@/services/authService";
 
 interface Order {
@@ -33,25 +33,25 @@ export default function OrdersPage() {
 }
 
 function OrdersContent() {
-    const router = useRouter();
+    const _router = useRouter();
     const searchParams = useSearchParams();
     const statusParam = searchParams.get('status');
-    const validTabs: TabType[] = ['pending', 'current', 'delivered', 'cancelled'];
-    const getTabFromStatusParam = (value: string | null): TabType => {
+    const validTabs: TabType[] = useMemo(() => ['pending', 'current', 'delivered', 'cancelled'], []);
+    const getTabFromStatusParam = useCallback((value: string | null): TabType => {
         if (!value) return 'current';
         return validTabs.includes(value as TabType) ? (value as TabType) : 'current';
-    };
+    }, [validTabs]);
 
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>(() => getTabFromStatusParam(statusParam));
     const [searchQuery, setSearchQuery] = useState("");
     const [retryingOrderId, setRetryingOrderId] = useState<string | null>(null);
 
     useEffect(() => {
         setActiveTab(getTabFromStatusParam(statusParam));
-    }, [statusParam]);
+    }, [statusParam, getTabFromStatusParam]);
 
     useEffect(() => {
         loadOrders();

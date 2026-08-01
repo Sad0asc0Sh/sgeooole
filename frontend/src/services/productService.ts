@@ -34,7 +34,6 @@ import type {
   ProductColor,
   ProductSpec,
   CategoryPathItem,
-  CategoryProperty,
   CategoryDetails,
 } from "@/types/product";
 

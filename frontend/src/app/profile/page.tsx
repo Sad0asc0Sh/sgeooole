@@ -1,13 +1,13 @@
 "use client";
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
     Edit2, Wallet, ChevronLeft, Box, CheckCircle2, XCircle, CreditCard,
-    UserCheck, Heart, MessageSquare, MapPin, Bell, Clock, LogOut, Camera, Lock, Mail, User as UserIcon, Headphones
+    UserCheck, Heart, MessageSquare, MapPin, Bell, Clock, LogOut, Lock, Mail, User as UserIcon, Headphones
 } from "lucide-react";
 import { authService, User } from "@/services/authService";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // ============================================
 // Skeleton Components for Fast Initial Render

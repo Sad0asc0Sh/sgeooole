@@ -39,7 +39,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 }
                 setAdmin(profile);
                 setLoading(false);
-            } catch (err) {
+            } catch {
                 router.push("/login");
             }
         };

@@ -14,8 +14,7 @@ global.IntersectionObserver = class IntersectionObserver {
 // Mock Next.js Image to render a basic img
 jest.mock("next/image", () => ({
   __esModule: true,
-  default: ({ src, alt, priority, fill, blurDataURL, placeholder, ...props }) => {
-    // eslint-disable-next-line @next/next/no-img-element
+  default: ({ src, alt, _priority, _fill, _blurDataURL, _placeholder, ...props }) => {
     return React.createElement("img", { src, alt, ...props });
   },
 }));

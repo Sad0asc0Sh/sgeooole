@@ -45,7 +45,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 setSelectedColor(null);
             }
         }
-    }, [initialProduct.id, product.id, initialProduct.colors]);
+    }, [initialProduct, product.id]);
 
     // Memoize flash deal status
     const isFlashDealActive = useMemo(() => 
@@ -57,7 +57,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         [product.isFlashDeal, product.flashDealEndTime]
     );
 
-    const showCampaignBadge = useMemo(() => 
+    const _showCampaignBadge = useMemo(() =>
         Boolean(
             product.campaignLabel &&
             !(product.campaignLabel.includes('فلش') && !isFlashDealActive)
@@ -66,7 +66,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     );
 
     // Memoize color change handler
-    const handleColorChange = useCallback((color: ProductColor) => {
+    const _handleColorChange = useCallback((color: ProductColor) => {
         setSelectedColor(color);
     }, []);
 

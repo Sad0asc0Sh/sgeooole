@@ -43,7 +43,7 @@ async function resolveProduct(segments: string[]) {
         if (product) {
             return { product, isNewFormat: false };
         }
-    } catch (e) {
+    } catch {
         // Not a valid ID, continue
     }
 
@@ -53,7 +53,7 @@ async function resolveProduct(segments: string[]) {
         if (productBySlug) {
             return { product: productBySlug, isNewFormat: false };
         }
-    } catch (e) {
+    } catch {
         // Not found by slug either
     }
 

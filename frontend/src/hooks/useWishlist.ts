@@ -7,18 +7,18 @@ import type { Product } from "@/services/productService";
 export type { WishlistItem };
 
 export const useWishlist = () => {
-    const store = useWishlistStore();
+    const { initialized, refreshWishlist, wishlistItems, addToWishlist: storeAddToWishlist, removeFromWishlist: storeRemoveFromWishlist, toggleWishlist: storeToggleWishlist, loading } = useWishlistStore();
     const { requireAuth } = useAuthModal();
 
     // Initial load (only once)
     useEffect(() => {
-        if (!store.initialized) {
-            store.refreshWishlist();
+        if (!initialized) {
+            refreshWishlist();
         }
-    }, [store.initialized, store.refreshWishlist]);
+    }, [initialized, refreshWishlist]);
 
     const isInWishlist = (productId: string) => {
-        return store.wishlistItems.some((item) => item.id === productId);
+        return wishlistItems.some((item) => item.id === productId);
     };
 
     const requireWishlistAuth = async (): Promise<boolean> => {
@@ -31,7 +31,7 @@ export const useWishlist = () => {
 
         if (!ok) return false;
 
-        await store.refreshWishlist();
+        await refreshWishlist();
         return true;
     };
 
@@ -39,7 +39,7 @@ export const useWishlist = () => {
         try {
             const ok = await requireWishlistAuth();
             if (!ok) return;
-            await store.addToWishlist(product);
+            await storeAddToWishlist(product);
         } catch (error) {
             console.error("[WISHLIST] addToWishlist error:", error);
         }
@@ -49,40 +49,31 @@ export const useWishlist = () => {
         try {
             const ok = await requireWishlistAuth();
             if (!ok) return;
-            await store.removeFromWishlist(productId);
+            await storeRemoveFromWishlist(productId);
         } catch (error) {
             console.error("[WISHLIST] removeFromWishlist error:", error);
         }
     };
 
     const toggleWishlist = async (product: Product) => {
-        const intentWasInWishlist = isInWishlist(product.id);
-
         try {
             const ok = await requireWishlistAuth();
             if (!ok) return;
-
-            const nowInWishlist = isInWishlist(product.id);
-
-            if (intentWasInWishlist) {
-                if (!nowInWishlist) return;
-                await store.removeFromWishlist(product.id);
-            } else {
-                if (nowInWishlist) return;
-                await store.addToWishlist(product);
-            }
+            await storeToggleWishlist(product);
         } catch (error) {
             console.error("[WISHLIST] toggleWishlist error:", error);
         }
     };
 
     return {
-        wishlistItems: store.wishlistItems,
-        loading: store.loading,
+        wishlistItems,
+        loading,
+        error: null,
         addToWishlist,
         removeFromWishlist,
         toggleWishlist,
         isInWishlist,
-        refreshWishlist: store.refreshWishlist,
+        refreshWishlist,
+        clearWishlist: async () => {},
     };
 };

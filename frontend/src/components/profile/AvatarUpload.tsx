@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Loader2 } from 'lucide-react';
+import { Camera, X, Loader2 } from 'lucide-react';
 import { authService } from '@/services/authService';
 
 /**

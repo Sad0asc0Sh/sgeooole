@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-    FileText,
-    ChevronLeft,
     Shield,
-    Clock,
     Home,
     Loader2
 } from "lucide-react";

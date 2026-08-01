@@ -18,7 +18,7 @@ export default function ListsPage() {
     const [now, setNow] = useState(() => Date.now());
     const [currentPage, setCurrentPage] = useState(1);
 
-    const { addToCart, updateQuantity, removeFromCart, getItemQuantity, cartItems } = useCart();
+    const { addToCart, updateQuantity, removeFromCart, getItemQuantity } = useCart();
 
     // Fetch wishlist on mount
     useEffect(() => {

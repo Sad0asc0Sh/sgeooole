@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X, Clock, TrendingUp, ChevronLeft, Loader2, ArrowUpRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,7 +68,7 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
         };
 
         fetchTrendingSearches();
-    }, []);
+    }, [searchSettings.trendingEnabled, searchSettings.trendingLimit]);
 
     // Handle Search Logic
     useEffect(() => {

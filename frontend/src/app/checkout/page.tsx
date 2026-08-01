@@ -1,14 +1,14 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Trash2, CheckCircle2, FileText, Hash, Building2, UserCheck, ChevronDown } from "lucide-react";
+import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { useCart } from "@/hooks/useCart";
 import { orderService, CreateOrderRequest, OrderItem, ShippingAddress } from "@/services/orderService";
 import { authService, User as UserType } from "@/services/authService";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import api from "@/lib/api";
 import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
 
@@ -32,7 +32,7 @@ interface Address {
 
 export default function CheckoutPage() {
     const router = useRouter();
-    const { cartItems, totalPrice, totalOriginalPrice, totalProfit, isEmpty } = useCart();
+    const { cartItems, totalPrice, totalProfit, isEmpty } = useCart();
 
     // Coupon State
     const [discount, setDiscount] = useState(0);
@@ -141,14 +141,7 @@ export default function CheckoutPage() {
         fetchSettings();
     }, []);
 
-    // Load addresses, shipping methods, and coupon on mount
-    useEffect(() => {
-        loadUserData();
-        loadShippingMethods();
-        loadAppliedCoupon();
-    }, []);
-
-    const loadAppliedCoupon = async () => {
+    const loadAppliedCoupon = useCallback(async () => {
         const code = localStorage.getItem("appliedCoupon");
         if (code) {
             try {
@@ -163,9 +156,9 @@ export default function CheckoutPage() {
                 localStorage.removeItem("appliedCoupon");
             }
         }
-    };
+    }, [totalPrice]);
 
-    const loadShippingMethods = async () => {
+    const loadShippingMethods = useCallback(async () => {
         try {
             setLoadingShipping(true);
             const { default: api } = await import("@/lib/api");
@@ -182,9 +175,9 @@ export default function CheckoutPage() {
         } finally {
             setLoadingShipping(false);
         }
-    };
+    }, []);
 
-    const loadUserData = async () => {
+    const loadUserData = useCallback(async () => {
         try {
             setLoadingAddresses(true);
             const profileData = await authService.getProfile();
@@ -221,7 +214,14 @@ export default function CheckoutPage() {
             setError(err.message || "خطا در بارگذاری اطلاعات کاربر");
             setLoadingAddresses(false);
         }
-    };
+    }, [selectedAddressId]);
+
+    // Load addresses, shipping methods, and coupon on mount
+    useEffect(() => {
+        loadUserData();
+        loadShippingMethods();
+        loadAppliedCoupon();
+    }, [loadUserData, loadShippingMethods, loadAppliedCoupon]);
 
     // Helper to split full name
     const splitName = (fullName: string) => {

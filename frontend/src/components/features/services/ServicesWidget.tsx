@@ -15,15 +15,7 @@ export default function ServicesWidget({ isOpen, onOpenChange }: ServicesWidgetP
     const [isExpanded, setIsExpanded] = useState(true);
     const router = useRouter();
 
-    // Auto-collapse on mount
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (!isOpen) setIsExpanded(false);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
-
-    // Auto-collapse after sheet closes
+    // Auto-collapse on mount and when sheet state changes
     useEffect(() => {
         if (!isOpen) {
             const timer = setTimeout(() => {

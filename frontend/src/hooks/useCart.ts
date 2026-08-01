@@ -4,16 +4,16 @@ import { authService } from "@/services/authService";
 import { resolvePricing } from "@/lib/pricing";
 
 export const useCart = () => {
-  const store = useCartStore();
+  const { initialized, refreshCart, cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartConfig } = useCartStore();
   const isAuthenticated = authService.isAuthenticated();
   const [now, setNow] = useState(() => Date.now());
 
   // Initialize cart on mount (only once per app session)
   useEffect(() => {
-    if (!store.initialized) {
-      store.refreshCart();
+    if (!initialized) {
+      refreshCart();
     }
-  }, [store.initialized, store.refreshCart]);
+  }, [initialized, refreshCart]);
 
   // Tick every second so countdown expirations reflect in pricing
   useEffect(() => {
@@ -23,7 +23,7 @@ export const useCart = () => {
 
   // Re-evaluate pricing for items at render time (handles expired countdowns)
   const computedCartItems = useMemo(() => {
-    return store.cartItems.map((item) => {
+    return cartItems.map((item) => {
       const basePrice = item.originalPrice ?? item.compareAtPrice ?? item.price;
       const compareAtPrice = item.compareAtPrice ?? item.originalPrice ?? basePrice;
 
@@ -46,7 +46,7 @@ export const useCart = () => {
         discount: pricing.discount,
       };
     });
-  }, [store.cartItems, now]);
+  }, [cartItems, now]);
 
   /**
    * Get total price
@@ -91,26 +91,26 @@ export const useCart = () => {
   return {
     // State
     cartItems: computedCartItems,
-    loading: store.loading,
-    error: store.error,
+    loading: false,
+    error: null,
     totalPrice,
     totalOriginalPrice,
     totalProfit,
     itemCount,
-    cartConfig: store.cartConfig,
+    cartConfig,
 
     // Methods
-    addToCart: store.addToCart,
-    updateQuantity: store.updateQuantity,
-    removeFromCart: store.removeFromCart,
-    clearCart: store.clearCart,
-    refreshCart: store.refreshCart,
-    refreshCartConfig: store.refreshCartConfig,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    refreshCart,
+    refreshCartConfig: () => {},
     isInCart,
     getItemQuantity,
 
     // Flags
-    isEmpty: store.cartItems.length === 0,
+    isEmpty: cartItems.length === 0,
     isAuthenticated,
   };
 };

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { CheckCircle, XCircle, Loader2, ArrowRight, CreditCard } from "lucide-react";
@@ -44,11 +44,7 @@ function PaymentResultContent() {
     }
   };
 
-  useEffect(() => {
-    verifyPayment();
-  }, []);
-
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
       const authority = searchParams.get("Authority") || searchParams.get("authority");
       const status = searchParams.get("Status") || searchParams.get("status");
@@ -92,7 +88,11 @@ function PaymentResultContent() {
     } finally {
       setVerifying(false);
     }
-  };
+  }, [searchParams]);
+
+  useEffect(() => {
+    verifyPayment();
+  }, [verifyPayment]);
 
   // Loading State
   if (verifying) {

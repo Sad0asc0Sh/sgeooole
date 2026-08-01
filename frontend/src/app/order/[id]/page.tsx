@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { CheckCircle, Package, MapPin, CreditCard, ChevronLeft, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -8,7 +8,6 @@ import { orderService, Order } from "@/services/orderService";
 
 export default function OrderDetailPage() {
     const params = useParams();
-    const router = useRouter();
     const orderId = params.id as string;
 
     const [order, setOrder] = useState<Order | null>(null);

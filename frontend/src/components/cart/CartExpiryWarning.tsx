@@ -30,13 +30,13 @@ export default function CartExpiryWarning() {
         }
 
         // اگر انقضا بی‌نهایت است، نیازی به هشدار نیست
-        if (cartConfig.cartExpirationDays === 0) {
+        if (cartConfig?.cartExpirationDays === 0) {
             setExpiryInfo(null);
             return;
         }
 
         // اگر ماندگاری غیرفعال است، نشان بده
-        if (!cartConfig.persistCart) {
+        if (cartConfig && !cartConfig.persistCart) {
             setExpiryInfo({
                 expiresAt: null,
                 daysRemaining: 0,
@@ -70,7 +70,7 @@ export default function CartExpiryWarning() {
     if (!expiryInfo || dismissed || isAuthenticated || isEmpty) return null;
 
     // اگر ماندگاری غیرفعال است
-    if (!cartConfig.persistCart) {
+    if (cartConfig && !cartConfig.persistCart) {
         return (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 animate-fade-in">
                 <div className="flex items-start gap-3">

@@ -121,7 +121,7 @@ export default function ContactPage() {
                 variants={staggerContainer}
             >
                 {/* Branches Grid */}
-                {branches.map((branch, index) => (
+                {branches.map((branch) => (
                     <motion.div
                         key={branch.id}
                         className={`bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow duration-300`}

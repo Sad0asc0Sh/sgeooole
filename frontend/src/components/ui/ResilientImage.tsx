@@ -228,7 +228,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
             }}
           />
         )}
-        <Image {...imageProps} />
+        <Image {...imageProps} alt={alt || ""} />
       </span>
     );
   }

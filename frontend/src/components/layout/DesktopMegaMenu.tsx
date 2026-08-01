@@ -140,7 +140,6 @@ export default function DesktopMegaMenu() {
             window.removeEventListener("resize", updatePosition);
             window.removeEventListener("scroll", updatePosition, true);
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     const handleMouseEnter = () => {

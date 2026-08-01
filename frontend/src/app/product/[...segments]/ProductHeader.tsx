@@ -1,10 +1,9 @@
 "use client";
 import { useState } from "react";
-import { Heart, ShoppingCart, Search, X, Sparkles } from "lucide-react";
+import { ShoppingCart, Search, X, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Product } from "@/services/productService";
 import { useCart } from "@/hooks/useCart";
-import { useWishlist } from "@/hooks/useWishlist";
 import { useSmartBack } from "@/hooks/useSmartBack";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
@@ -13,7 +12,7 @@ type ProductHeaderProps = {
     product: Product;
 };
 
-export default function ProductHeader({ product }: ProductHeaderProps) {
+export default function ProductHeader({ product: _product }: ProductHeaderProps) {
     const handleSmartBack = useSmartBack();
     const { itemCount } = useCart();
     const [isAiOpen, setIsAiOpen] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { ArrowRight, MessageSquare, Star, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ArrowRight, MessageSquare, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { reviewService, Review } from "@/services/reviewService";
@@ -15,11 +15,7 @@ export default function ReviewsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
 
-    useEffect(() => {
-        loadReviews();
-    }, [currentPage]);
-
-    const loadReviews = async () => {
+    const loadReviews = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -33,7 +29,11 @@ export default function ReviewsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage]);
+
+    useEffect(() => {
+        loadReviews();
+    }, [loadReviews]);
 
     const renderStars = (rating: number) => {
         return (

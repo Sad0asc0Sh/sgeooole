@@ -26,7 +26,7 @@ class ScrollManager {
 
     try {
       sessionStorage.setItem(`scroll_pos_${key}`, JSON.stringify(state));
-    } catch (e) {
+    } catch {
       // Storage quota or error fallback
     }
   }
@@ -53,7 +53,7 @@ class ScrollManager {
           return parsed.y;
         }
       }
-    } catch (e) {
+    } catch {
       // Ignore parse error
     }
 
@@ -69,7 +69,7 @@ class ScrollManager {
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.removeItem(`scroll_pos_${key}`);
-      } catch (e) {}
+      } catch {}
     }
   }
 
@@ -152,7 +152,7 @@ class ScrollManager {
     if (!railKey || typeof window === 'undefined') return;
     try {
       sessionStorage.setItem(`swiper_rail_${railKey}`, String(val));
-    } catch (e) {}
+    } catch {}
   }
 
   /**
@@ -166,7 +166,7 @@ class ScrollManager {
         const parsed = Number(raw);
         return isNaN(parsed) ? null : parsed;
       }
-    } catch (e) {}
+    } catch {}
     return null;
   }
 
@@ -203,7 +203,7 @@ class ScrollManager {
         keys.forEach((k) => {
           if (k.startsWith('scroll_pos_')) sessionStorage.removeItem(k);
         });
-      } catch (e) {}
+      } catch {}
     }
   }
 }

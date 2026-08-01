@@ -43,11 +43,12 @@ export default function CountdownTimer({ targetDate, className = "", showSeconds
             setTimeLeft(tl);
             if (tl.days === 0 && tl.hours === 0 && tl.minutes === 0 && tl.seconds === 0) {
                 clearInterval(timer);
+                if (onExpire) onExpire();
             }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [targetDate]);
+    }, [targetDate, onExpire]);
 
     // Format with leading zeros
     const format = (num: number) => num.toString().padStart(2, "0");

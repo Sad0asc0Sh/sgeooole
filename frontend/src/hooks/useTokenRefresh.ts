@@ -15,7 +15,7 @@ import { authService } from '@/services/authService';
 export const useTokenRefresh = (
     enabled: boolean = true,
     checkInterval: number = 60000, // 1 minute
-    refreshBuffer: number = 5 // 5 minutes before expiry
+    _refreshBuffer: number = 5 // 5 minutes before expiry
 ) => {
     const checkAndRefreshToken = useCallback(async () => {
         if (!enabled || typeof window === 'undefined') {
@@ -35,7 +35,7 @@ export const useTokenRefresh = (
         } catch (error) {
             console.error('[TOKEN REFRESH] Error in token check:', error);
         }
-    }, [enabled, refreshBuffer]);
+    }, [enabled]);
 
     useEffect(() => {
         if (!enabled) {

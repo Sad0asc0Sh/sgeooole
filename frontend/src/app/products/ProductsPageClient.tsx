@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useProductListing } from "@/hooks/useProductListing";

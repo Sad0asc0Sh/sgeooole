@@ -1,7 +1,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Bot, CreditCard, Settings as SettingsIcon } from "lucide-react";
+import { CreditCard, Settings as SettingsIcon } from "lucide-react";
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

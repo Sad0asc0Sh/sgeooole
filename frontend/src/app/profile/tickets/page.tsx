@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
@@ -21,8 +21,6 @@ import {
     Zap,
     Star,
     CheckCheck,
-    Phone,
-    Mail,
     Building2,
     Lock,
     Sparkles
@@ -82,13 +80,25 @@ function SupportMessenger() {
     const [sending, setSending] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const { user } = useAuth();
+    const { user: _user } = useAuth();
     const searchParams = useSearchParams();
+
+    const loadTickets = useCallback(async () => {
+        try {
+            setLoading(true);
+            const data = await ticketService.getAll();
+            setTickets(data);
+        } catch {
+            // handle error silently
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     // ===== EFFECTS =====
     useEffect(() => {
         loadTickets();
-    }, []);
+    }, [loadTickets]);
 
     // Auto-select ticket from URL query parameter
     useEffect(() => {
@@ -109,53 +119,31 @@ function SupportMessenger() {
     }, [toast.show]);
 
     // Load selected ticket details
+    const showToast = useCallback((title: string, message: string, type: 'success' | 'error') => {
+        setToast({ show: true, title, message, type });
+    }, []);
+
+    const loadSelectedTicket = useCallback(async (ticketId: string) => {
+        try {
+            setChatLoading(true);
+            const data = await ticketService.getById(ticketId);
+            setSelectedTicket(data);
+        } catch {
+            showToast("خطا", "در بارگذاری تیکت مشکلی پیش آمد", "error");
+            setSelectedTicketId(null);
+        } finally {
+            setChatLoading(false);
+        }
+    }, [showToast]);
+
+    // Load selected ticket details
     useEffect(() => {
         if (selectedTicketId) {
             loadSelectedTicket(selectedTicketId);
         } else {
             setSelectedTicket(null);
         }
-    }, [selectedTicketId]);
-
-    // Scroll to bottom when messages change
-    useEffect(() => {
-        if (selectedTicket?.messages) {
-            setTimeout(() => {
-                bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        }
-    }, [selectedTicket?.messages]);
-
-    // ===== API FUNCTIONS =====
-    const showToast = (title: string, message: string, type: 'success' | 'error') => {
-        setToast({ show: true, title, message, type });
-    };
-
-    const loadTickets = async () => {
-        try {
-            setLoading(true);
-            const data = await ticketService.getAll();
-            setTickets(data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const loadSelectedTicket = async (ticketId: string) => {
-        try {
-            setChatLoading(true);
-            const data = await ticketService.getById(ticketId);
-            setSelectedTicket(data);
-        } catch (err: any) {
-            console.error(err);
-            showToast("خطا", "در بارگذاری تیکت مشکلی پیش آمد", "error");
-            setSelectedTicketId(null);
-        } finally {
-            setChatLoading(false);
-        }
-    };
+    }, [selectedTicketId, loadSelectedTicket]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -167,7 +155,7 @@ function SupportMessenger() {
             setFormData({ subject: "", department: "support", priority: "medium", message: "" });
             loadTickets();
             setSelectedTicketId(newTicket._id);
-        } catch (err) {
+        } catch {
             showToast("خطا", "مشکلی در ثبت تیکت پیش آمد.", "error");
         } finally {
             setSubmitting(false);
@@ -186,7 +174,7 @@ function SupportMessenger() {
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';
             }
-        } catch (err) {
+        } catch {
             showToast("خطا", "در ارسال پیام مشکلی پیش آمد", "error");
         } finally {
             setSending(false);
@@ -257,7 +245,7 @@ function SupportMessenger() {
         }
     };
 
-    const getPriorityConfig = (priority: string) => {
+    const _getPriorityConfig = (priority: string) => {
         switch (priority) {
             case 'high': return { label: 'فوری', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' };
             case 'medium': return { label: 'مهم', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200' };

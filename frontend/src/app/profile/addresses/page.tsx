@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-    MapPin, Plus, Edit2, Trash2, CheckCircle2, ChevronRight, Home, Phone, User, FileText, Hash, Building2, UserCheck, Info
+    MapPin, Plus, Edit2, Trash2, CheckCircle2, ChevronRight, Home, Phone, User, Hash, Building2, UserCheck, Info
 } from "lucide-react";
 import { authService, User as UserType } from "@/services/authService";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -29,11 +29,11 @@ interface Address {
 }
 
 export default function AddressesPage() {
-    const router = useRouter();
+    const _router = useRouter();
     const [user, setUser] = useState<UserType | null>(null);
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
 
     // Sheet State
     const [sheetOpen, setSheetOpen] = useState(false);

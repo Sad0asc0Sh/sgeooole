@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, ChevronLeft, Search, Filter } from "lucide-react";
+import { Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, ChevronLeft, Search } from "lucide-react";
 import { authService } from "@/services/authService";
 
 interface Order {

@@ -57,7 +57,7 @@ export const ProductCardSkeleton = memo(function ProductCardSkeleton({
  * Product Rail Skeleton
  */
 export const ProductRailSkeleton = memo(function ProductRailSkeleton({
-    title = "Loading...",
+    title: _title = "Loading...",
     count = 5
 }: { title?: string; count?: number }) {
     return (

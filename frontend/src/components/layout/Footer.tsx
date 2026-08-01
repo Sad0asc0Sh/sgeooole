@@ -12,9 +12,9 @@ import api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
 // Static — defined outside component so it's never re-created on render
-const ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='اینماد' style='cursor:pointer;width:60px;height:60px;object-fit:contain;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
+const _ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='اینماد' style='cursor:pointer;width:60px;height:60px;object-fit:contain;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
 
-const TRUST_ITEMS = [
+const _TRUST_ITEMS = [
     { icon: "truck", bg: "bg-orange-400", title: "ارسال سریع", desc: "تحویل ۲۴ ساعته" },
     { icon: "headphones", bg: "bg-blue-500", title: "پشتیبانی ۲۴/۷", desc: "همیشه در کنارتان" },
     { icon: "shield", bg: "bg-emerald-500", title: "ضمانت اصالت", desc: "۱۰۰٪ اورجینال" },

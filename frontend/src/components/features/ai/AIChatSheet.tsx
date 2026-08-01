@@ -2,7 +2,7 @@
 
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, User, AlertCircle } from "lucide-react";
-import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { authService } from "@/services/authService";
 
 interface AIChatSheetProps {
@@ -31,7 +31,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
-    const [usage, setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
+    const [usage, _setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
 
     // --- Body Scroll Lock ---
     useEffect(() => {

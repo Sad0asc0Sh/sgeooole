@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronDown, Loader2, Package, AlertCircle } from "lucide-react";
 import type { Category } from "@/services/categoryService";
 import ResilientImage from "@/components/ui/ResilientImage";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCategoryTree } from "@/hooks/useCategories";
 

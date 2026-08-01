@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { useResilientImage } from "@/components/ui/ResilientImage";
 import { SectionTitle } from "@/components/ui/SectionTitle";

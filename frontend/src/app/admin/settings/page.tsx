@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle, ShoppingCart, Truck, Plus, Trash2, ExternalLink } from "lucide-react";
+import { Save, Bot, MessageSquare, Zap, AlertCircle, Store, Mail, Phone, MapPin, CheckCircle, ShoppingCart, Truck, Plus, Trash2 } from "lucide-react";
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);

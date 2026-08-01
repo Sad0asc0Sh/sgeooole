@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Star, MessageSquare, Info, CheckCircle, AlertCircle, User, Calendar, Send, Loader2 } from "lucide-react";
 import { Product } from "@/services/productService";
 import { reviewService, Review } from "@/services/reviewService";
@@ -16,6 +16,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });
+    console.log("Review stats:", reviewStats);
 
     // Helper to format Quill/RichText HTML automatically into structured layout
     const transformQuillHtml = (html: string) => {
@@ -97,15 +98,9 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     const [submitSuccess, setSubmitSuccess] = useState(false);
     const [submitError, setSubmitError] = useState("");
 
-    const { user, isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth();
 
-    useEffect(() => {
-        if (activeTab === "reviews") {
-            fetchReviews();
-        }
-    }, [activeTab, product.id]);
-
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         try {
             setLoadingReviews(true);
             const res = await reviewService.getProductReviews(product.id);
@@ -119,7 +114,13 @@ export default function ProductTabs({ product }: ProductTabsProps) {
         } finally {
             setLoadingReviews(false);
         }
-    };
+    }, [product.id, product.rating]);
+
+    useEffect(() => {
+        if (activeTab === "reviews") {
+            fetchReviews();
+        }
+    }, [activeTab, fetchReviews]);
 
     const handleSubmitReview = async (e: React.FormEvent) => {
         e.preventDefault();

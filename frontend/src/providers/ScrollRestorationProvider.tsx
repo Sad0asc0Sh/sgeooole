@@ -44,7 +44,7 @@ function ScrollRestorationController() {
         if (stack.length > 20) stack.shift();
         sessionStorage.setItem('ekg_internal_nav_stack', JSON.stringify(stack));
       }
-    } catch (e) {}
+    } catch {}
   }, [key]);
 
   // 2. Global Scroll & Click Tracker: Continuously save position for the active page

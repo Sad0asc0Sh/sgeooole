@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { reviewService, Review } from "@/services/reviewService";
 import {
     Check, X, MessageSquare, Star, Trash2, Search, Filter, Loader2,
-    AlertCircle, MoreVertical, Reply, Eye, Calendar, User, ShoppingBag,
+    AlertCircle, Reply, Eye, User, ShoppingBag,
     ChevronLeft, ChevronRight, Mail, Phone
 } from "lucide-react";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -40,11 +40,7 @@ export default function ReviewsPage() {
     const [replyText, setReplyText] = useState("");
     const [replying, setReplying] = useState(false);
 
-    useEffect(() => {
-        fetchReviews();
-    }, [page, filter]);
-
-    const fetchReviews = async () => {
+    const fetchReviews = useCallback(async () => {
         try {
             setLoading(true);
             let approvedParam: boolean | undefined = undefined;
@@ -60,7 +56,11 @@ export default function ReviewsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, filter]);
+
+    useEffect(() => {
+        fetchReviews();
+    }, [fetchReviews]);
 
     const handleStatusUpdate = async (id: string, isApproved: boolean) => {
         try {

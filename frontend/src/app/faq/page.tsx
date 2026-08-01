@@ -5,16 +5,10 @@ import Link from "next/link";
 import { pageService, PageData } from "@/services/pageService";
 import {
     HelpCircle,
-    ChevronLeft,
     ChevronDown,
     Search,
-    MessageCircle,
-    Clock,
-    AlertCircle,
     Loader2,
-    Home,
-    Phone,
-    Mail
+    Home
 } from "lucide-react";
 import { renderContent } from "@/lib/renderContent";
 
@@ -42,7 +36,7 @@ const defaultFAQs = [
     }
 ];
 
-function FAQItem({ question, answer, isOpen, onClick }: {
+function _FAQItem({ question, answer, isOpen, onClick }: {
     question: string;
     answer: string;
     isOpen: boolean;
@@ -91,9 +85,9 @@ function FAQItem({ question, answer, isOpen, onClick }: {
 }
 
 export default function FAQPage() {
-    const [page, setPage] = useState<PageData | null>(null);
+    const [_page, setPage] = useState<PageData | null>(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
     const [openFAQ, setOpenFAQ] = useState<number | null>(0);
     const [searchQuery, setSearchQuery] = useState("");
     const [faqs, setFaqs] = useState(defaultFAQs);
@@ -115,7 +109,7 @@ export default function FAQPage() {
                         // اگر JSON نبود، محتوا را به صورت HTML نمایش می‌دهیم
                     }
                 }
-            } catch (err: any) {
+            } catch {
                 setError("خطا در دریافت محتوا");
             } finally {
                 setLoading(false);

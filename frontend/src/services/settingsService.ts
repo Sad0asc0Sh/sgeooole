@@ -139,7 +139,7 @@ export const settingsService = {
                     ? Math.ceil(cartSettings.cartTTLHours / 24)
                     : 30, // Convert hours to days, default: 30 days
             };
-        } catch (error) {
+        } catch {
             // Return default config if failed
             return {
                 persistCart: true,
