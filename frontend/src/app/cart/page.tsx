@@ -8,7 +8,7 @@ import CartExpiryWarning from "@/components/cart/CartExpiryWarning";
 import { useCart } from "@/hooks/useCart";
 
 import api from "@/lib/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function CartPage() {
     const router = useRouter();
