@@ -50,6 +50,14 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
+    const rateLimit = await OTP.checkRateLimit(mobile);
+    if (!rateLimit.allowed) {
+      return res
+        .status(429)
+        .set('Retry-After', String(Math.max(rateLimit.retryAfter || 90, 1)))
+        .json({ success: false, message: rateLimit.message, reason: rateLimit.reason });
+    }
+
     await OTP.cleanupOld(mobile);
 
     const code = String(Math.floor(1000 + Math.random() * 9000));
@@ -687,11 +695,15 @@ exports.sendBindOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'این شماره موبایل قبلاً توسط کاربر دیگری استفاده شده است.' })
     }
 
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-    const recentOtps = await OTP.countDocuments({ mobile, createdAt: { $gte: tenMinutesAgo } })
-    if (recentOtps >= 3) {
-      return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
+    const rateLimit = await OTP.checkRateLimit(mobile)
+    if (!rateLimit.allowed) {
+      return res
+        .status(429)
+        .set('Retry-After', String(Math.max(rateLimit.retryAfter || 90, 1)))
+        .json({ success: false, message: rateLimit.message, reason: rateLimit.reason })
     }
+
+    await OTP.cleanupOld(mobile)
 
     // API جدید ملی‌پیامک کد را خودش تولید و برمی‌گرداند
     let smsResult
@@ -811,30 +823,36 @@ exports.sendEmailOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'ایمیل نامعتبر است.' })
     }
 
+    const normalizedEmail = email.toLowerCase()
+
     // Check if email is already used by another user
-    const existingUser = await User.findOne({ email })
+    const existingUser = await User.findOne({ email: normalizedEmail })
     if (existingUser && existingUser._id.toString() !== userId.toString()) {
       return res.status(400).json({ success: false, message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.' })
     }
 
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
-    const recentOtps = await OTP.countDocuments({ email, createdAt: { $gte: tenMinutesAgo } })
-    if (recentOtps >= 3) {
-      return res.status(429).json({ success: false, message: 'لطفا کمی بعد دوباره تلاش کنید.' })
+    const rateLimit = await OTP.checkRateLimit(normalizedEmail)
+    if (!rateLimit.allowed) {
+      return res
+        .status(429)
+        .set('Retry-After', String(Math.max(rateLimit.retryAfter || 90, 1)))
+        .json({ success: false, message: rateLimit.message, reason: rateLimit.reason })
     }
+
+    await OTP.cleanupOld(normalizedEmail)
 
     const code = crypto.randomInt(1000, 9999).toString()
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
-    const otp = new OTP({ email, code, expiresAt, verified: false, attempts: 0 })
+    const otp = new OTP({ email: normalizedEmail, code, expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
-    console.log(`[EMAIL OTP] Code generated for email: ${email}`)
+    console.log(`[EMAIL OTP] Code generated for email: ${normalizedEmail}`)
 
     // Send Email (Asynchronous - Fire and Forget)
-    sendVerificationEmail(email, code)
-      .then(() => console.log(`[EMAIL OTP] Email sent successfully to ${email}`))
-      .catch(err => console.error(`[EMAIL OTP] Failed to send email to ${email}:`, err))
+    sendVerificationEmail(normalizedEmail, code)
+      .then(() => console.log(`[EMAIL OTP] Email sent successfully to ${normalizedEmail}`))
+      .catch(err => console.error(`[EMAIL OTP] Failed to send email to ${normalizedEmail}:`, err))
 
     res.json({ success: true, message: 'کد تایید به ایمیل ارسال شد', expiresIn: 120 })
   } catch (error) {
