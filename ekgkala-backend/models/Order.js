@@ -171,6 +171,11 @@ const orderSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    couponCode: {
+      type: String,
+      trim: true,
+      uppercase: true,
+    },
 
     // وضعیت پرداخت
     isPaid: {

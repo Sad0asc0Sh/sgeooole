@@ -42,6 +42,7 @@ export interface CreateOrderRequest {
   taxPrice?: number;
   totalPrice: number;
   totalDiscount?: number;
+  couponCode?: string;
 }
 
 /**
@@ -66,6 +67,7 @@ export interface Order {
   taxPrice: number;
   totalPrice: number;
   totalDiscount?: number;
+  couponCode?: string;
   isPaid: boolean;
   paidAt?: string;
   orderStatus: string;

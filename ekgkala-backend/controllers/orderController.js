@@ -159,6 +159,7 @@ exports.createOrder = async (req, res) => {
       taxPrice,
       totalPrice,
       totalDiscount,
+      couponCode,
     } = req.body
 
     // اعتبارسنجی کاربر
@@ -208,10 +209,24 @@ exports.createOrder = async (req, res) => {
       taxPrice: taxPrice || 0,
       totalPrice,
       totalDiscount: totalDiscount || 0,
+      couponCode: couponCode ? String(couponCode).toUpperCase() : undefined,
       orderStatus: paymentMethod === 'cod' ? 'Processing' : 'Pending',
     })
 
     const createdOrder = await order.save()
+
+    // If couponCode was used, increment coupon usageCount
+    if (couponCode) {
+      try {
+        const Coupon = require('../models/Coupon')
+        await Coupon.findOneAndUpdate(
+          { code: String(couponCode).toUpperCase() },
+          { $inc: { usageCount: 1 } }
+        )
+      } catch (couponErr) {
+        console.error('Error updating coupon usageCount:', couponErr)
+      }
+    }
 
     // NEW LOGIC: Adjust stats if order is Cash-On-Delivery
     if (createdOrder.paymentMethod === 'cod') {

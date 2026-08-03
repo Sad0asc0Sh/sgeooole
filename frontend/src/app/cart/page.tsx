@@ -21,6 +21,24 @@ export default function CartPage() {
     const [couponError, setCouponError] = useState<string | null>(null);
     const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
+    // Load initial coupon if saved in localStorage
+    useEffect(() => {
+        const savedCode = localStorage.getItem("appliedCoupon");
+        if (savedCode && totalPrice > 0) {
+            api.get(`/coupons/validate/${savedCode}?totalPrice=${totalPrice}`)
+                .then((res) => {
+                    if (res.data.success) {
+                        setDiscount(res.data.data.discount);
+                        setCouponCode(savedCode);
+                        setCouponSuccess("کد تخفیف اعمال شد");
+                    }
+                })
+                .catch(() => {
+                    localStorage.removeItem("appliedCoupon");
+                });
+        }
+    }, [totalPrice]);
+
     // Calculations
     const shipping = 0; // Calculated at checkout
     const finalPrice = Math.max(0, totalPrice + shipping - discount);
@@ -37,14 +55,24 @@ export default function CartPage() {
                 setDiscount(res.data.data.discount);
                 setCouponCode(code);
                 setCouponSuccess("کد تخفیف با موفقیت اعمال شد");
+                localStorage.setItem("appliedCoupon", code);
             }
         } catch (err: any) {
             setCouponError(err.response?.data?.message || "کد تخفیف نامعتبر است");
             setDiscount(0);
             setCouponCode("");
+            localStorage.removeItem("appliedCoupon");
         } finally {
             setCouponLoading(false);
         }
+    };
+
+    const handleRemoveCoupon = () => {
+        setDiscount(0);
+        setCouponCode("");
+        setCouponError(null);
+        setCouponSuccess(null);
+        localStorage.removeItem("appliedCoupon");
     };
 
     const handleIncrease = (id: string, variantOptions?: Array<{ name: string; value: string }>) => {
@@ -164,7 +192,9 @@ export default function CartPage() {
                                 shipping={shipping}
                                 finalPrice={finalPrice}
                                 discount={discount}
+                                appliedCouponCode={couponCode}
                                 onApplyCoupon={handleApplyCoupon}
+                                onRemoveCoupon={handleRemoveCoupon}
                                 couponLoading={couponLoading}
                                 couponError={couponError}
                                 couponSuccess={couponSuccess}

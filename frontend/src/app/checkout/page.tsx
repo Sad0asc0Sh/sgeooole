@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck } from "lucide-react";
+import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck, Tag, CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { useCart } from "@/hooks/useCart";
@@ -37,6 +37,10 @@ export default function CheckoutPage() {
     // Coupon State
     const [discount, setDiscount] = useState(0);
     const [couponCode, setCouponCode] = useState("");
+    const [inputCouponCode, setInputCouponCode] = useState("");
+    const [couponLoading, setCouponLoading] = useState(false);
+    const [couponError, setCouponError] = useState<string | null>(null);
+    const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
 
     // User & Address State
     const [user, setUser] = useState<UserType | null>(null);
@@ -143,13 +147,15 @@ export default function CheckoutPage() {
 
     const loadAppliedCoupon = useCallback(async () => {
         const code = localStorage.getItem("appliedCoupon");
-        if (code) {
+        if (code && totalPrice > 0) {
             try {
                 const { default: api } = await import("@/lib/api");
                 const res = await api.get(`/coupons/validate/${code}?totalPrice=${totalPrice}`);
                 if (res.data.success) {
                     setDiscount(res.data.data.discount);
                     setCouponCode(code);
+                    setInputCouponCode(code);
+                    setCouponSuccess("کد تخفیف اعمال شد");
                 }
             } catch (err) {
                 console.error("Invalid coupon in storage", err);
@@ -157,6 +163,44 @@ export default function CheckoutPage() {
             }
         }
     }, [totalPrice]);
+
+    const handleApplyCoupon = async (codeToApply?: string) => {
+        const targetCode = (codeToApply || inputCouponCode).trim();
+        if (!targetCode) return;
+
+        try {
+            setCouponLoading(true);
+            setCouponError(null);
+            setCouponSuccess(null);
+
+            const { default: api } = await import("@/lib/api");
+            const res = await api.get(`/coupons/validate/${targetCode}?totalPrice=${totalPrice}`);
+
+            if (res.data.success) {
+                setDiscount(res.data.data.discount);
+                setCouponCode(targetCode);
+                setInputCouponCode(targetCode);
+                setCouponSuccess("کد تخفیف با موفقیت اعمال شد");
+                localStorage.setItem("appliedCoupon", targetCode);
+            }
+        } catch (err: any) {
+            setCouponError(err.response?.data?.message || "کد تخفیف نامعتبر یا منقضی شده است");
+            setDiscount(0);
+            setCouponCode("");
+            localStorage.removeItem("appliedCoupon");
+        } finally {
+            setCouponLoading(false);
+        }
+    };
+
+    const handleRemoveCoupon = () => {
+        setDiscount(0);
+        setCouponCode("");
+        setInputCouponCode("");
+        setCouponError(null);
+        setCouponSuccess(null);
+        localStorage.removeItem("appliedCoupon");
+    };
 
     const loadShippingMethods = useCallback(async () => {
         try {
@@ -484,12 +528,15 @@ export default function CheckoutPage() {
                 taxPrice,
                 totalPrice: finalTotalPrice,
                 totalDiscount: totalSavings,
+                couponCode: couponCode || undefined,
             };
 
             // Step 1: Create the order
             const response = await orderService.create(orderData);
 
             if (response.success && response.data) {
+                // Clear coupon from localStorage upon successful order creation
+                localStorage.removeItem("appliedCoupon");
                 const orderId = response.data._id;
 
                 // Step 2: If online payment, initiate payment
@@ -616,11 +663,63 @@ export default function CheckoutPage() {
                                             </div>
                                         )}
                                         {discount > 0 && (
-                                            <div className="flex justify-between text-xs text-gray-400">
+                                            <div className="flex justify-between text-xs text-green-600 font-medium">
                                                 <span>کد تخفیف ({couponCode})</span>
                                                 <span>{discount.toLocaleString("fa-IR")} - تومان</span>
                                             </div>
                                         )}
+
+                                        {/* Coupon Input Box in Checkout */}
+                                        <div className="pt-2 border-t border-gray-100 space-y-2">
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-700 font-bold mb-1">
+                                                <Tag size={14} className="text-amber-600" />
+                                                <span>کد تخفیف</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    value={inputCouponCode}
+                                                    onChange={(e) => setInputCouponCode(e.target.value)}
+                                                    placeholder="کد تخفیف خود را وارد کنید"
+                                                    className={`flex-1 bg-gray-50 border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-amber-500 transition-all ${couponError ? "border-red-300 bg-red-50" : discount > 0 ? "border-green-300 bg-green-50" : "border-gray-200"}`}
+                                                    disabled={couponLoading || discount > 0}
+                                                />
+                                                {discount > 0 ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveCoupon}
+                                                        className="bg-red-50 text-red-600 text-xs font-bold px-3 rounded-xl hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                                                    >
+                                                        <X size={14} />
+                                                        <span>حذف</span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleApplyCoupon()}
+                                                        disabled={couponLoading || !inputCouponCode.trim()}
+                                                        className="bg-amber-600 text-white text-xs font-bold px-4 rounded-xl hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center min-w-[60px]"
+                                                    >
+                                                        {couponLoading ? <Loader2 size={14} className="animate-spin" /> : "اعمال"}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {couponError && (
+                                                <div className="flex items-center gap-1 text-[10px] text-red-500 mt-1">
+                                                    <AlertCircle size={12} />
+                                                    <span>{couponError}</span>
+                                                </div>
+                                            )}
+
+                                            {couponSuccess && (
+                                                <div className="flex items-center gap-1 text-[10px] text-green-600 mt-1">
+                                                    <CheckCircle2 size={12} />
+                                                    <span>{couponSuccess}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div className="flex justify-between text-base font-black text-gray-900 pt-3 border-t border-gray-100 mt-2">
                                             <span>مبلغ قابل پرداخت</span>
                                             <span className="text-amber-600">{finalTotalPrice.toLocaleString("fa-IR")} تومان</span>

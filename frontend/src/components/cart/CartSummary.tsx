@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, CheckCircle2, AlertCircle, X } from "lucide-react";
 
 interface CartSummaryProps {
     totalPrice: number; // Discounted price of items
@@ -7,7 +7,9 @@ interface CartSummaryProps {
     shipping: number;
     finalPrice: number;
     discount?: number; // Coupon discount
+    appliedCouponCode?: string;
     onApplyCoupon?: (code: string) => Promise<void>;
+    onRemoveCoupon?: () => void;
     couponLoading?: boolean;
     couponError?: string | null;
     couponSuccess?: string | null;
@@ -19,16 +21,31 @@ export default function CartSummary({
     shipping,
     finalPrice,
     discount = 0,
+    appliedCouponCode = "",
     onApplyCoupon,
+    onRemoveCoupon,
     couponLoading = false,
     couponError,
     couponSuccess
 }: CartSummaryProps) {
-    const [code, setCode] = useState("");
+    const [code, setCode] = useState(appliedCouponCode);
+
+    useEffect(() => {
+        if (appliedCouponCode) {
+            setCode(appliedCouponCode);
+        }
+    }, [appliedCouponCode]);
 
     const handleApply = () => {
         if (onApplyCoupon && code.trim()) {
             onApplyCoupon(code.trim());
+        }
+    };
+
+    const handleRemove = () => {
+        setCode("");
+        if (onRemoveCoupon) {
+            onRemoveCoupon();
         }
     };
 
@@ -57,7 +74,7 @@ export default function CartSummary({
 
             {discount > 0 && (
                 <div className="flex justify-between text-[10px] text-gray-400">
-                    <span>کد تخفیف</span>
+                    <span>کد تخفیف ({appliedCouponCode || code})</span>
                     <span>{discount.toLocaleString("fa-IR")} - تومان</span>
                 </div>
             )}
@@ -70,16 +87,28 @@ export default function CartSummary({
                         value={code}
                         onChange={(e) => setCode(e.target.value)}
                         placeholder="کد تخفیف"
-                        className={`flex-1 bg-gray-50 border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-kala-500 transition-all ${couponError ? "border-red-300 bg-red-50" : couponSuccess ? "border-green-300 bg-green-50" : "border-gray-200"}`}
-                        disabled={couponLoading || !!couponSuccess}
+                        className={`flex-1 bg-gray-50 border rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-kala-500 transition-all ${couponError ? "border-red-300 bg-red-50" : couponSuccess || discount > 0 ? "border-green-300 bg-green-50" : "border-gray-200"}`}
+                        disabled={couponLoading || !!couponSuccess || discount > 0}
                     />
-                    <button
-                        onClick={handleApply}
-                        disabled={couponLoading || !code.trim() || !!couponSuccess}
-                        className="bg-gray-100 text-kala-600 text-xs font-bold px-4 rounded-lg hover:bg-kala-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] flex items-center justify-center"
-                    >
-                        {couponLoading ? <Loader2 size={14} className="animate-spin" /> : "ثبت"}
-                    </button>
+                    {discount > 0 || couponSuccess ? (
+                        <button
+                            onClick={handleRemove}
+                            type="button"
+                            className="bg-red-50 text-red-600 text-xs font-bold px-3 rounded-lg hover:bg-red-100 transition-colors min-w-[60px] flex items-center justify-center gap-1"
+                        >
+                            <X size={14} />
+                            <span>حذف</span>
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleApply}
+                            type="button"
+                            disabled={couponLoading || !code.trim()}
+                            className="bg-gray-100 text-kala-600 text-xs font-bold px-4 rounded-lg hover:bg-kala-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] flex items-center justify-center"
+                        >
+                            {couponLoading ? <Loader2 size={14} className="animate-spin" /> : "ثبت"}
+                        </button>
+                    )}
                 </div>
 
                 {couponError && (
