@@ -31,7 +31,7 @@ const otpSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: { expires: 0 }, // MongoDB TTL index to auto-delete expired documents
+      index: true,
     },
 
     // Verification status
@@ -65,12 +65,61 @@ otpSchema.index({ email: 1, createdAt: -1 })
 otpSchema.index({ mobile: 1, code: 1, verified: 1 })
 otpSchema.index({ email: 1, code: 1, verified: 1 })
 
-// Static method to clean up old OTPs for a mobile number or email
+// Static method to enforce per-identifier OTP send limits independent of client IP
+otpSchema.statics.checkRateLimit = async function (identifier) {
+  const query = identifier.includes('@') ? { email: identifier.toLowerCase() } : { mobile: identifier }
+  const now = new Date()
+  const cooldownStartedAt = new Date(now.getTime() - 90 * 1000)
+  const hourStartedAt = new Date(now.getTime() - 60 * 60 * 1000)
+  const dayStartedAt = new Date(now)
+  dayStartedAt.setHours(0, 0, 0, 0)
+
+  const [lastOtp, hourlyCount, dailyCount] = await Promise.all([
+    this.findOne(query).sort({ createdAt: -1 }).select('createdAt').lean(),
+    this.countDocuments({ ...query, createdAt: { $gte: hourStartedAt } }),
+    this.countDocuments({ ...query, createdAt: { $gte: dayStartedAt } }),
+  ])
+
+  if (lastOtp && lastOtp.createdAt > cooldownStartedAt) {
+    return {
+      allowed: false,
+      reason: 'cooldown',
+      retryAfter: Math.ceil((lastOtp.createdAt.getTime() + 90 * 1000 - now.getTime()) / 1000),
+      message: 'لطفاً ۹۰ ثانیه بعد دوباره درخواست کد دهید.',
+    }
+  }
+
+  if (hourlyCount >= 4) {
+    return {
+      allowed: false,
+      reason: 'hourly_limit',
+      retryAfter: 60 * 60,
+      message: 'تعداد درخواست کد برای این شماره/ایمیل در یک ساعت اخیر بیش از حد مجاز است.',
+    }
+  }
+
+  if (dailyCount >= 6) {
+    const tomorrow = new Date(dayStartedAt)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    return {
+      allowed: false,
+      reason: 'daily_limit',
+      retryAfter: Math.ceil((tomorrow.getTime() - now.getTime()) / 1000),
+      message: 'تعداد درخواست کد برای این شماره/ایمیل در امروز بیش از حد مجاز است.',
+    }
+  }
+
+  return { allowed: true }
+}
+
+// Static method to clean up OTP history that is no longer needed for rate limiting
 otpSchema.statics.cleanupOld = async function (identifier) {
-  const query = identifier.includes('@') ? { email: identifier } : { mobile: identifier }
+  const query = identifier.includes('@') ? { email: identifier.toLowerCase() } : { mobile: identifier }
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
   return this.deleteMany({
     ...query,
-    $or: [{ verified: true }, { expiresAt: { $lt: new Date() } }],
+    createdAt: { $lt: oneDayAgo },
   })
 }
 
