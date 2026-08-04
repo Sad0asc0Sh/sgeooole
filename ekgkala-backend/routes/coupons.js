@@ -9,13 +9,19 @@ const {
   validateCoupon,
 } = require('../controllers/couponController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+const { createCustomLimiter } = require('../middleware/rateLimiter')
+
+const couponValidateLimiter = createCustomLimiter({
+  name: 'coupon-validate',
+  windowMs: 15 * 60 * 1000,
+  max: 15,
+  keyType: 'ip',
+})
 
 // ============================================
 // GET /api/coupons/validate/:code - اعتبارسنجی کد تخفیف
-// این روت برای کاربران عادی (در فرانت‌اند سایت) است
-// پارامتر query: totalPrice (مبلغ کل سبد خرید)
 // ============================================
-router.get('/validate/:code', validateCoupon)
+router.get('/validate/:code', couponValidateLimiter, validateCoupon)
 
 // ============================================
 // POST /api/coupons - ایجاد کوپن جدید

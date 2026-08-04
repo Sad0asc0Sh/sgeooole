@@ -41,8 +41,17 @@ router.post('/', protect, validate(orderCreateSchema), createOrder)
 // Payment Routes
 // ============================================
 
+const verifyPaymentLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => getClientIp(req),
+  message: { success: false, message: 'تعداد درخواست‌های تایید پرداخت بیش از حد مجاز است.' },
+})
+
 // POST /api/orders/verify-payment - تایید پرداخت (باید قبل از /:id باشد)
-router.post('/verify-payment', verifyPayment)
+router.post('/verify-payment', verifyPaymentLimiter, verifyPayment)
 
 // ============================================
 // Guest Order Tracking (No Auth Required)

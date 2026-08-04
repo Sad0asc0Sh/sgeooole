@@ -25,6 +25,21 @@ const COOKIE_MAX_AGE_MS = Number(process.env.JWT_COOKIE_MAX_AGE || 24 * 60 * 60 
 // Google OAuth Client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
 
+const OTP_SITE_WIDE_HOURLY_CAP = Number(process.env.OTP_SITE_WIDE_HOURLY_CAP || 80);
+
+async function checkSiteWideOtpCircuitBreaker() {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const count = await OTP.countDocuments({ createdAt: { $gte: oneHourAgo } });
+  if (count >= OTP_SITE_WIDE_HOURLY_CAP) {
+    return {
+      allowed: false,
+      count,
+      message: 'محدودیت کل سایت برای ارسال کد فعال شده است. لطفاً دقایقی دیگر تلاش کنید.',
+    };
+  }
+  return { allowed: true };
+}
+
 // Helpers
 const generateToken = (userId) =>
   jwt.sign({ id: userId, type: 'customer' }, JWT_SECRET, { expiresIn: JWT_EXPIRE, issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
@@ -50,6 +65,17 @@ exports.sendOtp = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'شماره موبایل نامعتبر است'
+      });
+    }
+
+    // 0. Check Site-wide Circuit Breaker
+    const siteWideCheck = await checkSiteWideOtpCircuitBreaker();
+    if (!siteWideCheck.allowed) {
+      console.warn(`[SITE-WIDE OTP CIRCUIT BREAKER] Tripped with ${siteWideCheck.count} OTPs sent in last hour. Blocked attempt for ${mobile}`);
+      return res.status(429).json({
+        success: false,
+        message: siteWideCheck.message,
+        code: 'SITE_WIDE_LIMIT_REACHED',
       });
     }
 
@@ -725,6 +751,13 @@ exports.sendBindOtp = async (req, res) => {
     }
 
     const clientIp = getClientIp(req);
+
+    const siteWideCheck = await checkSiteWideOtpCircuitBreaker();
+    if (!siteWideCheck.allowed) {
+      console.warn(`[SITE-WIDE OTP CIRCUIT BREAKER] Tripped in sendBindOtp for ${mobile}`);
+      return res.status(429).json({ success: false, message: siteWideCheck.message, code: 'SITE_WIDE_LIMIT_REACHED' });
+    }
+
     const botCheck = inspectBotTelemetry(req);
     if (botCheck.isBot) {
       console.warn(`[BIND OTP BOT TRAP] Bot detected from IP ${clientIp} for mobile ${mobile}. Reason: ${botCheck.reason}`);
@@ -877,6 +910,25 @@ exports.sendEmailOtp = async (req, res) => {
     }
 
     const normalizedEmail = email.toLowerCase()
+
+    const clientIp = getClientIp(req);
+    const siteWideCheck = await checkSiteWideOtpCircuitBreaker();
+    if (!siteWideCheck.allowed) {
+      console.warn(`[SITE-WIDE OTP CIRCUIT BREAKER] Tripped in sendEmailOtp for ${normalizedEmail}`);
+      return res.status(429).json({ success: false, message: siteWideCheck.message, code: 'SITE_WIDE_LIMIT_REACHED' });
+    }
+
+    const botCheck = inspectBotTelemetry(req);
+    if (botCheck.isBot) {
+      console.warn(`[EMAIL OTP BOT TRAP] Bot detected from IP ${clientIp} for email ${normalizedEmail}.`);
+      return res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 });
+    }
+
+    const ipLimit = checkIpRateLimit(clientIp);
+    if (!ipLimit.allowed) {
+      console.warn(`[EMAIL OTP IP RATE LIMIT] Limit exceeded for IP ${clientIp}.`);
+      return res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 });
+    }
 
     // Check if email is already used by another user
     const existingUser = await User.findOne({ email: normalizedEmail })

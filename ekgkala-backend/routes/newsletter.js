@@ -8,9 +8,18 @@ const {
     exportSubscribers,
 } = require('../controllers/newsletterController')
 const { protect, admin } = require('../middleware/auth')
+const { createCustomLimiter } = require('../middleware/rateLimiter')
+const { requireCaptcha } = require('../middleware/requireCaptcha')
+
+const subscribeLimiter = createCustomLimiter({
+    name: 'newsletter-subscribe',
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    keyType: 'ip+email',
+})
 
 // Public routes
-router.post('/subscribe', subscribe)
+router.post('/subscribe', subscribeLimiter, requireCaptcha, subscribe)
 router.get('/unsubscribe/:token', unsubscribe)
 
 // Admin routes (requires authentication + admin role)

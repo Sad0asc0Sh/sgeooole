@@ -6,6 +6,7 @@ import Link from "next/link";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { authService } from "@/services/authService";
 import { cartService } from "@/services/cartService";
+import NativeCaptcha, { NativeCaptchaRef } from "@/components/auth/NativeCaptcha";
 
 // Google Icon Component
 const _GoogleIcon = () => (
@@ -93,6 +94,10 @@ export default function LoginPage() {
     const [newPassword, setNewPassword] = useState("");
     const [hpField, setHpField] = useState("");
 
+    const [captchaId, setCaptchaId] = useState("");
+    const [captchaText, setCaptchaText] = useState("");
+    const captchaRef = useRef<NativeCaptchaRef | null>(null);
+
     const mountTimeRef = useRef<number>(Date.now());
     const focusTimeRef = useRef<number>(0);
     const hasInteractionRef = useRef<boolean>(false);
@@ -142,19 +147,22 @@ export default function LoginPage() {
             setError("شماره موبایل نامعتبر است. فرمت صحیح: 09xxxxxxxxx");
             return;
         }
+        if (!captchaId || captchaText.length < 5) {
+            setError("لطفاً کد کپچا ۵ رقمی را به صورت کامل وارد کنید.");
+            return;
+        }
 
         try {
             setLoading(true);
             setError(null);
 
             const telemetry = getBotTelemetryPayload();
-            const response = await authService.sendOtp(normalized, {
+            const response = await authService.sendOtp(normalized, captchaId, captchaText, {
                 hp_field: hpField,
                 telemetry,
             });
 
             if (response.success) {
-                // Keep normalized value for OTP step and backend consistency
                 setPhone(normalized);
                 setStep(isRecoveryFlow ? "recovery-otp" : "otp");
                 setTimer(response.expiresIn || 120);
@@ -165,6 +173,7 @@ export default function LoginPage() {
             console.error("OTP send error:", err);
             setError(err.message || "خطا در ارسال کد تایید. لطفا دوباره تلاش کنید.");
         } finally {
+            captchaRef.current?.refresh();
             setLoading(false);
         }
     };
@@ -174,17 +183,22 @@ export default function LoginPage() {
             setError("لطفا یک ایمیل معتبر وارد کنید");
             return;
         }
+        if (!captchaId || captchaText.length < 5) {
+            setError("لطفاً کد کپچا ۵ رقمی را به صورت کامل وارد کنید.");
+            return;
+        }
 
         try {
             setLoading(true);
             setError(null);
 
-            await authService.forgotPassword(email);
+            await authService.forgotPassword(email, captchaId, captchaText);
             setStep("recovery-email-sent");
         } catch (err: any) {
             console.error("Email recovery error:", err);
             setError(err.message || "خطا در ارسال ایمیل بازیابی");
         } finally {
+            captchaRef.current?.refresh();
             setLoading(false);
         }
     };
@@ -454,7 +468,7 @@ export default function LoginPage() {
                                 {recoveryMethod === "mobile" ? (
                                     <>
                                         <label className="block text-sm font-bold text-ekg-900 mb-2">شماره موبایل</label>
-                                        <div className="relative">
+                                        <div className="relative mb-4">
                                             <input
                                                 type="tel"
                                                 placeholder="09xxxxxxxxx"
@@ -462,13 +476,21 @@ export default function LoginPage() {
                                                 maxLength={11}
                                                 value={phone}
                                                 onChange={(e) => setPhone(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit(true)}
                                             />
                                             <Smartphone className="absolute right-4 top-4 text-gray-400" size={20} />
                                         </div>
+
+                                        <NativeCaptcha
+                                            ref={captchaRef}
+                                            onChange={(id, text) => {
+                                                setCaptchaId(id);
+                                                setCaptchaText(text);
+                                            }}
+                                        />
+
                                         <button
                                             onClick={() => handlePhoneSubmit(true)}
-                                            disabled={phone.length < 10 || loading}
+                                            disabled={phone.length < 10 || loading || !captchaId || captchaText.length < 5}
                                             className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "ارسال کد بازیابی"}
@@ -477,20 +499,28 @@ export default function LoginPage() {
                                 ) : (
                                     <>
                                         <label className="block text-sm font-bold text-ekg-900 mb-2">ایمیل</label>
-                                        <div className="relative">
+                                        <div className="relative mb-4">
                                             <input
                                                 type="email"
                                                 placeholder="example@gmail.com"
                                                 className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-base focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                                 value={email}
                                                 onChange={(e) => setEmail(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleEmailRecoverySubmit()}
                                             />
                                             <Mail className="absolute right-4 top-4 text-gray-400" size={20} />
                                         </div>
+
+                                        <NativeCaptcha
+                                            ref={captchaRef}
+                                            onChange={(id, text) => {
+                                                setCaptchaId(id);
+                                                setCaptchaText(text);
+                                            }}
+                                        />
+
                                         <button
                                             onClick={handleEmailRecoverySubmit}
-                                            disabled={!email || !email.includes("@") || loading}
+                                            disabled={!email || !email.includes("@") || loading || !captchaId || captchaText.length < 5}
                                             className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "ارسال لینک بازیابی"}
@@ -605,7 +635,7 @@ export default function LoginPage() {
                                     // --- Phase 1: Phone Number ---
                                     <div className="animate-in fade-in slide-in-from-right duration-500">
                                         <label className="block text-sm font-bold text-ekg-900 mb-2">شماره موبایل</label>
-                                        <div className="relative">
+                                        <div className="relative mb-4">
                                             <input
                                                 type="tel"
                                                 placeholder="09xxxxxxxxx"
@@ -617,7 +647,6 @@ export default function LoginPage() {
                                                     hasInteractionRef.current = true;
                                                 }}
                                                 onChange={(e) => setPhone(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
                                             />
                                             {/* Honeypot field (hidden from real users) */}
                                             <input
@@ -632,9 +661,18 @@ export default function LoginPage() {
                                             />
                                             <Smartphone className="absolute right-4 top-4 text-gray-400" size={20} />
                                         </div>
+
+                                        <NativeCaptcha
+                                            ref={captchaRef}
+                                            onChange={(id, text) => {
+                                                setCaptchaId(id);
+                                                setCaptchaText(text);
+                                            }}
+                                        />
+
                                         <button
                                             onClick={() => handlePhoneSubmit(false)}
-                                            disabled={phone.length < 10 || loading}
+                                            disabled={phone.length < 10 || loading || !captchaId || captchaText.length < 5}
                                             className="w-full mt-6 bg-gradient-to-r from-kala-500 to-kala-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-kala-200 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
                                         >
                                             {loading ? "در حال ارسال..." : "دریافت کد تایید"}

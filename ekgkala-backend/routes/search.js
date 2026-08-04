@@ -1,5 +1,13 @@
 const express = require('express');
 const router = express.Router();
+const { createCustomLimiter } = require('../middleware/rateLimiter');
+
+const searchTrackLimiter = createCustomLimiter({
+    name: 'search-track',
+    windowMs: 60 * 1000,
+    max: 30,
+    keyType: 'ip',
+});
 
 // ============================================
 // Persian/Arabic Character Normalization for Search
@@ -93,7 +101,7 @@ router.get('/trending', async (req, res) => {
  * @desc    Track a search query for trending analytics
  * @access  Public
  */
-router.post('/track', async (req, res) => {
+router.post('/track', searchTrackLimiter, async (req, res) => {
     try {
         const { searchTerm } = req.body;
 

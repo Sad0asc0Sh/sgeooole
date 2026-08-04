@@ -161,7 +161,9 @@ const forgotPasswordSchema = Joi.object({
             'string.email': 'فرمت ایمیل نامعتبر است',
             'any.required': 'ایمیل الزامی است',
         }),
-});
+    captchaId: Joi.string().optional(),
+    captchaText: Joi.string().optional(),
+}).unknown(true);
 
 /**
  * Reset password schema
@@ -364,7 +366,9 @@ const sendOtpSchema = Joi.object({
             'any.required': 'شماره موبایل الزامی است',
             'string.empty': 'شماره موبایل الزامی است',
         }),
-});
+    captchaId: Joi.string().optional(),
+    captchaText: Joi.string().optional(),
+}).unknown(true);
 
 /**
  * OTP verification schema

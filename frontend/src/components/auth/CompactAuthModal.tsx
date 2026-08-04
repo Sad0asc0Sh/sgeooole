@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { authService } from "@/services/authService";
+import NativeCaptcha, { NativeCaptchaRef } from "@/components/auth/NativeCaptcha";
 
 type Step = "phone" | "otp";
 
@@ -27,6 +28,10 @@ export default function CompactAuthModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hpField, setHpField] = useState("");
+
+  const [captchaId, setCaptchaId] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
+  const captchaRef = useRef<NativeCaptchaRef | null>(null);
 
   const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const otpInputRef = useRef<HTMLInputElement | null>(null);
@@ -134,18 +139,23 @@ export default function CompactAuthModal({
       setError("شماره موبایل معتبر نیست. نمونه: 09xxxxxxxxx");
       return;
     }
+    if (!captchaId || captchaText.length < 5) {
+      setError("لطفاً کد کپچا ۵ رقمی را به صورت کامل وارد کنید.");
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
 
       const telemetry = getBotTelemetryPayload();
-      const response = await authService.sendOtp(normalized, {
+      const response = await authService.sendOtp(normalized, captchaId, captchaText, {
         hp_field: hpField,
         telemetry,
       });
       if (!response.success) {
         setError(response.message || "ارسال کد با خطا مواجه شد.");
+        captchaRef.current?.refresh();
         return;
       }
 
@@ -154,6 +164,7 @@ export default function CompactAuthModal({
       setTimer(response.expiresIn || 120);
     } catch (err: any) {
       setError(err?.message || "ارسال کد با خطا مواجه شد.");
+      captchaRef.current?.refresh();
     } finally {
       setLoading(false);
     }
@@ -300,10 +311,20 @@ export default function CompactAuthModal({
                   aria-hidden="true"
                 />
               </div>
+
+              {/* Native Captcha Component */}
+              <NativeCaptcha
+                ref={captchaRef}
+                onChange={(id, text) => {
+                  setCaptchaId(id);
+                  setCaptchaText(text);
+                }}
+              />
+
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full rounded-xl bg-kala-500 hover:bg-kala-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={loading || !captchaId || captchaText.length < 5}
+                className="w-full rounded-xl bg-kala-500 hover:bg-kala-600 text-white font-bold py-3 text-sm disabled:opacity-60 disabled:cursor-not-allowed transition-all"
               >
                 {loading ? "در حال ارسال..." : "ارسال کد"}
               </button>

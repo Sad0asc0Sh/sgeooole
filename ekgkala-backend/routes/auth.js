@@ -5,6 +5,8 @@ const crypto = require('crypto')
 const Admin = require('../models/Admin')
 const { sendResetPasswordEmail } = require('../utils/notificationService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+const { requireCaptcha } = require('../middleware/requireCaptcha')
+const { generateCaptcha } = require('../utils/nativeCaptcha')
 const { getPermissions } = require('../config/rbac')
 const { upload } = require('../middleware/upload')
 
@@ -87,9 +89,29 @@ router.use((req, res, next) => {
   next()
 })
 
+// GET /api/auth/captcha
+// Generate native SVG Captcha challenge
+router.get('/captcha', async (req, res) => {
+  try {
+    const result = await generateCaptcha()
+    res.json({
+      success: true,
+      captchaId: result.captchaId,
+      svg: result.svg,
+      expiresIn: result.expiresIn,
+    })
+  } catch (err) {
+    console.error('[CAPTCHA GENERATE ERROR]', err)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در تولید کد کپچا',
+    })
+  }
+})
+
 // POST /api/auth/send-otp
 // Send OTP code to customer mobile number
-router.post('/send-otp', validate(sendOtpSchema), sendOtp)
+router.post('/send-otp', requireCaptcha, validate(sendOtpSchema), sendOtp)
 
 // POST /api/auth/verify-otp
 // Verify OTP and login customer
@@ -105,7 +127,7 @@ router.post('/login-password', validate(loginSchema), loginWithPassword)
 
 // POST /api/auth/forgot-password
 // Send password reset email to customer
-router.post('/forgot-password', validate(forgotPasswordSchema), forgotPassword)
+router.post('/forgot-password', requireCaptcha, validate(forgotPasswordSchema), forgotPassword)
 
 // PUT /api/auth/reset-password/:token
 // Reset customer password using token from email
@@ -128,13 +150,13 @@ router.get('/profile', protect, getCustomerProfile)
 router.put('/me/update', protect, validate(updateProfileSchema), updateProfile)
 
 // POST /api/auth/bind-mobile/send-otp
-router.post('/bind-mobile/send-otp', protect, sendBindOtp)
+router.post('/bind-mobile/send-otp', protect, requireCaptcha, sendBindOtp)
 
 // POST /api/auth/bind-mobile/verify
 router.post('/bind-mobile/verify', protect, verifyBindOtp)
 
 // POST /api/auth/change-email/send-otp
-router.post('/change-email/send-otp', protect, sendEmailOtp)
+router.post('/change-email/send-otp', protect, requireCaptcha, sendEmailOtp)
 
 // POST /api/auth/change-email/verify
 router.post('/change-email/verify', protect, verifyEmailOtp)

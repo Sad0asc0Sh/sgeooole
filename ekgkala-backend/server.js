@@ -20,6 +20,7 @@ const { noSqlInjectionPrevention } = require('./middleware/noSqlInjection')
 const { securityLogger, accessLogger } = require('./middleware/securityLogger')
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler')
 const { checkProductAccess } = require('./middleware/accessControl')
+const { checkIpBlocklist } = require('./middleware/ipBlocklist')
 
 // SECURITY: Silence console.log/info/debug in production
 // Must be loaded AFTER dotenv to read NODE_ENV
@@ -28,11 +29,10 @@ require('./utils/productionConsole')
 const app = express()
 
 // ============================================
-// SECURITY: Trust Proxy Configuration
-// Required for rate limiting behind reverse proxies (Nginx, Cloudflare, AWS ELB)
-// Without this, all requests appear from proxy IP, causing false rate limits
+// SECURITY: IP Blocklist & Reverse Proxy
 // ============================================
 app.set('trust proxy', 1)
+app.use(checkIpBlocklist)
 
 // ============================================
 // Request ID (Correlation ID)

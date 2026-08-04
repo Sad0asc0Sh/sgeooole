@@ -127,6 +127,16 @@ class NotificationService {
   }
 
   async sendOtpSMS(phoneNumber, code) {
+    if (process.env.OTP_SMS_DISABLED === 'true') {
+      console.warn(`[EMERGENCY SMS TOGGLE] OTP_SMS_DISABLED=true. Suppressing SMS send to ${phoneNumber}`);
+      return {
+        success: true,
+        recId: 'EMERGENCY_DISABLED_TRAP',
+        status: 'SUPPRESSED',
+        provider: 'emergency-toggle',
+      };
+    }
+
     if (!this.smsConfig) {
       await this.initialize();
     }

@@ -83,18 +83,35 @@ interface OtpResponse {
  */
 export const authService = {
   /**
+   * Get Native Captcha Challenge
+   */
+  getCaptcha: async (): Promise<{ success: boolean; captchaId?: string; svg?: string; expiresIn?: number }> => {
+    try {
+      const response = await api.get(`/auth/captcha?_t=${Date.now()}`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching captcha:", error);
+      return { success: false };
+    }
+  },
+
+  /**
    * Step 1: Request OTP Code
    * Sends OTP to the provided mobile number
-   *
-   * @param mobile - Mobile number (e.g., "09123456789")
-   * @returns Promise with success status and message
    */
-  sendOtp: async (mobile: string, botPayload?: { hp_field?: string; telemetry?: string }): Promise<OtpResponse> => {
+  sendOtp: async (
+    mobile: string,
+    captchaId?: string,
+    captchaText?: string,
+    botPayload?: { hp_field?: string; telemetry?: string }
+  ): Promise<OtpResponse> => {
     try {
       console.log(`[AUTH] Sending OTP to ${mobile}`);
 
       const response = await api.post("/auth/send-otp", {
         mobile,
+        captchaId,
+        captchaText,
         hp_field: botPayload?.hp_field || "",
         telemetry: botPayload?.telemetry || "",
       });
@@ -491,15 +508,20 @@ export const authService = {
   /**
    * Forgot Password
    * Sends password reset email to user
-   *
-   * @param email - User email address
-   * @returns Promise with success status
    */
-  forgotPassword: async (email: string): Promise<{ success: boolean; message?: string }> => {
+  forgotPassword: async (
+    email: string,
+    captchaId?: string,
+    captchaText?: string
+  ): Promise<{ success: boolean; message?: string }> => {
     try {
       console.log("[AUTH] Requesting password reset for:", email);
 
-      const response = await api.post("/auth/forgot-password", { email });
+      const response = await api.post("/auth/forgot-password", {
+        email,
+        captchaId,
+        captchaText,
+      });
 
       return response.data;
     } catch (error: any) {
@@ -681,10 +703,10 @@ export const authService = {
   /**
    * Bind Mobile: Send OTP
    */
-  sendBindOtp: async (mobile: string): Promise<OtpResponse> => {
+  sendBindOtp: async (mobile: string, captchaId?: string, captchaText?: string): Promise<OtpResponse> => {
     try {
       console.log(`[AUTH] Sending bind OTP to ${mobile}`);
-      const response = await api.post("/auth/bind-mobile/send-otp", { mobile });
+      const response = await api.post("/auth/bind-mobile/send-otp", { mobile, captchaId, captchaText });
       return response.data;
     } catch (error: any) {
       console.error("Error sending bind OTP:", error);
@@ -716,10 +738,10 @@ export const authService = {
   /**
    * Change Email: Send OTP
    */
-  sendEmailOtp: async (email: string): Promise<OtpResponse> => {
+  sendEmailOtp: async (email: string, captchaId?: string, captchaText?: string): Promise<OtpResponse> => {
     try {
       console.log(`[AUTH] Sending email OTP to ${email}`);
-      const response = await api.post("/auth/change-email/send-otp", { email });
+      const response = await api.post("/auth/change-email/send-otp", { email, captchaId, captchaText });
       return response.data;
     } catch (error: any) {
       console.error("Error sending email OTP:", error);

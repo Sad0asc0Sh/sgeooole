@@ -4,13 +4,21 @@ const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { optionalAuth } = require('../middleware/optionalAuth')
 const categoryViewController = require('../controllers/categoryViewController')
 const { cacheMiddleware, CACHE_TTL } = require('../middleware/cache')
+const { createCustomLimiter } = require('../middleware/rateLimiter')
+
+const categoryTrackLimiter = createCustomLimiter({
+    name: 'category-track',
+    windowMs: 60 * 1000,
+    max: 40,
+    keyType: 'ip',
+})
 
 // ============================================
 // روت‌های عمومی
 // ============================================
 
 // ثبت بازدید دسته‌بندی (با احراز هویت اختیاری)
-router.post('/track', optionalAuth, categoryViewController.trackCategoryView)
+router.post('/track', categoryTrackLimiter, optionalAuth, categoryViewController.trackCategoryView)
 
 // دریافت دسته‌بندی‌های محبوب (بر اساس آمار)
 router.get('/popular', cacheMiddleware(CACHE_TTL.SHORT), categoryViewController.getPopularByViews)
