@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Smartphone, Timer, ChevronLeft, Lock, User, Mail, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -91,6 +91,37 @@ export default function LoginPage() {
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
+    const [hpField, setHpField] = useState("");
+
+    const mountTimeRef = useRef<number>(Date.now());
+    const focusTimeRef = useRef<number>(0);
+    const hasInteractionRef = useRef<boolean>(false);
+
+    useEffect(() => {
+        const onInteraction = () => {
+            hasInteractionRef.current = true;
+        };
+        window.addEventListener("mousemove", onInteraction, { once: true });
+        window.addEventListener("touchstart", onInteraction, { once: true });
+        window.addEventListener("keydown", onInteraction, { once: true });
+        return () => {
+            window.removeEventListener("mousemove", onInteraction);
+            window.removeEventListener("touchstart", onInteraction);
+            window.removeEventListener("keydown", onInteraction);
+        };
+    }, []);
+
+    const getBotTelemetryPayload = () => {
+        const loadTime = Date.now() - mountTimeRef.current;
+        const focusDuration = focusTimeRef.current ? Date.now() - focusTimeRef.current : 0;
+        const payload = JSON.stringify({
+            loadTime,
+            focusTime: focusDuration,
+            hasInteraction: hasInteractionRef.current,
+            ts: Date.now(),
+        });
+        return typeof window !== "undefined" ? btoa(payload) : "";
+    };
 
     const router = useRouter();
 
@@ -115,7 +146,11 @@ export default function LoginPage() {
             setLoading(true);
             setError(null);
 
-            const response = await authService.sendOtp(normalized);
+            const telemetry = getBotTelemetryPayload();
+            const response = await authService.sendOtp(normalized, {
+                hp_field: hpField,
+                telemetry,
+            });
 
             if (response.success) {
                 // Keep normalized value for OTP step and backend consistency
@@ -576,8 +611,23 @@ export default function LoginPage() {
                                                 className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-left text-lg tracking-widest focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
                                                 maxLength={11}
                                                 value={phone}
+                                                onFocus={() => {
+                                                    focusTimeRef.current = focusTimeRef.current || Date.now();
+                                                    hasInteractionRef.current = true;
+                                                }}
                                                 onChange={(e) => setPhone(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handlePhoneSubmit()}
+                                            />
+                                            {/* Honeypot field (hidden from real users) */}
+                                            <input
+                                                type="text"
+                                                name="hp_field"
+                                                value={hpField}
+                                                onChange={(e) => setHpField(e.target.value)}
+                                                style={{ display: "none" }}
+                                                tabIndex={-1}
+                                                autoComplete="off"
+                                                aria-hidden="true"
                                             />
                                             <Smartphone className="absolute right-4 top-4 text-gray-400" size={20} />
                                         </div>

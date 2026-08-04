@@ -89,11 +89,15 @@ export const authService = {
    * @param mobile - Mobile number (e.g., "09123456789")
    * @returns Promise with success status and message
    */
-  sendOtp: async (mobile: string): Promise<OtpResponse> => {
+  sendOtp: async (mobile: string, botPayload?: { hp_field?: string; telemetry?: string }): Promise<OtpResponse> => {
     try {
       console.log(`[AUTH] Sending OTP to ${mobile}`);
 
-      const response = await api.post("/auth/send-otp", { mobile });
+      const response = await api.post("/auth/send-otp", {
+        mobile,
+        hp_field: botPayload?.hp_field || "",
+        telemetry: botPayload?.telemetry || "",
+      });
 
       return response.data;
     } catch (error: any) {

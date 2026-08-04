@@ -9,6 +9,8 @@ const Order = require('../models/Order')
 const { sendVerificationEmail, sendOtpSMS, getSmsSettings } = require('../utils/notificationService')
 const { normalizeIranMobile } = require('../utils/phone')
 const { isValidNationalCode, isValidSheba } = require('../utils/validators')
+const { getClientIp } = require('../utils/clientIp')
+const { checkIpRateLimit, recordIpRequest, inspectBotTelemetry } = require('../middleware/botProtection')
 
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET
@@ -42,6 +44,7 @@ const setAuthCookie = (res, token) => {
 exports.sendOtp = async (req, res) => {
   try {
     const { mobile } = req.body;
+    const clientIp = getClientIp(req);
 
     if (!mobile || !/^09\d{9}$/.test(mobile)) {
       return res.status(400).json({
@@ -50,12 +53,47 @@ exports.sendOtp = async (req, res) => {
       });
     }
 
+    // 1. Silent Trap: Check Honeypot & Bot Telemetry
+    const botCheck = inspectBotTelemetry(req);
+    if (botCheck.isBot) {
+      console.warn(`[OTP BOT TRAP] Bot detected from IP ${clientIp} for mobile ${mobile}. Reason: ${botCheck.reason}`);
+      // Tricking bot with Silent Success (No SMS sent)
+      return res.json({
+        success: true,
+        message: 'کد تایید ارسال شد',
+        expiresIn: 120
+      });
+    }
+
+    // 2. Silent Trap: Check IP-level Rate Limit
+    const ipLimit = checkIpRateLimit(clientIp);
+    if (!ipLimit.allowed) {
+      console.warn(`[OTP IP RATE LIMIT] Limit exceeded for IP ${clientIp} (${ipLimit.reason}). Silent success returned.`);
+      return res.json({
+        success: true,
+        message: 'کد تایید ارسال شد',
+        expiresIn: 120
+      });
+    }
+
+    // 3. Check Mobile-level Rate Limit
     const rateLimit = await OTP.checkRateLimit(mobile);
     if (!rateLimit.allowed) {
-      return res
-        .status(429)
-        .set('Retry-After', String(Math.max(rateLimit.retryAfter || 90, 1)))
-        .json({ success: false, message: rateLimit.message, reason: rateLimit.reason });
+      if (rateLimit.reason === 'cooldown') {
+        // Active 90s cooldown period for the exact same user/number
+        return res
+          .status(429)
+          .set('Retry-After', String(Math.max(rateLimit.retryAfter || 90, 1)))
+          .json({ success: false, message: rateLimit.message, reason: rateLimit.reason });
+      } else {
+        // Daily/hourly limit exceeded for this mobile number -> Silent success trap
+        console.warn(`[OTP MOBILE RATE LIMIT] Mobile ${mobile} hit limit (${rateLimit.reason}). Silent success returned.`);
+        return res.json({
+          success: true,
+          message: 'کد تایید ارسال شد',
+          expiresIn: 120
+        });
+      }
     }
 
     await OTP.cleanupOld(mobile);
@@ -71,7 +109,9 @@ exports.sendOtp = async (req, res) => {
       attempts: 0
     });
     await otpRecord.save();
-    console.log('[OTP] Code saved for ' + mobile);
+    recordIpRequest(clientIp);
+
+    console.log('[OTP] Code saved and SMS sent for ' + mobile + ' from IP ' + clientIp);
 
     res.json({
       success: true,

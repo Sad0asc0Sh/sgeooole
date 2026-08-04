@@ -26,9 +26,44 @@ export default function CompactAuthModal({
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hpField, setHpField] = useState("");
 
   const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const otpInputRef = useRef<HTMLInputElement | null>(null);
+  const mountTimeRef = useRef<number>(Date.now());
+  const focusTimeRef = useRef<number>(0);
+  const hasInteractionRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!open) return;
+    mountTimeRef.current = Date.now();
+    focusTimeRef.current = 0;
+    hasInteractionRef.current = false;
+
+    const onInteraction = () => {
+      hasInteractionRef.current = true;
+    };
+    window.addEventListener("mousemove", onInteraction, { once: true });
+    window.addEventListener("touchstart", onInteraction, { once: true });
+    window.addEventListener("keydown", onInteraction, { once: true });
+    return () => {
+      window.removeEventListener("mousemove", onInteraction);
+      window.removeEventListener("touchstart", onInteraction);
+      window.removeEventListener("keydown", onInteraction);
+    };
+  }, [open]);
+
+  const getBotTelemetryPayload = () => {
+    const loadTime = Date.now() - mountTimeRef.current;
+    const focusDuration = focusTimeRef.current ? Date.now() - focusTimeRef.current : 0;
+    const payload = JSON.stringify({
+      loadTime,
+      focusTime: focusDuration,
+      hasInteraction: hasInteractionRef.current,
+      ts: Date.now(),
+    });
+    return typeof window !== "undefined" ? btoa(payload) : "";
+  };
 
   const googleEnabled = useMemo(() => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -103,7 +138,11 @@ export default function CompactAuthModal({
       setLoading(true);
       setError(null);
 
-      const response = await authService.sendOtp(normalized);
+      const telemetry = getBotTelemetryPayload();
+      const response = await authService.sendOtp(normalized, {
+        hp_field: hpField,
+        telemetry,
+      });
       if (!response.success) {
         setError(response.message || "ارسال کد با خطا مواجه شد.");
         return;
@@ -238,11 +277,26 @@ export default function CompactAuthModal({
                 <input
                   ref={phoneInputRef}
                   value={phone}
+                  onFocus={() => {
+                    focusTimeRef.current = focusTimeRef.current || Date.now();
+                    hasInteractionRef.current = true;
+                  }}
                   onChange={(e) => setPhone(e.target.value)}
                   inputMode="tel"
                   dir="ltr"
                   placeholder="09xxxxxxxxx"
                   className="w-full rounded-xl border border-gray-200 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-kala-500/30 focus:border-kala-400"
+                />
+                {/* Honeypot field (hidden from real users) */}
+                <input
+                  type="text"
+                  name="hp_field"
+                  value={hpField}
+                  onChange={(e) => setHpField(e.target.value)}
+                  style={{ display: "none" }}
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
                 />
               </div>
               <button
