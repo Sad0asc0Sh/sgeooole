@@ -1,3 +1,4 @@
+const crypto = require('crypto')
 const { getClientIp } = require('../utils/clientIp')
 const logger = require('../utils/logger')
 
@@ -61,7 +62,18 @@ function recordIpRequest(ip) {
 }
 
 /**
- * Validate invisible bot telemetry (Honeypot, timing, interaction signals)
+ * Verify Proof of Work Nonce
+ */
+function verifyPoW(loadTime, ts, powNonce) {
+  if (!powNonce || !ts) return false
+  const input = `ekgkala_pow_${loadTime}_${ts}_${powNonce}`
+  const hash = crypto.createHash('sha256').update(input).digest('hex')
+  return hash.startsWith('00')
+}
+
+/**
+ * Validate invisible bot telemetry (Honeypot, timing, interaction signals, PoW)
+ * MANDATORY: Telemetry payload MUST be provided by real frontend
  */
 function inspectBotTelemetry(req) {
   const { hp_field, telemetry } = req.body || {}
@@ -71,36 +83,47 @@ function inspectBotTelemetry(req) {
     return { isBot: true, reason: 'honeypot_filled' }
   }
 
-  // 2. Telemetry timing and behavioral signals if present
-  if (telemetry) {
-    let data = telemetry
-    if (typeof telemetry === 'string') {
-      try {
-        data = JSON.parse(Buffer.from(telemetry, 'base64').toString('utf-8'))
-      } catch {
-        // Bad telemetry encoding -> suspect
-        return { isBot: true, reason: 'invalid_telemetry_encoding' }
-      }
-    }
+  // 2. MANDATORY CHECK: Direct cURL / Python HTTP requests without telemetry payload are INSTANTLY TRAPPED
+  if (!telemetry || typeof telemetry !== 'string' || telemetry.trim().length === 0) {
+    return { isBot: true, reason: 'missing_telemetry_payload' }
+  }
 
-    const loadTime = Number(data.loadTime) || 0
-    const focusTime = Number(data.focusTime) || 0
-    const hasInteraction = Boolean(data.hasInteraction)
+  let data
+  try {
+    data = JSON.parse(Buffer.from(telemetry, 'base64').toString('utf-8'))
+  } catch {
+    return { isBot: true, reason: 'invalid_telemetry_encoding' }
+  }
 
-    // Form submitted faster than 1200ms after page load -> clear bot behavior
-    if (loadTime > 0 && loadTime < 1200) {
-      return { isBot: true, reason: 'too_fast_submit', loadTime }
-    }
+  const loadTime = Number(data.loadTime) || 0
+  const focusTime = Number(data.focusTime) || 0
+  const hasInteraction = Boolean(data.hasInteraction)
+  const ts = Number(data.ts) || 0
+  const powNonce = data.powNonce
 
-    // Form submitted without user ever focusing or interacting with input
-    if (!hasInteraction && loadTime > 0) {
-      return { isBot: true, reason: 'no_user_interaction' }
-    }
+  // Telemetry timestamp age check (token expires in 2 minutes)
+  if (!ts || Math.abs(Date.now() - ts) > 120 * 1000) {
+    return { isBot: true, reason: 'expired_telemetry_timestamp' }
+  }
 
-    // Focus to submit in less than 200ms -> scripted automated input
-    if (focusTime > 0 && focusTime < 200) {
-      return { isBot: true, reason: 'scripted_focus' }
-    }
+  // Mandatory user interaction signal check
+  if (!hasInteraction) {
+    return { isBot: true, reason: 'no_user_interaction' }
+  }
+
+  // Form submitted faster than 1200ms after page load -> bot behavior
+  if (loadTime < 1200) {
+    return { isBot: true, reason: 'too_fast_submit', loadTime }
+  }
+
+  // Focus to submit duration check
+  if (focusTime > 0 && focusTime < 200) {
+    return { isBot: true, reason: 'scripted_focus' }
+  }
+
+  // Verify Proof of Work challenge
+  if (!verifyPoW(loadTime, ts, powNonce)) {
+    return { isBot: true, reason: 'failed_pow_challenge' }
   }
 
   return { isBot: false }

@@ -53,14 +53,37 @@ export default function CompactAuthModal({
     };
   }, [open]);
 
-  const getBotTelemetryPayload = () => {
+  const solvePoW = async (loadTime: number, ts: number): Promise<string> => {
+    if (typeof window === "undefined" || !window.crypto?.subtle) return "0";
+    try {
+      const encoder = new TextEncoder();
+      let nonce = 0;
+      while (nonce < 100000) {
+        const input = `ekgkala_pow_${loadTime}_${ts}_${nonce}`;
+        const buffer = await window.crypto.subtle.digest("SHA-256", encoder.encode(input));
+        const hashArray = Array.from(new Uint8Array(buffer));
+        if (hashArray[0] === 0) {
+          return String(nonce);
+        }
+        nonce++;
+      }
+    } catch {
+      return "0";
+    }
+    return "0";
+  };
+
+  const getBotTelemetryPayload = async () => {
     const loadTime = Date.now() - mountTimeRef.current;
     const focusDuration = focusTimeRef.current ? Date.now() - focusTimeRef.current : 0;
+    const ts = Date.now();
+    const powNonce = await solvePoW(loadTime, ts);
     const payload = JSON.stringify({
       loadTime,
       focusTime: focusDuration,
       hasInteraction: hasInteractionRef.current,
-      ts: Date.now(),
+      ts,
+      powNonce,
     });
     return typeof window !== "undefined" ? btoa(payload) : "";
   };
@@ -138,7 +161,7 @@ export default function CompactAuthModal({
       setLoading(true);
       setError(null);
 
-      const telemetry = getBotTelemetryPayload();
+      const telemetry = await getBotTelemetryPayload();
       const response = await authService.sendOtp(normalized, {
         hp_field: hpField,
         telemetry,

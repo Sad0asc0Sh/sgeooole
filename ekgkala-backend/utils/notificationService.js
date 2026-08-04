@@ -3,6 +3,40 @@ const nodemailer = require('nodemailer');
 const { Resend } = require('resend');
 const Settings = require('../models/Settings');
 
+// System-wide SMS Circuit Breaker history (timestamps array)
+const globalSmsTracker = []
+
+function checkGlobalSmsCircuitBreaker() {
+  const now = Date.now()
+  const fifteenMinutesAgo = now - 15 * 60 * 1000
+  const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000
+
+  // Filter valid timestamps
+  const recent15Min = globalSmsTracker.filter(ts => ts > fifteenMinutesAgo)
+  const recent24Hours = globalSmsTracker.filter(ts => ts > twentyFourHoursAgo)
+
+  // Max 5 SMS per 15 minutes across ENTIRE site
+  if (recent15Min.length >= 5) {
+    return { allowed: false, reason: 'global_15m_limit', count: recent15Min.length }
+  }
+
+  // Max 30 SMS per 24 hours across ENTIRE site
+  if (recent24Hours.length >= 30) {
+    return { allowed: false, reason: 'global_24h_limit', count: recent24Hours.length }
+  }
+
+  return { allowed: true }
+}
+
+function recordGlobalSms() {
+  globalSmsTracker.push(Date.now())
+  // Clean up entries older than 24 hours
+  const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000
+  while (globalSmsTracker.length > 0 && globalSmsTracker[0] < twentyFourHoursAgo) {
+    globalSmsTracker.shift()
+  }
+}
+
 class NotificationService {
   constructor() {
     this.emailProvider = null;
@@ -97,6 +131,18 @@ class NotificationService {
       await this.initialize();
     }
 
+    // 🔒 Layer 0 Firewall: Global System SMS Circuit Breaker
+    const globalCheck = checkGlobalSmsCircuitBreaker();
+    if (!globalCheck.allowed) {
+      console.warn(`[SMS CIRCUIT BREAKER TRIPPED] System limit reached (${globalCheck.reason}, count=${globalCheck.count}). Suppressing Melipayamak API call to ${phoneNumber}.`);
+      return {
+        success: true,
+        recId: 'CIRCUIT_BREAKER_TRAP',
+        status: 'SUPPRESSED',
+        provider: 'circuit-breaker'
+      };
+    }
+
     try {
       const bodyId = this.smsConfig.bodyId || 434916;
       const response = await axios.post(
@@ -109,6 +155,7 @@ class NotificationService {
       );
 
       if (response.data && response.data.recId) {
+        recordGlobalSms();
         return {
           success: true,
           recId: response.data.recId,

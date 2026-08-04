@@ -724,6 +724,19 @@ exports.sendBindOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
     }
 
+    const clientIp = getClientIp(req);
+    const botCheck = inspectBotTelemetry(req);
+    if (botCheck.isBot) {
+      console.warn(`[BIND OTP BOT TRAP] Bot detected from IP ${clientIp} for mobile ${mobile}. Reason: ${botCheck.reason}`);
+      return res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 });
+    }
+
+    const ipLimit = checkIpRateLimit(clientIp);
+    if (!ipLimit.allowed) {
+      console.warn(`[BIND OTP IP RATE LIMIT] Limit exceeded for IP ${clientIp}. Silent success returned.`);
+      return res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 });
+    }
+
     const smsSettings = await getSmsSettings()
     if (!smsSettings.configured) {
       return res.status(503).json({ success: false, message: 'سیستم پیامک در پنل ادمین تنظیم نشده است.' })
