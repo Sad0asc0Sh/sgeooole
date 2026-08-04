@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useState, useCallback, useImperativeHandle, forwardRef, useRef } from "react";
 import { RotateCw } from "lucide-react";
 import { authService } from "@/services/authService";
 
@@ -22,12 +22,18 @@ const NativeCaptcha = forwardRef<NativeCaptchaRef, NativeCaptchaProps>(
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<boolean>(false);
 
+    // Keep onChange ref stable to avoid triggering useEffect re-renders when parent state changes
+    const onChangeRef = useRef(onChange);
+    useEffect(() => {
+      onChangeRef.current = onChange;
+    });
+
     const loadCaptcha = useCallback(async () => {
       try {
         setLoading(true);
         setError(false);
         setText("");
-        onChange("", "");
+        onChangeRef.current("", "");
 
         const res = await authService.getCaptcha();
         if (res.success && res.captchaId && res.svg) {
@@ -41,7 +47,7 @@ const NativeCaptcha = forwardRef<NativeCaptchaRef, NativeCaptchaProps>(
       } finally {
         setLoading(false);
       }
-    }, [onChange]);
+    }, []);
 
     useEffect(() => {
       loadCaptcha();
@@ -54,14 +60,14 @@ const NativeCaptcha = forwardRef<NativeCaptchaRef, NativeCaptchaProps>(
       },
       resetInput: () => {
         setText("");
-        onChange(captchaId, "");
+        onChangeRef.current(captchaId, "");
       },
     }));
 
     const handleTextChange = (val: string) => {
       const clean = val.trim().slice(0, 5);
       setText(clean);
-      onChange(captchaId, clean);
+      onChangeRef.current(captchaId, clean);
     };
 
     return (
