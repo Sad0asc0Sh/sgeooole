@@ -98,7 +98,7 @@ otpSchema.statics.checkRateLimit = async function (identifier) {
     }
   }
 
-  if (dailyCount >= 3) {
+  if (dailyCount >= 5) {
     const tomorrow = new Date(dayStartedAt)
     tomorrow.setDate(tomorrow.getDate() + 1)
     return {

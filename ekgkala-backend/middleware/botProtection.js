@@ -26,8 +26,8 @@ if (cleanupTimer && cleanupTimer.unref) {
 
 /**
  * Check if the request hits IP-level rate limits:
- * - Max 3 OTP SMS requests per 10 minutes per IP
- * - Max 6 OTP SMS requests per 24 hours per IP
+ * - Max 10 OTP SMS requests per 10 minutes per IP
+ * - Max 30 OTP SMS requests per 24 hours per IP
  */
 function checkIpRateLimit(ip) {
   const now = Date.now()
@@ -40,11 +40,11 @@ function checkIpRateLimit(ip) {
   const recent10Min = history.filter(ts => ts > tenMinutesAgo)
   const recent24Hours = history.filter(ts => ts > twentyFourHoursAgo)
 
-  if (recent10Min.length >= 3) {
+  if (recent10Min.length >= 10) {
     return { allowed: false, reason: 'ip_10m_limit', count: recent10Min.length }
   }
 
-  if (recent24Hours.length >= 6) {
+  if (recent24Hours.length >= 30) {
     return { allowed: false, reason: 'ip_24h_limit', count: recent24Hours.length }
   }
 
@@ -72,40 +72,36 @@ function verifyPoW(loadTime, ts, powNonce) {
 }
 
 /**
- * Validate invisible bot telemetry (Honeypot, timing, interaction signals)
- * MANDATORY: Telemetry payload MUST be provided by real frontend
+ * Validate invisible bot telemetry (Honeypot & timing signals)
+ * Safe for real users on any browser/device
  */
 function inspectBotTelemetry(req) {
   const { hp_field, telemetry } = req.body || {}
 
-  // 1. Honeypot check: If bot filled hidden field, trap it!
+  // 1. Honeypot check: If hidden field is filled, trap it as bot
   if (hp_field && String(hp_field).trim().length > 0) {
     return { isBot: true, reason: 'honeypot_filled' }
   }
 
-  // 2. MANDATORY CHECK: Direct cURL / Python HTTP requests without telemetry payload are INSTANTLY TRAPPED
-  if (!telemetry || typeof telemetry !== 'string' || telemetry.trim().length === 0) {
-    return { isBot: true, reason: 'missing_telemetry_payload' }
-  }
+  // 2. If telemetry payload is provided, inspect timing
+  if (telemetry && typeof telemetry === 'string' && telemetry.trim().length > 0) {
+    try {
+      const data = JSON.parse(Buffer.from(telemetry, 'base64').toString('utf-8'))
+      const loadTime = Number(data.loadTime) || 0
+      const ts = Number(data.ts) || 0
 
-  let data
-  try {
-    data = JSON.parse(Buffer.from(telemetry, 'base64').toString('utf-8'))
-  } catch {
-    return { isBot: true, reason: 'invalid_telemetry_encoding' }
-  }
+      // Form submitted faster than 200ms after page load -> clear automated bot
+      if (loadTime > 0 && loadTime < 200) {
+        return { isBot: true, reason: 'too_fast_submit', loadTime }
+      }
 
-  const loadTime = Number(data.loadTime) || 0
-  const ts = Number(data.ts) || 0
-
-  // Telemetry timestamp age check (token expires in 5 minutes)
-  if (!ts || Math.abs(Date.now() - ts) > 300 * 1000) {
-    return { isBot: true, reason: 'expired_telemetry_timestamp' }
-  }
-
-  // Form submitted faster than 300ms after page load -> scripted bot behavior
-  if (loadTime > 0 && loadTime < 300) {
-    return { isBot: true, reason: 'too_fast_submit', loadTime }
+      // Telemetry timestamp age check (older than 10 minutes)
+      if (ts > 0 && Math.abs(Date.now() - ts) > 600 * 1000) {
+        return { isBot: true, reason: 'expired_telemetry_timestamp' }
+      }
+    } catch {
+      // Ignore telemetry parsing errors for real user compatibility
+    }
   }
 
   return { isBot: false }
