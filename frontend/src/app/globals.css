@@ -1,15 +1,4 @@
-/* ---------- 1️⃣ تعریف فونت IRANSans به‌صورت لوکال ---------- */
-@font-face {
-  font-family: 'IRANSans';
-  src: url('/fonts/iransans.woff2') format('woff2');
-  font-weight: normal;
-  /* اگر وزن‌های دیگر دارید می‌توانید خطوط جداگانه اضافه کنید */
-  font-style: normal;
-  font-display: swap;
-  /* بارگذاری به‑صورت lazy & swap */
-}
-
-/* متغیر CSS که در ادامه استفاده می‌شود */
+/* ---------- 1️⃣ تعریف متغیر CSS فونت IRANSans ---------- */
 :root {
   --font-iransans: 'IRANSans', system-ui, sans-serif;
 }
