@@ -59,10 +59,6 @@ const otpSchema = new mongoose.Schema(
   }
 )
 
-// TTL index on createdAt to auto-delete old OTP logs after 48 hours
-// (Prevents early deletion so 24-hour daily rate limit counting works correctly)
-otpSchema.index({ createdAt: 1 }, { expireAfterSeconds: 172800 })
-
 // Compound index for efficient queries
 otpSchema.index({ mobile: 1, createdAt: -1 })
 otpSchema.index({ email: 1, createdAt: -1 })

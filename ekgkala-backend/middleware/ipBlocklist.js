@@ -1,3 +1,4 @@
+const mongoose = require('mongoose')
 const BlockedIP = require('../models/BlockedIP')
 const { getClientIp } = require('../utils/clientIp')
 const { logger } = require('../utils/logger')
@@ -36,8 +37,13 @@ async function checkIpBlocklist(req, res, next) {
     })
   }
 
+  // Fail-open: If Mongoose connection is not ready, do not block request
+  if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+    return next()
+  }
+
   try {
-    const blocked = await BlockedIP.findOne({ ip }).lean()
+    const blocked = await BlockedIP.findOne({ ip }).maxTimeMS(1000).lean()
     if (blocked && blocked.expiresAt > new Date()) {
       blockedCache.set(ip, blocked.expiresAt.getTime())
       return res.status(403).json({
@@ -47,7 +53,7 @@ async function checkIpBlocklist(req, res, next) {
       })
     }
   } catch (err) {
-    // If DB fails, do not block legitimate users
+    // If DB query fails or times out, fail open
   }
 
   next()
@@ -72,24 +78,26 @@ async function recordIpFailure(ip, reason = 'Repeated security failure', thresho
     const expiresAt = new Date(now + blockDurationSec * 1000)
     blockedCache.set(ip, expiresAt.getTime())
 
-    try {
-      await BlockedIP.findOneAndUpdate(
-        { ip },
-        {
-          ip,
-          reason,
-          failedCount: data.count,
-          expiresAt,
-        },
-        { upsert: true, new: true }
-      )
-      if (logger && logger.warn) {
-        logger.warn(`[SECURITY ALERT] IP ${ip} automatically blocked for ${blockDurationSec}s. Reason: ${reason}`)
-      } else {
-        console.warn(`[SECURITY ALERT] IP ${ip} automatically blocked for ${blockDurationSec}s. Reason: ${reason}`)
+    if (mongoose.connection && mongoose.connection.readyState === 1) {
+      try {
+        await BlockedIP.findOneAndUpdate(
+          { ip },
+          {
+            ip,
+            reason,
+            failedCount: data.count,
+            expiresAt,
+          },
+          { upsert: true, new: true }
+        )
+        if (logger && logger.warn) {
+          logger.warn(`[SECURITY ALERT] IP ${ip} automatically blocked for ${blockDurationSec}s. Reason: ${reason}`)
+        } else {
+          console.warn(`[SECURITY ALERT] IP ${ip} automatically blocked for ${blockDurationSec}s. Reason: ${reason}`)
+        }
+      } catch (err) {
+        console.error('Failed to block IP in DB:', err)
       }
-    } catch (err) {
-      console.error('Failed to block IP in DB:', err)
     }
   }
 }
