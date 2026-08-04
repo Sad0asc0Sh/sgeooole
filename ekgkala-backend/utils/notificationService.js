@@ -8,20 +8,20 @@ const globalSmsTracker = []
 
 function checkGlobalSmsCircuitBreaker() {
   const now = Date.now()
-  const fifteenMinutesAgo = now - 15 * 60 * 1000
+  const tenMinutesAgo = now - 10 * 60 * 1000
   const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000
 
   // Filter valid timestamps
-  const recent15Min = globalSmsTracker.filter(ts => ts > fifteenMinutesAgo)
+  const recent10Min = globalSmsTracker.filter(ts => ts > tenMinutesAgo)
   const recent24Hours = globalSmsTracker.filter(ts => ts > twentyFourHoursAgo)
 
-  // Max 5 SMS per 15 minutes across ENTIRE site
-  if (recent15Min.length >= 5) {
-    return { allowed: false, reason: 'global_15m_limit', count: recent15Min.length }
+  // Max 20 SMS per 10 minutes across ENTIRE site
+  if (recent10Min.length >= 20) {
+    return { allowed: false, reason: 'global_10m_limit', count: recent10Min.length }
   }
 
-  // Max 30 SMS per 24 hours across ENTIRE site
-  if (recent24Hours.length >= 30) {
+  // Max 150 SMS per 24 hours across ENTIRE site
+  if (recent24Hours.length >= 150) {
     return { allowed: false, reason: 'global_24h_limit', count: recent24Hours.length }
   }
 

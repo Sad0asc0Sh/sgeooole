@@ -72,7 +72,7 @@ function verifyPoW(loadTime, ts, powNonce) {
 }
 
 /**
- * Validate invisible bot telemetry (Honeypot, timing, interaction signals, PoW)
+ * Validate invisible bot telemetry (Honeypot, timing, interaction signals)
  * MANDATORY: Telemetry payload MUST be provided by real frontend
  */
 function inspectBotTelemetry(req) {
@@ -96,34 +96,16 @@ function inspectBotTelemetry(req) {
   }
 
   const loadTime = Number(data.loadTime) || 0
-  const focusTime = Number(data.focusTime) || 0
-  const hasInteraction = Boolean(data.hasInteraction)
   const ts = Number(data.ts) || 0
-  const powNonce = data.powNonce
 
-  // Telemetry timestamp age check (token expires in 2 minutes)
-  if (!ts || Math.abs(Date.now() - ts) > 120 * 1000) {
+  // Telemetry timestamp age check (token expires in 5 minutes)
+  if (!ts || Math.abs(Date.now() - ts) > 300 * 1000) {
     return { isBot: true, reason: 'expired_telemetry_timestamp' }
   }
 
-  // Mandatory user interaction signal check
-  if (!hasInteraction) {
-    return { isBot: true, reason: 'no_user_interaction' }
-  }
-
-  // Form submitted faster than 1200ms after page load -> bot behavior
-  if (loadTime < 1200) {
+  // Form submitted faster than 300ms after page load -> scripted bot behavior
+  if (loadTime > 0 && loadTime < 300) {
     return { isBot: true, reason: 'too_fast_submit', loadTime }
-  }
-
-  // Focus to submit duration check
-  if (focusTime > 0 && focusTime < 200) {
-    return { isBot: true, reason: 'scripted_focus' }
-  }
-
-  // Verify Proof of Work challenge
-  if (!verifyPoW(loadTime, ts, powNonce)) {
-    return { isBot: true, reason: 'failed_pow_challenge' }
   }
 
   return { isBot: false }
