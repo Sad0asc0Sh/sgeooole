@@ -10,7 +10,10 @@ import { useWishlist } from "@/hooks/useWishlist";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import {
+    getNextPromotionExpiry,
+    resolveProductPromotion,
+} from "@/lib/promotions/productPromotion";
 import styles from "./ProductCard.module.css";
 
 
@@ -23,46 +26,28 @@ interface ProductCardProps {
 export default function ProductCard({ product, priority = false }: ProductCardProps) {
     const { toggleWishlist, isInWishlist } = useWishlist();
     const [isHovered, setIsHovered] = useState(false);
-    const [now, setNow] = useState(() => Date.now());
+    const [, forcePromotionBoundaryRender] = useState(0);
 
     const isFavorite = isInWishlist(product.id);
     const isOutOfStock = product.countInStock <= 0;
-
-    // Check if flash deal countdown is still active
-    const isFlashDealActive = Boolean(
-        product.isFlashDeal &&
-        product.flashDealEndTime &&
-        new Date(product.flashDealEndTime).getTime() > now
-    );
-
-    const isSpecialOfferCountdownActive = Boolean(
-        product.isSpecialOffer &&
-        product.specialOfferEndTime &&
-        new Date(product.specialOfferEndTime).getTime() > now
-    );
-    const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
-
-    // Effective discount: only apply if flash deal is active OR special offer is active
-    const effectiveDiscount =
-        product.discount > 0 &&
-            (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
-            ? product.discount
-            : 0;
-
+    const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
+        resolveProductPromotion(product, Date.now());
     const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 
-    // Price reversion: when flash deal or special offer expires, revert to original price
-    const displayPrice =
-        (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
-            ? product.oldPrice
-            : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
-                ? product.oldPrice
-                : product.price;
-
+    // ProductTimerBadge owns its second-by-second display. The card itself only
+    // needs another render when the nearest promotion crosses its end boundary.
     useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
-        return () => clearInterval(id);
-    }, []);
+        const nextExpiry = getNextPromotionExpiry(product, Date.now());
+        if (!nextExpiry) return;
+
+        const delay = Math.max(0, nextExpiry - Date.now()) + 50;
+        const id = window.setTimeout(
+            () => forcePromotionBoundaryRender((version) => version + 1),
+            delay,
+        );
+
+        return () => window.clearTimeout(id);
+    }, [product]);
 
     const handleToggleWishlist = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -70,57 +55,27 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
         toggleWishlist(product);
     };
 
-    // Determine Header Type - Only show flash header if countdown is active
+    // A single resolver gives the three promotion types a stable precedence.
+    // Notably, a plain percentage can no longer create a "شگفت‌انگیز" label.
     let headerConfig = null;
-    const shouldShowCampaignHeader =
-        (product.campaignLabel || product.campaignTheme) &&
-        (!hasFlashLabel || isFlashDealActive);
 
-    if (isFlashDealActive) {
-        // Default Flash Deal Style (Amber/Orange/Red Gradient)
-        let themeColor = 'text-orange-600';
-        let themeBorder = 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600';
-        let themeTitle = 'پیشنهاد لحظه‌ای';
-
-        // If Campaign Theme is present, override with Campaign Style
-        if (product.campaignLabel || product.campaignTheme) {
-            themeTitle = product.campaignLabel || 'پیشنهاد لحظه‌ای'; // Use label if present, else default
-
-            if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-                themeColor = 'text-amber-600';
-                themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
-            } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-                themeColor = 'text-rose-600';
-                themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
-            } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-                themeColor = 'text-lime-600';
-                themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
-            } else {
-                // Default Blue Campaign if theme is Blue or generic
-                themeColor = 'text-blue-600';
-                themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
-            }
-        }
-
+    if (promotionKind === 'flash') {
         headerConfig = {
             type: 'flash',
-            title: themeTitle,
-            color: themeColor,
-            borderColor: themeBorder,
-            endTime: product.flashDealEndTime,
-            iconColor: themeColor
+            title: 'پیشنهاد لحظه‌ای',
+            color: 'text-orange-600',
+            borderColor: 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
+            endTime,
+            iconColor: 'text-orange-600',
         };
-    } else if (shouldShowCampaignHeader) {
-        // Map campaign themes to colors
+    } else if (promotionKind === 'campaign') {
         let themeColor = 'text-blue-600';
         let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
 
-        // Check for specific themes
         if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
             themeColor = 'text-amber-600';
             themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
         } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-            // Mapping 'fire' to the Pink/Purple gradient theme (as requested to match detail page badge)
             themeColor = 'text-rose-600';
             themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
         } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
@@ -133,28 +88,19 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             title: product.campaignLabel || 'فروش ویژه',
             color: themeColor,
             borderColor: themeBorder,
-            // Use flashDealEndTime as fallback for campaign timer if available, otherwise no timer
-            endTime: product.flashDealEndTime || product.specialOfferEndTime,
-            iconColor: themeColor
+            endTime,
+            iconColor: themeColor,
         };
-    } else if (
-        (product.isSpecialOffer && isSpecialOfferCountdownActive) ||
-        (!product.isFlashDeal && !product.isSpecialOffer && product.discount && product.discount > 0)
-    ) {
+    } else if (promotionKind === 'amazing') {
         headerConfig = {
             type: 'amazing',
             title: 'شگفت‌انگیز',
             color: 'text-red-500',
             borderColor: 'bg-red-500',
-            endTime: product.specialOfferEndTime,
-            iconColor: 'text-red-500'
+            endTime,
+            iconColor: 'text-red-500',
         };
     }
-
-    const showSpecialOfferChrome =
-        !(headerConfig?.type === 'amazing') ||
-        isSpecialOfferCountdownActive ||
-        !product.isSpecialOffer;
 
     return (
         <div
@@ -163,7 +109,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Special Header Line */}
-            {headerConfig && showSpecialOfferChrome && (
+            {headerConfig && (
                 <div className="w-full">
                     {/* Colored Line */}
                     <div className={`h-1 w-full ${headerConfig.borderColor}`} />

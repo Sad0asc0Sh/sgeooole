@@ -84,9 +84,12 @@ export function useProductListing(query: ProductListingQuery) {
     cacheKey,
     () => fetchProductListing(query),
     {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      dedupingInterval: 5 * 60 * 1000,
+      // Discount state is edited in the admin panel; do not retain a card's
+      // promotion type for minutes after that change.
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      refreshInterval: 30 * 1000,
+      dedupingInterval: 10 * 1000,
       keepPreviousData: true,
     },
   );

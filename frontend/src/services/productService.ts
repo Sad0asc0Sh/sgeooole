@@ -548,8 +548,10 @@ export const productService = {
         });
       }
 
-      // Add cache busting timestamp
-      queryParams.set('_t', Date.now().toString());
+      // Listing cards must reflect promotion edits promptly. The backend treats
+      // this flag as an explicit no-store request, so no unique timestamp cache
+      // entries are created for each refresh.
+      queryParams.set("nocache", "true");
 
       const response = await api.get(`/products?${queryParams.toString()}`);
 

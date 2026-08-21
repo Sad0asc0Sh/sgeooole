@@ -9,7 +9,10 @@ import { AlertTriangle, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
-import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import {
+  getNextPromotionExpiry,
+  resolveProductPromotion,
+} from "@/lib/promotions/productPromotion";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
@@ -22,13 +25,29 @@ interface ProductRailProps {
 }
 
 export default function ProductRail({ title, products, viewAllHref = "/products" }: ProductRailProps) {
-  const [now, setNow] = useState(() => Date.now());
+  const [, forcePromotionBoundaryRender] = useState(0);
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
+  const now = Date.now();
 
+  // Timer badges update their own text. This rail only needs to render at the
+  // closest promotion expiry, not once for every second and every product.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+    const nextExpiry = products.reduce<number | null>((nearest, product) => {
+      const expiry = getNextPromotionExpiry(product, Date.now());
+      if (!expiry) return nearest;
+      return nearest === null ? expiry : Math.min(nearest, expiry);
+    }, null);
+
+    if (!nextExpiry) return;
+
+    const delay = Math.max(0, nextExpiry - Date.now()) + 50;
+    const id = window.setTimeout(
+      () => forcePromotionBoundaryRender((version) => version + 1),
+      delay,
+    );
+
+    return () => window.clearTimeout(id);
+  }, [products]);
 
   return (
     <div className="py-4 bg-white border-b border-gray-100">
@@ -91,40 +110,23 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
           grabCursor
         >
           {products.map((product, index) => {
-            // Check if flash deal countdown is still active
-            const isFlashDealActive = Boolean(
-              product.isFlashDeal &&
-              product.flashDealEndTime &&
-              new Date(product.flashDealEndTime).getTime() > now
-            );
+            const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
+              resolveProductPromotion(product, now);
+            const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 
-            const isSpecialOfferCountdownActive = Boolean(
-              product.isSpecialOffer &&
-              product.specialOfferEndTime &&
-              new Date(product.specialOfferEndTime).getTime() > now
-            );
-            const hasFlashLabel = isFlashDealLabel(product.campaignLabel);
-            const shouldShowCampaignHeader =
-              (product.campaignLabel || product.campaignTheme) &&
-              (!hasFlashLabel || isFlashDealActive);
-
-            // Determine Header Type - Only show flash header if countdown is active
             let headerConfig = null;
-
-            if (isFlashDealActive) {
+            if (promotionKind === 'flash') {
               headerConfig = {
                 type: 'flash',
                 title: 'پیشنهاد لحظه‌ای',
                 color: 'text-amber-500',
                 borderColor: 'bg-amber-500',
-                endTime: product.flashDealEndTime,
+                endTime,
               };
-            } else if (shouldShowCampaignHeader) {
-              // Map campaign themes to colors
+            } else if (promotionKind === 'campaign') {
               let themeColor = 'text-blue-600';
               let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
 
-              // Check for specific themes
               if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
                 themeColor = 'text-amber-600';
                 themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
@@ -141,43 +143,18 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
                 title: product.campaignLabel || 'فروش ویژه',
                 color: themeColor,
                 borderColor: themeBorder,
-                endTime: product.flashDealEndTime || product.specialOfferEndTime,
-                iconColor: themeColor
+                endTime,
+                iconColor: themeColor,
               };
-            } else if (
-              (product.isSpecialOffer && isSpecialOfferCountdownActive) ||
-              (!product.isFlashDeal && !product.isSpecialOffer && product.discount && product.discount > 0)
-            ) {
+            } else if (promotionKind === 'amazing') {
               headerConfig = {
                 type: 'amazing',
                 title: 'شگفت‌انگیز',
                 color: 'text-red-500',
                 borderColor: 'bg-red-500',
-                endTime: product.specialOfferEndTime,
+                endTime,
               };
             }
-
-            const showSpecialOfferChrome =
-              !(headerConfig?.type === 'amazing') ||
-              isSpecialOfferCountdownActive ||
-              !product.isSpecialOffer;
-
-            // Effective discount: only apply if flash deal is active OR special offer is active
-            const effectiveDiscount =
-              product.discount > 0 &&
-                (isFlashDealActive || (!product.isFlashDeal && (!product.isSpecialOffer || isSpecialOfferCountdownActive)))
-                ? product.discount
-                : 0;
-
-            const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
-
-            // Price reversion: when flash deal or special offer expires, revert to original price
-            const displayPrice =
-              (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
-                ? product.oldPrice
-                : (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
-                  ? product.oldPrice
-                  : product.price;
 
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
@@ -188,7 +165,7 @@ export default function ProductRail({ title, products, viewAllHref = "/products"
                   <div className={`bg-white rounded-lg border border-gray-200 h-full flex flex-col justify-between cursor-pointer hover:shadow-md transition-shadow duration-300 relative overflow-hidden group ${headerConfig ? 'pt-0' : 'p-3'}`}>
 
                     {/* Special Header Line */}
-                    {headerConfig && showSpecialOfferChrome && (
+                    {headerConfig && (
                       <div className="w-full mb-2">
                         <div className={`h-1 w-full ${headerConfig.borderColor}`} />
                         <div className="flex items-center justify-between px-2 py-1 bg-white gap-1">
