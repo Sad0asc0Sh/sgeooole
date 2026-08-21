@@ -19,7 +19,10 @@ type ScrollRestorationControls = {
 };
 
 export function useScrollRestoration({
+  enabled = true,
   key,
+  restoreOnMount = true,
+  ready = false,
 }: ScrollRestorationOptions = {}): ScrollRestorationControls {
   const saveScroll = useCallback(() => {
     if (key && typeof window !== "undefined") {
@@ -39,6 +42,19 @@ export function useScrollRestoration({
     }
   }, [key]);
 
+  useEffect(() => {
+    if (!enabled || !restoreOnMount || !ready || !key || typeof window === "undefined") return;
+
+    const manager = getScrollManager();
+    const savedY = manager.getSavedY(key);
+    if (typeof savedY === "number" && savedY > 0) {
+      manager.restore(key);
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [enabled, key, ready, restoreOnMount]);
+
   return { saveScroll, restoreScroll, clearScroll };
 }
 
@@ -52,4 +68,3 @@ export function useDisableScrollRestoration() {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
 }
-

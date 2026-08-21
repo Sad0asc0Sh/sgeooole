@@ -7,6 +7,7 @@ import ThirdPartyScripts from "@/components/ThirdPartyScripts";
 import ScrollRestorationProvider from "@/providers/ScrollRestorationProvider";
 import SWRProvider from "@/providers/SWRProvider";
 import LayoutStateProvider from "@/providers/LayoutStateProvider";
+import RouteLoadingProvider from "@/providers/RouteLoadingProvider";
 import { Suspense } from "react";
 
 // Parspack Cloud Storage — DNS preconnect
@@ -85,7 +86,9 @@ export default function RootLayout({
             <ScrollRestorationProvider>
               <LayoutStateProvider>
                 <Suspense fallback={null}>
-                  <ClientLayout>{children}</ClientLayout>
+                  <RouteLoadingProvider>
+                    <ClientLayout>{children}</ClientLayout>
+                  </RouteLoadingProvider>
                 </Suspense>
               </LayoutStateProvider>
             </ScrollRestorationProvider>

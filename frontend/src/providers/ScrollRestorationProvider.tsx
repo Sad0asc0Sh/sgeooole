@@ -97,6 +97,10 @@ function ScrollRestorationController() {
     if (pathname.startsWith('/product/')) {
       // Detail page: always start at top 0
       window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+    } else if (pathname === '/products') {
+      // The listing restores scroll only after its query data is stable.
+      // Restoring here can expose footer and previous cached content first.
+      return;
     } else {
       // Check if we have a saved scroll position for this route (e.g. Home '/' or '/products')
       const savedY = manager.getSavedY(key);
@@ -113,7 +117,6 @@ function ScrollRestorationController() {
 
   return null;
 }
-
 
 
 

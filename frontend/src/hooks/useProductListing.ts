@@ -1,10 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
+import type { Cache } from "swr";
 import { productService, Product } from "@/services/productService";
+import { getProductListingReadiness, PRODUCT_LISTING_CACHE_POLICY } from "@/lib/productListingState";
 
 const ITEMS_PER_PAGE = 24;
+const listingCacheTimestamps = new Map<string, number>();
+const listingCacheGcTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleListingCacheEviction(cache: Cache<unknown>, cacheKey: string, fetchedAt: number) {
+  const existingTimer = listingCacheGcTimers.get(cacheKey);
+  if (existingTimer) clearTimeout(existingTimer);
+
+  const timer = setTimeout(() => {
+    if (listingCacheTimestamps.get(cacheKey) === fetchedAt) {
+      cache.delete(cacheKey);
+      listingCacheTimestamps.delete(cacheKey);
+      listingCacheGcTimers.delete(cacheKey);
+    }
+  }, PRODUCT_LISTING_CACHE_POLICY.gcTime);
+
+  listingCacheGcTimers.set(cacheKey, timer);
+}
 
 export type ProductListingQuery = {
   page: number;
@@ -79,20 +98,38 @@ async function fetchProductListing(query: ProductListingQuery): Promise<ProductL
 
 export function useProductListing(query: ProductListingQuery) {
   const cacheKey = useMemo(() => buildListingCacheKey(query), [query]);
+  const { cache } = useSWRConfig();
+  const fetchedAt = listingCacheTimestamps.get(cacheKey);
+  const isStale = !fetchedAt || Date.now() - fetchedAt >= PRODUCT_LISTING_CACHE_POLICY.staleTime;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     cacheKey,
     () => fetchProductListing(query),
     {
-      // Discount state is edited in the admin panel; do not retain a card's
-      // promotion type for minutes after that change.
-      revalidateOnFocus: true,
+      // SWR has no `staleTime` / `gcTime` options. The policy below provides
+      // their equivalents for this listing: a bounded fresh window plus
+      // explicit cache eviction after the maximum retention period.
+      revalidateOnMount: isStale,
+      revalidateIfStale: true,
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
-      refreshInterval: 30 * 1000,
-      dedupingInterval: 10 * 1000,
-      keepPreviousData: true,
+      refreshInterval: 0,
+      dedupingInterval: PRODUCT_LISTING_CACHE_POLICY.staleTime,
+      keepPreviousData: false,
+      onSuccess: () => {
+        const completedAt = Date.now();
+        listingCacheTimestamps.set(cacheKey, completedAt);
+        scheduleListingCacheEviction(cache, cacheKey, completedAt);
+      },
     },
   );
+
+  const readiness = getProductListingReadiness({
+    hasData: Boolean(data),
+    isValidating,
+    isStale: Boolean(data) && isStale,
+    hasError: Boolean(error),
+  });
 
   return {
     products: data?.products ?? [],
@@ -100,10 +137,12 @@ export function useProductListing(query: ProductListingQuery) {
     totalPages: data?.totalPages ?? 1,
     currentPage: data?.currentPage ?? query.page,
     priceRange: data?.priceRange,
-    isLoading: isLoading && !data,
+    isLoading,
     isValidating,
     error,
     mutate,
     hasCache: Boolean(data),
+    isStale: Boolean(data) && isStale,
+    ...readiness,
   };
 }

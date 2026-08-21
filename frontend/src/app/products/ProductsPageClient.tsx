@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useProductListing } from "@/hooks/useProductListing";
@@ -31,6 +31,8 @@ import { productService, CategoryProperty, CategoryDetails } from "@/services/pr
 import { brandService, Brand } from "@/services/brandService";
 import { Category } from "@/services/categoryService";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
+import ProductListingSkeleton from "@/components/product/ProductListingSkeleton";
+import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -264,6 +266,7 @@ function DesktopSortBar({
 function ProductListingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { markRoutePending, markRouteReady } = useRouteLoadingState();
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
   // URL Params
@@ -419,11 +422,21 @@ function ProductListingContent() {
     totalPages,
     currentPage,
     priceRange: fetchedPriceRange,
-    isLoading,
-    hasCache,
+    isReady,
+    showSkeleton,
+    showError,
+    error,
   } = useProductListing(listingQuery);
 
-  const showInitialLoader = isLoading && !hasCache;
+  const showInitialLoader = showSkeleton;
+
+  useLayoutEffect(() => {
+    markRoutePending();
+  }, [listingScrollKey, markRoutePending]);
+
+  useEffect(() => {
+    if (isReady) markRouteReady();
+  }, [isReady, markRouteReady]);
 
   useScrollRestoration({
     enabled: true,
@@ -431,7 +444,7 @@ function ProductListingContent() {
     restoreOnMount: true,
     saveOnScroll: true,
     observeLayoutShifts: true,
-    ready: hasCache || !isLoading,
+    ready: isReady,
   });
 
   useEffect(() => {
@@ -1128,8 +1141,21 @@ function ProductListingContent() {
 
             {/* Products Grid */}
             {showInitialLoader ? (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-kala-500" />
+              <ProductListingSkeleton />
+            ) : showError ? (
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-red-100 bg-white py-20 text-center text-gray-500">
+                <p className="text-lg font-bold text-gray-800">بارگذاری محصولات انجام نشد</p>
+                <p className="mt-2 text-sm">لطفاً اتصال اینترنت را بررسی کرده و دوباره تلاش کنید.</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-5 rounded-xl bg-gray-900 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-gray-800"
+                >
+                  تلاش مجدد
+                </button>
+                {process.env.NODE_ENV === "development" && error instanceof Error && (
+                  <p className="mt-3 text-xs text-red-500">{error.message}</p>
+                )}
               </div>
             ) : products.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-gray-400">

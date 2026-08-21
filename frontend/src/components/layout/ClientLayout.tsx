@@ -9,6 +9,7 @@ import Footer from "@/components/layout/Footer";
 import ServicesWidget from "@/components/features/services/ServicesWidget";
 import AuthModalProvider from "@/providers/AuthModalProvider";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
+import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 
 export default function ClientLayout({
     children,
@@ -17,6 +18,7 @@ export default function ClientLayout({
 }) {
     const pathname = usePathname();
     const { isProductPage: isProductPageFromContext } = useLayoutState();
+    const { isCurrentRouteReady } = useRouteLoadingState();
     const [isAIOpen, setIsAIOpen] = useState(false);
     const [isServicesOpen, setIsServicesOpen] = useState(false);
 
@@ -36,7 +38,8 @@ export default function ClientLayout({
     // Header should stay consistent on desktop across the site.
     // We still hide the full "chrome" (footer/bottom nav) on product pages to avoid layout conflicts.
     const showHeader = !isLoginPage;
-    const showChrome = !isLoginPage && !isProductPage;
+    const isProductsListingRoute = pathname === "/products";
+    const showChrome = !isLoginPage && !isProductPage && (!isProductsListingRoute || isCurrentRouteReady);
 
     // Hide the global header on mobile for pages that use their own mobile header
     const hideHeaderOnMobile = isProfileSubPage || isProductPage || hasStandaloneMobileHeader;
