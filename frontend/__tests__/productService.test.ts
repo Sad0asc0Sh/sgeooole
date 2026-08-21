@@ -54,7 +54,9 @@ describe("productService", () => {
             name: "محصول لحظه‌ای",
             slug: "flash-best-seller",
             image: "/uploads/flash.png",
-            price: 480000,
+            // Contract returned by /bestsellers: the active discount is already
+            // applied once, while compareAtPrice remains the original amount.
+            price: 422400,
             discount: 12,
             compareAtPrice: 480000,
             stock: 4,

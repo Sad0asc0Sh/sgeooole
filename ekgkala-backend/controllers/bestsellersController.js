@@ -44,6 +44,19 @@ exports.getBestsellers = async (req, res) => {
 
     let result = []
 
+    // Product.price is the stored base price. Match the public product endpoint:
+    // expose a discounted price plus the original compareAtPrice when a discount exists.
+    const buildPromotionPrice = (product) => {
+      const basePrice = Number(product.price) || 0
+      const discount = Number(product.discount) || 0
+      const hasDiscount = basePrice > 0 && discount > 0 && discount < 100
+
+      return {
+        price: hasDiscount ? Math.round(basePrice * (1 - discount / 100)) : basePrice,
+        compareAtPrice: hasDiscount ? basePrice : product.compareAtPrice,
+      }
+    }
+
     if (scoreCount > 0) {
       // ===== مسیر اصلی: استفاده از ProductScore =====
       const query = {
@@ -74,6 +87,7 @@ exports.getBestsellers = async (req, res) => {
         .filter((score) => score.product_id) // فیلتر محصولات حذف شده
         .map((score) => {
           const product = score.product_id
+          const promotionPrice = buildPromotionPrice(product)
 
           // Extract image URL from images array
           let imageData = null
@@ -91,9 +105,9 @@ exports.getBestsellers = async (req, res) => {
             name: product.name,
             slug: product.slug,
             image: imageData,
-            price: product.price,
+            price: promotionPrice.price,
             discount: product.discount || 0,
-            compareAtPrice: product.compareAtPrice,
+            compareAtPrice: promotionPrice.compareAtPrice,
             isFlashDeal: Boolean(product.isFlashDeal),
             flashDealEndTime: product.flashDealEndTime || null,
             isSpecialOffer: Boolean(product.isSpecialOffer),
@@ -202,6 +216,7 @@ exports.getBestsellers = async (req, res) => {
       }
 
       result = fallbackProducts.map((product) => {
+        const promotionPrice = buildPromotionPrice(product)
         let imageData = null
         if (product.images && product.images.length > 0) {
           const img = product.images[0]
@@ -217,8 +232,15 @@ exports.getBestsellers = async (req, res) => {
           name: product.name,
           slug: product.slug,
           image: imageData,
-          price: product.price,
+          price: promotionPrice.price,
           discount: product.discount || 0,
+          compareAtPrice: promotionPrice.compareAtPrice,
+          isFlashDeal: Boolean(product.isFlashDeal),
+          flashDealEndTime: product.flashDealEndTime || null,
+          isSpecialOffer: Boolean(product.isSpecialOffer),
+          specialOfferEndTime: product.specialOfferEndTime || null,
+          campaignLabel: product.campaignLabel || null,
+          campaignTheme: product.campaignTheme || null,
           average_rating: product.rating || 0,
           review_count: product.numReviews || 0,
           stock: product.stock || 0,
