@@ -331,9 +331,9 @@ export const productService = {
    */
   getNewest: async (limit: number = 10): Promise<Product[]> => {
     try {
-      // OPTIMIZED: Only fetch fields needed for rail display
-      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime';
-      const response = await api.get(`/products?sort=-createdAt&limit=${limit}&fields=${fields}&_t=${Date.now()}`);
+      // Include all promotion metadata required by the shared card resolver.
+      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,campaignLabel,campaignTheme';
+      const response = await api.get(`/products?sort=-createdAt&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
@@ -351,7 +351,9 @@ export const productService = {
   getBestSellers: async (limit: number = 10): Promise<Product[]> => {
     try {
       // Primary: Use the dedicated bestsellers endpoint (ProductScore engine)
-      const response = await api.get(`/bestsellers?limit=${limit}&in_stock=true&_t=${Date.now()}`);
+      // Best-seller cards can contain time-limited promotions; request the
+      // current payload instead of the endpoint's long-lived ranking cache.
+      const response = await api.get(`/bestsellers?limit=${limit}&in_stock=true&nocache=true`);
       const payload = response?.data;
 
       // The bestsellers endpoint returns { success, data: [...] }
@@ -380,15 +382,26 @@ export const productService = {
 
           // Handle stock - could be a number or an object with variants
           const stock = typeof item.stock === 'number' ? item.stock : 0;
+          const pricing = resolvePricing({
+            price: item.price || 0,
+            discount: item.discount,
+            compareAtPrice: item.compareAtPrice,
+            isFlashDeal: item.isFlashDeal,
+            flashDealEndTime: item.flashDealEndTime,
+            isSpecialOffer: item.isSpecialOffer,
+            specialOfferEndTime: item.specialOfferEndTime,
+            campaignLabel: item.campaignLabel,
+          });
 
           return {
             id: item._id,
             name: item.name || "",
             title: item.name || "",
             slug: item.slug || "",
-            price: item.price || 0,
-            oldPrice: item.discount > 0 ? Math.round(item.price / (1 - item.discount / 100)) : undefined,
-            discount: item.discount || 0,
+            price: pricing.finalPrice,
+            oldPrice: pricing.oldPrice,
+            compareAtPrice: pricing.basePrice,
+            discount: pricing.discount,
             image: imageUrl,
             images: [imageUrl],
             category: item.category?.name || "عمومی",
@@ -396,8 +409,12 @@ export const productService = {
             rating: item.average_rating || 0,
             reviewCount: item.review_count || 0,
             countInStock: stock,
-            isFlashDeal: false,
-            isSpecialOffer: false,
+            campaignLabel: item.campaignLabel || undefined,
+            campaignTheme: item.campaignTheme || undefined,
+            isFlashDeal: Boolean(item.isFlashDeal),
+            flashDealEndTime: item.flashDealEndTime || undefined,
+            isSpecialOffer: Boolean(item.isSpecialOffer),
+            specialOfferEndTime: item.specialOfferEndTime || undefined,
           } as Product;
         });
       }

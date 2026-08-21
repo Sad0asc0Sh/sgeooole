@@ -74,7 +74,12 @@ export function useNewestProducts(limit: number = 10) {
         () => productService.getNewest(limit),
         {
             ...swrConfig,
-            refreshInterval: 120000, // Refresh every 2 minutes
+            // A newest product may receive a time-limited promotion after it is
+            // already visible in this rail.
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            dedupingInterval: 5000,
+            refreshInterval: 30000,
         }
     );
 
@@ -96,7 +101,12 @@ export function useBestSellers(limit: number = 10) {
         () => productService.getBestSellers(limit),
         {
             ...swrConfig,
-            refreshInterval: 300000, // Refresh every 5 minutes (less volatile)
+            // Ranking can remain cached elsewhere, but card-level promotion
+            // state must follow the same freshness policy as flash deals.
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            dedupingInterval: 5000,
+            refreshInterval: 30000,
         }
     );
 

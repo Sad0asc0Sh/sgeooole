@@ -20,13 +20,14 @@ const redis = require('../utils/redis')
 
 exports.getBestsellers = async (req, res) => {
   try {
-    const { limit = 8, category = null, in_stock = true, fresh = false } = req.query
+    const { limit = 8, category = null, in_stock = true, fresh = false, nocache = false } = req.query
+    const bypassCache = fresh === true || fresh === 'true' || nocache === true || nocache === 'true'
 
     // ساخت کلید کش
     const cacheKey = `bestsellers:${category}:${in_stock}:${limit}`
 
-    // بررسی کش (مگر اگر fresh=true)
-    if (!fresh && redis) {
+    // بررسی کش؛ کارت‌های محصول زمان‌دار می‌توانند صریحاً دادهٔ تازه درخواست کنند.
+    if (!bypassCache && redis) {
       const cached = await redis.getCache(cacheKey)
       if (cached) {
         console.log('[BestSellers] 📦 نتیجه از کش برگردانده شد')
@@ -60,7 +61,7 @@ exports.getBestsellers = async (req, res) => {
         .limit(parseInt(limit) || 8)
         .populate({
           path: 'product_id',
-          select: 'name slug images price discount rating numReviews stock category',
+          select: 'name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme',
           populate: {
             path: 'category',
             select: 'name slug',
@@ -92,6 +93,13 @@ exports.getBestsellers = async (req, res) => {
             image: imageData,
             price: product.price,
             discount: product.discount || 0,
+            compareAtPrice: product.compareAtPrice,
+            isFlashDeal: Boolean(product.isFlashDeal),
+            flashDealEndTime: product.flashDealEndTime || null,
+            isSpecialOffer: Boolean(product.isSpecialOffer),
+            specialOfferEndTime: product.specialOfferEndTime || null,
+            campaignLabel: product.campaignLabel || null,
+            campaignTheme: product.campaignTheme || null,
             average_rating: product.rating || 0,
             review_count: product.numReviews || 0,
             stock: product.stock || 0,
@@ -142,7 +150,7 @@ exports.getBestsellers = async (req, res) => {
           isActive: true,
           ...stockFilter,
         })
-          .select('name slug images price discount rating numReviews stock category')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme')
           .populate('category', 'name slug')
           .lean()
 
@@ -168,7 +176,7 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ salesCount: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount rating numReviews stock category salesCount')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme salesCount')
           .populate('category', 'name slug')
           .lean()
 
@@ -186,7 +194,7 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ views: -1, rating: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount rating numReviews stock category views')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme views')
           .populate('category', 'name slug')
           .lean()
 
@@ -231,8 +239,8 @@ exports.getBestsellers = async (req, res) => {
       })
     }
 
-    // ذخیره در کش (TTL: 15 دقیقه)
-    if (redis && result.length > 0) {
+    // ذخیره در کش (TTL: 15 دقیقه)، مگر آن‌که مصرف‌کننده دادهٔ تازه خواسته باشد.
+    if (!bypassCache && redis && result.length > 0) {
       await redis.setCache(cacheKey, result, 900)
     }
 
