@@ -910,35 +910,34 @@ export default function CheckoutPage() {
                                     <div className="space-y-3">
                                         {canUseMashhadSpecialPickup && (
                                             <label
-                                                className={`relative flex items-center gap-3 overflow-hidden p-4 border-2 rounded-2xl cursor-pointer transition-all ${isMashhadSpecialPickup
-                                                    ? "border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-100"
+                                                className={`flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all ${isMashhadSpecialPickup
+                                                    ? "border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100"
                                                     : "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 hover:border-emerald-400"
                                                     }`}
                                             >
-                                                <div className="absolute top-0 left-0 px-3 py-1 rounded-br-xl bg-emerald-600 text-white text-[10px] font-black">
-                                                    ویژهٔ مشهد
-                                                </div>
                                                 <input
                                                     type="radio"
                                                     name="deliveryOption"
                                                     value="mashhad_special_pickup"
                                                     checked={isMashhadSpecialPickup}
                                                     onChange={() => setDeliveryOption("mashhad_special_pickup")}
-                                                    className="w-4 h-4 mt-4 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
+                                                    className="w-4 h-4 shrink-0 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
                                                 />
-                                                <div className="mt-3 w-11 h-11 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
-                                                    <Store size={21} />
+                                                <div className="w-10 h-10 shrink-0 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                                                    <Store size={19} />
                                                 </div>
-                                                <div className="flex-1 pt-3">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-sm font-black text-emerald-950">تحویل حضوری ویژه</span>
-                                                        <ShieldCheck size={15} className="text-emerald-600" />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className="min-w-0 flex items-center gap-1.5">
+                                                            <span className="truncate text-sm font-black text-emerald-950">تحویل حضوری ویژه</span>
+                                                            <ShieldCheck size={14} className="shrink-0 text-emerald-600" />
+                                                        </div>
+                                                        <span className="shrink-0 rounded-md border border-emerald-200 bg-white/80 px-2 py-1 text-[11px] font-black text-emerald-700">
+                                                            رایگان
+                                                        </span>
                                                     </div>
-                                                    <span className="text-xs leading-5 text-emerald-800 mt-1 block">برای نشانی انتخابی شما در مشهد فعال است؛ هزینه تحویل کاملاً رایگان است.</span>
-                                                    <span className="text-[11px] text-emerald-700 mt-1 block">پرداخت سفارش همچنان فقط از طریق درگاه امن آنلاین انجام می‌شود.</span>
-                                                </div>
-                                                <div className="mt-3 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-black text-emerald-700 border border-emerald-200">
-                                                    رایگان
+                                                    <p className="mt-1 text-xs leading-5 text-emerald-800">تحویل در مشهد، بدون هزینه ارسال</p>
+                                                    <p className="text-[11px] leading-4 text-emerald-700">پرداخت فقط از طریق درگاه آنلاین</p>
                                                 </div>
                                             </label>
                                         )}
