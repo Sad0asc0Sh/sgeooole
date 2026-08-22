@@ -1,5 +1,4 @@
 const Order = require('../models/Order')
-const User = require('../models/User')
 const Cart = require('../models/Cart')
 const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
@@ -201,11 +200,10 @@ exports.createOrder = async (req, res) => {
     let finalShippingMethod = shippingMethod
 
     if (isMashhadSpecialPickup) {
-      const user = await User.findById(userId).select('isMashhadPickupEligible').lean()
-      if (!user?.isMashhadPickupEligible || !isMashhadShippingAddress(shippingAddress)) {
+      if (!isMashhadShippingAddress(shippingAddress)) {
         return res.status(403).json({
           success: false,
-          message: 'تحویل حضوری ویژه فقط برای کاربران مجاز با نشانی شهر مشهد فعال است.',
+          message: 'تحویل حضوری ویژه فقط برای نشانی شهر مشهد فعال است.',
         })
       }
 

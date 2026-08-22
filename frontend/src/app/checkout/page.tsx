@@ -126,7 +126,8 @@ export default function CheckoutPage() {
         normalizeIranLocationText(selectedAddress.city) === "مشهد" &&
         normalizeIranLocationText(selectedAddress.province) === "خراسان رضوی"
     );
-    const canUseMashhadSpecialPickup = Boolean(user?.isMashhadPickupEligible && isMashhadAddress);
+    // The selected delivery address is the source of truth. Every Mashhad address can use pickup.
+    const canUseMashhadSpecialPickup = isMashhadAddress;
     const isMashhadSpecialPickup = deliveryOption === "mashhad_special_pickup" && canUseMashhadSpecialPickup;
     const shippingPrice = isMashhadSpecialPickup ? 0 : (selectedMethod ? selectedMethod.cost : 0);
     const deliveryLabel = isMashhadSpecialPickup ? "تحویل حضوری ویژه مشهد" : selectedMethod?.name;
@@ -933,7 +934,7 @@ export default function CheckoutPage() {
                                                         <span className="text-sm font-black text-emerald-950">تحویل حضوری ویژه</span>
                                                         <ShieldCheck size={15} className="text-emerald-600" />
                                                     </div>
-                                                    <span className="text-xs leading-5 text-emerald-800 mt-1 block">برای شما در مشهد فعال است؛ هزینه تحویل کاملاً رایگان است.</span>
+                                                    <span className="text-xs leading-5 text-emerald-800 mt-1 block">برای نشانی انتخابی شما در مشهد فعال است؛ هزینه تحویل کاملاً رایگان است.</span>
                                                     <span className="text-[11px] text-emerald-700 mt-1 block">پرداخت سفارش همچنان فقط از طریق درگاه امن آنلاین انجام می‌شود.</span>
                                                 </div>
                                                 <div className="mt-3 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-black text-emerald-700 border border-emerald-200">

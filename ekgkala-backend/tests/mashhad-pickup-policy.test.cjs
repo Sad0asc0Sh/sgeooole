@@ -1,7 +1,8 @@
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const { orderCreateSchema } = require('../validators/joiSchemas/orderSchemas')
-const User = require('../models/User')
 const Order = require('../models/Order')
 
 const orderBase = {
@@ -45,19 +46,8 @@ assert.notEqual(
   'پرداخت در محل نباید برای سفارش جدید معتبر باشد',
 )
 
-const eligibleUser = new User({
-  mobile: '09123456789',
-  isMashhadPickupEligible: true,
-})
-assert.equal(
-  eligibleUser.validateSync(),
-  undefined,
-  'نشان مجازبودن تحویل ویژه باید در مدل کاربر معتبر باشد',
-)
-assert.equal(eligibleUser.isMashhadPickupEligible, true)
-
 const specialPickupOrder = new Order({
-  user: eligibleUser._id,
+  user: '507f1f77bcf86cd799439012',
   orderItems: orderBase.orderItems,
   shippingAddress: orderBase.shippingAddress,
   paymentMethod: 'online',
@@ -72,6 +62,27 @@ assert.equal(
   specialPickupOrder.validateSync(),
   undefined,
   'سفارش تحویل ویژه باید با هزینه تحویل صفر در مدل سفارش معتبر باشد',
+)
+
+const checkoutSource = fs.readFileSync(
+  path.resolve(__dirname, '../../frontend/src/app/checkout/page.tsx'),
+  'utf8',
+)
+const orderControllerSource = fs.readFileSync(
+  path.resolve(__dirname, '../controllers/orderController.js'),
+  'utf8',
+)
+assert.ok(
+  checkoutSource.includes('const canUseMashhadSpecialPickup = isMashhadAddress;'),
+  'نمایش کارت تحویل ویژه باید فقط به نشانی انتخابی مشهد وابسته باشد',
+)
+assert.ok(
+  orderControllerSource.includes("if (!isMashhadShippingAddress(shippingAddress))"),
+  'سرور باید نشانی مشهد را پیش از اعمال تحویل ویژه کنترل کند',
+)
+assert.ok(
+  !orderControllerSource.includes('isMashhadPickupEligible'),
+  'سرور نباید تحویل ویژه را به پرچم پنهانِ پروفایل وابسته کند',
 )
 
 console.log('Mashhad special pickup policy tests passed.')
