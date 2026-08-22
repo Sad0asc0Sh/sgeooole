@@ -16,7 +16,7 @@ const iranMobilePattern = /^09\d{9}$/;
 const ORDER_STATUSES = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Refunded'];
 
 // Payment methods
-const PAYMENT_METHODS = ['online', 'cod', 'wallet', 'credit'];
+const PAYMENT_METHODS = ['online'];
 
 // ============================================
 // Order Schemas
@@ -113,6 +113,7 @@ const orderCreateSchema = Joi.object({
     itemsPrice: Joi.number().min(0).required(),
     shippingPrice: Joi.number().min(0).required(),
     shippingMethod: Joi.string().optional().allow('', null),
+    fulfillmentType: Joi.string().valid('shipping', 'mashhad_special_pickup').optional(),
     taxPrice: Joi.number().min(0).optional(),
     totalPrice: Joi.number().min(0).required(),
     totalDiscount: Joi.number().min(0).optional(),

@@ -161,6 +161,12 @@ const orderSchema = new mongoose.Schema(
       type: String,
       required: false, // Optional for backward compatibility
     },
+    // New orders explicitly distinguish normal shipping from eligible Mashhad pickup.
+    fulfillmentType: {
+      type: String,
+      enum: ['shipping', 'mashhad_special_pickup'],
+      default: 'shipping',
+    },
     taxPrice: {
       type: Number,
       required: true,

@@ -11,6 +11,8 @@ export interface User {
   wallet?: number;
   role?: string;
   isActive: boolean;
+  /** Granted only by an authorized administrator for free in-person pickup in Mashhad. */
+  isMashhadPickupEligible?: boolean;
   addresses?: any[];
   avatar?: string;
   googleId?: string;
@@ -195,6 +197,7 @@ export const authService = {
         wallet: userData.wallet ?? userData.walletBalance ?? 0,
         role: userData.role || "user",
         isActive: userData.isActive !== false,
+        isMashhadPickupEligible: Boolean(userData.isMashhadPickupEligible),
         addresses: userData.addresses || [],
         avatar: userData.avatar,
          // Personal Info
@@ -304,6 +307,7 @@ export const authService = {
         wallet: userData.wallet ?? userData.walletBalance ?? 0,
         role: userData.role || "user",
         isActive: userData.isActive !== false,
+        isMashhadPickupEligible: Boolean(userData.isMashhadPickupEligible),
         addresses: userData.addresses || [],
         avatar: userData.avatar,
         // Personal Info

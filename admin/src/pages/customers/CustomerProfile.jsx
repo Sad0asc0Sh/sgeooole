@@ -106,6 +106,7 @@ function CustomerProfile() {
         email: userData?.email || '',
         mobile: userData?.mobile || '', // ✅ FIX: تغییر از phoneNumber به mobile
         isActive: userData?.isActive ?? true,
+        isMashhadPickupEligible: userData?.isMashhadPickupEligible ?? false,
         role: userData?.role || 'user',
       })
     } catch (err) {
@@ -160,6 +161,7 @@ function CustomerProfile() {
         email: values.email,
         mobile: values.mobile, // ✅ FIX: تغییر از phoneNumber به mobile
         isActive: values.isActive,
+        isMashhadPickupEligible: values.isMashhadPickupEligible,
         ...(canManageRoles ? { role: values.role } : {}),
       })
 
@@ -286,6 +288,11 @@ function CustomerProfile() {
                   <Descriptions.Item label="وضعیت حساب">
                     <Tag color={user.isActive ? 'green' : 'red'}>
                       {user.isActive ? 'فعال' : 'غیرفعال'}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="تحویل حضوری ویژهٔ مشهد">
+                    <Tag color={user.isMashhadPickupEligible ? 'green' : 'default'}>
+                      {user.isMashhadPickupEligible ? 'مجاز' : 'غیرفعال'}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="شماره موبایل">
@@ -417,6 +424,18 @@ function CustomerProfile() {
                     >
                       <Switch
                         checkedChildren="فعال"
+                        unCheckedChildren="غیرفعال"
+                      />
+                    </Form.Item>
+
+                    <Form.Item
+                      name="isMashhadPickupEligible"
+                      label="تحویل حضوری ویژهٔ مشهد"
+                      valuePropName="checked"
+                      extra="فقط برای کاربرانی فعال کنید که در مشهد امکان تحویل حضوری دارند. پرداخت آن‌ها همچنان فقط آنلاین است."
+                    >
+                      <Switch
+                        checkedChildren="مجاز"
                         unCheckedChildren="غیرفعال"
                       />
                     </Form.Item>

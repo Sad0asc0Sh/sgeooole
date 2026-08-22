@@ -290,6 +290,7 @@ exports.getProfile = async (req, res) => {
         walletBalance: user.wallet,
         role: user.role,
         isActive: user.isActive,
+        isMashhadPickupEligible: Boolean(user.isMashhadPickupEligible),
         addresses: user.addresses,
         lastLogin: user.lastLogin,
         createdAt: user.createdAt,

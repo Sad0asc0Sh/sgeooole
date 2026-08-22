@@ -1,4 +1,5 @@
 const Order = require('../models/Order')
+const User = require('../models/User')
 const Cart = require('../models/Cart')
 const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
@@ -11,6 +12,20 @@ const convertPersianToEnglishDigits = (str) => {
     .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
     .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
 }
+
+const MASHHAD_SPECIAL_PICKUP = 'mashhad_special_pickup'
+
+const normalizeLocationName = (value) => String(value || '')
+  .replace(/[يى]/g, 'ی')
+  .replace(/ك/g, 'ک')
+  .replace(/\u200c/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .toLocaleLowerCase('fa-IR')
+
+const isMashhadShippingAddress = (shippingAddress) =>
+  normalizeLocationName(shippingAddress?.city) === 'مشهد' &&
+  normalizeLocationName(shippingAddress?.province) === 'خراسان رضوی'
 
 // ============================================
 // Helper: Record SalesEvents for Bestsellers Engine
@@ -154,8 +169,9 @@ exports.createOrder = async (req, res) => {
       shippingAddress,
       paymentMethod,
       itemsPrice,
-      shippingPrice,
+      shippingPrice: requestedShippingPrice,
       shippingMethod,
+      fulfillmentType,
       taxPrice,
       totalPrice,
       totalDiscount,
@@ -171,6 +187,31 @@ exports.createOrder = async (req, res) => {
     }
 
     const userId = req.user._id
+
+    // All customer-facing orders must be paid through the online gateway.
+    if (paymentMethod !== 'online') {
+      return res.status(400).json({
+        success: false,
+        message: 'پرداخت در محل غیرفعال است؛ لطفاً پرداخت آنلاین را انتخاب کنید.',
+      })
+    }
+
+    const isMashhadSpecialPickup = fulfillmentType === MASHHAD_SPECIAL_PICKUP
+    let finalShippingPrice = requestedShippingPrice
+    let finalShippingMethod = shippingMethod
+
+    if (isMashhadSpecialPickup) {
+      const user = await User.findById(userId).select('isMashhadPickupEligible').lean()
+      if (!user?.isMashhadPickupEligible || !isMashhadShippingAddress(shippingAddress)) {
+        return res.status(403).json({
+          success: false,
+          message: 'تحویل حضوری ویژه فقط برای کاربران مجاز با نشانی شهر مشهد فعال است.',
+        })
+      }
+
+      finalShippingPrice = 0
+      finalShippingMethod = 'تحویل حضوری ویژه مشهد'
+    }
 
     // اعتبارسنجی سبد خرید
     if (!orderItems || orderItems.length === 0) {
@@ -202,15 +243,16 @@ exports.createOrder = async (req, res) => {
       user: userId,
       orderItems,
       shippingAddress,
-      paymentMethod: paymentMethod || 'online',
+      paymentMethod: 'online',
       itemsPrice,
-      shippingPrice,
-      shippingMethod,
+      shippingPrice: finalShippingPrice,
+      shippingMethod: finalShippingMethod,
+      fulfillmentType: isMashhadSpecialPickup ? MASHHAD_SPECIAL_PICKUP : 'shipping',
       taxPrice: taxPrice || 0,
       totalPrice,
       totalDiscount: totalDiscount || 0,
       couponCode: couponCode ? String(couponCode).toUpperCase() : undefined,
-      orderStatus: paymentMethod === 'cod' ? 'Processing' : 'Pending',
+      orderStatus: 'Pending',
     })
 
     const createdOrder = await order.save()
@@ -226,13 +268,6 @@ exports.createOrder = async (req, res) => {
       } catch (couponErr) {
         console.error('Error updating coupon usageCount:', couponErr)
       }
-    }
-
-    // NEW LOGIC: Adjust stats if order is Cash-On-Delivery
-    if (createdOrder.paymentMethod === 'cod') {
-      await adjustProductStats(createdOrder.orderItems, true)
-      // Record SalesEvents for Bestsellers scoring engine
-      await recordSalesEvents(createdOrder.orderItems, createdOrder._id)
     }
 
     // پاک کردن سبد خرید کاربر بعد از ثبت سفارش
@@ -981,6 +1016,13 @@ exports.createOrderForUser = async (req, res) => {
       adminNotes,
     } = req.body
 
+    if (paymentMethod && paymentMethod !== 'online') {
+      return res.status(400).json({
+        success: false,
+        message: 'پرداخت در محل غیرفعال است؛ سفارش ادمین نیز باید با پرداخت آنلاین ثبت شود.',
+      })
+    }
+
     // اعتبارسنجی کاربر هدف
     if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
       return res.status(400).json({
@@ -1019,26 +1061,19 @@ exports.createOrderForUser = async (req, res) => {
       user: userId,
       orderItems,
       shippingAddress,
-      paymentMethod: paymentMethod || 'online',
+      paymentMethod: 'online',
       itemsPrice,
       shippingPrice,
       shippingMethod,
       taxPrice: taxPrice || 0,
       totalPrice,
       totalDiscount: totalDiscount || 0,
-      orderStatus: paymentMethod === 'cod' ? 'Processing' : 'Pending',
+      orderStatus: 'Pending',
       adminNotes: adminNotes || '',
       isPaid: false, // Default not paid
     })
 
     const createdOrder = await order.save()
-
-    // NEW LOGIC: Adjust stats if COD
-    if (createdOrder.paymentMethod === 'cod') {
-      await adjustProductStats(createdOrder.orderItems, true)
-      // Record SalesEvents for Bestsellers scoring engine
-      await recordSalesEvents(createdOrder.orderItems, createdOrder._id)
-    }
 
     // Audit Log
     const { logAction } = require('../utils/auditLogger')

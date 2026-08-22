@@ -113,7 +113,7 @@ exports.getUserByIdAsAdmin = async (req, res) => {
 // ============================================
 exports.updateUserAsAdmin = async (req, res) => {
   try {
-    const { name, email, mobile, isActive, role } = req.body || {} // ✅ FIX: تغییر phoneNumber به mobile
+    const { name, email, mobile, isActive, isMashhadPickupEligible, role } = req.body || {} // ✅ FIX: تغییر phoneNumber به mobile
 
     const currentRole = req.user?.role || 'user'
     const currentLevel = getRoleLevel(currentRole)
@@ -191,6 +191,10 @@ exports.updateUserAsAdmin = async (req, res) => {
       user.mobile = mobile // ✅ FIX: تغییر از phoneNumber به mobile
     }
     if (isActive !== undefined) user.isActive = isActive
+    // This flag is intentionally managed only through the protected admin endpoint.
+    if (isMashhadPickupEligible !== undefined) {
+      user.isMashhadPickupEligible = Boolean(isMashhadPickupEligible)
+    }
 
     await user.save()
 

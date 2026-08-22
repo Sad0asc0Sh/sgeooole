@@ -88,6 +88,12 @@ const userSchema = new mongoose.Schema(
       default: true,
     },
 
+    // Granted explicitly by an authorized admin. Location is verified at order creation.
+    isMashhadPickupEligible: {
+      type: Boolean,
+      default: false,
+    },
+
     // Personal Info
     nationalCode: {
       type: String,

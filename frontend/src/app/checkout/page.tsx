@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck, Tag, CheckCircle2, X } from "lucide-react";
+import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck, Tag, CheckCircle2, X, Store, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { useCart } from "@/hooks/useCart";
@@ -12,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import api from "@/lib/api";
 import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
 import AddressLocationFields from "@/components/checkout/AddressLocationFields";
+import { normalizeIranLocationText } from "@/lib/iranLocations";
 
 interface Address {
     _id?: string;
@@ -47,7 +47,6 @@ interface AddressFormState {
 }
 
 export default function CheckoutPage() {
-    const router = useRouter();
     const { cartItems, totalPrice, totalProfit, isEmpty } = useCart();
 
     // Coupon State
@@ -64,8 +63,11 @@ export default function CheckoutPage() {
     const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
     const [loadingAddresses, setLoadingAddresses] = useState(true);
 
-    // Payment Method
-    const [paymentMethod, setPaymentMethod] = useState<"online" | "cod">("online");
+    // Only online payment is available. Cash on delivery is intentionally retired.
+    const paymentMethod = "online" as const;
+
+    // Delivery State
+    const [deliveryOption, setDeliveryOption] = useState<"shipping" | "mashhad_special_pickup">("shipping");
 
     // UI State
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -118,10 +120,25 @@ export default function CheckoutPage() {
 
     // Pricing Calculations
     const selectedMethod = shippingMethods.find(m => m._id === selectedShippingMethodId);
-    const shippingPrice = selectedMethod ? selectedMethod.cost : 0;
+    const selectedAddress = addresses.find((address) => address._id === selectedAddressId);
+    const isMashhadAddress = Boolean(
+        selectedAddress &&
+        normalizeIranLocationText(selectedAddress.city) === "مشهد" &&
+        normalizeIranLocationText(selectedAddress.province) === "خراسان رضوی"
+    );
+    const canUseMashhadSpecialPickup = Boolean(user?.isMashhadPickupEligible && isMashhadAddress);
+    const isMashhadSpecialPickup = deliveryOption === "mashhad_special_pickup" && canUseMashhadSpecialPickup;
+    const shippingPrice = isMashhadSpecialPickup ? 0 : (selectedMethod ? selectedMethod.cost : 0);
+    const deliveryLabel = isMashhadSpecialPickup ? "تحویل حضوری ویژه مشهد" : selectedMethod?.name;
     const taxPrice = 0;
     const finalTotalPrice = Math.max(0, totalPrice + shippingPrice + taxPrice - discount);
     const totalSavings = (totalProfit || 0) + discount;
+
+    useEffect(() => {
+        if (!canUseMashhadSpecialPickup && deliveryOption === "mashhad_special_pickup") {
+            setDeliveryOption("shipping");
+        }
+    }, [canUseMashhadSpecialPickup, deliveryOption]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -505,6 +522,8 @@ export default function CheckoutPage() {
             return;
         }
 
+        let redirectingToGateway = false;
+
         try {
             setIsSubmitting(true);
             setError(null);
@@ -546,7 +565,8 @@ export default function CheckoutPage() {
                 paymentMethod,
                 itemsPrice: totalPrice,
                 shippingPrice,
-                shippingMethod: selectedMethod?.name,
+                shippingMethod: deliveryLabel,
+                fulfillmentType: isMashhadSpecialPickup ? "mashhad_special_pickup" : "shipping",
                 taxPrice,
                 totalPrice: finalTotalPrice,
                 totalDiscount: totalSavings,
@@ -561,30 +581,23 @@ export default function CheckoutPage() {
                 localStorage.removeItem("appliedCoupon");
                 const orderId = response.data._id;
 
-                // Step 2: If online payment, initiate payment
-                if (paymentMethod === "online") {
-                    try {
-                        const { default: api } = await import("@/lib/api");
-                        // Pass selected gateway if available
-                        const paymentResponse = await api.post(`/orders/${orderId}/pay`, {
-                            gateway: selectedGateway
-                        });
+                // Step 2: Every checkout must proceed to the online payment gateway.
+                try {
+                    const { default: api } = await import("@/lib/api");
+                    const paymentResponse = await api.post(`/orders/${orderId}/pay`, {
+                        gateway: selectedGateway
+                    });
 
-                        if (paymentResponse.data.success && paymentResponse.data.data.paymentUrl) {
-                            // Redirect to Gateway
-                            window.location.href = paymentResponse.data.data.paymentUrl;
-                        } else {
-                            setError("خطا در ایجاد درخواست پرداخت");
-                            setIsSubmitting(false);
-                        }
-                    } catch (payErr: any) {
-                        console.error("[CHECKOUT] Payment error:", payErr);
-                        setError(payErr?.response?.data?.message || "خطا در اتصال به درگاه پرداخت");
-                        setIsSubmitting(false);
+                    if (paymentResponse.data.success && paymentResponse.data.data.paymentUrl) {
+                        redirectingToGateway = true;
+                        window.location.href = paymentResponse.data.data.paymentUrl;
+                        return;
                     }
-                } else {
-                    // Cash on delivery - go directly to order page
-                    router.push(`/profile/orders/${orderId}`);
+
+                    setError("خطا در ایجاد درخواست پرداخت");
+                } catch (payErr: any) {
+                    console.error("[CHECKOUT] Payment error:", payErr);
+                    setError(payErr?.response?.data?.message || "خطا در اتصال به درگاه پرداخت");
                 }
             } else {
                 setError(response.message || "خطا در ثبت سفارش");
@@ -593,8 +606,8 @@ export default function CheckoutPage() {
             console.error("[CHECKOUT] Error placing order:", err);
             setError(err.message || "خطا در ثبت سفارش");
         } finally {
-            // Don't set isSubmitting to false if redirecting to payment
-            if (paymentMethod !== "online") {
+            // Keep the loading state only while the browser is leaving for the gateway.
+            if (!redirectingToGateway) {
                 setIsSubmitting(false);
             }
         }
@@ -675,8 +688,10 @@ export default function CheckoutPage() {
                                             <span>{totalPrice.toLocaleString("fa-IR")} تومان</span>
                                         </div>
                                         <div className="flex justify-between text-sm text-gray-600">
-                                            <span>هزینه ارسال</span>
-                                            <span>{shippingPrice.toLocaleString("fa-IR")} تومان</span>
+                                            <span>{isMashhadSpecialPickup ? "هزینه تحویل حضوری" : "هزینه ارسال"}</span>
+                                            <span className={isMashhadSpecialPickup ? "font-bold text-emerald-600" : ""}>
+                                                {isMashhadSpecialPickup ? "رایگان" : `${shippingPrice.toLocaleString("fa-IR")} تومان`}
+                                            </span>
                                         </div>
                                         {totalSavings > 0 && (
                                             <div className="flex justify-between text-sm text-red-500 font-bold">
@@ -761,11 +776,11 @@ export default function CheckoutPage() {
                                     {isSubmitting ? (
                                         <>
                                             <Loader2 className="animate-spin" size={20} />
-                                            <span>در حال ثبت...</span>
+                                            <span>در حال انتقال به پرداخت...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <span>ثبت نهایی سفارش</span>
+                                            <span>ادامه و پرداخت آنلاین</span>
                                             <ChevronLeft size={20} className="animate-pulse" />
                                         </>
                                     )}
@@ -870,37 +885,78 @@ export default function CheckoutPage() {
                                 )}
                             </div>
 
-                            {/* Step 2: Shipping Method */}
+                            {/* Step 2: Delivery Option */}
                             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                                 <div className="flex items-center gap-2 mb-4">
                                     <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                                         <Package size={16} className="text-amber-600" />
                                     </div>
-                                    <h2 className="font-bold text-gray-900">روش ارسال</h2>
+                                    <div>
+                                        <h2 className="font-bold text-gray-900">روش تحویل</h2>
+                                        <p className="text-[11px] text-gray-500 mt-0.5">هزینه و زمان تحویل بر اساس گزینهٔ انتخابی محاسبه می‌شود.</p>
+                                    </div>
                                 </div>
 
                                 {loadingShipping ? (
                                     <div className="flex items-center justify-center py-4">
                                         <Loader2 className="animate-spin text-amber-600" size={24} />
                                     </div>
-                                ) : shippingMethods.length === 0 ? (
+                                ) : shippingMethods.length === 0 && !canUseMashhadSpecialPickup ? (
                                     <div className="text-center py-4 text-gray-500 text-sm">
-                                        هیچ روش ارسالی یافت نشد.
+                                        هیچ روش تحویلی یافت نشد.
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
+                                        {canUseMashhadSpecialPickup && (
+                                            <label
+                                                className={`relative flex items-center gap-3 overflow-hidden p-4 border-2 rounded-2xl cursor-pointer transition-all ${isMashhadSpecialPickup
+                                                    ? "border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-100"
+                                                    : "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 hover:border-emerald-400"
+                                                    }`}
+                                            >
+                                                <div className="absolute top-0 left-0 px-3 py-1 rounded-br-xl bg-emerald-600 text-white text-[10px] font-black">
+                                                    ویژهٔ مشهد
+                                                </div>
+                                                <input
+                                                    type="radio"
+                                                    name="deliveryOption"
+                                                    value="mashhad_special_pickup"
+                                                    checked={isMashhadSpecialPickup}
+                                                    onChange={() => setDeliveryOption("mashhad_special_pickup")}
+                                                    className="w-4 h-4 mt-4 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
+                                                />
+                                                <div className="mt-3 w-11 h-11 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-sm">
+                                                    <Store size={21} />
+                                                </div>
+                                                <div className="flex-1 pt-3">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-sm font-black text-emerald-950">تحویل حضوری ویژه</span>
+                                                        <ShieldCheck size={15} className="text-emerald-600" />
+                                                    </div>
+                                                    <span className="text-xs leading-5 text-emerald-800 mt-1 block">برای شما در مشهد فعال است؛ هزینه تحویل کاملاً رایگان است.</span>
+                                                    <span className="text-[11px] text-emerald-700 mt-1 block">پرداخت سفارش همچنان فقط از طریق درگاه امن آنلاین انجام می‌شود.</span>
+                                                </div>
+                                                <div className="mt-3 rounded-lg bg-white/80 px-2.5 py-1.5 text-xs font-black text-emerald-700 border border-emerald-200">
+                                                    رایگان
+                                                </div>
+                                            </label>
+                                        )}
+
                                         {shippingMethods.map((method) => (
                                             <label
                                                 key={method._id}
-                                                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedShippingMethodId === method._id ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
+                                                className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${deliveryOption === "shipping" && selectedShippingMethodId === method._id ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50 hover:border-gray-200"
                                                     }`}
                                             >
                                                 <input
                                                     type="radio"
-                                                    name="shippingMethod"
+                                                    name="deliveryOption"
                                                     value={method._id}
-                                                    checked={selectedShippingMethodId === method._id}
-                                                    onChange={() => setSelectedShippingMethodId(method._id)}
+                                                    checked={deliveryOption === "shipping" && selectedShippingMethodId === method._id}
+                                                    onChange={() => {
+                                                        setSelectedShippingMethodId(method._id);
+                                                        setDeliveryOption("shipping");
+                                                    }}
                                                     className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
                                                 />
                                                 <div className="flex-1">
@@ -918,76 +974,55 @@ export default function CheckoutPage() {
                                 )}
                             </div>
 
-                            {/* Step 3: Payment Method */}
+                            {/* Step 3: Online Payment */}
                             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                                 <div className="flex items-center gap-2 mb-4">
                                     <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
                                         <CreditCard size={16} className="text-amber-600" />
                                     </div>
-                                    <h2 className="font-bold text-gray-900">روش پرداخت</h2>
+                                    <div>
+                                        <h2 className="font-bold text-gray-900">پرداخت امن آنلاین</h2>
+                                        <p className="text-[11px] text-gray-500 mt-0.5">پس از ثبت سفارش، مستقیماً به درگاه پرداخت منتقل می‌شوید.</p>
+                                    </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <label
-                                        className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "online" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
-                                            }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="paymentMethod"
-                                            value="online"
-                                            checked={paymentMethod === "online"}
-                                            onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
-                                            className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
-                                        />
-                                        <div className="flex-1">
-                                            <span className="block text-sm font-bold text-gray-900">پرداخت اینترنتی</span>
-                                            <span className="text-xs text-gray-500 mt-0.5 block">پرداخت آنلاین با کلیه کارت‌های بانکی</span>
-
-                                            {/* Gateway Selection (Only visible if Online Payment is selected) */}
-                                            {paymentMethod === "online" && availableGateways.length > 0 && (
-                                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    {availableGateways.map((gateway) => (
-                                                        <label
-                                                            key={gateway.id}
-                                                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${selectedGateway === gateway.id
-                                                                ? "border-amber-500 bg-amber-50"
-                                                                : "border-gray-200 hover:border-gray-300"
-                                                                }`}
-                                                        >
-                                                            <input
-                                                                type="radio"
-                                                                name="gateway"
-                                                                value={gateway.id}
-                                                                checked={selectedGateway === gateway.id}
-                                                                onChange={() => setSelectedGateway(gateway.id)}
-                                                                className="w-3 h-3 text-amber-600 accent-amber-600"
-                                                            />
-                                                            <span className="text-sm text-gray-700">{gateway.name}</span>
-                                                        </label>
-                                                    ))}
-                                                </div>
-                                            )}
+                                <div className="rounded-2xl border border-amber-200 bg-gradient-to-l from-amber-50 to-orange-50 p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-sm">
+                                            <CreditCard size={20} />
                                         </div>
-                                    </label>
-
-                                    <label
-                                        className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${paymentMethod === "cod" ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50"
-                                            }`}
-                                    >
-                                        <input
-                                            type="radio"
-                                            name="paymentMethod"
-                                            value="cod"
-                                            checked={paymentMethod === "cod"}
-                                            onChange={(e) => setPaymentMethod(e.target.value as "online" | "cod")}
-                                            className="w-4 h-4 text-amber-600 focus:ring-amber-500 accent-amber-600"
-                                        />
                                         <div className="flex-1">
-                                            <span className="block text-sm font-bold text-gray-900">پرداخت در محل</span>
-                                            <span className="text-xs text-gray-500 mt-0.5 block">پرداخت وجه هنگام تحویل کالا</span>
+                                            <span className="block text-sm font-black text-gray-900">پرداخت اینترنتی</span>
+                                            <span className="text-xs text-gray-600 mt-0.5 block">تنها روش پرداخت فعال برای تمام سفارش‌ها</span>
                                         </div>
-                                    </label>
+                                        <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-amber-700 border border-amber-200">الزامی</span>
+                                    </div>
+
+                                    {availableGateways.length > 0 ? (
+                                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {availableGateways.map((gateway) => (
+                                                <label
+                                                    key={gateway.id}
+                                                    className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${selectedGateway === gateway.id
+                                                        ? "border-amber-500 bg-white shadow-sm"
+                                                        : "border-amber-100 bg-white/70 hover:border-amber-300"
+                                                        }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="gateway"
+                                                        value={gateway.id}
+                                                        checked={selectedGateway === gateway.id}
+                                                        onChange={() => setSelectedGateway(gateway.id)}
+                                                        className="w-3 h-3 text-amber-600 accent-amber-600"
+                                                    />
+                                                    <span className="text-sm text-gray-700">{gateway.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mt-3 text-xs text-amber-800">درگاه فعال به‌صورت خودکار هنگام ثبت سفارش انتخاب می‌شود.</p>
+                                    )}
                                 </div>
                             </div>
 
@@ -1015,11 +1050,11 @@ export default function CheckoutPage() {
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="animate-spin" size={20} />
-                                <span>در حال ثبت...</span>
+                                <span>در حال انتقال به پرداخت...</span>
                             </>
                         ) : (
                             <>
-                                <span>ثبت نهایی سفارش</span>
+                                <span>ادامه و پرداخت آنلاین</span>
                                 <ChevronLeft size={20} />
                             </>
                         )}

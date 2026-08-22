@@ -37,10 +37,11 @@ export interface OrderItem {
 export interface CreateOrderRequest {
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
-  paymentMethod: "online" | "cod";
+  paymentMethod: "online";
   itemsPrice: number;
   shippingPrice: number;
   shippingMethod?: string;
+  fulfillmentType?: "shipping" | "mashhad_special_pickup";
   taxPrice?: number;
   totalPrice: number;
   totalDiscount?: number;
@@ -66,6 +67,7 @@ export interface Order {
   itemsPrice: number;
   shippingPrice: number;
   shippingMethod?: string;
+  fulfillmentType?: "shipping" | "mashhad_special_pickup";
   taxPrice: number;
   totalPrice: number;
   totalDiscount?: number;
