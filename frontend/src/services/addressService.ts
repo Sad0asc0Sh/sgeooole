@@ -10,6 +10,8 @@ export interface Address {
   recipientPhone: string;
   province: string;
   city: string;
+  provinceId?: number;
+  cityId?: number;
   address: string;
   plaque: string;
   unit?: string;
@@ -27,6 +29,8 @@ export interface CreateAddressRequest {
   recipientPhone: string;
   province: string;
   city: string;
+  provinceId?: number;
+  cityId?: number;
   address: string;
   plaque: string;
   unit?: string;

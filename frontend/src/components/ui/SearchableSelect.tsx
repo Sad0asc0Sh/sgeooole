@@ -17,6 +17,7 @@ interface SearchableSelectProps {
     disabled?: boolean;
     className?: string;
     error?: boolean;
+    searchNormalizer?: (value: string) => string;
 }
 
 export default function SearchableSelect({
@@ -27,7 +28,8 @@ export default function SearchableSelect({
     searchPlaceholder = "جستجو...",
     disabled = false,
     className = "",
-    error = false
+    error = false,
+    searchNormalizer = (value) => value.toLowerCase()
 }: SearchableSelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -61,10 +63,11 @@ export default function SearchableSelect({
 
     const filteredOptions = useMemo(() => {
         if (!searchTerm) return options;
+        const normalizedSearchTerm = searchNormalizer(searchTerm);
         return options.filter(option =>
-            option.label.toLowerCase().includes(searchTerm.toLowerCase())
+            searchNormalizer(option.label).includes(normalizedSearchTerm)
         );
-    }, [options, searchTerm]);
+    }, [options, searchNormalizer, searchTerm]);
 
     const selectedOption = options.find(opt => opt.value === value);
 

@@ -31,7 +31,7 @@ exports.getUserAddresses = async (req, res) => {
 exports.createAddress = async (req, res) => {
   try {
     const userId = req.user._id
-    const { recipientName, recipientPhone, province, city, address, postalCode, isDefault } = req.body
+    const { recipientName, recipientPhone, province, city, provinceId, cityId, address, postalCode, isDefault } = req.body
 
     // اعتبارسنجی
     if (!recipientName || !recipientPhone || !city || !address || !postalCode) {
@@ -59,6 +59,8 @@ exports.createAddress = async (req, res) => {
       recipientPhone,
       province: province || '',
       city,
+      provinceId,
+      cityId,
       address,
       postalCode,
       isDefault: shouldBeDefault,
@@ -88,7 +90,7 @@ exports.updateAddress = async (req, res) => {
   try {
     const userId = req.user._id
     const addressId = req.params.id
-    const { recipientName, recipientPhone, province, city, address, postalCode, isDefault } = req.body
+    const { recipientName, recipientPhone, province, city, provinceId, cityId, address, postalCode, isDefault } = req.body
 
     // پیدا کردن آدرس و بررسی مالکیت
     const existingAddress = await Address.findOne({ _id: addressId, user: userId })
@@ -105,6 +107,8 @@ exports.updateAddress = async (req, res) => {
     if (recipientPhone) existingAddress.recipientPhone = recipientPhone
     if (province !== undefined) existingAddress.province = province
     if (city) existingAddress.city = city
+    if (provinceId !== undefined) existingAddress.provinceId = provinceId
+    if (cityId !== undefined) existingAddress.cityId = cityId
     if (address) existingAddress.address = address
     if (postalCode) {
       if (!/^\d{10}$/.test(postalCode)) {

@@ -82,6 +82,9 @@ const orderCreateSchema = Joi.object({
             .min(2)
             .max(50)
             .required(),
+        // IDs are optional so previous address records remain fully usable.
+        provinceId: Joi.number().integer().positive().optional(),
+        cityId: Joi.number().integer().positive().optional(),
         address: Joi.string()
             .trim()
             .min(5)

@@ -267,6 +267,10 @@ const addressSchema = Joi.object({
             'any.required': 'شهر الزامی است',
         }),
 
+    // Optional canonical IDs; text fields remain required for legacy compatibility.
+    provinceId: Joi.number().integer().positive().optional(),
+    cityId: Joi.number().integer().positive().optional(),
+
     address: Joi.string()
         .trim()
         .min(10)
@@ -352,6 +356,10 @@ const addressUpdateSchema = Joi.object({
         .min(2)
         .max(50)
         .optional(),
+
+    // Optional canonical IDs. Omitting them leaves existing legacy values unchanged.
+    provinceId: Joi.number().integer().positive().optional(),
+    cityId: Joi.number().integer().positive().optional(),
 
     address: Joi.string()
         .trim()

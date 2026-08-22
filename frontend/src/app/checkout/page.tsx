@@ -11,6 +11,7 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import api from "@/lib/api";
 import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
+import AddressLocationFields from "@/components/checkout/AddressLocationFields";
 
 interface Address {
     _id?: string;
@@ -20,6 +21,8 @@ interface Address {
     nationalCode: string;
     province: string;
     city: string;
+    provinceId?: number;
+    cityId?: number;
     address: string;
     plaque: string;
     unit: string;
@@ -28,6 +31,19 @@ interface Address {
     recipientName?: string;
     recipientPhone?: string;
     recipientNationalCode?: string;
+}
+
+interface AddressFormState {
+    title: string;
+    province: string;
+    city: string;
+    provinceId?: number;
+    cityId?: number;
+    address: string;
+    plaque: string;
+    unit: string;
+    postalCode: string;
+    isDefault: boolean;
 }
 
 export default function CheckoutPage() {
@@ -72,7 +88,7 @@ export default function CheckoutPage() {
     });
 
     // Address Info
-    const [addressInfo, setAddressInfo] = useState({
+    const [addressInfo, setAddressInfo] = useState<AddressFormState>({
         title: "",
         province: "",
         city: "",
@@ -333,6 +349,8 @@ export default function CheckoutPage() {
             title: addr.title,
             province: addr.province,
             city: addr.city,
+            provinceId: addr.provinceId,
+            cityId: addr.cityId,
             address: addr.address,
             plaque: addr.plaque,
             unit: addr.unit,
@@ -434,6 +452,8 @@ export default function CheckoutPage() {
                 recipientNationalCode: finalRecipientNationalCode,
                 province: normalizedProvince,
                 city: normalizedCity,
+                provinceId: addressInfo.provinceId,
+                cityId: addressInfo.cityId,
                 address: normalizedAddress,
                 plaque: normalizedPlaque,
                 postalCode: normalizedPostalCode,
@@ -508,6 +528,8 @@ export default function CheckoutPage() {
                 phone: selectedAddress.mobile,
                 province: selectedAddress.province,
                 city: selectedAddress.city,
+                provinceId: selectedAddress.provinceId,
+                cityId: selectedAddress.cityId,
                 address: selectedAddress.address,
                 postalCode: selectedAddress.postalCode,
                 isDefault: selectedAddress.isDefault,
@@ -1095,26 +1117,10 @@ export default function CheckoutPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5">استان <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                value={addressInfo.province}
-                                                onChange={(e) => setAddressInfo({ ...addressInfo, province: e.target.value })}
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 mb-1.5">شهر <span className="text-red-500">*</span></label>
-                                            <input
-                                                type="text"
-                                                value={addressInfo.city}
-                                                onChange={(e) => setAddressInfo({ ...addressInfo, city: e.target.value })}
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-all"
-                                            />
-                                        </div>
-                                    </div>
+                                    <AddressLocationFields
+                                        value={addressInfo}
+                                        onChange={(location) => setAddressInfo({ ...addressInfo, ...location })}
+                                    />
 
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 mb-1.5">آدرس پستی <span className="text-red-500">*</span></label>

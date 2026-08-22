@@ -32,6 +32,9 @@ const addressSchema = new mongoose.Schema(
       required: [true, 'شهر الزامی است'],
       trim: true,
     },
+    // Written only for addresses selected from the canonical list.
+    provinceId: Number,
+    cityId: Number,
     address: {
       type: String,
       required: [true, 'آدرس کامل الزامی است'],

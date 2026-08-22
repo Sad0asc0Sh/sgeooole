@@ -1254,6 +1254,8 @@ exports.addAddress = async (req, res) => {
       nationalCode,
       province,
       city,
+      provinceId,
+      cityId,
       address,
       plaque,
       unit,
@@ -1280,6 +1282,8 @@ exports.addAddress = async (req, res) => {
       nationalCode,
       province,
       city,
+      provinceId,
+      cityId,
       address,
       plaque,
       unit,
@@ -1323,6 +1327,8 @@ exports.updateAddress = async (req, res) => {
       nationalCode,
       province,
       city,
+      provinceId,
+      cityId,
       address,
       plaque,
       unit,
@@ -1352,6 +1358,9 @@ exports.updateAddress = async (req, res) => {
     if (nationalCode) user.addresses[addressIndex].nationalCode = nationalCode
     if (province) user.addresses[addressIndex].province = province
     if (city) user.addresses[addressIndex].city = city
+    // Absent IDs intentionally preserve legacy addresses as-is.
+    if (provinceId !== undefined) user.addresses[addressIndex].provinceId = provinceId
+    if (cityId !== undefined) user.addresses[addressIndex].cityId = cityId
     if (address) user.addresses[addressIndex].address = address
     if (plaque) user.addresses[addressIndex].plaque = plaque
     if (unit) user.addresses[addressIndex].unit = unit

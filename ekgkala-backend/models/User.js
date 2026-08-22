@@ -168,8 +168,12 @@ const userSchema = new mongoose.Schema(
         fullName: String,
         mobile: String,
         nationalCode: String,
+        // Display names remain the source of truth for legacy compatibility.
         province: String,
         city: String,
+        // Optional stable IDs are written only by the new selector.
+        provinceId: Number,
+        cityId: Number,
         address: String,
         plaque: String,
         unit: String,

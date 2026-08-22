@@ -8,6 +8,8 @@ export interface ShippingAddress {
   phone: string;
   province?: string;
   city: string;
+  provinceId?: number;
+  cityId?: number;
   address: string;
   postalCode: string;
   isDefault?: boolean;

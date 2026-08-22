@@ -56,6 +56,13 @@ const shippingAddressSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  // Optional values for new orders; legacy snapshots remain valid without them.
+  province: {
+    type: String,
+    trim: true,
+  },
+  provinceId: Number,
+  cityId: Number,
   postalCode: {
     type: String,
     required: true,

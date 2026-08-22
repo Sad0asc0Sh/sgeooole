@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { addressService, CreateAddressRequest } from "@/services/addressService";
+import AddressLocationFields from "@/components/checkout/AddressLocationFields";
 
 interface AddressFormProps {
   onSuccess: () => void;
@@ -110,36 +111,10 @@ export default function AddressForm({ onSuccess, onCancel }: AddressFormProps) {
           </div>
 
           {/* Province & City */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                استان *
-              </label>
-              <input
-                type="text"
-                name="province"
-                value={formData.province}
-                onChange={handleChange}
-                placeholder="تهران"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">
-                شهر *
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                placeholder="تهران"
-                className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                required
-              />
-            </div>
-          </div>
+          <AddressLocationFields
+            value={formData}
+            onChange={(location) => setFormData((previous) => ({ ...previous, ...location }))}
+          />
 
           {/* Address */}
           <div>
