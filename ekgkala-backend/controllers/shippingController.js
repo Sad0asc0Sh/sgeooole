@@ -1,9 +1,47 @@
 const ShippingMethod = require('../models/ShippingMethod')
 
+const normalizeLocationText = (value) => String(value || '')
+  .replace(/[يى]/g, 'ی')
+  .replace(/ك/g, 'ک')
+  .replace(/\u200c/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+
+const normalizeDestinationRules = (availabilityScope, destinationRules) => {
+  if (availabilityScope !== 'restricted') return []
+
+  if (!Array.isArray(destinationRules) || destinationRules.length === 0) {
+    const error = new Error('برای روش ارسال محدود، حداقل یک استان یا شهر مجاز تعیین کنید')
+    error.statusCode = 400
+    throw error
+  }
+
+  const rulesByProvince = new Map()
+  for (const rule of destinationRules) {
+    const province = normalizeLocationText(rule?.province)
+    if (!province) {
+      const error = new Error('نام استان در مقصدهای مجاز الزامی است')
+      error.statusCode = 400
+      throw error
+    }
+
+    const cities = [...new Set(
+      (Array.isArray(rule?.cities) ? rule.cities : [])
+        .map(normalizeLocationText)
+        .filter(Boolean),
+    )]
+
+    const existing = rulesByProvince.get(province) || []
+    rulesByProvince.set(province, [...new Set([...existing, ...cities])])
+  }
+
+  return [...rulesByProvince.entries()].map(([province, cities]) => ({ province, cities }))
+}
+
 // ایجاد روش ارسال جدید
 exports.createMethod = async (req, res) => {
   try {
-    const { name, description, costType, cost, isActive } = req.body || {}
+    const { name, description, costType, cost, isActive, availabilityScope, destinationRules } = req.body || {}
 
     if (!name) {
       return res.status(400).json({
@@ -20,12 +58,17 @@ exports.createMethod = async (req, res) => {
       })
     }
 
+    const finalAvailabilityScope = availabilityScope || 'all'
+    const finalDestinationRules = normalizeDestinationRules(finalAvailabilityScope, destinationRules)
+
     const method = await ShippingMethod.create({
       name,
       description,
       costType: costType || 'fixed',
       cost,
       isActive: isActive !== undefined ? isActive : true,
+      availabilityScope: finalAvailabilityScope,
+      destinationRules: finalDestinationRules,
     })
 
     res.status(201).json({
@@ -35,9 +78,9 @@ exports.createMethod = async (req, res) => {
     })
   } catch (error) {
     console.error('Error creating shipping method:', error)
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'خطا در ایجاد روش ارسال',
+      message: error.statusCode ? error.message : 'خطا در ایجاد روش ارسال',
       error: error.message,
     })
   }
@@ -121,6 +164,10 @@ exports.updateMethod = async (req, res) => {
     method.name = updates.name ?? method.name
     method.description = updates.description ?? method.description
     method.costType = updates.costType ?? method.costType
+    const nextAvailabilityScope = updates.availabilityScope ?? method.availabilityScope ?? 'all'
+    const nextDestinationRules = updates.destinationRules ?? method.destinationRules
+    method.availabilityScope = nextAvailabilityScope
+    method.destinationRules = normalizeDestinationRules(nextAvailabilityScope, nextDestinationRules)
     if (updates.cost !== undefined) {
       method.cost = updates.cost
     }
@@ -137,9 +184,9 @@ exports.updateMethod = async (req, res) => {
     })
   } catch (error) {
     console.error('Error updating shipping method:', error)
-    res.status(500).json({
+    res.status(error.statusCode || 500).json({
       success: false,
-      message: 'خطا در ویرایش روش ارسال',
+      message: error.statusCode ? error.message : 'خطا در ویرایش روش ارسال',
       error: error.message,
     })
   }

@@ -15,6 +15,7 @@ import {
 } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import api from '../../api'
+import { cityOptionsForProvince, provinceOptions } from '../../data/iranLocations'
 
 const { Option } = Select
 
@@ -79,6 +80,8 @@ function ShippingPage() {
       costType: 'fixed',
       cost: 0,
       isActive: true,
+      availabilityScope: 'all',
+      destinationRules: [],
     })
     setOpen(true)
   }
@@ -91,6 +94,8 @@ function ShippingPage() {
       costType: method.costType || 'fixed',
       cost: method.cost || 0,
       isActive: method.isActive,
+      availabilityScope: method.availabilityScope || 'all',
+      destinationRules: method.destinationRules || [],
     })
     setOpen(true)
   }
@@ -105,6 +110,8 @@ function ShippingPage() {
         costType: values.costType || 'fixed',
         cost: values.cost ?? 0,
         isActive: values.isActive !== undefined ? values.isActive : true,
+        availabilityScope: values.availabilityScope || 'all',
+        destinationRules: values.availabilityScope === 'restricted' ? (values.destinationRules || []) : [],
       }
 
       setSaving(true)
@@ -202,6 +209,27 @@ function ShippingPage() {
       width: 160,
       render: (value) =>
         `${new Intl.NumberFormat('fa-IR').format(value || 0)} تومان`,
+    },
+    {
+      title: 'محدوده نمایش',
+      key: 'availabilityScope',
+      width: 230,
+      render: (_, record) => {
+        if (record.availabilityScope !== 'restricted') {
+          return <Tag color="blue">همهٔ مناطق</Tag>
+        }
+
+        const rules = record.destinationRules || []
+        return (
+          <Space size={[4, 4]} wrap>
+            {rules.map((rule) => (
+              <Tag key={`${rule.province}-${(rule.cities || []).join('-')}`} color="geekblue">
+                {rule.province}{rule.cities?.length ? `: ${rule.cities.join('، ')}` : ' (همهٔ شهرها)'}
+              </Tag>
+            ))}
+          </Space>
+        )
+      },
     },
     {
       title: 'وضعیت',
@@ -304,6 +332,7 @@ function ShippingPage() {
         onOk={handleSubmit}
         confirmLoading={saving}
         title={editingMethod ? 'ویرایش روش ارسال' : 'ایجاد روش ارسال جدید'}
+        width={680}
         okText="ذخیره"
         cancelText="انصراف"
       >
@@ -318,6 +347,77 @@ function ShippingPage() {
 
           <Form.Item name="description" label="توضیحات">
             <Input.TextArea rows={3} placeholder="توضیحات اختیاری درباره این روش..." />
+          </Form.Item>
+
+          <Form.Item
+            name="availabilityScope"
+            label="محدودهٔ نمایش برای مشتری"
+            extra="روش‌های عمومی برای همهٔ نشانی‌ها نمایش داده می‌شوند. برای محدودکردن روش به مقصدهای خاص، گزینهٔ دوم را انتخاب کنید."
+          >
+            <Select
+              onChange={(value) => {
+                if (value === 'all') form.setFieldValue('destinationRules', [])
+              }}
+            >
+              <Option value="all">نمایش برای همهٔ مناطق</Option>
+              <Option value="restricted">نمایش فقط برای استان‌ها و شهرهای مشخص</Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate>
+            {() => form.getFieldValue('availabilityScope') === 'restricted' && (
+              <div style={{ marginBottom: 20, padding: 12, border: '1px solid #d9f7be', borderRadius: 8, background: '#f6ffed' }}>
+                <div style={{ marginBottom: 10, color: '#237804', fontSize: 13 }}>
+                  هر ردیف یک استان است. اگر شهر انتخاب نکنید، این روش برای تمام شهرهای آن استان نمایش داده می‌شود.
+                </div>
+                <Form.List name="destinationRules">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map((field) => {
+                        const selectedProvince = form.getFieldValue(['destinationRules', field.name, 'province'])
+                        return (
+                          <Space key={field.key} align="start" wrap style={{ display: 'flex', marginBottom: 8 }}>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'province']}
+                              rules={[{ required: true, message: 'استان را انتخاب کنید' }]}
+                              style={{ minWidth: 210, marginBottom: 0 }}
+                            >
+                              <Select
+                                showSearch
+                                optionFilterProp="label"
+                                options={provinceOptions}
+                                placeholder="انتخاب استان"
+                                onChange={() => form.setFieldValue(['destinationRules', field.name, 'cities'], [])}
+                              />
+                            </Form.Item>
+                            <Form.Item
+                              {...field}
+                              name={[field.name, 'cities']}
+                              style={{ minWidth: 260, marginBottom: 0 }}
+                            >
+                              <Select
+                                mode="multiple"
+                                allowClear
+                                showSearch
+                                optionFilterProp="label"
+                                disabled={!selectedProvince}
+                                options={cityOptionsForProvince(selectedProvince)}
+                                placeholder={selectedProvince ? 'شهرها؛ خالی = همهٔ شهرهای استان' : 'ابتدا استان را انتخاب کنید'}
+                              />
+                            </Form.Item>
+                            <Button danger type="text" onClick={() => remove(field.name)}>حذف مقصد</Button>
+                          </Space>
+                        )
+                      })}
+                      <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ province: undefined, cities: [] })}>
+                        افزودن استان یا شهر
+                      </Button>
+                    </>
+                  )}
+                </Form.List>
+              </div>
+            )}
           </Form.Item>
 
           <Form.Item

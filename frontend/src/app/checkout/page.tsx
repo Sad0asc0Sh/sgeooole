@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { ChevronLeft, MapPin, CreditCard, Package, AlertCircle, Loader2, Plus, Check, Edit2, Home, Phone, User, Hash, Building2, UserCheck, Tag, CheckCircle2, X, Store, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -12,6 +12,23 @@ import api from "@/lib/api";
 import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
 import AddressLocationFields from "@/components/checkout/AddressLocationFields";
 import { normalizeIranLocationText } from "@/lib/iranLocations";
+
+const isShippingMethodAvailableForAddress = (method: any, address: Address | undefined) => {
+    if (method.availabilityScope !== "restricted") return true;
+    if (!address) return false;
+
+    const addressProvince = normalizeIranLocationText(address.province);
+    const addressCity = normalizeIranLocationText(address.city);
+
+    return (method.destinationRules || []).some((rule: { province?: string; cities?: string[] }) => {
+        const isSameProvince = normalizeIranLocationText(rule.province) === addressProvince;
+        const eligibleCities = Array.isArray(rule.cities) ? rule.cities : [];
+        const hasNoCityRestriction = eligibleCities.length === 0;
+        const isSameCity = eligibleCities.some((city) => normalizeIranLocationText(city) === addressCity);
+
+        return isSameProvince && (hasNoCityRestriction || isSameCity);
+    });
+};
 
 interface Address {
     _id?: string;
@@ -119,8 +136,12 @@ export default function CheckoutPage() {
     const [selectedGateway, setSelectedGateway] = useState<string>("");
 
     // Pricing Calculations
-    const selectedMethod = shippingMethods.find(m => m._id === selectedShippingMethodId);
     const selectedAddress = addresses.find((address) => address._id === selectedAddressId);
+    const visibleShippingMethods = useMemo(
+        () => shippingMethods.filter((method) => isShippingMethodAvailableForAddress(method, selectedAddress)),
+        [shippingMethods, selectedAddress],
+    );
+    const selectedMethod = visibleShippingMethods.find(m => m._id === selectedShippingMethodId);
     const isMashhadAddress = Boolean(
         selectedAddress &&
         normalizeIranLocationText(selectedAddress.city) === "مشهد" &&
@@ -140,6 +161,16 @@ export default function CheckoutPage() {
             setDeliveryOption("shipping");
         }
     }, [canUseMashhadSpecialPickup, deliveryOption]);
+
+    useEffect(() => {
+        const selectedMethodIsVisible = visibleShippingMethods.some(
+            (method) => method._id === selectedShippingMethodId,
+        );
+
+        if (!selectedMethodIsVisible) {
+            setSelectedShippingMethodId(visibleShippingMethods[0]?._id || null);
+        }
+    }, [visibleShippingMethods, selectedShippingMethodId]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -523,6 +554,11 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!isMashhadSpecialPickup && !selectedMethod) {
+            setError("برای نشانی انتخاب‌شده، هنوز روش ارسال فعالی تعریف نشده است");
+            return;
+        }
+
         let redirectingToGateway = false;
 
         try {
@@ -902,7 +938,7 @@ export default function CheckoutPage() {
                                     <div className="flex items-center justify-center py-4">
                                         <Loader2 className="animate-spin text-amber-600" size={24} />
                                     </div>
-                                ) : shippingMethods.length === 0 && !canUseMashhadSpecialPickup ? (
+                                ) : visibleShippingMethods.length === 0 && !canUseMashhadSpecialPickup ? (
                                     <div className="text-center py-4 text-gray-500 text-sm">
                                         هیچ روش تحویلی یافت نشد.
                                     </div>
@@ -942,7 +978,7 @@ export default function CheckoutPage() {
                                             </label>
                                         )}
 
-                                        {shippingMethods.map((method) => (
+                                        {visibleShippingMethods.map((method) => (
                                             <label
                                                 key={method._id}
                                                 className={`flex items-center gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${deliveryOption === "shipping" && selectedShippingMethodId === method._id ? "border-amber-500 bg-amber-50 shadow-sm" : "border-gray-100 bg-gray-50 hover:border-gray-200"

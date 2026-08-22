@@ -30,6 +30,26 @@ const shippingMethodSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // `all` preserves the behavior of existing shipping methods.
+    // For `restricted`, an empty city list means every city of that province.
+    availabilityScope: {
+      type: String,
+      enum: ['all', 'restricted'],
+      default: 'all',
+    },
+    destinationRules: [
+      {
+        province: {
+          type: String,
+          required: true,
+          trim: true,
+        },
+        cities: {
+          type: [String],
+          default: [],
+        },
+      },
+    ],
   },
   { timestamps: true },
 )
