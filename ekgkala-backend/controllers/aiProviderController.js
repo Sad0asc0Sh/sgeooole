@@ -1,10 +1,15 @@
 const AiProvider = require('../models/AiProvider')
 const axios = require('axios')
 const dnsAgent = require('../utils/dnsAgent')
+const { getProviderRuntimeHealth } = require('../utils/groqService')
+
+exports.getRuntimeHealth = async (req, res) => {
+  res.json({ success: true, data: getProviderRuntimeHealth() })
+}
 
 exports.getAll = async (req, res) => {
   try {
-    const providers = await AiProvider.find().sort({ isDefault: -1, createdAt: -1 })
+    const providers = await AiProvider.find().sort({ isDefault: -1, priority: 1, createdAt: 1 })
     res.json({ success: true, data: providers })
   } catch (error) {
     console.error('Error fetching AI providers:', error)
@@ -27,11 +32,12 @@ exports.getById = async (req, res) => {
 
 exports.create = async (req, res) => {
   try {
-    const { name, baseUrl, apiKey, model, isActive, isDefault, maxTokens, temperature, description, headers } = req.body
+    const { name, baseUrl, apiKey, model, isActive, isDefault, priority, maxTokens, temperature, description, headers } = req.body
     const provider = new AiProvider({
       name, baseUrl, apiKey, model,
       isActive: isActive !== undefined ? isActive : true,
       isDefault: isDefault || false,
+      priority: priority || 100,
       maxTokens: maxTokens || 500,
       temperature: temperature !== undefined ? temperature : 0.7,
       description: description || '',
@@ -57,13 +63,14 @@ exports.update = async (req, res) => {
     if (!provider) {
       return res.status(404).json({ success: false, message: 'ارائه‌دهنده یافت نشد' })
     }
-    const { name, baseUrl, apiKey, model, isActive, isDefault, maxTokens, temperature, description, headers } = req.body
+    const { name, baseUrl, apiKey, model, isActive, isDefault, priority, maxTokens, temperature, description, headers } = req.body
     if (name !== undefined) provider.name = name
     if (baseUrl !== undefined) provider.baseUrl = baseUrl
     if (apiKey && apiKey !== '****') provider.apiKey = apiKey
     if (model !== undefined) provider.model = model
     if (isActive !== undefined) provider.isActive = isActive
     if (isDefault !== undefined) provider.isDefault = isDefault
+    if (priority !== undefined) provider.priority = priority
     if (maxTokens !== undefined) provider.maxTokens = maxTokens
     if (temperature !== undefined) provider.temperature = temperature
     if (description !== undefined) provider.description = description

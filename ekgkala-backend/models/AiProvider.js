@@ -30,6 +30,12 @@ const aiProviderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    priority: {
+      type: Number,
+      default: 100,
+      min: 1,
+      max: 10000,
+    },
     maxTokens: {
       type: Number,
       default: 2048,
@@ -75,7 +81,7 @@ aiProviderSchema.pre('save', async function (next) {
   next()
 })
 
-aiProviderSchema.index({ isDefault: 1 })
-aiProviderSchema.index({ isActive: 1 })
+aiProviderSchema.index({ isDefault: 1, priority: 1 })
+aiProviderSchema.index({ isActive: 1, priority: 1 })
 
 module.exports = mongoose.model('AiProvider', aiProviderSchema)

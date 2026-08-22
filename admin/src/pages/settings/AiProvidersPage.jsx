@@ -15,6 +15,7 @@ const { Text } = Typography
 
 export default function AiProvidersPage() {
   const [providers, setProviders] = useState([])
+  const [runtimeHealth, setRuntimeHealth] = useState({})
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingProvider, setEditingProvider] = useState(null)
@@ -25,8 +26,12 @@ export default function AiProvidersPage() {
   const fetchProviders = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get('/ai-providers')
-      setProviders(data.data || [])
+      const [providersResponse, healthResponse] = await Promise.all([
+        api.get('/ai-providers'),
+        api.get('/ai-providers/health/runtime').catch(() => ({ data: { data: [] } })),
+      ])
+      setProviders(providersResponse.data.data || [])
+      setRuntimeHealth(Object.fromEntries((healthResponse.data.data || []).map((item) => [item.id, item])))
     } catch (err) {
       message.error('خطا در دریافت لیست ارائه‌دهندگان')
     } finally {
@@ -39,7 +44,7 @@ export default function AiProvidersPage() {
   const openCreateModal = () => {
     setEditingProvider(null)
     form.resetFields()
-    form.setFieldsValue({ isActive: true, isDefault: false, maxTokens: 500, temperature: 0.7 })
+    form.setFieldsValue({ isActive: true, isDefault: false, priority: 100, maxTokens: 500, temperature: 0.7 })
     setModalOpen(true)
   }
 
@@ -131,6 +136,13 @@ export default function AiProvidersPage() {
       render: (text) => <Text copyable={{ text }} style={{ fontSize: 12 }}>{text}</Text>,
     },
     {
+      title: 'اولویت',
+      dataIndex: 'priority',
+      key: 'priority',
+      width: 90,
+      render: (value, record) => record.isDefault ? <Tag color="gold">اصلی</Tag> : <Tag>{value || 100}</Tag>,
+    },
+    {
       title: 'وضعیت',
       key: 'status',
       width: 100,
@@ -140,6 +152,7 @@ export default function AiProvidersPage() {
             {record.isActive ? 'فعال' : 'غیرفعال'}
           </Tag>
           {record.isDefault && <Tag color="gold">پیش‌فرض</Tag>}
+          {runtimeHealth[record._id]?.openUntil > Date.now() && <Tag color="orange">موقتاً در انتظار</Tag>}
         </Space>
       ),
     },
@@ -229,7 +242,7 @@ export default function AiProvidersPage() {
       >
         <Alert
           message="مدیریت ارائه‌دهندگان API هوش مصنوعی"
-          description="هر ارائه‌دهنده‌ای که با فرمت OpenAI سازگار باشد (مانند Groq، OpenRouter، Together AI و ...) قابل اضافه شدن است. ارائه‌دهنده پیش‌فرض برای چت‌بات فروشگاه استفاده می‌شود."
+          description="ارائه‌دهنده پیش‌فرض ابتدا استفاده می‌شود و ارائه‌دهندگان فعال دیگر، بر اساس اولویت، فقط در خطاهای موقت پیش از شروع پاسخ جایگزین می‌شوند. وضعیت «موقتاً در انتظار» پس از چند خطای متوالی خودکار و گذرا است."
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
@@ -284,6 +297,14 @@ export default function AiProvidersPage() {
 
           <Form.Item name="temperature" label="دمای مدل (Temperature)">
             <Slider min={0} max={2} step={0.1} marks={{ 0: 'دقیق', 0.7: 'متعادل', 2: 'خلاق' }} />
+          </Form.Item>
+
+          <Form.Item
+            name="priority"
+            label="اولویت جایگزینی"
+            extra="عدد کوچک‌تر زودتر استفاده می‌شود؛ ارائه‌دهنده پیش‌فرض همیشه اول است."
+          >
+            <InputNumber min={1} max={10000} style={{ width: '100%' }} />
           </Form.Item>
 
           <Space size="large">

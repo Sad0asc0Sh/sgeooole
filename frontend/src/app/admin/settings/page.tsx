@@ -28,7 +28,19 @@ export default function SettingsPage() {
         try {
             setSaving(true);
             setSaveSuccess(false);
-            await api.put("/settings", settings);
+            const payload = {
+                storeName: settings.storeName || '',
+                storeEmail: settings.storeEmail || '',
+                storePhone: settings.storePhone || '',
+                storeAddress: settings.storeAddress || '',
+                aiConfig: {
+                    enabled: Boolean(settings.aiConfig?.enabled),
+                    userDailyLimit: Number(settings.aiConfig?.userDailyLimit || 20),
+                    maxTokens: Number(settings.aiConfig?.maxTokens || 500),
+                },
+                ...(settings.cartSettings ? { cartSettings: settings.cartSettings } : {}),
+            };
+            await api.put("/settings", payload);
             window.dispatchEvent(new Event("settings:updated"));
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
@@ -177,8 +189,10 @@ export default function SettingsPage() {
                             <input
                                 type="number"
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                                min={1}
+                                max={1000}
                                 value={settings.aiConfig?.userDailyLimit || 20}
-                                onChange={(e) => setSettings({ ...settings, aiConfig: { ...settings.aiConfig, userDailyLimit: Number(e.target.value) } })}
+                                onChange={(e) => setSettings({ ...settings, aiConfig: { ...settings.aiConfig, userDailyLimit: Math.min(1000, Math.max(1, Number(e.target.value))) } })}
                             />
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">پیام</span>
                         </div>
@@ -198,8 +212,10 @@ export default function SettingsPage() {
                             <input
                                 type="number"
                                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+                                min={100}
+                                max={4000}
                                 value={settings.aiConfig?.maxTokens || 500}
-                                onChange={(e) => setSettings({ ...settings, aiConfig: { ...settings.aiConfig, maxTokens: Number(e.target.value) } })}
+                                onChange={(e) => setSettings({ ...settings, aiConfig: { ...settings.aiConfig, maxTokens: Math.min(4000, Math.max(100, Number(e.target.value))) } })}
                             />
                             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-bold">Token</span>
                         </div>

@@ -31,7 +31,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
-    const [usage, _setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
+    const [usage, setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
 
     // --- Body Scroll Lock ---
     useEffect(() => {
@@ -92,9 +92,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
         pendingRequestRef.current = true;
 
-        const userMsg: Message = { role: 'user', content: input };
+        const currentInput = input.trim();
+        const userMsg: Message = { role: 'user', content: currentInput };
         setMessages((prev: Message[]) => [...prev, userMsg]);
-        const currentInput = input;
         setInput("");
         if (textareaRef.current) textareaRef.current.style.height = "40px";
 
@@ -112,6 +112,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
         const abortController = new AbortController();
         abortRef.current = abortController;
+        const requestId = createRequestId();
 
         let fullReply = '';
         fullReplyRef.current = '';
@@ -126,16 +127,22 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                 headers,
                 body: JSON.stringify({
                     message: currentInput,
-                    userId: currentUser?.id || undefined
+                    userId: currentUser?.id || undefined,
+                    requestId,
                 }),
                 signal: abortController.signal,
             });
+
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => null);
+                throw new Error(errorPayload?.message || `خطا در ارسال پیام (${response.status})`);
+            }
 
             const reader = response.body?.getReader();
             const decoder = new TextDecoder();
 
             if (!reader) {
-                throw new Error('No response body');
+                throw new Error('پاسخ قابل‌خواندن از دستیار دریافت نشد.');
             }
 
             // Buffer tokens and flush at ~60fps for smooth typing animation
@@ -164,68 +171,91 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                 }
             };
 
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
+            let sseBuffer = '';
+            const consumeSseLine = (line: string) => {
+                const trimmed = line.trim();
+                if (!trimmed || trimmed.startsWith(':') || !trimmed.startsWith('data: ')) return;
 
-                const chunk = decoder.decode(value, { stream: true });
-                const lines = chunk.split('\n');
+                const jsonStr = trimmed.substring(6);
+                if (jsonStr === '[DONE]') return;
 
-                for (const line of lines) {
-                    const trimmed = line.trim();
-                    if (!trimmed || !trimmed.startsWith('data: ')) continue;
+                let payload: {
+                    token?: string;
+                    done?: boolean;
+                    error?: string;
+                    usage?: { current: number; limit: number; remaining: number };
+                    partial?: boolean;
+                };
+                try {
+                    payload = JSON.parse(jsonStr);
+                } catch {
+                    return;
+                }
 
-                    const jsonStr = trimmed.substring(6);
-                    if (jsonStr === '[DONE]') continue;
-
-                    let payload: { token?: string; done?: boolean; error?: string };
-                    try {
-                        payload = JSON.parse(jsonStr);
-                    } catch {
-                        continue;
-                    }
-
-                    // Provider-level errors: non-fatal, keep reading for fallback providers
-                    if (payload.error) {
-                        console.warn('[AI Chat] Provider error (non-fatal):', payload.error);
-                        lastError = payload.error;
-                        continue;
-                    }
-
-                    if (payload.token) {
-                        tokenBuffer += payload.token;
-                        // Throttle DOM updates to ~60fps for smooth animation
-                        if (rafId === null) {
-                            rafId = requestAnimationFrame(flushBuffer);
-                        }
-                    }
-
-                    if (payload.done) {
-                        // Flush any remaining buffered tokens immediately
+                if (payload.usage) setUsage(payload.usage);
+                if (payload.error) {
+                    lastError = payload.error;
+                    if (payload.partial) {
                         if (rafId !== null) {
                             cancelAnimationFrame(rafId);
                             rafId = null;
                         }
                         flushBuffer();
+                        setMessages((prev: Message[]) => {
+                            const last = prev[prev.length - 1];
+                            if (last?.role !== 'ai') return prev;
+                            const updated = [...prev];
+                            updated[updated.length - 1] = {
+                                ...last,
+                                content: `${fullReply}\n\n${payload.error}`,
+                                isLoading: false,
+                                isError: true,
+                            };
+                            return updated;
+                        });
+                    }
+                    return;
+                }
 
-                        if (!fullReply && !lastError) {
-                            setMessages((prev: Message[]) => {
-                                const last = prev[prev.length - 1];
-                                if (last?.role === 'ai' && last.isLoading) {
-                                    const updated = [...prev];
-                                    updated[updated.length - 1] = {
-                                        role: 'ai',
-                                        content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
-                                        isError: true,
-                                    };
-                                    return updated;
-                                }
-                                return prev;
-                            });
-                        }
+                if (payload.token) {
+                    tokenBuffer += payload.token;
+                    if (rafId === null) rafId = requestAnimationFrame(flushBuffer);
+                }
+
+                if (payload.done) {
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId);
+                        rafId = null;
+                    }
+                    flushBuffer();
+                    if (!fullReply && !lastError) {
+                        setMessages((prev: Message[]) => {
+                            const last = prev[prev.length - 1];
+                            if (last?.role === 'ai') {
+                                const updated = [...prev];
+                                updated[updated.length - 1] = {
+                                    role: 'ai',
+                                    content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
+                                    isError: true,
+                                };
+                                return updated;
+                            }
+                            return prev;
+                        });
                     }
                 }
+            };
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                sseBuffer += decoder.decode(value, { stream: true });
+                const lines = sseBuffer.split(/\r?\n/);
+                sseBuffer = lines.pop() || '';
+                lines.forEach(consumeSseLine);
             }
+            sseBuffer += decoder.decode();
+            if (sseBuffer.trim()) consumeSseLine(sseBuffer);
 
             // Final flush — ensures no tokens are lost
             if (rafId !== null) {
@@ -242,7 +272,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         const updated = [...prev];
                         updated[updated.length - 1] = {
                             role: 'ai',
-                            content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
+                            content: lastError || 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
                             isError: true,
                         };
                         return updated;
@@ -448,12 +478,19 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
 // --- helpers ---
 
+function createRequestId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 14)}`;
+}
+
 function getSessionId(): string {
     try {
         const key = 'ekgkala_session_id';
         let id = localStorage.getItem(key);
         if (!id) {
-            id = 'sess_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+            id = `sess_${createRequestId()}`;
             localStorage.setItem(key, id);
         }
         return id;

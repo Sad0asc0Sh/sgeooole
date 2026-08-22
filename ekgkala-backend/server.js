@@ -252,9 +252,11 @@ app.use(compression({
   level: 6, // Good balance between speed and compression
   threshold: 512, // Compress anything above 512 bytes
   filter: (req, res) => {
-    // Don't compress if client doesn't want it
+    // SSE must remain uncompressed so tokens are flushed immediately through proxies.
+    if (req.path.startsWith('/api/chat/stream')) return false
+    // Don't compress if client doesn't want it.
     if (req.headers['x-no-compression']) return false
-    // Always compress API responses
+    // Always compress non-stream API responses.
     if (req.path.startsWith('/api')) return true
     return compression.filter(req, res)
   }
@@ -320,8 +322,8 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'Pragma'],
-  exposedHeaders: ['Content-Type', 'Content-Length'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'Pragma', 'X-Session-Id', 'X-Chat-Request-Id'],
+  exposedHeaders: ['Content-Type', 'Content-Length', 'X-Request-Id'],
   optionsSuccessStatus: 204,
   maxAge: 86400,
 }
