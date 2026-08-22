@@ -23,6 +23,7 @@ function ScrollRestorationController() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentKeyRef = useRef<string>('');
+  const hasHandledInitialRouteRef = useRef(false);
 
   const key = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
   currentKeyRef.current = key;
@@ -93,6 +94,19 @@ function ScrollRestorationController() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const manager = getScrollManager();
+    const isInitialRoute = !hasHandledInitialRouteRef.current;
+    hasHandledInitialRouteRef.current = true;
+
+    // A new document navigation (for example, entering from a Google result)
+    // must not inherit the previous visit's home-page scroll state from
+    // sessionStorage. Back/forward navigation still uses the saved state.
+    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    const isFreshDocumentNavigation = navigationEntry?.type === 'navigate';
+    if (isInitialRoute && pathname === '/' && isFreshDocumentNavigation) {
+      manager.clear(key);
+      window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      return;
+    }
 
     if (pathname.startsWith('/product/')) {
       // Detail page: always start at top 0
