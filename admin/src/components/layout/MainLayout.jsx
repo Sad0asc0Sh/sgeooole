@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer } from 'antd'
 import { Link, useLocation } from 'react-router-dom'
 import {
@@ -17,6 +17,7 @@ import {
   MenuOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  CloseOutlined,
 } from '@ant-design/icons'
 import {
   useAuthStore,
@@ -24,6 +25,7 @@ import {
 } from '../../stores'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { hasAnyPermission, hasPermission } from '../../rbac/access'
+import useIsMobile from '../../hooks/useIsMobile'
 import './MainLayout.css'
 
 const { Header, Sider, Content } = Layout
@@ -32,6 +34,13 @@ function MainLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const location = useLocation()
+  const isDesktopLayout = !useIsMobile(992)
+
+  // Close the mobile drawer automatically when resizing up to desktop
+  useEffect(() => {
+    if (isDesktopLayout) setMobileDrawerOpen(false)
+  }, [isDesktopLayout])
+
   const { user, permissions, logout } = useAuthStore()
   const { notifications, markAllAsRead, deleteNotification } = useNotificationStore()
 
@@ -320,7 +329,7 @@ function MainLayout({ children }) {
         label: (
           <div
             style={{
-              width: 260,
+              width: 'min(280px, calc(100vw - 48px))',
               padding: '8px 0',
               display: 'flex',
               alignItems: 'flex-start',
@@ -412,13 +421,18 @@ function MainLayout({ children }) {
         collapsible
         collapsed={collapsed}
         breakpoint="lg"
-        collapsedWidth={80}
-        width={220}
+        collapsedWidth={76}
+        width={240}
         className="admin-sider"
       >
         <div className="admin-sider-inner">
           <div className="logo">
-            {collapsed ? 'مدیر' : 'پنل مدیریت'}
+            <span className="logo-icon">
+              <DashboardOutlined />
+            </span>
+            {collapsed ? null : (
+              <span className="logo-text">پنل مدیریت</span>
+            )}
           </div>
           <div className="admin-sider-menu-wrap">
             <Menu
@@ -434,19 +448,64 @@ function MainLayout({ children }) {
 
       {/* Mobile Drawer */}
       <Drawer
-        title="منوی ناوبری"
         placement="right"
         onClose={() => setMobileDrawerOpen(false)}
         open={mobileDrawerOpen}
         className="mobile-drawer"
+        width={290}
+        styles={{ body: { padding: 0 } }}
+        title={null}
+        closeIcon={null}
       >
+        <div className="mobile-drawer-header">
+          <span className="logo-icon">
+            <DashboardOutlined />
+          </span>
+          <span>پنل مدیریت ای‌کا‌جی کالا</span>
+          <Button
+            type="text"
+            icon={<CloseOutlined />}
+            className="mobile-drawer-close"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="بستن منو"
+          />
+        </div>
         <Menu
+          theme="dark"
           mode="inline"
+          style={{ background: 'transparent' }}
           selectedKeys={[location.pathname]}
           defaultOpenKeys={getOpenKeys}
           items={filteredMenuItems}
           onClick={() => setMobileDrawerOpen(false)}
         />
+        <div className="mobile-drawer-footer">
+          <Avatar
+            size={36}
+            src={user?.avatar?.url}
+            icon={!user?.avatar?.url && <UserOutlined />}
+          />
+          <div className="user-meta">
+            <span className="u-name">{user?.name || 'کاربر'}</span>
+            <span className="u-role">
+              {role === 'superadmin'
+                ? 'مدیر ارشد'
+                : role === 'manager'
+                ? 'مدیر'
+                : 'ادمین'}
+            </span>
+          </div>
+          <Button
+            type="text"
+            danger
+            icon={<LogoutOutlined />}
+            onClick={() => {
+              setMobileDrawerOpen(false)
+              logout()
+            }}
+            aria-label="خروج"
+          />
+        </div>
       </Drawer>
 
       {/* ── Main content area ── */}
@@ -459,32 +518,41 @@ function MainLayout({ children }) {
               type="text"
               icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => setCollapsed(!collapsed)}
-              className="collapse-btn"
+              className="collapse-btn header-icon-btn"
             />
             {/* Mobile hamburger */}
             <Button
               type="text"
               icon={<MenuOutlined />}
-              className="mobile-menu-btn"
+              className="mobile-menu-btn header-icon-btn"
               onClick={() => setMobileDrawerOpen(true)}
+              aria-label="باز کردن منو"
             />
           </div>
 
           <div className="header-right">
             <Dropdown menu={notificationMenu} trigger={['click']}>
-              <Badge count={unreadCount} style={{ marginLeft: 24 }}>
-                <BellOutlined style={{ fontSize: 20, cursor: 'pointer' }} />
-              </Badge>
+              <Button
+                type="text"
+                className="header-icon-btn header-bell-btn"
+                icon={
+                  <Badge count={unreadCount} size="small" offset={[2, -2]}>
+                    <BellOutlined style={{ fontSize: 18 }} />
+                  </Badge>
+                }
+                aria-label="اعلان‌ها"
+              />
             </Dropdown>
 
             <Dropdown menu={userMenu} trigger={['click']}>
               <div className="header-user-info">
                 <Avatar
+                  size={32}
                   src={user?.avatar?.url}
                   icon={!user?.avatar?.url && <UserOutlined />}
                   style={{ marginLeft: 8 }}
                 />
-                <span>{user?.name}</span>
+                <span className="header-user-name">{user?.name}</span>
               </div>
             </Dropdown>
           </div>

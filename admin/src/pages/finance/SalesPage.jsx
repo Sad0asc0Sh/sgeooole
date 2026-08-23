@@ -258,7 +258,9 @@ function SalesPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>مدیریت تخفیف‌های زمان‌دار</h1>
@@ -268,7 +270,8 @@ function SalesPage() {
       </div>
 
       <Card>
-        <Table columns={columns} dataSource={sales} loading={loading} rowKey="_id" />
+        <Table columns={columns} dataSource={sales} loading={loading} rowKey="_id"
+ scroll={{ x: 'max-content' }} />
       </Card>
 
       <Modal

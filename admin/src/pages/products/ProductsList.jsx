@@ -992,13 +992,13 @@ function ProductsList({ mode }) {
           flexWrap: 'wrap',
         }}
       >
-        <Input.Group compact style={{ display: 'flex', width: 420 }}>
+        <Input.Group compact style={{ display: 'flex', width: 420, maxWidth: '100%' }}>
           <Select
             value={filters.searchField}
             onChange={(value) =>
               setFilters((prev) => ({ ...prev, searchField: value }))
             }
-            style={{ width: 120 }}
+            style={{ width: 120, maxWidth: '100%' }}
           >
             <Select.Option value="all">همه</Select.Option>
             <Select.Option value="name">نام</Select.Option>
@@ -1020,7 +1020,7 @@ function ProductsList({ mode }) {
         </Input.Group>
         <Select
           placeholder="دسته‌بندی"
-          style={{ width: 320, minWidth: 240 }}
+          style={{ width: 320, minWidth: 240, maxWidth: '100%' }}
           allowClear
           loading={categoriesLoading}
           showSearch
@@ -1066,7 +1066,7 @@ function ProductsList({ mode }) {
         )}
         <Select
           placeholder='وضعیت'
-          style={{ width: 150 }}
+          style={{ width: 150, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, status: value || null }))
@@ -1077,7 +1077,7 @@ function ProductsList({ mode }) {
         </Select>
         <Select
           placeholder="نوع محصول"
-          style={{ width: 180 }}
+          style={{ width: 180, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, productType: value || '' }))
@@ -1098,7 +1098,7 @@ function ProductsList({ mode }) {
               <Select
                 key={prop.name}
                 placeholder={prop.name}
-                style={{ width: 150 }}
+                style={{ width: 150, maxWidth: '100%' }}
                 allowClear
                 onChange={(value) =>
                   setDynamicFilters(prev => ({ ...prev, [prop.name]: value }))
@@ -1130,7 +1130,7 @@ function ProductsList({ mode }) {
                   <Input
                     key={prop.name}
                     placeholder={prop.name}
-                    style={{ width: 150 }}
+                    style={{ width: 150, maxWidth: '100%' }}
                     allowClear
                     onChange={(e) =>
                       setDynamicFilters(prev => ({ ...prev, [prop.name]: e.target.value }))
@@ -1244,6 +1244,7 @@ function ProductsList({ mode }) {
         dataSource={products}
         loading={loading}
         rowKey="_id"
+        scroll={{ x: 'max-content' }}
         rowSelection={rowSelection}
         pagination={{
           current: pagination.current,

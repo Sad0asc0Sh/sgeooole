@@ -265,6 +265,7 @@ function AnnouncementsPage() {
           columns={columns}
           dataSource={announcements}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           loading={loading}
           pagination={{ pageSize: 10 }}
           locale={{

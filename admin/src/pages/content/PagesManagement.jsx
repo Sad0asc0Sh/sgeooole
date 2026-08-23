@@ -198,12 +198,12 @@ function PagesManagement() {
           <Input
             placeholder="جستجو"
             allowClear
-            style={{ width: 200 }}
+            style={{ width: 200, maxWidth: '100%' }}
             onChange={(e) => setSearch(e.target.value)}
             onPressEnter={() => fetchPages(1, pagination.pageSize)}
             onBlur={() => fetchPages(1, pagination.pageSize)}
           />
-          <Select placeholder="وضعیت" allowClear style={{ width: 140 }} onChange={setStatus}>
+          <Select placeholder="وضعیت" allowClear style={{ width: 140, maxWidth: '100%' }} onChange={setStatus}>
             <Select.Option value="published">published</Select.Option>
             <Select.Option value="hidden">hidden</Select.Option>
           </Select>
@@ -217,6 +217,7 @@ function PagesManagement() {
           dataSource={pages}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

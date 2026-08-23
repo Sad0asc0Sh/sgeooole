@@ -1,9 +1,18 @@
 /* =============================================
-   PROFESSIONAL ADMIN PANEL LAYOUT
-   - Fixed Sidebar with independent scroll
-   - Sticky Header
-   - Independent main content scroll
+   PROFESSIONAL ADMIN PANEL LAYOUT v2
+   - Dark slate sidebar w/ gradient accents
+   - Sticky glass header (responsive)
+   - Mobile drawer with branded header
+   - Fully responsive down to 320px phones
    ============================================= */
+
+:root {
+  --sider-w: 240px;
+  --sider-collapsed-w: 76px;
+  --header-h: 60px;
+  --brand-900: #0b1220;
+  --brand-800: #0f172a;
+}
 
 /* ─── ROOT LAYOUT ─────────────────────────────── */
 .admin-root-layout {
@@ -19,32 +28,44 @@
   bottom: 0;
   height: 100vh !important;
   z-index: 101;
-  box-shadow: -2px 0 16px rgba(0, 0, 0, 0.12);
-  transition: all 0.2s ease;
+  background: linear-gradient(180deg, var(--brand-800) 0%, var(--brand-900) 100%) !important;
+  box-shadow: -4px 0 24px rgba(2, 6, 23, 0.35);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .admin-sider .admin-sider-inner {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  background: transparent;
 }
 
 /* Logo area — sticky at top of sidebar */
 .admin-sider .logo {
-  height: 64px;
-  min-height: 64px;
+  height: var(--header-h);
+  min-height: var(--header-h);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  font-weight: 700;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
   color: #fff;
-  background: rgba(255, 255, 255, 0.06);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  letter-spacing: 0.3px;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
+  box-shadow: 0 2px 12px rgba(79, 70, 229, 0.35);
+}
+
+.admin-sider .logo .logo-icon {
+  font-size: 20px;
+  display: inline-flex;
+}
+
+.admin-sider .logo .logo-text {
+  line-height: 1.2;
 }
 
 /* Menu scrollable area */
@@ -52,9 +73,9 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  /* Sleek scrollbar */
+  padding-block: 12px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar {
@@ -73,13 +94,14 @@
 /* Remove default ant border on menu */
 .admin-sider .ant-menu {
   border-inline-end: none !important;
+  background: transparent !important;
 }
 
 /* ─── MAIN LAYOUT (beside sidebar) ────────────── */
 .admin-main-layout {
   /* Push content to account for the fixed sidebar */
-  margin-right: 220px !important;
-  transition: margin-right 0.2s ease;
+  margin-right: var(--sider-w) !important;
+  transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -87,9 +109,9 @@
 }
 
 /* When sidebar is collapsed, less margin */
-.admin-root-layout .ant-layout-sider-collapsed+.admin-main-layout,
-.admin-root-layout .ant-layout-sider-collapsed~.admin-main-layout {
-  margin-right: 80px !important;
+.admin-root-layout .ant-layout-sider-collapsed + .admin-main-layout,
+.admin-root-layout .ant-layout-sider-collapsed ~ .admin-main-layout {
+  margin-right: var(--sider-collapsed-w) !important;
 }
 
 /* ─── HEADER ──────────────────────────────────── */
@@ -97,11 +119,13 @@
   display: flex !important;
   justify-content: space-between;
   align-items: center;
-  background: #fff !important;
-  padding: 0 24px !important;
-  height: 64px !important;
-  min-height: 64px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(10px);
+  padding: 0 20px !important;
+  height: var(--header-h) !important;
+  min-height: var(--header-h);
+  box-shadow: inset 0 -1px 0 #e2e8f0;
   z-index: 90;
   flex-shrink: 0;
 }
@@ -115,14 +139,45 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 6px;
 }
 
 .header-user-info {
   display: flex;
   align-items: center;
   cursor: pointer;
-  margin-right: 8px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+.header-user-info:hover {
+  background: #f1f5f9;
+}
+
+.header-user-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Icon buttons in header */
+.header-icon-btn.ant-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icon-btn.ant-btn:hover {
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 /* Desktop collapse button */
@@ -141,40 +196,93 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #f5f6fa !important;
-  /* Elegant scrollbar */
+  background: #f1f5f9 !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
-}
-
-.admin-content-area::-webkit-scrollbar {
-  width: 6px;
-}
-
-.admin-content-area::-webkit-scrollbar-track {
-  background: #f5f6fa;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-content-area::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.14);
   border-radius: 6px;
 }
 
-.admin-content-area::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.24);
-}
-
 .admin-content-inner {
-  margin: 24px;
-  padding: 24px;
+  margin: 20px;
+  padding: 20px;
   background: #fff;
-  border-radius: 10px;
-  min-height: calc(100vh - 64px - 48px);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  min-height: calc(100vh - var(--header-h) - 40px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 /* ─── MOBILE DRAWER ───────────────────────────── */
-/* Drawer is shown/hidden via antd's `open` prop — no CSS override needed */
+.mobile-drawer .ant-drawer-header {
+  display: none !important; /* custom branded header rendered inside body */
+  padding: 0;
+  height: 0;
+}
+
+.mobile-drawer .ant-drawer-body {
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.mobile-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--header-h);
+  min-height: var(--header-h);
+  padding: 0 16px;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.mobile-drawer-header .mobile-drawer-close {
+  margin-inline-start: auto;
+  color: #fff;
+  font-size: 18px;
+}
+
+.mobile-drawer .ant-menu {
+  flex: 1;
+  overflow-y: auto;
+  border-inline-end: none !important;
+  padding-block: 8px;
+}
+
+.mobile-drawer-footer {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-drawer-footer .user-meta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mobile-drawer-footer .user-meta .u-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-drawer-footer .user-meta .u-role {
+  font-size: 11px;
+  color: #64748b;
+}
 
 /* ─── MOBILE / TABLET RESPONSIVE ──────────────── */
 @media (max-width: 992px) {
@@ -198,30 +306,41 @@
     display: none !important;
   }
 
-  .admin-header {
-    padding: 0 12px !important;
-  }
-
   .admin-content-inner {
-    margin: 12px;
-    padding: 12px;
-    min-height: calc(100vh - 64px - 24px);
+    margin: 14px;
+    padding: 16px;
+    min-height: calc(100vh - var(--header-h) - 28px);
   }
 }
 
-/* Extra small screens */
+/* Extra small screens (phones) */
 @media (max-width: 576px) {
+  :root {
+    --header-h: 56px;
+  }
+
   .admin-header {
-    padding: 0 8px !important;
+    padding: 0 10px !important;
   }
 
   .header-user-info span {
     display: none;
   }
 
+  .header-user-info {
+    padding: 5px;
+  }
+
+  .header-icon-btn.ant-btn {
+    width: 36px;
+    height: 36px;
+  }
+
   .admin-content-inner {
-    margin: 8px;
-    padding: 8px;
-    border-radius: 6px;
+    margin: 10px;
+    margin-bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 12px;
+    border-radius: 12px;
+    min-height: calc(100vh - 56px - 20px);
   }
 }

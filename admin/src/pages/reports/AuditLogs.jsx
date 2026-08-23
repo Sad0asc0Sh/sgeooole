@@ -100,7 +100,14 @@ function AuditLogs() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
+        }}>
                 <h1>گزارش عملکرد سیستم (Audit Logs)</h1>
                 <Button icon={<ReloadOutlined />} onClick={() => fetchLogs(1, pagination.pageSize)}>
                     بروزرسانی
@@ -113,6 +120,7 @@ function AuditLogs() {
                     dataSource={logs}
                     loading={loading}
                     rowKey="_id"
+                    scroll={{ x: 'max-content' }}
                     pagination={{
                         current: pagination.current,
                         pageSize: pagination.pageSize,

@@ -445,7 +445,9 @@ function CategoriesPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>مدیریت دسته‌بندی‌ها</h1>
@@ -686,7 +688,7 @@ function CategoriesPage() {
                   <Select
                     value={newPropertyType}
                     onChange={setNewPropertyType}
-                    style={{ width: 100 }}
+                    style={{ width: 100, maxWidth: '100%' }}
                     options={[
                       { value: 'select', label: 'انتخابی' },
                       { value: 'text', label: 'متنی' },
@@ -697,7 +699,7 @@ function CategoriesPage() {
                     placeholder="واحد (اختیاری)"
                     value={newPropertyUnit}
                     onChange={(e) => setNewPropertyUnit(e.target.value)}
-                    style={{ width: 100 }}
+                    style={{ width: 100, maxWidth: '100%' }}
                   />
                 </div>
 

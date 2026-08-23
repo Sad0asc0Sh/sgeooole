@@ -255,16 +255,16 @@ function BlogPosts() {
           <Input
             placeholder="جستجو"
             allowClear
-            style={{ width: 200 }}
+            style={{ width: 200, maxWidth: '100%' }}
             onChange={(e) => setSearch(e.target.value)}
             onPressEnter={() => fetchPosts(1, pagination.pageSize)}
             onBlur={() => fetchPosts(1, pagination.pageSize)}
           />
-          <Select placeholder="وضعیت" allowClear style={{ width: 140 }} onChange={setStatus}>
+          <Select placeholder="وضعیت" allowClear style={{ width: 140, maxWidth: '100%' }} onChange={setStatus}>
             <Select.Option value="draft">draft</Select.Option>
             <Select.Option value="published">published</Select.Option>
           </Select>
-          <Select placeholder="دسته‌بندی" allowClear style={{ width: 200 }} onChange={setCategory}>
+          <Select placeholder="دسته‌بندی" allowClear style={{ width: 200, maxWidth: '100%' }} onChange={setCategory}>
             {categories.map(c => <Select.Option key={c._id} value={c._id}>{c.name}</Select.Option>)}
           </Select>
           <Button onClick={() => fetchPosts(1, pagination.pageSize)}>اعمال</Button>
@@ -278,6 +278,7 @@ function BlogPosts() {
           dataSource={posts}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

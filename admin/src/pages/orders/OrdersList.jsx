@@ -229,16 +229,9 @@ function OrdersList() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-        }}
-      >
+      <div className="page-header">
         <h1>مدیریت سفارشات</h1>
-        <Space>
+        <Space wrap>
           {canCreate && (
             <Link to="/orders/create">
               <Button type="primary" icon={<PlusOutlined />}>
@@ -255,18 +248,11 @@ function OrdersList() {
         </Space>
       </div>
 
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="filter-bar">
         <Input
           placeholder="جستجو (کد سفارش، نام مشتری...)"
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: 300, maxWidth: '100%' }}
           allowClear
           onChange={(e) =>
             setFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -276,7 +262,7 @@ function OrdersList() {
         />
         <Select
           placeholder="وضعیت سفارش"
-          style={{ width: 180 }}
+          style={{ width: 180, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, orderStatus: value || null }))
@@ -290,7 +276,7 @@ function OrdersList() {
         </Select>
         <Select
           placeholder="وضعیت پرداخت"
-          style={{ width: 180 }}
+          style={{ width: 180, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, isPaid: value }))
@@ -301,12 +287,13 @@ function OrdersList() {
         </Select>
       </div>
 
-      <Card>
+      <Card styles={{ body: { padding: '0 16px 16px' } }}>
         <Table
           columns={columns}
           dataSource={orders}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

@@ -293,7 +293,7 @@ function InventoryPage() {
         <Input
           placeholder="جستجو بر اساس نام یا SKU..."
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: 300, maxWidth: '100%' }}
           allowClear
           onChange={(e) =>
             setFilters((prev) => ({ ...prev, search: e.target.value }))
@@ -303,7 +303,7 @@ function InventoryPage() {
         />
         <Select
           placeholder="وضعیت موجودی"
-          style={{ width: 200 }}
+          style={{ width: 200, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, stockStatus: value || null }))
@@ -321,6 +321,7 @@ function InventoryPage() {
           dataSource={products}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

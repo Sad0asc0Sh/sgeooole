@@ -12,6 +12,42 @@ body {
 
 /* Layout height is managed by MainLayout.css */
 
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE & POLISH STYLESHEET
+   Applies to ALL pages of the admin panel automatically.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── BASE ─────────────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Vazirmatn', 'IRANSans', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Tahoma, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+pre,
+code {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
 /* Fix RTL for Ant Design */
 .ant-menu {
   border-inline-start: none !important;
@@ -19,7 +55,7 @@ body {
 
 .dashboard-widgets {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 24px;
 }
@@ -41,7 +77,7 @@ body {
   min-height: 200px;
   direction: rtl;
   text-align: right;
-  font-family: Tahoma, Arial, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
 }
 
 /* Tree draggable */
@@ -51,4 +87,174 @@ body {
 
 .variant-table .ant-table-cell {
   padding: 8px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITY: Page header — wraps on mobile
+   ═══════════════════════════════════════════════════════════ */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.page-header h1,
+.page-header .page-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.page-header .ant-space {
+  flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header h1,
+  .page-header .page-title {
+    font-size: 18px;
+  }
+
+  .page-header .ant-space {
+    width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITY: Filter bar — wraps gracefully on mobile
+   ═══════════════════════════════════════════════════════════ */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.filter-bar > * {
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .filter-bar > .ant-input-affix-wrapper,
+  .filter-bar > .ant-input,
+  .filter-bar > .ant-select,
+  .filter-bar > .ant-picker {
+    flex: 1 1 calc(50% - 6px);
+    width: auto !important;
+    min-width: calc(50% - 6px);
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-bar > .ant-input-affix-wrapper,
+  .filter-bar > .ant-input,
+  .filter-bar > .ant-select,
+  .filter-bar > .ant-picker {
+    flex: 1 1 100%;
+    min-width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GLOBAL TABLE SAFETY NET — any wide table scrolls horizontally
+   while pagination stays fixed below.
+   ═══════════════════════════════════════════════════════════ */
+.admin-content-inner .ant-table-wrapper {
+  max-width: 100%;
+}
+
+.admin-content-inner .ant-table {
+  overflow-x: auto;
+}
+
+/* Prevent long words/URLs from blowing up table cells */
+.admin-content-inner .ant-table td,
+.admin-content-inner .ant-table th {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.admin-content-inner .ant-table-cell {
+  vertical-align: middle;
+}
+
+/* Compact tables on phones */
+@media (max-width: 768px) {
+  .admin-content-inner .ant-table-thead > tr > th,
+  .admin-content-inner .ant-table-tbody > tr > td {
+    padding: 10px 8px !important;
+    white-space: nowrap;
+  }
+
+  .admin-content-inner .ant-pagination {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    justify-content: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODALS — never exceed the phone viewport
+   ═══════════════════════════════════════════════════════════ */
+.ant-modal {
+  max-width: calc(100vw - 24px) !important;
+}
+
+.ant-modal .ant-modal-content {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+@media (max-width: 576px) {
+  .ant-modal {
+    top: 12px !important;
+    margin: 0 auto !important;
+    padding-bottom: 0 !important;
+  }
+
+  .ant-modal .ant-modal-content {
+    max-height: calc(100dvh - 60px);
+  }
+
+  .ant-modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DRAWERS — safe widths on phones
+   ═══════════════════════════════════════════════════════════ */
+.ant-drawer-content-wrapper {
+  max-width: 92vw !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DROPDOWNS — stay within viewport on phones
+   ═══════════════════════════════════════════════════════════ */
+.ant-dropdown-menu {
+  max-width: calc(100vw - 24px);
+}
+
+.ant-dropdown-menu-item,
+.ant-dropdown-menu-submenu-title {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 576px) {
+  .ant-message {
+    max-width: calc(100vw - 32px) !important;
+  }
 }

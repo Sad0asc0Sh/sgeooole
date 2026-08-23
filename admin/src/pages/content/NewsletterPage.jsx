@@ -267,7 +267,7 @@ function NewsletterPage() {
                     <Space wrap>
                         <Select
                             placeholder="وضعیت"
-                            style={{ width: 150 }}
+                            style={{ width: 150, maxWidth: '100%' }}
                             allowClear
                             value={filters.active}
                             onChange={(value) => {
@@ -307,6 +307,7 @@ function NewsletterPage() {
                     columns={columns}
                     dataSource={subscribers}
                     rowKey="_id"
+                    scroll={{ x: 'max-content' }}
                     loading={loading}
                     pagination={{
                         ...pagination,

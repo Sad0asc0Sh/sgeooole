@@ -252,6 +252,7 @@ export default function AiProvidersPage() {
           columns={columns}
           dataSource={providers}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           loading={loading}
           pagination={false}
           locale={{ emptyText: 'هیچ ارائه‌دهنده‌ای ثبت نشده. اولین ارائه‌دهنده را اضافه کنید.' }}

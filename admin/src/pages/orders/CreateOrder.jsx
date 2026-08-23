@@ -332,11 +332,13 @@ function CreateOrderPage() {
         <div>
             <div
                 style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: 16,
-                }}
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
+        }}
             >
                 <Space>
                     <Link to="/orders">
@@ -506,7 +508,7 @@ function CreateOrderPage() {
                             size="small"
                             extra={
                                 <AutoComplete
-                                    style={{ width: 300 }}
+                                    style={{ width: 300, maxWidth: '100%' }}
                                     placeholder="جستجوی محصول..."
                                     onSearch={searchProducts}
                                     onSelect={handleAddProduct}

@@ -283,7 +283,9 @@ function RMAPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>مدیریت مرجوعی (RMA)</h1>
@@ -306,7 +308,7 @@ function RMAPage() {
         <Input
           placeholder="جستجو بر اساس شماره سفارش..."
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: 300, maxWidth: '100%' }}
           allowClear
           value={filters.orderId}
           onChange={(e) =>
@@ -317,7 +319,7 @@ function RMAPage() {
         />
         <Select
           placeholder="وضعیت مرجوعی"
-          style={{ width: 180 }}
+          style={{ width: 180, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, status: value || null }))
@@ -337,6 +339,7 @@ function RMAPage() {
           dataSource={rmas}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

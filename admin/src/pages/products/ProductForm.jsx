@@ -1238,7 +1238,7 @@ function ProductForm() {
                                   onChange={(e) =>
                                     setNewAttributeName(e.target.value)
                                   }
-                                  style={{ width: 200 }}
+                                  style={{ width: 200, maxWidth: '100%' }}
                                 />
                                 <Input
                                   placeholder="مقادیر (با کاما جدا کنید: آبی، قرمز)"
@@ -1246,7 +1246,7 @@ function ProductForm() {
                                   onChange={(e) =>
                                     setNewAttributeValues(e.target.value)
                                   }
-                                  style={{ width: 300 }}
+                                  style={{ width: 300, maxWidth: '100%' }}
                                 />
                                 <Button
                                   type="primary"
@@ -1321,6 +1321,7 @@ function ProductForm() {
                                 columns={variantColumns}
                                 dataSource={variants}
                                 rowKey="_id"
+                                scroll={{ x: 'max-content' }}
                                 pagination={false}
                                 bordered
                                 size="small"

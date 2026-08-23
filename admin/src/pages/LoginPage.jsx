@@ -49,18 +49,24 @@ function LoginPage() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       display: 'flex',
       justifyContent: 'center',
       alignItems: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      background:
+          'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #312e81 100%)'
     }}>
       <Card
-        style={{ width: 400, boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          boxShadow: '0 20px 50px rgba(2, 6, 23, 0.35)',
+          borderRadius: 18,
+        }}
         bordered={false}
       >
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', color: '#1890ff', margin: 0 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 'bold', color: '#4f46e5', margin: 0 }}>
             ورود به پنل ادمین
           </h1>
           <p style={{ color: '#999', marginTop: 8 }}>لطفاً وارد حساب ادمین شوید</p>
@@ -102,7 +108,7 @@ function LoginPage() {
             <Link
               to="/forgot-password"
               style={{
-                color: '#1890ff',
+                color: '#4f46e5',
                 textDecoration: 'none',
                 fontSize: 14,
               }}

@@ -772,7 +772,9 @@ function BannersPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 24,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 24,
         }}
       >
         <div>
@@ -986,7 +988,7 @@ function BannersPage() {
           <Select
             placeholder="فیلتر بر اساس موقعیت"
             allowClear
-            style={{ width: 220 }}
+            style={{ width: 220, maxWidth: '100%' }}
             value={positionFilter}
             onChange={setPositionFilter}
           >
@@ -1003,6 +1005,7 @@ function BannersPage() {
           dataSource={banners}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

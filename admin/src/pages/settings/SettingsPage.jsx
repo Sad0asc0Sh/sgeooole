@@ -1575,7 +1575,9 @@ function SettingsPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>تنظیمات فروشگاه</h1>

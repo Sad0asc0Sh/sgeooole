@@ -619,7 +619,7 @@ function AbandonedCartsPage() {
           <Select
             value={hoursAgo}
             onChange={setHoursAgo}
-            style={{ width: 150 }}
+            style={{ width: 150, maxWidth: '100%' }}
           >
             <Select.Option value={0}>هم‌اکنون (همه)</Select.Option>
             <Select.Option value={1}>1 ساعت</Select.Option>
@@ -631,7 +631,7 @@ function AbandonedCartsPage() {
         </div>
         <div>
           <label style={{ marginLeft: 8 }}>حداکثر زمان:</label>
-          <Select value={daysAgo} onChange={setDaysAgo} style={{ width: 150 }}>
+          <Select value={daysAgo} onChange={setDaysAgo} style={{ width: 150, maxWidth: '100%' }}>
             <Select.Option value={3}>3 روز</Select.Option>
             <Select.Option value={7}>7 روز</Select.Option>
             <Select.Option value={14}>14 روز</Select.Option>
@@ -647,6 +647,7 @@ function AbandonedCartsPage() {
           dataSource={carts}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             pageSize: 20,
             showSizeChanger: true,

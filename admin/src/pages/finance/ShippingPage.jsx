@@ -287,7 +287,9 @@ function ShippingPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>مدیریت روش‌های ارسال</h1>
@@ -311,6 +313,7 @@ function ShippingPage() {
           dataSource={methods}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

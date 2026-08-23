@@ -321,7 +321,9 @@ function AdminsPage() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>🔐 مدیریت ادمین‌ها</h1>
@@ -446,6 +448,7 @@ function AdminsPage() {
           dataSource={admins}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             showSizeChanger: true,
             showTotal: (total) => `مجموع: ${total} ادمین`,
@@ -537,7 +540,7 @@ function AdminsPage() {
             <Switch
               checkedChildren="فعال"
               unCheckedChildren="غیرفعال"
-              style={{ width: 80 }}
+              style={{ width: 80, maxWidth: '100%' }}
             />
           </Form.Item>
         </Form>

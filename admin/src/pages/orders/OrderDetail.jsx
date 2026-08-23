@@ -408,7 +408,9 @@ function OrderDetail() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <Space>
@@ -596,7 +598,14 @@ function OrderDetail() {
                 {deliveryMode === 'online' ? (
                   <>
                     <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 8,
+        }}>
                         <label style={{ fontWeight: 'bold' }}>شرکت حمل‌ونقل:</label>
                         <Button
                           type="link"

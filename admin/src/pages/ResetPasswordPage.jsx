@@ -40,11 +40,12 @@ function ResetPasswordPage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background:
+          'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #312e81 100%)',
         padding: '20px',
       }}
     >
@@ -64,7 +65,7 @@ function ResetPasswordPage() {
                   width: 80,
                   height: 80,
                   borderRadius: '50%',
-                  background: '#1890ff',
+                  background: '#4f46e5',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -158,7 +159,7 @@ function ResetPasswordPage() {
                 <Link
                   to="/login"
                   style={{
-                    color: '#1890ff',
+                    color: '#4f46e5',
                     textDecoration: 'none',
                   }}
                 >

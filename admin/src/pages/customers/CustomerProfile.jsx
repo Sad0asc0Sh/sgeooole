@@ -470,11 +470,13 @@ function CustomerProfile() {
         <div>
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 16,
-            }}
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
+        }}
           >
             <h3>لیست سفارش‌ها</h3>
             <Button
@@ -490,6 +492,7 @@ function CustomerProfile() {
             dataSource={orders}
             loading={ordersLoading}
             rowKey="_id"
+            scroll={{ x: 'max-content' }}
             pagination={{
               pageSize: 20,
               showSizeChanger: true,
@@ -558,7 +561,9 @@ function CustomerProfile() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>پروفایل مشتری</h1>

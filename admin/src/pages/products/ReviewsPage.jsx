@@ -336,7 +336,7 @@ function ReviewsPage() {
       <Card bordered={false} className="shadow-sm">
         <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
           <Select
-            style={{ width: 200 }}
+            style={{ width: 200, maxWidth: '100%' }}
             placeholder="فیلتر وضعیت"
             allowClear
             value={filters.isApproved}

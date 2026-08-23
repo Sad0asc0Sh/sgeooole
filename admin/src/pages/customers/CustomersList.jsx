@@ -187,7 +187,9 @@ function CustomersList() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 12,
+marginBottom: 16,
         }}
       >
         <h1>مدیریت مشتریان</h1>
@@ -200,14 +202,14 @@ function CustomersList() {
         <Input
           placeholder="جستجوی نام یا ایمیل..."
           prefix={<SearchOutlined />}
-          style={{ width: 300 }}
+          style={{ width: 300, maxWidth: '100%' }}
           allowClear
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <Select
           placeholder="نقش"
-          style={{ width: 150 }}
+          style={{ width: 150, maxWidth: '100%' }}
           allowClear
           value={roleFilter}
           onChange={setRoleFilter}
@@ -220,7 +222,7 @@ function CustomersList() {
         </Select>
         <Select
           placeholder="وضعیت"
-          style={{ width: 150 }}
+          style={{ width: 150, maxWidth: '100%' }}
           allowClear
           value={activeFilter}
           onChange={setActiveFilter}
@@ -236,6 +238,7 @@ function CustomersList() {
           dataSource={users}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,

@@ -33,11 +33,12 @@ function ForgotPasswordPage() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        minHeight: '100dvh',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background:
+          'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #312e81 100%)',
         padding: '20px',
       }}
     >
@@ -109,7 +110,7 @@ function ForgotPasswordPage() {
                 <Link
                   to="/login"
                   style={{
-                    color: '#1890ff',
+                    color: '#4f46e5',
                     textDecoration: 'none',
                     display: 'flex',
                     alignItems: 'center',

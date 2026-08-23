@@ -110,7 +110,7 @@ function TicketDetail() {
 
             <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
               <span>تغییر وضعیت:</span>
-              <Select value={status} onChange={setStatus} style={{ width: 180 }}>
+              <Select value={status} onChange={setStatus} style={{ width: 180, maxWidth: '100%' }}>
                 {['open','pending','closed'].map(s => (
                   <Select.Option key={s} value={s}>{s}</Select.Option>
                 ))}

@@ -122,18 +122,18 @@ function TicketsList() {
           <Input
             placeholder="جستجو (موضوع/پیام)"
             prefix={<SearchOutlined />}
-            style={{ width: 320 }}
+            style={{ width: 320, maxWidth: '100%' }}
             allowClear
             onChange={(e) => setSearch(e.target.value)}
             onPressEnter={() => fetchTickets(1, pagination.pageSize)}
             onBlur={() => fetchTickets(1, pagination.pageSize)}
           />
-          <Select placeholder="وضعیت" style={{ width: 150 }} allowClear onChange={setStatus}>
+          <Select placeholder="وضعیت" style={{ width: 150, maxWidth: '100%' }} allowClear onChange={setStatus}>
             {['open','pending','closed'].map(s => (
               <Select.Option key={s} value={s}>{s}</Select.Option>
             ))}
           </Select>
-          <Select placeholder="اولویت" style={{ width: 150 }} allowClear onChange={setPriority}>
+          <Select placeholder="اولویت" style={{ width: 150, maxWidth: '100%' }} allowClear onChange={setPriority}>
             {['low','medium','high'].map(p => (
               <Select.Option key={p} value={p}>{p}</Select.Option>
             ))}
@@ -146,6 +146,7 @@ function TicketsList() {
           dataSource={data}
           loading={loading}
           rowKey="_id"
+          scroll={{ x: 'max-content' }}
           pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, showSizeChanger: true }}
           onChange={onTableChange}
         />
