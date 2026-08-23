@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Button,
   Space,
   Select,
@@ -23,6 +22,7 @@ import {
   Alert,
   Progress,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   InboxOutlined,
   PlusOutlined,
@@ -1000,7 +1000,7 @@ marginBottom: 24,
           </Select>
         }
       >
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={banners}
           loading={loading}

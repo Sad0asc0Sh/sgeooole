@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Table, Card, Tag, Input, Select, Space, Button } from 'antd'
+import { Card, Tag, Input, Select, Space, Button } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { SearchOutlined, ReloadOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -176,6 +177,7 @@ function OrdersList() {
     },
     {
       title: 'وضعیت سفارش',
+      mobileBadge: true,
       dataIndex: 'orderStatus',
       key: 'orderStatus',
       width: 150,
@@ -288,7 +290,7 @@ function OrdersList() {
       </div>
 
       <Card styles={{ body: { padding: '0 16px 16px' } }}>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={orders}
           loading={loading}

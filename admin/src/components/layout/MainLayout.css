@@ -216,7 +216,11 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
-/* ─── MOBILE DRAWER ───────────────────────────── */
+/* ─── MOBILE DRAWER (dark, matches sidebar) ───── */
+.mobile-drawer .ant-drawer-content {
+  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%) !important;
+}
+
 .mobile-drawer .ant-drawer-header {
   display: none !important; /* custom branded header rendered inside body */
   padding: 0;
@@ -230,6 +234,7 @@
   height: 100%;
 }
 
+/* Branded gradient header */
 .mobile-drawer-header {
   display: flex;
   align-items: center;
@@ -240,25 +245,129 @@
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   color: #fff;
   font-weight: 700;
-  font-size: 15px;
+  font-size: 14.5px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(79, 70, 229, 0.35);
 }
 
 .mobile-drawer-header .mobile-drawer-close {
   margin-inline-start: auto;
   color: #fff;
-  font-size: 18px;
+  font-size: 17px;
 }
 
-.mobile-drawer .ant-menu {
+.mobile-drawer-header .mobile-drawer-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ── Drawer menu: high-contrast items ── */
+.mobile-drawer .mobile-drawer-menu {
   flex: 1;
   overflow-y: auto;
-  border-inline-end: none !important;
-  padding-block: 8px;
+  overscroll-behavior: contain;
+  padding-block: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
 
+.mobile-drawer .mobile-drawer-menu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.mobile-drawer .mobile-drawer-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.mobile-drawer .mobile-drawer-menu.ant-menu {
+  background: transparent !important;
+  border-inline-end: none !important;
+}
+
+/* Item base — bright, comfortable touch target */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
+  color: #e8edf7 !important;
+  font-size: 14.5px !important;
+  font-weight: 500;
+  height: 44px !important;
+  line-height: 44px !important;
+  margin-inline: 10px !important;
+  border-radius: 10px !important;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.mobile-drawer .mobile-drawer-menu .ant-menu-item .anticon,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title .anticon {
+  font-size: 16px;
+  color: #aab6d3;
+  transition: color 0.2s ease;
+}
+
+/* Hover state */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover .anticon,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover .anticon {
+  color: #ffffff;
+}
+
+/* Selected item — vivid indigo pill */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item-selected {
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700;
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.45);
+}
+
+.mobile-drawer .mobile-drawer-menu .ant-menu-item-selected .anticon {
+  color: #ffffff;
+}
+
+/* Submenu children — slightly indented, still bright */
+.mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-radius: 10px;
+  margin-inline: 10px !important;
+}
+
+.mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  margin-inline: 6px !important;
+  font-size: 13.5px !important;
+  height: 40px !important;
+  line-height: 40px !important;
+  color: #cbd5ef !important;
+}
+
+.mobile-drawer .mobile-drawer-menu
+  .ant-menu-sub.ant-menu-inline
+  .ant-menu-item-selected {
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+}
+
+/* Submenu arrow color */
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-arrow {
+  color: #aab6d3 !important;
+}
+
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-active,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-open
+  > .ant-menu-submenu-title {
+  color: #ffffff !important;
+}
+
+/* ── Drawer footer (user + logout) ── */
 .mobile-drawer-footer {
+  flex-shrink: 0;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  border-top: 1px solid #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -268,12 +377,13 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .mobile-drawer-footer .user-meta .u-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
-  color: #0f172a;
+  color: #f1f5f9;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -281,7 +391,7 @@
 
 .mobile-drawer-footer .user-meta .u-role {
   font-size: 11px;
-  color: #64748b;
+  color: #94a3b8;
 }
 
 /* ─── MOBILE / TABLET RESPONSIVE ──────────────── */

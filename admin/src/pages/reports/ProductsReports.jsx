@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Row, Col, message } from 'antd'
+import { Card, Row, Col, message } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import api from '../../api'
 
 function ProductsReports() {
@@ -71,7 +72,7 @@ function ProductsReports() {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="پرفروش‌ترین محصولات" loading={loading}>
-            <Table
+            <ResponsiveTable
               columns={topSellingColumns}
               dataSource={topSelling}
               rowKey={(r) => r.productId || r.name}
@@ -81,7 +82,7 @@ function ProductsReports() {
         </Col>
         <Col xs={24} lg={12}>
           <Card title="محصولات نیازمند شارژ موجودی" loading={loading}>
-            <Table
+            <ResponsiveTable
               columns={lowStockColumns}
               dataSource={lowStock}
               rowKey={(r) => r.productId || r.name}

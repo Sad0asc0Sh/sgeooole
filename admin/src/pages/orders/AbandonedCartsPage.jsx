@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Button,
   Tag,
   message,
@@ -16,6 +15,7 @@ import {
   Image,
   Progress,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   ReloadOutlined,
   MailOutlined,
@@ -642,7 +642,7 @@ function AbandonedCartsPage() {
 
       {/* جدول */}
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={carts}
           loading={loading}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Table, Card, Tag, Button, Space } from 'antd'
+import { Card, Tag, Button, Space } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -115,7 +116,7 @@ marginBottom: 16,
             </div>
 
             <Card>
-                <Table
+                <ResponsiveTable
                     columns={columns}
                     dataSource={logs}
                     loading={loading}

@@ -17,6 +17,7 @@ import {
     Empty,
     Popconfirm,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
     MailOutlined,
     DeleteOutlined,
@@ -146,6 +147,7 @@ function NewsletterPage() {
         },
         {
             title: 'وضعیت',
+            mobileBadge: true,
             dataIndex: 'isActive',
             key: 'isActive',
             width: 120,
@@ -303,7 +305,7 @@ function NewsletterPage() {
 
             {/* Table */}
             <Card>
-                <Table
+                <ResponsiveTable
                     columns={columns}
                     dataSource={subscribers}
                     rowKey="_id"

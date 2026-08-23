@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Table, Card, Input, Tag, Button, Select, Space, message } from 'antd'
+import { Card, Input, Tag, Button, Select, Space, message } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -149,6 +150,7 @@ function CustomersList() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'isActive',
       width: 120,
@@ -233,7 +235,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={users}
           loading={loading}

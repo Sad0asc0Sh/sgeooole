@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  Table,
   Button,
   Space,
   Tag,
@@ -13,6 +12,7 @@ import {
   Popconfirm,
   Card,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   PlusOutlined,
   EditOutlined,
@@ -187,6 +187,7 @@ function AnnouncementsPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'isActive',
       width: 120,
@@ -261,7 +262,7 @@ function AnnouncementsPage() {
           </Button>
         }
       >
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={announcements}
           rowKey="_id"

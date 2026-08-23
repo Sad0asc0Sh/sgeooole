@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Tag, Input, Select, Space, message } from 'antd'
+import { Card, Tag, Input, Select, Space, message } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { SearchOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -97,6 +98,7 @@ function TicketsList() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'status',
       key: 'status',
       render: (s) => <Tag color={s==='closed'?'red':s==='pending'?'blue':'green'}>{s}</Tag>,
@@ -141,7 +143,7 @@ function TicketsList() {
         </Space>
       </div>
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={data}
           loading={loading}

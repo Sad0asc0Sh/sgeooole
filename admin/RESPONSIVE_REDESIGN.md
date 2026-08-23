@@ -2,6 +2,43 @@
 
 تاریخ: ۱۴۰۴/۰۶/۰۱ — بهینه‌سازی کامل برای موبایل (ابعاد ۳۲۰px تا دسکتاپ)
 
+## 🆕 نسخه ۲ — اصلاحات عمیق UI/UX موبایل
+
+### 1️⃣ رفع مشکل منوی همبرگری (کمرنگ بودن گزینه‌ها)
+**ریشه مشکل:** منوی Drawer با تم `dark` روی پس‌زمینه سفید Drawer رندر می‌شد → متن روشن تقریباً نامرئی.
+
+**راه‌حل اعمال‌شده:**
+- پس‌زمینه Drawer تیره با گرادیان Slate (`#0f172a → #0b1220`) کاملاً هماهنگ با سایدبار
+- آیتم‌های منو: رنگ پررنگ `#e8edf7`، ارتفاع لمسی ۴۴px، فونت ۱۴.۵px
+- آیتم انتخاب‌شده: قرص گرادیانی Indigo با سایه نئونی
+- زیرمنوها: پس‌زمینه ملایم + تورفتگی + رنگ روشن
+- فوتر پروفایل تیره با دکمه خروج
+
+### 2️⃣ جداول در موبایل: نمایش کارتی (Card View)
+کامپوننت جدید **`src/components/ResponsiveTable.jsx`** (+ `ResponsiveTable.css`):
+- **دسکتاپ**: همان antd Table معمولی — drop-in replacement، تمام props ها forward می‌شوند
+- **موبایل (<768px)**: هر ردیف = یک کارت لمسی شامل:
+  - عنوان برجسته (ستون اول یا ستونِ `mobileTitle: true`)
+  - Badge وضعیت بالای کارت (ستون‌های «وضعیت» → `mobileBadge: true`)
+  - سایر فیلدها به‌صورت مرتب label/value
+  - دکمه‌های «عملیات» پایین کارت (تشخیص خودکار)
+  - Checkbox برای عملیات گروهی (ProductsList)
+  - Pagination سازگار با server-side/client-side
+  - Skeleton لودینگ و Empty state اختصاصی
+
+**۲۲ صفحه لیست** تبدیل شدند: OrdersList, ProductsList, CustomersList, InventoryPage, TicketsList, RMAPage, BrandsPage, CouponsPage, SalesPage, ShippingPage, AdminsPage, ReviewsPage, AnnouncementsPage, NewsletterPage, BlogPosts, PagesManagement, AbandonedCartsPage, AuditLogs, CustomersReports, ProductsReports, AiProvidersPage, BannersPage
+
+> صفحات فرم‌محور (OrderDetail, CreateOrder, ProductForm, CustomerProfile) عمداً Table معمولی ماندند چون ورودی درون‌ردیفی دارند؛ اسکرول افقی آن‌ها فعال است.
+
+### 3️⃣ پالیش تکمیلی موبایل
+- دکمه‌های هدر صفحات در موبایل تمام‌عرض
+- padding بدنه Card ها در موبایل: ۱۲px
+- بسته‌شدن خودکار Drawer هنگام بزرگ شدن صفحه (`useIsMobile`)
+
+---
+
+## ✨ تغییرات نسخه ۱
+
 ## ✨ تغییرات اعمال‌شده
 
 ### 1. سیستم طراحی سراسری

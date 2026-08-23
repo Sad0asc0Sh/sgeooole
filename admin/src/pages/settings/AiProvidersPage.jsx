@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Card, Table, Button, Modal, Form, Input, InputNumber, Switch, Space,
+  Card, Button, Modal, Form, Input, InputNumber, Switch, Space,
   Tag, Tooltip, message, Popconfirm, Alert, Slider, Typography, Badge, Divider
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, CheckCircleOutlined,
   ApiOutlined, StarOutlined, StarFilled, ExperimentOutlined,
@@ -144,6 +145,7 @@ export default function AiProvidersPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       key: 'status',
       width: 100,
       render: (_, record) => (
@@ -248,7 +250,7 @@ export default function AiProvidersPage() {
           style={{ marginBottom: 16 }}
         />
 
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={providers}
           rowKey="_id"

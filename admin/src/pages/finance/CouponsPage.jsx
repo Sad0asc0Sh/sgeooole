@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Tag,
   Button,
   Modal,
@@ -15,6 +14,7 @@ import {
   Switch,
   Tooltip,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -302,6 +302,7 @@ function CouponsPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'isActive',
       width: 100,
@@ -377,7 +378,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={coupons}
           loading={loading}

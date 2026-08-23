@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Tag,
   Button,
   Modal,
@@ -16,6 +15,7 @@ import {
   Switch,
   Radio,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -217,6 +217,7 @@ function SalesPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       key: 'status',
       render: (_, record) => {
         const status = getSaleStatus(record)
@@ -270,7 +271,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table columns={columns} dataSource={sales} loading={loading} rowKey="_id"
+        <ResponsiveTable columns={columns} dataSource={sales} loading={loading} rowKey="_id"
  scroll={{ x: 'max-content' }} />
       </Card>
 

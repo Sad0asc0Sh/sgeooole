@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Tag,
   Input,
   Select,
@@ -14,6 +13,7 @@ import {
   InputNumber,
   Divider,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   SearchOutlined,
   ReloadOutlined,
@@ -225,6 +225,7 @@ function RMAPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'status',
       key: 'status',
       width: 140,
@@ -334,7 +335,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={rmas}
           loading={loading}

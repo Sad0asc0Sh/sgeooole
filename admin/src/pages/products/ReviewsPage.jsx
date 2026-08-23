@@ -21,6 +21,7 @@ import {
   Tooltip,
   Image
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   ReloadOutlined,
   DeleteOutlined,
@@ -251,6 +252,7 @@ function ReviewsPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isApproved',
       key: 'isApproved',
       width: 120,
@@ -347,7 +349,7 @@ function ReviewsPage() {
           </Select>
         </div>
 
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={reviews}
           rowKey="_id"

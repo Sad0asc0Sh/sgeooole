@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   InputNumber,
   Button,
   message,
@@ -11,6 +10,7 @@ import {
   Select,
   Alert,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { SearchOutlined, SaveOutlined, ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import api from '../../api'
 import S3AdminImage from '../../components/S3AdminImage'
@@ -316,7 +316,7 @@ function InventoryPage() {
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={products}
           loading={loading}

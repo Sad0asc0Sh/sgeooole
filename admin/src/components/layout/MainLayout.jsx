@@ -473,7 +473,7 @@ function MainLayout({ children }) {
         <Menu
           theme="dark"
           mode="inline"
-          style={{ background: 'transparent' }}
+          className="mobile-drawer-menu"
           selectedKeys={[location.pathname]}
           defaultOpenKeys={getOpenKeys}
           items={filteredMenuItems}

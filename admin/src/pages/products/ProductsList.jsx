@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Table,
   Button,
   Input,
   Dropdown,
@@ -13,6 +12,7 @@ import {
   Checkbox,
   Upload,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   PlusOutlined,
   SearchOutlined,
@@ -446,6 +446,7 @@ function ProductsList({ mode }) {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'status',
       render: (status, record) => (
@@ -1239,7 +1240,7 @@ function ProductsList({ mode }) {
       </div>
       )}
 
-      <Table
+      <ResponsiveTable
         columns={columns}
         dataSource={products}
         loading={loading}

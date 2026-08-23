@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
+import { Card, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import RichTextEditor from '../../components/RichTextEditor'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -273,7 +274,7 @@ function BlogPosts() {
         </Space>
       </div>
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={posts}
           loading={loading}

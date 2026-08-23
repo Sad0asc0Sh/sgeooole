@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Tag,
   Button,
   Modal,
@@ -13,6 +12,7 @@ import {
   Space,
   message,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import api from '../../api'
 import { cityOptionsForProvince, provinceOptions } from '../../data/iranLocations'
@@ -233,6 +233,7 @@ function ShippingPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'isActive',
       width: 120,
@@ -308,7 +309,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={methods}
           loading={loading}

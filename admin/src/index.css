@@ -124,8 +124,22 @@ code {
     font-size: 18px;
   }
 
+  /* Action buttons become full-width stacked */
   .page-header .ant-space {
     width: 100%;
+  }
+
+  .page-header .ant-space-item {
+    flex: 1;
+  }
+
+  .page-header .ant-space-item .ant-btn {
+    width: 100%;
+  }
+
+  /* Tighter card padding on phones */
+  .admin-content-inner > .ant-card > .ant-card-body {
+    padding: 12px;
   }
 }
 

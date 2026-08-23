@@ -17,6 +17,7 @@ import {
   Tag,
   Tooltip,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   PlusOutlined,
   EditOutlined,
@@ -417,7 +418,7 @@ marginBottom: 16,
       </div>
 
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={brands}
           loading={loading}

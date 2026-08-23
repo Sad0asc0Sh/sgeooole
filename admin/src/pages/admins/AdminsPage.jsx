@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
   Card,
-  Table,
   Tag,
   Button,
   Modal,
@@ -19,6 +18,7 @@ import {
   Collapse,
   Typography,
 } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   PlusOutlined,
   EditOutlined,
@@ -261,6 +261,7 @@ function AdminsPage() {
     },
     {
       title: 'وضعیت',
+      mobileBadge: true,
       dataIndex: 'isActive',
       key: 'isActive',
       render: (v) => (
@@ -443,7 +444,7 @@ marginBottom: 16,
       {/* جدول ادمین‌ها */}
       {/* ============================================ */}
       <Card title="📋 لیست ادمین‌ها">
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={admins}
           loading={loading}

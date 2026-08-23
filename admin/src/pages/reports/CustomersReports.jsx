@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Card, Table, message } from 'antd'
+import { Card, message } from 'antd'
+import ResponsiveTable from '../../components/ResponsiveTable'
 import api from '../../api'
 
 function CustomersReports() {
@@ -56,7 +57,7 @@ function CustomersReports() {
     <div>
       <h1>گزارش مشتریان</h1>
       <Card>
-        <Table
+        <ResponsiveTable
           columns={columns}
           dataSource={data}
           loading={loading}
