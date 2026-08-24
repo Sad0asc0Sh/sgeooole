@@ -122,6 +122,11 @@ export default function ResponsiveTable({
   // Optional thumbnail pinned next to the card title (e.g. product photo)
   const thumbCol = cols.find((c) => c.mobileThumb)
 
+  // Optional secondary line under the card title (e.g. customer email)
+  const subtitleCol = cols.find(
+    (c) => c.mobileSubtitle && c !== titleCol && !isActionsCol(c),
+  )
+
   const list = Array.isArray(dataSource) ? dataSource : []
 
   let pageItems = list
@@ -195,7 +200,7 @@ export default function ResponsiveTable({
         const selected = isSelected(key)
         const badges = fieldCols.filter((c) => c.mobileBadge && c !== titleCol)
         const bodyFields = fieldCols.filter(
-          (c) => c !== titleCol && !c.mobileBadge,
+          (c) => c !== titleCol && !c.mobileBadge && c !== subtitleCol,
         )
         return (
           <div
@@ -222,6 +227,11 @@ export default function ResponsiveTable({
                   )}
                   <span className="rt-title-text">
                     {titleCol ? renderCell(titleCol, record, idx) : `#${idx + 1}`}
+                    {subtitleCol && (
+                      <span className="rt-subtitle">
+                        {renderCell(subtitleCol, record, idx)}
+                      </span>
+                    )}
                   </span>
                 </span>
               </div>
@@ -241,7 +251,10 @@ export default function ResponsiveTable({
                 {bodyFields.map((c, i) => {
                   const label = typeof c.title === 'string' ? c.title : c.key
                   return (
-                    <div className="rt-field" key={i}>
+                    <div
+                      className={`rt-field ${c.mobileFull ? 'rt-field-full' : ''}`}
+                      key={i}
+                    >
                       <span className="rt-field-label">{label}</span>
                       <span className="rt-field-value">
                         {renderCell(c, record, idx) ?? '—'}

@@ -290,7 +290,7 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 10px;
+  padding-block: 6px 10px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
 }
@@ -309,23 +309,42 @@
   border-inline-end: none !important;
 }
 
+/* ── Section group labels (فروشگاه / سیستم …) ── */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item-group-title {
+  color: #8294b8 !important;
+  font-size: 11.5px !important;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 14px 24px 6px !important;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* Tighten first group's top spacing */
+.mobile-drawer .mobile-drawer-menu
+  .ant-menu-item-group:first-child
+  > .ant-menu-item-group-title {
+  padding-top: 10px !important;
+}
+
 /* Item base — bright, comfortable touch target */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
-  color: #e8edf7 !important;
-  font-size: 14.5px !important;
-  font-weight: 500;
-  height: 44px !important;
-  line-height: 44px !important;
+  color: #eef2fb !important;
+  font-size: 15px !important;
+  font-weight: 600;
+  height: 46px !important;
+  line-height: 46px !important;
   margin-inline: 10px !important;
-  border-radius: 10px !important;
+  margin-block: 2px !important;
+  border-radius: 11px !important;
   transition: background 0.2s ease, color 0.2s ease;
 }
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-item .anticon,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title .anticon {
-  font-size: 16px;
-  color: #aab6d3;
+  font-size: 17px;
+  color: #c7d2fe;
   transition: color 0.2s ease;
 }
 
@@ -353,19 +372,21 @@
   color: #ffffff;
 }
 
-/* Submenu children — slightly indented, still bright */
+/* Submenu children — inset panel, clearly nested */
 .mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.1) !important;
+  border-radius: 12px;
   margin-inline: 10px !important;
+  padding-block: 4px;
 }
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  margin-inline: 6px !important;
+  margin-inline: 8px !important;
   font-size: 13.5px !important;
+  font-weight: 500 !important;
   height: 40px !important;
   line-height: 40px !important;
-  color: #cbd5ef !important;
+  color: #d7dff2 !important;
 }
 
 .mobile-drawer .mobile-drawer-menu

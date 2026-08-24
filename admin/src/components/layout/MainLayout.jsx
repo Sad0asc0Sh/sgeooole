@@ -33,6 +33,8 @@ const { Header, Sider, Content } = Layout
 function MainLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  // Sub-menus currently expanded inside the mobile drawer
+  const [drawerOpenKeys, setDrawerOpenKeys] = useState([])
   const location = useLocation()
   const isDesktopLayout = !useIsMobile(992)
 
@@ -267,6 +269,34 @@ function MainLayout({ children }) {
   ]
   const filteredMenuItems = filterMenuItems(menuItems)
 
+  // ── Grouped items for the mobile drawer ──
+  // Adds section labels (فروشگاه / سیستم …) so the menu is scannable
+  // instead of one long flat list.
+  const groupedDrawerItems = useMemo(() => {
+    const byKey = new Map(filteredMenuItems.map((it) => [it.key, it]))
+    const pick = (...keys) => keys.map((k) => byKey.get(k)).filter(Boolean)
+
+    return [
+      { type: 'group', label: 'اصلی', children: pick('/') },
+      {
+        type: 'group',
+        label: 'فروش و مشتریان',
+        children: pick('products-menu', 'orders-menu', '/customers'),
+      },
+      { type: 'group', label: 'پشتیبانی', children: pick('/tickets') },
+      {
+        type: 'group',
+        label: 'مالی و محتوا',
+        children: pick('/finance', '/content'),
+      },
+      {
+        type: 'group',
+        label: 'سیستم',
+        children: pick('/reports', '/settings', '/admins'),
+      },
+    ].filter((g) => g.children.length > 0)
+  }, [filteredMenuItems])
+
   // Map pathname to the correct parent menu key for auto-expanding
   const getOpenKeys = useMemo(() => {
     if (collapsed) return []
@@ -302,6 +332,15 @@ function MainLayout({ children }) {
     const matchedKey = Object.keys(pathToParent).find(k => path.startsWith(k + '/'))
     return matchedKey ? [pathToParent[matchedKey]] : []
   }, [location.pathname, collapsed])
+
+  // Keep the active section auto-expanded inside the mobile drawer
+  // (merges with keys the user expanded manually)
+  useEffect(() => {
+    setDrawerOpenKeys((prev) => {
+      const merged = new Set([...prev, ...getOpenKeys])
+      return Array.from(merged)
+    })
+  }, [getOpenKeys])
 
   const formatRelativeTime = (timestamp) => {
     if (!timestamp) return ''
@@ -461,7 +500,7 @@ function MainLayout({ children }) {
           <span className="logo-icon">
             <DashboardOutlined />
           </span>
-          <span>پنل مدیریت ای‌کا‌جی کالا</span>
+          <span>پنل مدیریت</span>
           <Button
             type="text"
             icon={<CloseOutlined />}
@@ -475,8 +514,9 @@ function MainLayout({ children }) {
           mode="inline"
           className="mobile-drawer-menu"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={getOpenKeys}
-          items={filteredMenuItems}
+          openKeys={drawerOpenKeys}
+          onOpenChange={(keys) => setDrawerOpenKeys(keys)}
+          items={groupedDrawerItems}
           onClick={() => setMobileDrawerOpen(false)}
         />
         <div className="mobile-drawer-footer">

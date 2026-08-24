@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Input, Tag, Button, Select, Space, message } from 'antd'
+import { Card, Input, Tag, Button, Select, Space, message, Avatar } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import { SearchOutlined, ReloadOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
@@ -103,12 +103,36 @@ function CustomersList() {
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
+      // Mobile card: avatar + name as the card header
+      mobileTitle: true,
+      render: (name, record) => {
+        const label = name || record?.email?.split('@')[0] || 'کاربر'
+        const initial = label.trim().charAt(0) || '؟'
+        return (
+          <Space size={8} style={{ minWidth: 0 }}>
+            <Avatar
+              style={{
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              {initial}
+            </Avatar>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {label}
+            </span>
+          </Space>
+        )
+      },
     },
     {
       title: 'ایمیل',
       dataIndex: 'email',
       key: 'email',
       ellipsis: true,
+      // Mobile card: shown right under the customer's name
+      mobileSubtitle: true,
     },
     {
       title: 'شماره موبایل',
@@ -128,6 +152,8 @@ function CustomersList() {
       dataIndex: 'role',
       key: 'role',
       width: 120,
+      // Mobile card: second badge next to the status tag
+      mobileBadge: true,
       render: (role) => {
         const colors = {
           user: 'default',
