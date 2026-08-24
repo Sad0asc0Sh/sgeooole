@@ -131,7 +131,7 @@
   margin-block: 3px !important;
   margin-inline: 0 !important;
   border-radius: 10px !important;
-  color: #dce4f5 !important; /* slate-100 — fully readable, never faint */
+  color: #f1f5fb !important; /* near-white — maximum readability */
   font-size: 14px !important;
   font-weight: 600 !important;
   letter-spacing: 0.1px;
@@ -167,6 +167,12 @@
   background: rgba(148, 163, 184, 0.18) !important;
 }
 
+/* Hover must stay pure-white on every nested node (spans/links) */
+.admin-sider .ant-menu-item:hover *,
+.admin-sider .ant-menu-submenu-title:hover * {
+  color: #ffffff !important;
+}
+
 .admin-sider .ant-menu-item:hover .anticon,
 .admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title .anticon,
 .admin-sider .ant-menu-submenu-title:hover .anticon {
@@ -188,34 +194,26 @@
   outline-offset: -2px;
 }
 
-/* ── SELECTED item: vivid branded pill + marker bar ── */
-.admin-sider .ant-menu-item.ant-menu-item-selected {
-  position: relative;
+/* ── SELECTED item: vivid branded pill, pure-white text ── */
+.admin-sider .ant-menu-item.ant-menu-item-selected,
+.admin-sider
+  .ant-menu-sub.ant-menu-inline
+  .ant-menu-item.ant-menu-item-selected {
   background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45);
+}
+
+/* Hard cascade: NOTHING inside the pill may dim the label */
+.admin-sider .ant-menu-item.ant-menu-item-selected,
+.admin-sider .ant-menu-item.ant-menu-item-selected *,
+.admin-sider .ant-menu-item.ant-menu-item-selected a,
+.admin-sider .ant-menu-item.ant-menu-item-selected span {
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-.admin-sider .ant-menu-item-selected .anticon,
-.admin-sider .ant-menu-item-selected a {
-  color: #ffffff !important;
-}
-
-/* Active-page marker bar on the inner edge */
-.admin-sider .ant-menu-item-selected::after {
-  content: "";
-  position: absolute;
-  inset-inline-end: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 46%;
-  min-height: 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.55);
+.admin-sider .ant-menu-item.ant-menu-item-selected:hover {
+  background: linear-gradient(135deg, #5951ef 0%, #7b32e0 100%) !important;
 }
 
 /* ── Open submenu title stays highlighted ── */
@@ -241,18 +239,8 @@
   line-height: 38px !important;
   margin-block: 2px !important;
   font-size: 13.5px !important;
-  font-weight: 500 !important;
-  color: #ccd6ec !important;
-}
-
-.admin-sider
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item.ant-menu-item-selected {
-  font-weight: 700 !important;
-}
-
-.admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::after {
-  inset-inline-end: 5px;
+  font-weight: 600 !important;
+  color: #e2eaf8 !important;
 }
 
 /* ── Collapsed (icon-only) mode ── */
@@ -265,11 +253,6 @@
   .ant-menu-submenu
   > .ant-menu-submenu-title {
   margin-block: 4px !important;
-}
-
-/* The marker bar would clutter icon-only pills — hide it */
-.admin-sider.ant-layout-sider-collapsed .ant-menu-item-selected::after {
-  display: none;
 }
 
 /* ─── MAIN LAYOUT (beside sidebar) ────────────── */
@@ -474,7 +457,7 @@
 
 /* ── Section group labels (فروشگاه / سیستم …) ── */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item-group-title {
-  color: #8294b8 !important;
+  color: #9db0d8 !important;
   font-size: 11.5px !important;
   font-weight: 800;
   letter-spacing: 1px;
@@ -493,7 +476,7 @@
 /* Item base — bright, comfortable touch target */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
-  color: #eef2fb !important;
+  color: #f3f7ff !important;
   font-size: 15px !important;
   font-weight: 600;
   height: 46px !important;
@@ -533,6 +516,12 @@
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-item-selected .anticon {
   color: #ffffff;
+}
+
+/* Hard cascade: selected label stays pure-white everywhere */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected,
+.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected * {
+  color: #ffffff !important;
 }
 
 /* Submenu children — inset panel, clearly nested */
@@ -599,7 +588,7 @@
 
 .mobile-drawer-footer .user-meta .u-role {
   font-size: 11px;
-  color: #94a3b8;
+  color: #aab8d8;
 }
 
 /* ═══════════════════════════════════════════════
@@ -627,7 +616,7 @@
   line-height: 40px !important;
   margin-block: 2px !important;
   border-radius: 9px !important;
-  color: #dce4f5 !important;
+  color: #f1f5fb !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
   transition: background-color 0.18s ease, color 0.18s ease !important;
@@ -654,6 +643,11 @@
 }
 
 .admin-sider-popup .ant-menu-item-selected a {
+  color: #ffffff !important;
+}
+
+.admin-sider-popup .ant-menu-item.ant-menu-item-selected,
+.admin-sider-popup .ant-menu-item.ant-menu-item-selected * {
   color: #ffffff !important;
 }
 
