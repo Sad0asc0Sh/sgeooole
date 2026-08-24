@@ -1,1 +1,0 @@
-import{u as i,h as o,b as a,c as e}from"./index-DjotsPBw.js";function t(){const r=i(s=>s.permissions||[]),n=Array.isArray(r)?r:[];return{permissions:n,can:s=>e(n,s),canAny:s=>a(n,s),canAll:s=>o(n,s)}}export{t as u};

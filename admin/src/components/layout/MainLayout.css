@@ -386,9 +386,16 @@
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
-/* ─── MOBILE DRAWER (dark, matches sidebar) ───── */
+/* ─── MOBILE DRAWER v2 (deep space + aurora glow) ── */
 .mobile-drawer .ant-drawer-content {
-  background: linear-gradient(180deg, #0f172a 0%, #0b1220 100%) !important;
+  background:
+    radial-gradient(900px 420px at 85% -8%, rgba(99, 102, 241, 0.22), transparent 62%),
+    radial-gradient(600px 320px at -10% 108%, rgba(124, 58, 237, 0.14), transparent 60%),
+    linear-gradient(180deg, #0b1226 0%, #070c19 100%) !important;
+}
+
+.mobile-drawer .ant-drawer-content-wrapper {
+  box-shadow: -18px 0 60px rgba(2, 6, 23, 0.65) !important;
 }
 
 .mobile-drawer .ant-drawer-header {
@@ -431,23 +438,18 @@
   background: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* ── Drawer menu: high-contrast items ── */
+/* ── Drawer menu scroll area ── */
 .mobile-drawer .mobile-drawer-menu {
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 6px 10px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+  padding-block: 4px 12px;
+  padding-inline: 6px;
+  scrollbar-width: none;
 }
 
 .mobile-drawer .mobile-drawer-menu::-webkit-scrollbar {
-  width: 4px;
-}
-
-.mobile-drawer .mobile-drawer-menu::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  display: none;
 }
 
 .mobile-drawer .mobile-drawer-menu.ant-menu {
@@ -455,12 +457,21 @@
   border-inline-end: none !important;
 }
 
-/* ── Section group labels (فروشگاه / سیستم …) ── */
+/* ── Section labels with hairline separators ── */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item-group {
+  margin-top: 8px;
+}
+
+.mobile-drawer .mobile-drawer-menu
+  .ant-menu-item-group:not(:first-child) {
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+}
+
 .mobile-drawer .mobile-drawer-menu .ant-menu-item-group-title {
-  color: #9db0d8 !important;
-  font-size: 11.5px !important;
+  color: #93a6cf !important;
+  font-size: 10.5px !important;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
   padding: 14px 24px 6px !important;
   text-transform: uppercase;
   user-select: none;
@@ -473,33 +484,48 @@
   padding-top: 10px !important;
 }
 
-/* Item base — bright, comfortable touch target */
+/* Item base — roomy touch target */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
   position: relative;
-  color: #f4f7ff !important;
-  font-size: 15px !important;
+  color: #eef3fd !important;
+  font-size: 14.5px !important;
   font-weight: 600;
   height: 46px !important;
   line-height: 46px !important;
-  margin-inline: 10px !important;
-  margin-block: 2px !important;
-  border-radius: 11px !important;
-  transition: background 0.2s ease, color 0.2s ease;
+  margin-inline: 8px !important;
+  margin-block: 3px !important;
+  border-radius: 13px !important;
+  transition: background 0.18s ease, color 0.18s ease,
+    transform 0.12s ease;
 }
 
-.mobile-drawer .mobile-drawer-menu .ant-menu-item .anticon,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title .anticon {
-  font-size: 17px;
-  color: #c7d2fe;
-  transition: color 0.2s ease;
+/* Icon chips — the v2 signature look */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item > .anticon,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title > .anticon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 27px;
+  font-size: 15px !important;
+  color: #a5b4fc !important;
+  background: linear-gradient(
+    150deg,
+    rgba(129, 140, 248, 0.18),
+    rgba(129, 140, 248, 0.06)
+  );
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 9px;
+  transition: background 0.18s ease, color 0.18s ease,
+    border-color 0.18s ease;
 }
 
-/* Hover / touch-press feedback */
+/* Hover & touch feedback */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item:hover,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.09) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-item:hover *,
@@ -509,29 +535,37 @@
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-item:active,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:active {
-  background: rgba(99, 102, 241, 0.3) !important;
+  background: rgba(99, 102, 241, 0.24) !important;
+  transform: scale(0.98);
 }
 
-/* Selected item — vivid indigo pill + ring + accent bar */
+/* SELECTED — branded gradient pill, inverse chip, marker bar */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.24);
 }
 
-/* Accent bar on the leading edge (inside padding zone — never over text) */
+.mobile-drawer .mobile-drawer-menu
+  .ant-menu-item.ant-menu-item-selected
+  > .anticon {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
 .mobile-drawer .mobile-drawer-menu
   .ant-menu-item.ant-menu-item-selected::after {
   content: "";
   position: absolute;
-  inset-inline-start: 6px;
+  inset-inline-start: 7px;
   top: 50%;
   transform: translateY(-50%);
   width: 3px;
-  height: 42%;
+  height: 44%;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
 }
 
 /* Hard cascade: selected label stays pure-white everywhere */
@@ -540,11 +574,11 @@
   color: #ffffff !important;
 }
 
-/* Submenu children — inset panel, clearly nested */
+/* Submenu panel — recessed tray */
 .mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline {
-  background: rgba(148, 163, 184, 0.1) !important;
-  border-radius: 12px;
-  margin-inline: 10px !important;
+  background: rgba(10, 16, 32, 0.45) !important;
+  border-radius: 14px;
+  margin-inline: 8px !important;
   padding-block: 4px;
 }
 
@@ -554,33 +588,36 @@
   font-weight: 600 !important;
   height: 40px !important;
   line-height: 40px !important;
-  color: #e0e8f8 !important;
+  border-radius: 10px !important;
+  color: #dbe4f6 !important;
 }
 
 .mobile-drawer .mobile-drawer-menu
   .ant-menu-sub.ant-menu-inline
-  .ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  .ant-menu-item.ant-menu-item-selected {
   color: #ffffff !important;
 }
 
-/* Submenu arrow color */
+/* Submenu arrow + open-state title */
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-arrow {
-  color: #aab6d3 !important;
+  color: #8fa2c9 !important;
 }
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-active,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-open
   > .ant-menu-submenu-title {
   color: #ffffff !important;
+  background: rgba(99, 102, 241, 0.14) !important;
 }
 
-/* ── Drawer footer (user + logout) ── */
+/* ── Drawer footer — floating user card ── */
 .mobile-drawer-footer {
   flex-shrink: 0;
-  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.05);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -603,8 +640,16 @@
 }
 
 .mobile-drawer-footer .user-meta .u-role {
-  font-size: 11px;
-  color: #aab8d8;
+  display: inline-block;
+  width: fit-content;
+  margin-top: 3px;
+  padding: 1px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #b3bff5;
+  background: rgba(129, 140, 248, 0.16);
+  border-radius: 999px;
 }
 
 /* ═══════════════════════════════════════════════
