@@ -35,6 +35,16 @@
 - padding بدنه Card ها در موبایل: ۱۲px
 - بسته‌شدن خودکار Drawer هنگام بزرگ شدن صفحه (`useIsMobile`)
 
+### 4️⃣ رفع همپوشانی کف صفحه با نوار ناوبری مرورگر ⭐
+**ریشه مشکل:** `height: 100vh` در مرورگرهای موبایل شامل ناحیه زیر نوار ناوبری (URL-bar) نیز می‌شود؛ یعنی `100vh` > فضای واقعی نمایش. چون لایوت fixed-height با اسکرول داخلی است، آخرین بخش محتوا (pagination/کارت آخر) همیشه زیر نوار مرورگر گم می‌شد.
+
+**راه‌حل سه‌لایه:**
+1. **`100dvh`** (Dynamic Viewport Height) برای مرورگرهای مدرن از طریق `@supports`
+2. متغیر JS **`--app-vh`** = `1% × window.innerHeight` واقعی (`src/utils/viewportHeight.js`) با listener روی resize/orientationchange/pageshow — برای مرورگرهای قدیمی‌تر
+3. **فاصله امن کف**: `padding-bottom: max(12px, env(safe-area-inset-bottom))` روی اسکرول کانتینر + margin-bottom امن روی کارت محتوا
+
+فایل‌ها: `utils/viewportHeight.js` (جدید)، `main.jsx`، `MainLayout.css`، `index.css` (مودال‌ها هم dvh-aware شدند)
+
 ---
 
 ## ✨ تغییرات نسخه ۱

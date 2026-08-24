@@ -15,9 +15,21 @@
 }
 
 /* ─── ROOT LAYOUT ─────────────────────────────── */
+/* Real mobile viewport height:
+   1. JS sets --app-vh = 1% of window.innerHeight (see utils/viewportHeight.js)
+   2. Modern browsers get exact 100dvh via @supports below.
+   This prevents the page bottom from hiding under the
+   mobile browser navigation bar. */
 .admin-root-layout {
   height: 100vh !important;
+  height: calc(var(--app-vh, 1vh) * 100) !important;
   overflow: hidden !important;
+}
+
+@supports (height: 100dvh) {
+  .admin-root-layout {
+    height: 100dvh !important;
+  }
 }
 
 /* ─── SIDEBAR ─────────────────────────────────── */
@@ -26,7 +38,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  height: 100vh !important;
+  height: calc(var(--app-vh, 1vh) * 100) !important;
   z-index: 101;
   background: linear-gradient(180deg, var(--brand-800) 0%, var(--brand-900) 100%) !important;
   box-shadow: -4px 0 24px rgba(2, 6, 23, 0.35);
@@ -36,7 +48,7 @@
 .admin-sider .admin-sider-inner {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background: transparent;
 }
 
@@ -103,9 +115,16 @@
   margin-right: var(--sider-w) !important;
   transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100vh;
+  height: calc(var(--app-vh, 1vh) * 100);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .admin-main-layout {
+    height: 100dvh;
+  }
 }
 
 /* When sidebar is collapsed, less margin */
@@ -201,6 +220,9 @@
   scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  /* Breathing room so the last row / pagination never sits flush
+     against (or under) the mobile browser navigation bar. */
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 
 .admin-content-area::-webkit-scrollbar-thumb {
@@ -212,7 +234,9 @@
   padding: 20px;
   background: #fff;
   border-radius: 14px;
-  min-height: calc(100vh - var(--header-h) - 40px);
+  min-height: calc(
+    calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 52px
+  );
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
@@ -419,7 +443,9 @@
   .admin-content-inner {
     margin: 14px;
     padding: 16px;
-    min-height: calc(100vh - var(--header-h) - 28px);
+    min-height: calc(
+      calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 40px
+    );
   }
 }
 
@@ -448,9 +474,10 @@
 
   .admin-content-inner {
     margin: 10px;
-    margin-bottom: max(10px, env(safe-area-inset-bottom));
+    /* Extra bottom gap keeps content clear of the browser nav bar */
+    margin-bottom: max(14px, env(safe-area-inset-bottom));
     padding: 12px;
     border-radius: 12px;
-    min-height: calc(100vh - 56px - 20px);
+    min-height: calc(calc(var(--app-vh, 1vh) * 100) - 76px);
   }
 }

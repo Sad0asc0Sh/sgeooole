@@ -4,9 +4,14 @@ import { BrowserRouter } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import faIR from 'antd/locale/fa_IR'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { setupViewportHeight } from './utils/viewportHeight'
 import './jalaliSetup'
 import App from './App'
 import './index.css'
+
+// Publish the REAL visible viewport height (--app-vh) for mobile browsers
+// so fixed-height layouts never hide their bottom behind browser chrome.
+setupViewportHeight()
 
 // Create a client for React Query (v5 - cacheTime renamed to gcTime)
 const queryClient = new QueryClient({

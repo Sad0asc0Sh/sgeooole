@@ -219,6 +219,7 @@ code {
 
 /* ═══════════════════════════════════════════════════════════
    MODALS — never exceed the phone viewport
+   (dvh/--app-vh aware so the footer stays above browser chrome)
    ═══════════════════════════════════════════════════════════ */
 .ant-modal {
   max-width: calc(100vw - 24px) !important;
@@ -226,6 +227,15 @@ code {
 
 .ant-modal .ant-modal-content {
   max-height: calc(100vh - 120px);
+}
+
+@supports (height: 100dvh) {
+  .ant-modal .ant-modal-content {
+    max-height: calc(100dvh - 120px);
+  }
+}
+
+.ant-modal .ant-modal-content {
   overflow-y: auto;
 }
 
@@ -237,7 +247,13 @@ code {
   }
 
   .ant-modal .ant-modal-content {
-    max-height: calc(100dvh - 60px);
+    max-height: calc(calc(var(--app-vh, 1vh) * 100) - 48px);
+  }
+
+  @supports (height: 100dvh) {
+    .ant-modal .ant-modal-content {
+      max-height: calc(100dvh - 48px);
+    }
   }
 
   .ant-modal-footer {
