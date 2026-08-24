@@ -119,6 +119,9 @@ export default function ResponsiveTable({
 
   const actionsCol = cols.find(isActionsCol)
 
+  // Optional thumbnail pinned next to the card title (e.g. product photo)
+  const thumbCol = cols.find((c) => c.mobileThumb)
+
   const list = Array.isArray(dataSource) ? dataSource : []
 
   let pageItems = list
@@ -211,8 +214,15 @@ export default function ResponsiveTable({
                     onChange={() => toggleSelect(key)}
                   />
                 )}
-                <span className="rt-card-title">
-                  {titleCol ? renderCell(titleCol, record, idx) : `#${idx + 1}`}
+                <span className="rt-card-title rt-with-thumb">
+                  {thumbCol && (
+                    <span className="rt-thumb">
+                      {renderCell(thumbCol, record, idx)}
+                    </span>
+                  )}
+                  <span className="rt-title-text">
+                    {titleCol ? renderCell(titleCol, record, idx) : `#${idx + 1}`}
+                  </span>
                 </span>
               </div>
               {badges.length > 0 && (

@@ -4,7 +4,6 @@ import {
   Card,
   Descriptions,
   Tag,
-  Table,
   Select,
   Button,
   message,
@@ -36,6 +35,8 @@ import { useNotificationStore } from '../../stores'
 import Countdown from 'react-countdown'
 import { PERMISSIONS } from '../../rbac/permissions'
 import S3AdminImage from '../../components/S3AdminImage'
+import ResponsiveTable from '../../components/ResponsiveTable'
+import useIsMobile from '../../hooks/useIsMobile'
 import { useCan } from '../../rbac/useCan'
 
 // فعال‌سازی تقویم جلالی
@@ -80,6 +81,8 @@ function OrderDetail() {
   const navigate = useNavigate()
   const { can } = useCan()
   const canUpdateStatus = can(PERMISSIONS.ORDER_UPDATE_STATUS)
+  // Mobile-first layout switches (single-column descriptions etc.)
+  const isMobile = useIsMobile(768)
 
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -318,6 +321,9 @@ function OrderDetail() {
       dataIndex: ['product', 'images'],
       key: 'image',
       width: 80,
+      // Mobile card: photo pinned next to the product name
+      mobileThumb: true,
+      mobile: false,
       render: (images) => {
         let url = null
         if (Array.isArray(images) && images.length > 0) {
@@ -350,6 +356,7 @@ function OrderDetail() {
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
+      mobileTitle: true,
     },
     {
       title: 'SKU',
@@ -431,7 +438,12 @@ marginBottom: 16,
           <Card title="اطلاعات سفارش" loading={loading}>
             {order && (
               <>
-                <Descriptions bordered size="small" column={2}>
+                <Descriptions
+                  bordered
+                  size="small"
+                  column={isMobile ? 1 : 2}
+                  labelStyle={isMobile ? { width: '38%' } : undefined}
+                >
                   <Descriptions.Item label="شماره سفارش" span={2}>
                     <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.2em' }}>
                       {order.orderCode || `#${order._id}`}
@@ -513,7 +525,7 @@ marginBottom: 16,
 
                 <Divider>آیتم‌های سفارش</Divider>
 
-                <Table
+                <ResponsiveTable
                   columns={itemsColumns}
                   dataSource={order.orderItems || []}
                   rowKey={(r, i) => r.product?._id || String(i)}

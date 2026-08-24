@@ -81,6 +81,38 @@
   line-height: 1.55;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* Title with optional thumbnail (product photo) */
+.rt-with-thumb {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.rt-thumb {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rt-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.rt-title-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
