@@ -477,6 +477,8 @@ function MainLayout({ children }) {
             <Menu
               theme="dark"
               mode="inline"
+              className="admin-sider-menu"
+              popupClassName="admin-sider-popup"
               selectedKeys={[location.pathname]}
               defaultOpenKeys={getOpenKeys}
               items={filteredMenuItems}

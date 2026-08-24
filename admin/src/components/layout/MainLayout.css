@@ -1,6 +1,9 @@
 /* =============================================
-   PROFESSIONAL ADMIN PANEL LAYOUT v2
+   PROFESSIONAL ADMIN PANEL LAYOUT v3
    - Dark slate sidebar w/ gradient accents
+   - Enterprise-contrast menu system (desktop +
+     drawer + collapsed flyouts share one language:
+     bright text, clear hover, branded selected pill)
    - Sticky glass header (responsive)
    - Mobile drawer with branded header
    - Fully responsive down to 320px phones
@@ -103,10 +106,170 @@
   border-radius: 4px;
 }
 
+/* ═══════════════════════════════════════════════
+   SIDEBAR MENU — ENTERPRISE CONTRAST SYSTEM
+   Bright readable text · clear hover feedback ·
+   unmistakable selected state (branded pill)
+   ═══════════════════════════════════════════════ */
+
 /* Remove default ant border on menu */
 .admin-sider .ant-menu {
   border-inline-end: none !important;
   background: transparent !important;
+}
+
+.admin-sider .admin-sider-menu.ant-menu {
+  padding-inline: 10px !important;
+  font-family: inherit;
+}
+
+/* ── Item & submenu-title base: bright, tactile ── */
+.admin-sider .ant-menu-item,
+.admin-sider .ant-menu-submenu > .ant-menu-submenu-title {
+  height: 42px !important;
+  line-height: 42px !important;
+  margin-block: 3px !important;
+  margin-inline: 0 !important;
+  border-radius: 10px !important;
+  color: #dce4f5 !important; /* slate-100 — fully readable, never faint */
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1px;
+  transition: background-color 0.18s ease, color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+/* Icons: indigo accent that pops off the dark slate */
+.admin-sider .ant-menu-item .anticon,
+.admin-sider .ant-menu-submenu > .ant-menu-submenu-title .anticon {
+  font-size: 16px !important;
+  color: #a5b4fc !important;
+  transition: color 0.18s ease;
+}
+
+/* Labels rendered as <Link> must inherit item colors */
+.admin-sider .ant-menu-item a,
+.admin-sider .ant-menu-submenu-title a {
+  color: inherit !important;
+  text-decoration: none;
+}
+
+/* Submenu expand arrows */
+.admin-sider .ant-menu-submenu-arrow {
+  color: #94a7c9 !important;
+}
+
+/* ── Hover / pressed / keyboard focus: unmistakable ── */
+.admin-sider .ant-menu-item:hover,
+.admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title,
+.admin-sider .ant-menu-submenu-title:hover {
+  color: #ffffff !important;
+  background: rgba(148, 163, 184, 0.18) !important;
+}
+
+.admin-sider .ant-menu-item:hover .anticon,
+.admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title .anticon,
+.admin-sider .ant-menu-submenu-title:hover .anticon {
+  color: #e0e7ff !important;
+}
+
+.admin-sider .ant-menu-submenu-title:hover .ant-menu-submenu-arrow {
+  color: #ffffff !important;
+}
+
+.admin-sider .ant-menu-item:active,
+.admin-sider .ant-menu-submenu-title:active {
+  background: rgba(99, 102, 241, 0.28) !important;
+}
+
+.admin-sider .ant-menu-item:focus-visible,
+.admin-sider .ant-menu-submenu-title:focus-visible {
+  outline: 2px solid #818cf8 !important;
+  outline-offset: -2px;
+}
+
+/* ── SELECTED item: vivid branded pill + marker bar ── */
+.admin-sider .ant-menu-item.ant-menu-item-selected {
+  position: relative;
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.admin-sider .ant-menu-item-selected .anticon,
+.admin-sider .ant-menu-item-selected a {
+  color: #ffffff !important;
+}
+
+/* Active-page marker bar on the inner edge */
+.admin-sider .ant-menu-item-selected::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 46%;
+  min-height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.55);
+}
+
+/* ── Open submenu title stays highlighted ── */
+.admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
+  color: #ffffff !important;
+  background: rgba(99, 102, 241, 0.16) !important;
+}
+
+.admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .anticon {
+  color: #c7d2fe !important;
+}
+
+/* ── Inline submenu panel: clearly nested ── */
+.admin-sider .ant-menu-sub.ant-menu-inline {
+  background: rgba(148, 163, 184, 0.09) !important;
+  border-radius: 12px !important;
+  margin-inline: 2px !important;
+  padding-block: 4px !important;
+}
+
+.admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
+  height: 38px !important;
+  line-height: 38px !important;
+  margin-block: 2px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #ccd6ec !important;
+}
+
+.admin-sider
+  .ant-menu-sub.ant-menu-inline
+  .ant-menu-item.ant-menu-item-selected {
+  font-weight: 700 !important;
+}
+
+.admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item-selected::after {
+  inset-inline-end: 5px;
+}
+
+/* ── Collapsed (icon-only) mode ── */
+.admin-sider.ant-layout-sider-collapsed .admin-sider-menu.ant-menu {
+  padding-inline: 8px !important;
+}
+
+.admin-sider.ant-layout-sider-collapsed .ant-menu-item,
+.admin-sider.ant-layout-sider-collapsed
+  .ant-menu-submenu
+  > .ant-menu-submenu-title {
+  margin-block: 4px !important;
+}
+
+/* The marker bar would clutter icon-only pills — hide it */
+.admin-sider.ant-layout-sider-collapsed .ant-menu-item-selected::after {
+  display: none;
 }
 
 /* ─── MAIN LAYOUT (beside sidebar) ────────────── */
@@ -437,6 +600,61 @@
 .mobile-drawer-footer .user-meta .u-role {
   font-size: 11px;
   color: #94a3b8;
+}
+
+/* ═══════════════════════════════════════════════
+   COLLAPSED-MODE FLYOUT POPUPS
+   (rendered in a portal on <body> — scoped via
+   the Menu's popupClassName so nothing leaks)
+   ═══════════════════════════════════════════════ */
+.admin-sider-popup.ant-menu-submenu.ant-menu-submenu-popup {
+  background: #101b31 !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.55);
+  padding: 6px !important;
+}
+
+.admin-sider-popup .ant-menu.ant-menu-sub.ant-menu-vertical {
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.admin-sider-popup .ant-menu-item,
+.admin-sider-popup .ant-menu-submenu-title {
+  height: 40px !important;
+  line-height: 40px !important;
+  margin-block: 2px !important;
+  border-radius: 9px !important;
+  color: #dce4f5 !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  transition: background-color 0.18s ease, color 0.18s ease !important;
+}
+
+.admin-sider-popup .ant-menu-item a {
+  color: inherit !important;
+  text-decoration: none;
+}
+
+.admin-sider-popup .ant-menu-item:hover,
+.admin-sider-popup .ant-menu-submenu-title:hover {
+  color: #ffffff !important;
+  background: rgba(148, 163, 184, 0.18) !important;
+}
+
+/* Selected entry inside flyout — same branded pill */
+.admin-sider-popup .ant-menu-item.ant-menu-item-selected,
+.admin-sider-popup .ant-menu-item-selected {
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.45);
+}
+
+.admin-sider-popup .ant-menu-item-selected a {
+  color: #ffffff !important;
 }
 
 /* ─── MOBILE / TABLET RESPONSIVE ──────────────── */
