@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { cpSync, existsSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -33,6 +33,24 @@ const result = spawnSync(process.execPath, [viteBin, 'build'], {
 if (result.error) {
   console.error(result.error)
   process.exit(1)
+}
+
+// ── Post-build mirror: dist/ → dist2/ ────────────────
+// Some deployment targets (nginx roots, CDN upload
+// scripts, PM2 static servers) point at `dist2/`
+// instead of vite's default `dist/`. Mirroring after
+// every successful build guarantees that whichever
+// folder the web server serves is always the freshest.
+const distDir = resolve(projectRoot, 'dist')
+const dist2Dir = resolve(projectRoot, 'dist2')
+if (result.status === 0 && existsSync(distDir)) {
+  try {
+    rmSync(dist2Dir, { recursive: true, force: true })
+    cpSync(distDir, dist2Dir, { recursive: true })
+    console.log('✓ Mirrored dist/ → dist2/')
+  } catch (err) {
+    console.warn('⚠ Could not mirror dist/ → dist2/:', err?.message)
+  }
 }
 
 process.exit(result.status ?? 1)

@@ -476,7 +476,8 @@
 /* Item base — bright, comfortable touch target */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
-  color: #f3f7ff !important;
+  position: relative;
+  color: #f4f7ff !important;
   font-size: 15px !important;
   font-weight: 600;
   height: 46px !important;
@@ -494,28 +495,43 @@
   transition: color 0.2s ease;
 }
 
-/* Hover state */
+/* Hover / touch-press feedback */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item:hover,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.09) !important;
 }
 
-.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover .anticon,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover .anticon {
-  color: #ffffff;
-}
-
-/* Selected item — vivid indigo pill */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover *,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover * {
   color: #ffffff !important;
-  font-weight: 700;
-  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.45);
 }
 
-.mobile-drawer .mobile-drawer-menu .ant-menu-item-selected .anticon {
-  color: #ffffff;
+.mobile-drawer .mobile-drawer-menu .ant-menu-item:active,
+.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:active {
+  background: rgba(99, 102, 241, 0.3) !important;
+}
+
+/* Selected item — vivid indigo pill + ring + accent bar */
+.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected {
+  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+}
+
+/* Accent bar on the leading edge (inside padding zone — never over text) */
+.mobile-drawer .mobile-drawer-menu
+  .ant-menu-item.ant-menu-item-selected::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 42%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 /* Hard cascade: selected label stays pure-white everywhere */
@@ -535,10 +551,10 @@
 .mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline .ant-menu-item {
   margin-inline: 8px !important;
   font-size: 13.5px !important;
-  font-weight: 500 !important;
+  font-weight: 600 !important;
   height: 40px !important;
   line-height: 40px !important;
-  color: #d7dff2 !important;
+  color: #e0e8f8 !important;
 }
 
 .mobile-drawer .mobile-drawer-menu
