@@ -1,175 +1,305 @@
-/* ---------- 1️⃣ تعریف متغیر CSS فونت IRANSans ---------- */
+/* ============================================================================
+   EKGKALA — Design Foundation
+   ----------------------------------------------------------------------------
+   Single source of truth for the storefront's visual language.
+   `tailwind.config.ts` was removed: this project runs Tailwind v4 and never
+   loaded that config, so its duplicated palette was silently dead. Everything
+   the UI is allowed to use is declared here, once.
+
+   Two brand scales, deliberately narrow:
+     ekg-*   — cool navy-slate. Structure, text, depth. Carries the "precision
+               instrument" character. Used for ~90% of the interface.
+     kala-*  — brass/gold. Reserved for brand emphasis and genuine opportunity.
+               Restrained on purpose: gold that appears everywhere stops
+               meaning anything.
+
+   Semantic aliases (surface/line/ink/...) exist so components describe intent
+   instead of picking numbers, which is what kept the old UI inconsistent.
+   ============================================================================ */
+
 :root {
   --font-iransans: 'IRANSans', system-ui, sans-serif;
 }
 
-/* ---------- 2️⃣ وارد کردن Tailwind ---------- */
 @import "tailwindcss";
 
 @theme {
-  --color-border: hsl(var(--border));
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-
-  --color-ekg-50: #f8fafc;
-  --color-ekg-100: #f1f5f9;
-  --color-ekg-200: #e2e8f0;
-  --color-ekg-300: #cbd5e1;
-  --color-ekg-400: #94a3b8;
+  /* --- Brand: EKG navy-slate -------------------------------------------------
+     Shifted off default Tailwind slate toward navy so surfaces read as
+     "engineered" rather than generic gray. Steps stay perceptually even. */
+  --color-ekg-50: #f6f8fb;
+  --color-ekg-100: #eceff5;
+  --color-ekg-200: #dbe1eb;
+  --color-ekg-300: #bcc6d6;
+  --color-ekg-400: #8b9ab2;
   --color-ekg-500: #64748b;
-  --color-ekg-600: #475569;
-  --color-ekg-700: #334155;
-  --color-ekg-800: #1e293b;
-  --color-ekg-900: #0f172a;
-  --color-ekg-950: #020617;
+  --color-ekg-600: #4a5a75;
+  --color-ekg-700: #35455e;
+  --color-ekg-800: #1f2d44;
+  --color-ekg-900: #131f33;
+  --color-ekg-950: #0a1322;
 
-  --color-kala-50: #fffbeb;
-  --color-kala-100: #fef3c7;
-  --color-kala-200: #fde68a;
-  --color-kala-300: #fcd34d;
-  --color-kala-400: #fbbf24;
-  --color-kala-500: #f59e0b;
-  --color-kala-600: #d97706;
-  --color-kala-700: #b45309;
-  --color-kala-800: #92400e;
-  --color-kala-900: #78350f;
-  --color-kala-950: #451a03;
+  /* --- Brand: Kala brass ----------------------------------------------------
+     Pulled away from pure amber (#f59e0b) toward brass. Reads as material and
+     premium instead of "clearance sticker". 600 is the text-safe step. */
+  --color-kala-50: #fdf9ed;
+  --color-kala-100: #f9f0d4;
+  --color-kala-200: #f2dfa4;
+  --color-kala-300: #e8c76c;
+  --color-kala-400: #ddb144;
+  --color-kala-500: #c9962a;
+  --color-kala-600: #a97a1f;
+  --color-kala-700: #855d1c;
+  --color-kala-800: #6a4a1d;
+  --color-kala-900: #593e1c;
+  --color-kala-950: #33210c;
 
-  /* استفاده از متغیر فونت تعریف‌شده */
+  /* --- Semantic surfaces --------------------------------------------------- */
+  --color-surface: #ffffff;
+  --color-surface-sunken: #f6f8fb;
+  --color-surface-inverse: #131f33;
+
+  /* --- Semantic lines ----------------------------------------------------- */
+  --color-line: #dbe1eb;
+  --color-line-soft: #eceff5;
+  --color-line-strong: #bcc6d6;
+
+  /* --- Semantic ink ------------------------------------------------------- */
+  --color-ink: #131f33;
+  --color-ink-muted: #4a5a75;
+  --color-ink-subtle: #64748b;
+  --color-ink-faint: #8b9ab2;
+  --color-ink-inverse: #ffffff;
+
+  /* --- Status --------------------------------------------------------------
+     One value per meaning. Previously the same "urgent" idea appeared as
+     red-500, #ef394e and rose-600 depending on the file. */
+  --color-signal-ok: #158463;
+  --color-signal-ok-soft: #e7f6f1;
+  --color-signal-warn: #b45309;
+  --color-signal-warn-soft: #fef3c7;
+  --color-signal-urgent: #c2334a;
+  --color-signal-urgent-soft: #fdeef0;
+  --color-signal-info: #1d5fa8;
+  --color-signal-info-soft: #eaf2fb;
+
+  /* --- Elevation ------------------------------------------------------------
+     Tight, low-spread shadows. Large soft shadows read as "template"; these
+     read as physical panels. */
+  --shadow-e1: 0 1px 2px rgb(19 31 51 / 0.05);
+  --shadow-e2: 0 1px 3px rgb(19 31 51 / 0.06), 0 4px 12px -4px rgb(19 31 51 / 0.07);
+  --shadow-e3: 0 2px 6px rgb(19 31 51 / 0.07), 0 12px 28px -10px rgb(19 31 51 / 0.12);
+
   --font-sans: var(--font-iransans);
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-*/
-@layer base {
+/* Tailwind v4 reads @theme at build time and cannot resolve runtime hsl()
+   vars, so the legacy shadcn-style aliases are declared as real utilities. */
+@utility bg-background { background-color: var(--color-surface); }
+@utility text-foreground { color: var(--color-ink-muted); }
+@utility border-border { border-color: var(--color-line); }
 
+/* Tailwind v4 changed the default border color to `currentColor`. Anchor it to
+   the brand line token so unstyled borders stay on-brand instead of inheriting
+   text color. */
+@layer base {
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
+    border-color: var(--color-line);
   }
 }
 
-/* --------- سایر متغیرها (قابلیت تغییر نشد) --------- */
+/* --- Legacy HSL variables ---------------------------------------------------
+   Still referenced by a handful of pages via hsl(var(--primary)). Kept and
+   re-pointed at the brand tokens so nothing drifts. */
 :root {
-  /* Base Background (EKG Neutral) */
   --background: 0 0% 100%;
-  /* White */
-  --foreground: 215 19% 35%;
-
-  /* Primary: Kala (Golden-Orange) */
-  --primary: 39 85% 49%;
+  --foreground: 217 24% 37%;
+  --primary: 40 66% 48%;
   --primary-foreground: 0 0% 100%;
-
-  /* Secondary: EKG (Slate Gray) */
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-
-  /* Accents */
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --border: 214.3 31.8% 91.4%;
+  --secondary: 220 30% 96%;
+  --secondary-foreground: 217 43% 14%;
+  --muted: 220 30% 96%;
+  --muted-foreground: 217 15% 47%;
+  --border: 218 27% 89%;
 }
 
-/* ---------- باقی‌ماندهٔ استایل‌ها (بدون تغییر) ---------- */
+/* ============================================================================
+   BASE — Persian-first typography and rhythm
+   ============================================================================ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    /* Persian needs more leading than Latin at the same size; IRANSans in
+       particular looks cramped at Tailwind's default 1.5. */
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings are set tighter than body copy so hierarchy comes from rhythm,
+     not just from size and weight. */
+  h1, h2, h3, h4, h5, h6 {
+    line-height: 1.45;
+    text-wrap: balance;
+  }
+
+  /* Persian numerals and Latin model codes (DH-HAC-HFW1200TP, CAT6) must not
+     be broken by RTL reordering. Applied where the code opts in. */
+  [dir="ltr"],
+  .ltr-nums {
+    font-feature-settings: "tnum" 1;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  /* Never let a long Persian product name or Latin SKU force a horizontal
+     scrollbar on mobile. */
+  body {
+    overflow-x: hidden;
+  }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+/* Visible keyboard focus, brand-coloured, on every focusable element.
+   The previous stylesheet defined none, so keyboard users had no idea where
+   they were. Pointer users never see this because of :focus-visible. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-kala-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Elements that already draw their own ring opt out of the double outline. */
+  .focus-ring-none:focus-visible {
+    outline: none;
+  }
+}
+
+/* Respect the OS "reduce motion" setting. This storefront runs several
+   autoplaying carousels and shimmer loops; without this they are actively
+   hostile to motion-sensitive users. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen-reader-only text, for icon-only controls that need a real name. */
+@utility sr-only-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================================================
+   SCROLLBARS
+   ----------------------------------------------------------------------------
+   Previously every scrollbar in the app was hidden globally via `*`, which
+   removed a real affordance (users could not tell a region was scrollable) and
+   broke the browser's own scroll UI. Now the default scrollbar is styled to fit
+   the brand, and hiding is opt-in on the horizontal rails that genuinely need
+   it.
+   ============================================================================ */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+}
+
+/* Opt-in hiding for horizontal product/category rails, where a scrollbar adds
+   noise and the swipe affordance is already obvious. */
+.no-scrollbar,
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.mega-menu-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+/* ============================================================================
+   LAYOUT UTILITIES
+   ============================================================================ */
+
+/* The storefront's one content measure. Every section uses this so vertical
+   edges line up down the whole page — a large part of why the page now reads
+   as one product instead of a stack of widgets. */
+@utility page-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 90rem;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .page-shell {
+    padding-inline: 1.5rem;
+  }
+}
+
 @utility mobile-container {
   @apply w-full px-4 mx-auto max-w-md overflow-x-hidden;
 }
 
-/* --- HIDE SCROLLBARS GLOBALLY --- */
-@layer utilities {
-  *::-webkit-scrollbar {
-    display: none;
-  }
-
-  * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+/* Hairline used to separate stacked sections without a heavy border. */
+@utility section-rule {
+  border-top: 1px solid var(--color-line-soft);
 }
 
-/* --- SWIPER SLIDER FIX --- */
-.free-mode-slider .swiper-wrapper {
-  transition-timing-function: linear !important;
-  display: flex !important;
-  flex-direction: row !important;
-}
-
-.free-mode-slider .swiper-slide {
-  flex-shrink: 0 !important;
-  width: auto !important;
-  height: auto !important;
-}
-
-/* --- CATEGORY RAIL SLIDER --- */
-.category-rail-slider .swiper-wrapper {
-  display: flex !important;
-  flex-direction: row !important;
-}
-
-.category-rail-slider .swiper-slide {
-  flex-shrink: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  transition: transform 0.3s ease, opacity 0.3s ease;
-}
-
-.category-rail-slider .swiper-slide-active {
-  z-index: 2;
-}
-
-/* Flash Offer rail hardening */
-.flash-offer-swiper .swiper-wrapper {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: stretch !important;
-}
-
-.flash-offer-swiper .swiper-slide {
-  flex-shrink: 0 !important;
-  width: auto !important;
-  height: auto !important;
-  scroll-snap-align: start;
-}
-
-.flash-offer-swiper {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-}
-
-.flash-offer-swiper>.swiper-slide {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-}
-
-/* --- SKELETON SHIMMER ANIMATION --- */
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-.animate-shimmer {
-  animation: shimmer 1.5s infinite linear;
-}
-
-/* --- OPTIMIZED TRANSITIONS --- */
+/* ============================================================================
+   MOTION
+   ============================================================================ */
 @layer utilities {
   .transition-fast {
     transition-duration: 150ms;
@@ -182,53 +312,74 @@
   }
 }
 
-/* --- PERFORMANCE OPTIMIZATIONS --- */
-@layer base {
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
+.animate-shimmer {
+  animation: shimmer 1.5s infinite linear;
+}
+
+/* Neutral skeleton surface. Skeletons must not flash brand gold — a loading
+   state that looks like a promotion is a lie. */
+@utility skeleton {
+  background-image: linear-gradient(
+    90deg,
+    var(--color-ekg-100) 0%,
+    var(--color-ekg-50) 50%,
+    var(--color-ekg-100) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite linear;
+}
+
+/* ============================================================================
+   SWIPER — behavioural fixes retained from the previous stylesheet.
+   These are load-bearing (Edge/Android RTL flex bugs); left intact.
+   ============================================================================ */
+.free-mode-slider .swiper-wrapper {
+  transition-timing-function: linear !important;
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.free-mode-slider .swiper-slide {
+  flex-shrink: 0 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.category-rail-slider .swiper-wrapper,
+.product-rail-swiper .swiper-wrapper {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+}
+
+.category-rail-slider .swiper-slide,
+.product-rail-swiper .swiper-slide {
+  flex-shrink: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  scroll-snap-align: start;
+}
+
+.category-rail-slider .swiper-slide-active {
+  z-index: 2;
+}
+
+@layer base {
   .swiper-slide,
   .swiper-wrapper {
     -webkit-transform: translateZ(0);
     transform: translateZ(0);
   }
-
-  img {
-    display: block;
-    max-width: 100%;
-  }
 }
 
-/* --- MEGA MENU SCROLLBAR (override global hide) --- */
-.mega-menu-scrollbar::-webkit-scrollbar {
-  display: block !important;
-  width: 5px;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-  border-radius: 10px;
-}
-
-.mega-menu-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
-}
-
-.mega-menu-scrollbar {
-  -ms-overflow-style: auto !important;
-  scrollbar-width: thin !important;
-  scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
-}
-
-/* --- HERO SWIPER STYLES (moved from JSX for Edge Android compat) --- */
-.hero-swiper {
-  /* Border radius and overflow handled by parent wrapper */
-}
-
+/* --- Hero pagination ------------------------------------------------------ */
 .hero-swiper .swiper-pagination {
-  bottom: 12px !important;
+  bottom: 14px !important;
   display: flex !important;
   justify-content: center;
   align-items: center;
@@ -238,26 +389,53 @@
 .hero-swiper .swiper-pagination-bullet {
   -webkit-transition: all 0.3s ease;
   transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgb(255 255 255 / 0.55);
+  border: 1px solid rgb(255 255 255 / 0.35);
+  opacity: 1;
 }
 
 .hero-swiper .swiper-pagination-bullet-active {
-  width: 28px !important;
+  width: 26px !important;
   border-radius: 9999px !important;
-  background: white !important;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  background: #ffffff !important;
+  box-shadow: 0 1px 4px rgb(10 19 34 / 0.35);
 }
 
+/* --- Mega menu scrollbar (overrides the opt-in hide above) ---------------- */
+.mega-menu-scrollbar::-webkit-scrollbar {
+  display: block !important;
+  width: 6px;
+}
 
-/* --- PREMIUM CMS DESIGN SYSTEM --- */
+.mega-menu-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mega-menu-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 10px;
+}
+
+.mega-menu-scrollbar {
+  -ms-overflow-style: auto !important;
+  scrollbar-width: thin !important;
+}
+
+/* ============================================================================
+   CMS CONTENT (admin-authored pages: FAQ, terms, about, blog bodies)
+   ----------------------------------------------------------------------------
+   Behaviour is unchanged — only the palette is re-pointed at the brand tokens.
+   Previously these pages used a generic #2563eb blue found nowhere else in the
+   storefront, so admin-authored content read as a different website.
+   ============================================================================ */
 :root {
-  --cms-primary: #0f172a;
-  --cms-accent: #2563eb;
-  --cms-accent-light: #eff6ff;
-  --cms-text-main: #475569;
-  --cms-text-dark: #0f172a;
-  --cms-bg-card: #ffffff;
-  --cms-border: #e2e8f0;
+  --cms-primary: var(--color-ekg-900);
+  --cms-accent: var(--color-kala-600);
+  --cms-accent-light: var(--color-kala-50);
+  --cms-text-main: var(--color-ink-muted);
+  --cms-text-dark: var(--color-ink);
+  --cms-bg-card: var(--color-surface);
+  --cms-border: var(--color-line);
   --cms-radius: 16px;
   --cms-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -310,7 +488,7 @@
 
 .cms-accordion[open] {
   border-color: var(--cms-accent);
-  box-shadow: 0 12px 30px -5px rgba(37, 99, 241, 0.1);
+  box-shadow: 0 12px 30px -5px rgb(169 122 31 / 0.12);
 }
 
 .cms-summary {
@@ -422,8 +600,8 @@
 .cms-content strong {
   font-weight: 800;
   color: var(--cms-text-dark);
-  background: #fef3c7;
-  color: #d97706;
+  background: var(--color-kala-50);
+  color: var(--color-kala-700);
   padding: 0.1rem 0.4rem;
   border-radius: 6px;
   font-size: 0.95em;
@@ -507,7 +685,7 @@
 
 /* Hero Section Support */
 .cms-hero {
-  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-ekg-950) 0%, var(--color-ekg-800) 100%);
   color: #ffffff;
   text-align: center;
   padding: 5rem 1.5rem 8rem 1.5rem;
@@ -515,5 +693,5 @@
   overflow: hidden;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 10px 30px rgb(10 19 34 / 0.18);
 }
