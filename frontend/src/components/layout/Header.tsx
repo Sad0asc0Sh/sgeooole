@@ -86,27 +86,33 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
                 {/* Left: Search & AI */}
                 <div className="flex flex-1 items-center justify-end gap-2 min-w-0">
-                    <div
-                        onClick={() => setIsSearchOpen(true)}
-                        className="relative flex-1 min-w-0 cursor-pointer"
-                    >
-                        <input
-                            type="text"
-                            readOnly
-                            placeholder="جستجو..."
-                            className="h-9 w-full min-w-0 rounded-full bg-ekg-50 px-8 text-xs text-ekg-900 placeholder:text-ekg-500 focus:outline-none cursor-pointer pointer-events-none"
-                        />
-                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-ekg-500" />
-                    </div>
-
-                    {/* AI Assistant Overlay */}
+                    {/* Was a `readOnly` + `pointer-events-none` <input> inside a
+                        clickable <div>: not focusable, invisible to screen
+                        readers as a control, and a 36px target. It is now a real
+                        <button> at 44px — the minimum reliable touch size — and
+                        the placeholder text states the domain so the field
+                        teaches what can be searched (model numbers, not just
+                        "جستجو..."). */}
                     <button
-                        onClick={() => setIsAIOpen(true)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
+                        type="button"
+                        onClick={() => setIsSearchOpen(true)}
+                        aria-label="جستجوی محصولات"
+                        className="relative flex h-11 flex-1 min-w-0 items-center gap-2 rounded-full bg-ekg-50 pe-3 ps-3.5 text-start transition-colors hover:bg-ekg-100"
                     >
-                        <Sparkles className="h-5 w-5" />
+                        <Search className="h-4 w-4 shrink-0 text-ekg-500" aria-hidden="true" />
+                        <span className="truncate text-[12px] text-ekg-500">
+                            جستجوی نام یا مدل دستگاه
+                        </span>
                     </button>
 
+                    <button
+                        type="button"
+                        onClick={() => setIsAIOpen(true)}
+                        aria-label="گفتگو با دستیار هوشمند"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ekg-50 text-kala-600 transition-colors hover:bg-kala-50"
+                    >
+                        <Sparkles className="h-5 w-5" aria-hidden="true" />
+                    </button>
                 </div>
             </div>
 

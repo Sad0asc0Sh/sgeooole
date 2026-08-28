@@ -1,33 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import CountdownTimer from "@/components/ui/CountdownTimer";
+import Countdown from "@/components/ui/Countdown";
 
 interface ProductTimerBadgeProps {
     targetDate: string;
-    color?: string;
     className?: string;
 }
 
-export default function ProductTimerBadge({ targetDate, color = "text-gray-700", className = "" }: ProductTimerBadgeProps) {
+/**
+ * Remaining-time badge overlaid on a product image.
+ *
+ * Positioned bottom-inline-start (not centre-top) so it never covers the
+ * product itself — recognising the device is the primary job of that image, and
+ * a badge across the middle of a camera housing actively harms it.
+ *
+ * Urgency colour is decided inside `Countdown` from the real remaining time,
+ * so a card can no longer choose to look urgent when it is not.
+ */
+export default function ProductTimerBadge({ targetDate, className = "" }: ProductTimerBadgeProps) {
     const [isVisible, setIsVisible] = useState(true);
-
-    const handleExpire = () => {
-        setIsVisible(false);
-    };
 
     if (!isVisible) return null;
 
     return (
-        <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none ${className}`}>
-            <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-gray-100 flex items-center justify-center gap-1">
-                <CountdownTimer
-                    targetDate={targetDate}
-                    showSeconds={true}
-                    className={`text-[11px] font-bold ${color}`}
-                    onExpire={handleExpire}
-                />
-            </div>
+        <div className={`absolute bottom-2 start-2 z-20 max-w-[calc(100%-1rem)] ${className}`}>
+            <Countdown
+                targetDate={targetDate}
+                variant="pill"
+                onExpire={() => setIsVisible(false)}
+                className="shadow-e1 backdrop-blur-sm"
+            />
         </div>
     );
 }

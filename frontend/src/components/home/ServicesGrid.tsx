@@ -1,40 +1,95 @@
-"use client";
-import { SERVICES } from "@/lib/mock/homeData";
-import { Truck, PenTool, MapPin } from "lucide-react";
+import { Wrench, Truck, Store, ShieldCheck } from "lucide-react";
+import SectionHeader from "@/components/ui/SectionHeader";
+
+/**
+ * What EKGKala does beyond selling boxes.
+ * ============================================================================
+ * WHY THIS REPLACED TWO SECTIONS
+ *
+ * The homepage previously ended with three separate trust-flavoured widgets:
+ * `ServicesGrid` (3 services), `BrandsStrip` (logos) and `ValueProposition`
+ * (5 bullet points on a dark panel). `ServicesGrid` and `ValueProposition`
+ * overlapped substantially — both claimed the repair department, both claimed
+ * the Mashhad branches — so the user read the same reassurance twice and
+ * believed it less each time.
+ *
+ * This is now the single capability statement, built only from facts already
+ * asserted elsewhere in the codebase and site content:
+ *
+ *   - on-site installation, Mashhad             (existing SERVICES mock)
+ *   - courier pickup for repairs, Mashhad       (existing SERVICES mock)
+ *   - in-person collection, 3 branches          (existing SERVICES mock)
+ *   - authenticity and manufacturer warranty    (existing ValueProposition)
+ *
+ * Nothing was invented, and the geographic limit is stated on each item rather
+ * than hidden in a footnote — a customer in Tabriz should not discover on the
+ * checkout page that installation is Mashhad-only. Honest scoping is what makes
+ * the rest of the claim credible.
+ *
+ * This is a server component: it renders static, non-interactive content and has
+ * no reason to ship JavaScript. The old version was marked `"use client"` for a
+ * `switch` statement that chose an icon.
+ */
+
+const CAPABILITIES = [
+    {
+        icon: Wrench,
+        title: "نصب و راه‌اندازی در محل",
+        description: "اعزام تکنسین برای نصب دوربین، دستگاه ضبط و تنظیم دسترسی از راه دور.",
+        scope: "مشهد",
+    },
+    {
+        icon: Truck,
+        title: "تعمیرات با دریافت و تحویل",
+        description: "دستگاه معیوب را با پیک تحویل می‌گیریم و پس از تعمیر بازمی‌گردانیم.",
+        scope: "مشهد",
+    },
+    {
+        icon: Store,
+        title: "تحویل حضوری از شعبه",
+        description: "امکان بررسی و دریافت کالا به‌صورت حضوری در سه شعبه فعال.",
+        scope: "۳ شعبه",
+    },
+    {
+        icon: ShieldCheck,
+        title: "اصالت کالا و گارانتی",
+        description: "تأمین از نمایندگی رسمی همراه با گارانتی معتبر شرکتی.",
+        scope: "همه سفارش‌ها",
+    },
+] as const;
 
 export default function ServicesGrid() {
-    const getIcon = (id: number) => {
-        switch (id) {
-            case 1: return <PenTool className="w-6 h-6 text-kala-500" />;
-            case 2: return <Truck className="w-6 h-6 text-kala-500" />;
-            case 3: return <MapPin className="w-6 h-6 text-kala-500" />;
-            default: return null;
-        }
-    };
-
     return (
-        <div className="py-6 px-4 bg-white">
-            <h3 className="mb-4 text-ekg-900 font-bold text-lg">خدمات اختصاصی ای‌کا‌جی کالا</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-                {SERVICES.map((service) => (
-                    <div key={service.id} className="flex items-start gap-4 p-4 rounded-xl border border-ekg-100 bg-ekg-50 hover:bg-white hover:shadow-md hover:border-kala-200 transition-all duration-300 cursor-default group">
-                        <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
-                            {getIcon(service.id)}
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <h4 className="font-bold text-ekg-900 text-sm group-hover:text-kala-600 transition-colors">{service.title}</h4>
-                                <span className="px-2 py-0.5 rounded-full bg-kala-100 text-kala-700 text-[10px]">
-                                    {service.tag}
+        <div className="space-y-6">
+            <SectionHeader
+                id="home-capabilities"
+                title="بیش از فروش؛ پشتیبانی فنی"
+                description="خدماتی که پس از ثبت سفارش در اختیار شماست."
+            />
+
+            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {CAPABILITIES.map(({ icon: Icon, title, description, scope }) => (
+                    <li
+                        key={title}
+                        className="flex flex-col gap-3 rounded-xl border border-line-soft bg-surface p-4"
+                    >
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-kala-200 bg-kala-50 text-kala-700">
+                            <Icon size={19} aria-hidden="true" />
+                        </span>
+
+                        <div className="space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-[13.5px] font-bold text-ink">{title}</h3>
+                                {/* Scope is stated on the item, not buried. */}
+                                <span className="rounded border border-line bg-surface-sunken px-1.5 py-px text-[10px] font-medium text-ink-subtle">
+                                    {scope}
                                 </span>
                             </div>
-                            <p className="text-xs text-ekg-500 leading-relaxed">
-                                {service.description}
-                            </p>
+                            <p className="text-[12px] leading-6 text-ink-subtle">{description}</p>
                         </div>
-                    </div>
+                    </li>
                 ))}
-            </div>
+            </ul>
         </div>
     );
 }

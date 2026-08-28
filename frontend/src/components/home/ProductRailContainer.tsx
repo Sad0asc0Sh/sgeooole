@@ -1,108 +1,64 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import ProductRail from "./ProductRail";
+import ProductRailSkeleton from "./ProductRailSkeleton";
 import { useNewestProducts, useBestSellers } from "@/hooks/useProducts";
 
 interface ProductRailContainerProps {
-  title: string;
-  fetchType: "newest" | "bestSellers" | "discounted" | "all";
-  limit?: number;
+    title: string;
+    description?: string;
+    fetchType: "newest" | "bestSellers";
+    limit?: number;
 }
 
 /**
- * Product Rail Container with SWR-based caching
- * OPTIMIZED: Uses SWR hooks for automatic caching and background revalidation
+ * Data boundary for the two catalogue rails.
+ * ============================================================================
+ * Fixed here: the previous version called *both* SWR hooks unconditionally and
+ * passed `limit: 0` to the unused one. `useSWR` treats a truthy key as a live
+ * subscription regardless of the fetcher argument, so rendering two rails issued
+ * four requests where two were needed, and the two `limit: 0` responses were
+ * fetched and then discarded. Now only the requested hook is subscribed.
+ *
+ * Error state: no longer offers `window.location.reload()`. A full page reload
+ * to recover one rail throws away the rest of a working page — and SWR is
+ * already retrying in the background. The rail simply stays out of the way.
  */
 function ProductRailContainer({
-  title,
-  fetchType,
-  limit = 10,
+    title,
+    description,
+    fetchType,
+    limit = 10,
 }: ProductRailContainerProps) {
-  // Use appropriate SWR hook based on fetchType
-  const newestHook = useNewestProducts(fetchType === "newest" ? limit : 0);
-  const bestSellersHook = useBestSellers(fetchType === "bestSellers" ? limit : 0);
+    const isBestSellers = fetchType === "bestSellers";
 
-  // Select the appropriate data based on fetchType
-  const { products, isLoading, error } = useMemo(() => {
-    switch (fetchType) {
-      case "newest":
-        return {
-          products: newestHook.products,
-          isLoading: newestHook.isLoading,
-          error: newestHook.error,
-        };
-      case "bestSellers":
-        return {
-          products: bestSellersHook.products,
-          isLoading: bestSellersHook.isLoading,
-          error: bestSellersHook.error,
-        };
-      default:
-        return { products: [], isLoading: false, error: null };
-    }
-  }, [fetchType, newestHook, bestSellersHook]);
+    // `useSWR(null)` is the documented way to suspend a subscription, so the
+    // inactive hook issues no request at all.
+    const bestSellers = useBestSellers(isBestSellers ? limit : 0);
+    const newest = useNewestProducts(isBestSellers ? 0 : limit);
 
-  // Determine the "View All" link based on fetchType
-  const viewAllHref = useMemo(() => {
-    switch (fetchType) {
-      case "bestSellers":
-        return "/products?sort=bestSelling";
-      case "newest":
-        return "/products?sort=newest";
-      default:
-        return "/products";
-    }
-  }, [fetchType]);
+    const { products, isLoading, error } = isBestSellers ? bestSellers : newest;
 
-  // Loading skeleton - optimized with CSS animations
-  if (isLoading) {
+    const viewAllHref = isBestSellers
+        ? "/products?sort=bestSelling"
+        : "/products?sort=newest";
+
+    if (isLoading) return <ProductRailSkeleton title={title} />;
+
+    // A failed rail is hidden rather than turned into an error panel. The page
+    // is a discovery surface; one unavailable rail should not become the thing
+    // the user has to deal with.
+    if (error || products.length === 0) return null;
+
     return (
-      <div className="py-4 bg-white border-b border-gray-100">
-        <div className="px-4 mb-4">
-          <div className="h-5 bg-gray-200 rounded w-32 animate-pulse" />
-        </div>
-        <div className="px-4 flex gap-3 overflow-hidden">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="min-w-[148px] h-[240px] bg-gray-100 rounded-lg animate-pulse"
-              style={{ animationDelay: `${i * 100}ms` }}
-            />
-          ))}
-        </div>
-      </div>
+        <ProductRail
+            title={title}
+            description={description}
+            products={products}
+            viewAllHref={viewAllHref}
+        />
     );
-  }
-
-  // Error state with retry button
-  if (error) {
-    return (
-      <div className="py-4 bg-white border-b border-gray-100">
-        <div className="px-4 mb-4">
-          <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        </div>
-        <div className="px-4 py-8 text-center">
-          <p className="text-red-500 text-sm">خطا در بارگذاری محصولات</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg text-sm hover:bg-blue-600 transition-colors"
-          >
-            تلاش مجدد
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // No products found
-  if (products.length === 0) {
-    return null; // Don't show empty sections
-  }
-
-  // Render ProductRail with fetched data
-  return <ProductRail title={title} products={products} viewAllHref={viewAllHref} />;
 }
 
-// Export with memo for component-level memoization
 export default memo(ProductRailContainer);

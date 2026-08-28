@@ -13,12 +13,24 @@ const swrConfig = {
 };
 
 /**
+ * Builds an SWR key, or `null` to suspend the subscription entirely.
+ *
+ * Callers use `limit: 0` to mean "I am not rendering this rail right now".
+ * Previously that still produced a truthy key (`"newest-products-0"`), so SWR
+ * subscribed and fetched a response that was immediately discarded — two wasted
+ * requests on every homepage load. Returning `null` is SWR's documented way to
+ * make a hook inert.
+ */
+const railKey = (prefix: string, limit: number): string | null =>
+    limit > 0 ? `${prefix}-${limit}` : null;
+
+/**
  * Hook for fetching Flash Deals with SWR caching
  * Data is cached and instantly available on subsequent renders
  */
 export function useFlashDeals(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `flash-deals-${limit}`,
+        railKey("flash-deals", limit),
         () => productService.getFlashDeals(limit),
         {
             ...swrConfig,
@@ -45,7 +57,7 @@ export function useFlashDeals(limit: number = 10) {
  */
 export function useSpecialOffers(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `special-offers-${limit}`,
+        railKey("special-offers", limit),
         () => productService.getSpecialOffers(limit),
         {
             ...swrConfig,
@@ -70,7 +82,7 @@ export function useSpecialOffers(limit: number = 10) {
  */
 export function useNewestProducts(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `newest-products-${limit}`,
+        railKey("newest-products", limit),
         () => productService.getNewest(limit),
         {
             ...swrConfig,
@@ -97,7 +109,7 @@ export function useNewestProducts(limit: number = 10) {
  */
 export function useBestSellers(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `best-sellers-${limit}`,
+        railKey("best-sellers", limit),
         () => productService.getBestSellers(limit),
         {
             ...swrConfig,

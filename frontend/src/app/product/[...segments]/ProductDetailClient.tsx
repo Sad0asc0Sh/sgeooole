@@ -4,7 +4,7 @@ import { useDisableScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import type { Product, ProductColor } from "@/services/productService";
-import CountdownTimer from "@/components/ui/CountdownTimer";
+import Countdown from "@/components/ui/Countdown";
 import ProductTabs from "@/components/product/ProductTabs";
 import ProductHeader from "./ProductHeader";
 import ProductGallery from "./ProductGallery";
@@ -207,12 +207,12 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                             <Store size={18} />
                                             {label}
                                         </span>
-                                        <div className="flex items-center gap-2" dir="ltr">
-                                            <CountdownTimer
-                                                targetDate={endTime}
-                                                className="text-base font-bold"
-                                            />
-                                        </div>
+                                        <Countdown
+                                            targetDate={endTime}
+                                            variant="inline"
+                                            prefix="پایان تا"
+                                            className="text-sm font-bold"
+                                        />
                                     </div>
                                 </div>
                             );
@@ -400,12 +400,12 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                         <Store size={16} />
                                         {label}
                                     </span>
-                                    <div className="flex items-center gap-2" dir="ltr">
-                                        <CountdownTimer
-                                            targetDate={endTime}
-                                            className="text-sm font-bold"
-                                        />
-                                    </div>
+                                    <Countdown
+                                        targetDate={endTime}
+                                        variant="inline"
+                                        prefix="پایان تا"
+                                        className="text-xs font-bold"
+                                    />
                                 </div>
                             </div>
                         );

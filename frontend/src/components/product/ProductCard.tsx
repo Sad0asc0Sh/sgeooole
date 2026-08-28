@@ -2,40 +2,93 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Heart } from "lucide-react";
 import ResilientImage from "@/components/ui/ResilientImage";
-import { Heart, Star, AlertTriangle } from "lucide-react";
-
-import { Product } from "@/services/productService";
-import { useWishlist } from "@/hooks/useWishlist";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
+import { useWishlist } from "@/hooks/useWishlist";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
+import { CURRENCY_LABEL, faPercent, faPrice, faPriceLabel, faDigits } from "@/lib/persian";
+import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import {
     getNextPromotionExpiry,
     resolveProductPromotion,
 } from "@/lib/promotions/productPromotion";
-import styles from "./ProductCard.module.css";
+import type { Product } from "@/types/product";
 
+/**
+ * The storefront's single product card.
+ * ============================================================================
+ * WHY THIS EXISTS
+ *
+ * Product presentation was previously implemented five times — `ProductCard`,
+ * `OptimizedProductCard`, and inline copies inside `ProductRail`,
+ * `FlashOfferRail` and `SpecialOfferRail`. Each had drifted:
+ *
+ *   - three different discount-badge colours for the same meaning
+ *     (`bg-red-500`, `#ef394e`, `bg-rose-600`)
+ *   - four different pricing calculations, two of which disagreed with the
+ *     shared `resolveProductPromotion` resolver about which price to show
+ *   - flash cards carried a 4px gradient bar + coloured header + centred timer
+ *     over the product photo, so the promotion out-shouted the product
+ *
+ * That last point is the real UX problem. On a security-equipment store the
+ * customer is matching a model number and a spec. Anything that competes with
+ * product recognition costs a sale. So this card has a strict priority order:
+ *
+ *     photo → name → price → availability → why it's highlighted
+ *
+ * Promotion state is expressed only through a single small chip and a border
+ * tint. Never a gradient bar, never a coloured card, never a badge over
+ * the product itself.
+ *
+ * DENSITY
+ * `density="comfortable"` — grid/listing pages, ~2 per row on mobile.
+ * `density="compact"`     — horizontal rails, where cards are ~150px wide.
+ * Both share one DOM structure and one pricing path, so a fix in one is a fix
+ * in both. That was the whole point of consolidating.
+ */
 
+type ProductCardDensity = "comfortable" | "compact";
 
 interface ProductCardProps {
     product: Product;
+    /** Eager-load the image. Only for cards above the fold. */
     priority?: boolean;
+    density?: ProductCardDensity;
+    /** Rendering context, for the accessible name only. */
+    context?: string;
 }
 
-export default function ProductCard({ product, priority = false }: ProductCardProps) {
+export default function ProductCard({
+    product,
+    priority = false,
+    density = "comfortable",
+    context,
+}: ProductCardProps) {
     const { toggleWishlist, isInWishlist } = useWishlist();
-    const [isHovered, setIsHovered] = useState(false);
     const [, forcePromotionBoundaryRender] = useState(0);
 
     const isFavorite = isInWishlist(product.id);
     const isOutOfStock = product.countInStock <= 0;
+    const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
+
     const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
         resolveProductPromotion(product, Date.now());
-    const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 
-    // ProductTimerBadge owns its second-by-second display. The card itself only
-    // needs another render when the nearest promotion crosses its end boundary.
+    // Only show a struck-through price when there is a real, higher reference
+    // price. The old cards would render an empty crossed-out row, which reads
+    // as a broken discount.
+    const referencePrice = product.compareAtPrice || product.oldPrice;
+    const showReferencePrice =
+        effectiveDiscount > 0 &&
+        !isOutOfStock &&
+        Boolean(referencePrice) &&
+        (referencePrice as number) > displayPrice;
+
+    // Re-render exactly once, when the nearest promotion actually expires.
+    // `ProductTimerBadge` owns its own ticking, so the card does not re-render
+    // every second — with 10 cards per rail that used to be 10 renders/second.
     useEffect(() => {
         const nextExpiry = getNextPromotionExpiry(product, Date.now());
         if (!nextExpiry) return;
@@ -49,191 +102,190 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
         return () => window.clearTimeout(id);
     }, [product]);
 
-    const handleToggleWishlist = (e: React.MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
+    const isTimed = promotionKind === "flash" || promotionKind === "amazing" || promotionKind === "campaign";
+
+    // One chip answers "why am I looking at this?". A named admin campaign wins
+    // because it carries real editorial meaning; otherwise we fall back to the
+    // neutral "time-limited" language rather than exposing which internal flag
+    // happened to be set.
+    const reasonLabel = product.campaignLabel?.trim()
+        ? product.campaignLabel.trim()
+        : isTimed
+            ? getPromotionCopy("promotion.reason.timed.label")
+            : null;
+
+    const isCompact = density === "compact";
+    const href = buildProductUrl(product);
+
+    const handleToggleWishlist = (event: React.MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
         toggleWishlist(product);
     };
 
-    // A single resolver gives the three promotion types a stable precedence.
-    // Notably, a plain percentage can no longer create a "شگفت‌انگیز" label.
-    let headerConfig = null;
-
-    if (promotionKind === 'flash') {
-        headerConfig = {
-            type: 'flash',
-            title: 'پیشنهاد لحظه‌ای',
-            color: 'text-orange-600',
-            borderColor: 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
-            endTime,
-            iconColor: 'text-orange-600',
-        };
-    } else if (promotionKind === 'campaign') {
-        let themeColor = 'text-blue-600';
-        let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
-
-        if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-            themeColor = 'text-amber-600';
-            themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
-        } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-            themeColor = 'text-rose-600';
-            themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
-        } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-            themeColor = 'text-lime-600';
-            themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
-        }
-
-        headerConfig = {
-            type: 'campaign',
-            title: product.campaignLabel || 'فروش ویژه',
-            color: themeColor,
-            borderColor: themeBorder,
-            endTime,
-            iconColor: themeColor,
-        };
-    } else if (promotionKind === 'amazing') {
-        headerConfig = {
-            type: 'amazing',
-            title: 'شگفت‌انگیز',
-            color: 'text-red-500',
-            borderColor: 'bg-red-500',
-            endTime,
-            iconColor: 'text-red-500',
-        };
-    }
+    // The whole card is one link, so the accessible name has to carry
+    // everything a sighted user gets from the layout.
+    const accessibleName = [
+        product.title || product.name,
+        context,
+        faPriceLabel(displayPrice),
+        isOutOfStock ? getPromotionCopy("availability.outOfStock") : null,
+        effectiveDiscount > 0 && !isOutOfStock ? `${faPercent(effectiveDiscount)} تخفیف` : null,
+    ]
+        .filter(Boolean)
+        .join("، ");
 
     return (
-        <div
-            className={`${styles.card} ${isOutOfStock ? styles.outOfStockCard : ""} group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-lg border-gray-200' : 'border-gray-100'}`}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+        <article
+            className={[
+                "group relative flex h-full flex-col overflow-hidden rounded-xl border bg-surface",
+                "transition-[border-color,box-shadow] duration-200",
+                // Promotion is signalled by a warm border, not by repainting the
+                // card. Keeps the photo on a neutral white ground where the
+                // product's own colours stay true.
+                isTimed && !isOutOfStock
+                    ? "border-kala-200 hover:border-kala-300"
+                    : "border-line-soft hover:border-line-strong",
+                isOutOfStock ? "opacity-[0.72]" : "hover:shadow-e2",
+            ].join(" ")}
         >
-            {/* Special Header Line */}
-            {headerConfig && (
-                <div className="w-full">
-                    {/* Colored Line */}
-                    <div className={`h-1 w-full ${headerConfig.borderColor}`} />
+            {/* --- Media ------------------------------------------------------
+                `object-contain` on white: product photography for cameras, NVRs
+                and cables arrives on varied backgrounds at varied aspect
+                ratios, and cropping them (`cover`) cuts off the connector or
+                lens that identifies the model. */}
+            <div className="relative aspect-square w-full shrink-0 overflow-hidden bg-surface">
+                <ResilientImage
+                    src={product.image || "/placeholder.svg"}
+                    alt={product.title || product.name}
+                    fill
+                    className={[
+                        "object-contain p-2 transition-transform duration-500",
+                        isOutOfStock ? "grayscale-[0.65] opacity-70" : "group-hover:scale-[1.04]",
+                    ].join(" ")}
+                    sizes={
+                        isCompact
+                            ? "(max-width: 640px) 45vw, 160px"
+                            : "(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 22vw, 240px"
+                    }
+                    loading={priority ? "eager" : "lazy"}
+                    priority={priority}
+                    fetchPriority={priority ? "high" : "auto"}
+                    quality={75}
+                    placeholder="blur"
+                    blurDataURL={getBlurDataURL()}
+                    fallbackSrc="/placeholder.svg"
+                />
 
-                    {/* Header Content */}
-                    <div className="flex items-center justify-between px-1 py-1 bg-white gap-1">
-                        {/* Left: Timer - REMOVED (Moved to overlay) */}
+                {endTime && !isOutOfStock ? <ProductTimerBadge targetDate={endTime} /> : null}
 
-
-                        {/* Right: Title */}
-                        <div className={`text-[10px] font-bold whitespace-nowrap truncate ${headerConfig.color}`}>
-                            {headerConfig.title}
-                        </div>
+                {isOutOfStock ? (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface/45">
+                        <span className="rounded-full border border-line bg-surface/95 px-3 py-1 text-[11px] font-bold text-ink-muted shadow-e1">
+                            {getPromotionCopy("availability.outOfStock")}
+                        </span>
                     </div>
-                    {/* Separator */}
-                    <div className="h-px w-full bg-gray-100" />
-                </div>
-            )}
+                ) : null}
+            </div>
 
-            {/* Image Gallery Slider */}
-            <div className={`${styles.imageFrame} relative aspect-square overflow-hidden`}>
-                {/* Timer Overlay (Top Right) */}
-                {(headerConfig?.endTime) && (
-                    <ProductTimerBadge
-                        targetDate={headerConfig.endTime}
-                        color={headerConfig.color}
-                    />
-                )}
-
+            {/* --- Wishlist ---------------------------------------------------
+                Sits above the card link with a real 40px touch target. In the
+                compact rail density it is hidden: at ~150px wide it collided
+                with the product name and was mis-tapped constantly. */}
+            {!isCompact ? (
                 <button
                     type="button"
                     onClick={handleToggleWishlist}
-                    aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
-                    className={`${styles.wishlistButton} ${isFavorite ? styles.wishlistButtonActive : ""} flex items-center justify-center transition-all`}
+                    aria-pressed={isFavorite}
+                    aria-label={
+                        isFavorite
+                            ? `حذف ${product.title || product.name} از علاقه‌مندی‌ها`
+                            : `افزودن ${product.title || product.name} به علاقه‌مندی‌ها`
+                    }
+                    className={[
+                        "absolute top-2 end-2 z-30 flex h-10 w-10 items-center justify-center rounded-full",
+                        "border bg-surface/95 backdrop-blur-sm transition-colors",
+                        isFavorite
+                            ? "border-signal-urgent/25 text-signal-urgent"
+                            : "border-line text-ink-faint hover:border-line-strong hover:text-ink-muted",
+                    ].join(" ")}
                 >
-                    <Heart size={18} className={isFavorite ? "fill-red-500 text-red-500" : "text-gray-500"} />
+                    <Heart size={17} className={isFavorite ? "fill-current" : undefined} aria-hidden="true" />
                 </button>
+            ) : null}
 
-                {/* Low Stock Badge (Bottom Left) */}
-                {product.countInStock > 0 && product.countInStock <= 3 && (
-                    <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-md">
-                        <AlertTriangle size={12} />
-                        <span>تنها {product.countInStock} عدد</span>
-                    </div>
-                )}
-
-                <Link href={buildProductUrl(product)} className="block w-full h-full">
-                    {/* Static Image */}
-                    <div className="relative w-full h-full">
-                        <ResilientImage
-                            src={product.image || "/placeholder.svg"}
-                            alt={product.title}
-                            fill
-                            className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}
-                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"
-                            loading={priority ? "eager" : "lazy"}
-                            priority={priority}
-                            fetchPriority={priority ? "high" : "auto"}
-                            quality={75}
-                            placeholder="blur"
-                            blurDataURL={getBlurDataURL()}
-                            fallbackSrc="/placeholder.svg"
-                        />
-                        {isOutOfStock && (
-                            <div className={styles.outOfStockOverlay} aria-label="این کالا ناموجود است">
-                                <span className={styles.outOfStockBadge}>ناموجود</span>
-                            </div>
-                        )}
-                    </div>
-                </Link>
-            </div>
-
-            {/* Content */}
-            <div className={`${styles.content} p-4 flex flex-col flex-1 gap-2`}>
-                {/* Category - only show if it's a valid category name */}
-                {product.category &&
-                    product.category !== "عمومی" &&
-                    !/^[a-fA-F0-9]{24}$/.test(product.category) && (
-                        <span className="text-[10px] text-gray-400 font-medium truncate">
-                            {product.category}
-                        </span>
-                    )}
-
-                {/* Title */}
-                <Link href={buildProductUrl(product)} className="block">
-                    <h3 className="text-sm font-bold text-gray-800 leading-snug line-clamp-2 min-h-[2.5em] hover:text-kala-600 transition-colors">
-                        {product.title}
-                    </h3>
-                </Link>
-
-                {/* Rating */}
-                <div className="flex items-center gap-1 mt-1">
-                    <Star size={12} className="text-yellow-400 fill-yellow-400" />
-                    <span className="text-xs font-bold text-gray-700">{product.rating || 0}</span>
-                    <span className="text-[10px] text-gray-400">({product.reviewCount || 0})</span>
-                </div>
-
-                {isOutOfStock && (
-                    <span className={styles.stockStatus}>فعلاً ناموجود</span>
-                )}
-
-                <div className={`${styles.footerRow} mt-auto`}>
-                    <div className={`${styles.priceColumn} flex flex-col`}>
-                        {product.oldPrice && showSpecialOfferPricing && (
-                            <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1`}>
-                                {effectiveDiscount > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                        {effectiveDiscount}%
-                                    </span>
-                                )}
-                                <span className={`${styles.oldPriceValue} text-[11px] text-gray-400 line-through decoration-red-500/50`}>
-                                    {product.oldPrice.toLocaleString("fa-IR")}
-                                </span>
-                            </div>
-                        )}
-                        <div className={`${styles.priceLine} ${isOutOfStock ? "text-gray-400" : ""}`}>
-                            <span className={`${styles.priceValue} text-base font-black ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}>
-                                {displayPrice.toLocaleString("fa-IR")}
+            {/* --- Body ------------------------------------------------------ */}
+            <div className={`flex min-w-0 flex-1 flex-col ${isCompact ? "gap-1.5 p-2.5" : "gap-2 p-3.5"}`}>
+                {/* Reason chip and stock warning share one row with a reserved
+                    height, so cards in a rail keep their price lines aligned
+                    whether or not they carry a promotion. */}
+                {(reasonLabel || isLowStock) && !isOutOfStock ? (
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        {reasonLabel ? (
+                            <span className="inline-flex max-w-full items-center truncate rounded-full border border-kala-200 bg-kala-50 px-2 py-0.5 text-[10px] font-semibold text-kala-700">
+                                {reasonLabel}
                             </span>
-                            <span className={`${styles.priceCurrency} text-[10px] text-gray-500`}>تومان</span>
-                        </div>
+                        ) : null}
+                        {isLowStock ? (
+                            <span className="inline-flex shrink-0 items-center rounded-full border border-signal-urgent/20 bg-signal-urgent-soft px-2 py-0.5 text-[10px] font-semibold text-signal-urgent">
+                                {faDigits(product.countInStock)} عدد باقی‌مانده
+                            </span>
+                        ) : null}
+                    </div>
+                ) : null}
+
+                {/* Name. `h3` because cards live under a section `h2`.
+                    Two lines with a reserved minimum keeps the grid even
+                    without truncating mid-model-number more than necessary. */}
+                <h3
+                    className={[
+                        "line-clamp-2 font-semibold leading-6 text-ink",
+                        isCompact ? "min-h-[3rem] text-[12px]" : "min-h-[3rem] text-[13px]",
+                    ].join(" ")}
+                >
+                    <Link
+                        href={href}
+                        aria-label={accessibleName}
+                        className="focus-ring-none block outline-none after:absolute after:inset-0 after:content-[''] group-focus-within:after:rounded-xl group-focus-within:after:outline group-focus-within:after:outline-2 group-focus-within:after:outline-offset-2 group-focus-within:after:outline-kala-500"
+                    >
+                        {product.title || product.name}
+                    </Link>
+                </h3>
+
+                {/* --- Price ---------------------------------------------------
+                    Reference price above, current price below. Iranian
+                    convention, and it means the eye lands on what you pay.
+                    `tabular-nums` stops prices jitteringas digits change. */}
+                <div className="mt-auto flex flex-col gap-0.5 pt-1">
+                    <div className="flex h-4 items-center gap-1.5">
+                        {showReferencePrice ? (
+                            <>
+                                <span className="inline-flex shrink-0 items-center rounded bg-signal-urgent px-1.5 py-px text-[10px] font-bold leading-tight text-ink-inverse">
+                                    {faPercent(effectiveDiscount)}
+                                </span>
+                                <span className="truncate text-[11px] tabular-nums text-ink-faint line-through">
+                                    {faPrice(referencePrice)}
+                                </span>
+                            </>
+                        ) : null}
+                    </div>
+
+                    <div className="flex items-baseline gap-1">
+                        <span
+                            className={[
+                                "font-bold tabular-nums tracking-tight",
+                                isCompact ? "text-[15px]" : "text-[17px]",
+                                isOutOfStock ? "text-ink-faint" : "text-ink",
+                            ].join(" ")}
+                        >
+                            {faPrice(displayPrice)}
+                        </span>
+                        <span className="shrink-0 text-[10px] font-medium text-ink-faint">
+                            {CURRENCY_LABEL}
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
+        </article>
     );
 }

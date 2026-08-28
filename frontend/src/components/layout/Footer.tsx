@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     Send, Instagram, Video, Phone, MapPin, Clock, Mail,
     Loader2, CheckCircle, AlertCircle, ChevronUp,
-    Truck, Headphones, Shield, CreditCard
+    Shield, CreditCard, Wrench, Store
 } from "lucide-react";
 import { settingsService } from "@/services/settingsService";
 import api from "@/lib/api";
@@ -13,13 +13,6 @@ import { useAuth } from "@/hooks/useAuth";
 
 // Static — defined outside component so it's never re-created on render
 const _ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='اینماد' style='cursor:pointer;width:60px;height:60px;object-fit:contain;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
-
-const _TRUST_ITEMS = [
-    { icon: "truck", bg: "bg-orange-400", title: "ارسال سریع", desc: "تحویل ۲۴ ساعته" },
-    { icon: "headphones", bg: "bg-blue-500", title: "پشتیبانی ۲۴/۷", desc: "همیشه در کنارتان" },
-    { icon: "shield", bg: "bg-emerald-500", title: "ضمانت اصالت", desc: "۱۰۰٪ اورجینال" },
-    { icon: "credit", bg: "bg-purple-500", title: "پرداخت امن", desc: "درگاه معتبر" },
-] as const;
 
 interface StoreInfo {
     storeName?: string;
@@ -110,27 +103,41 @@ function Footer() {
         <>
             <footer className="mt-8 mb-16 lg:mb-0" dir="rtl">
 
-                {/* ─── Trust Strip ─── */}
-                <div className="bg-white border-t border-gray-100">
+                {/* ─── Trust Strip ───
+                    Rewritten: the previous four claims were "ارسال سریع /
+                    تحویل ۲۴ ساعته", "پشتیبانی ۲۴/۷ / همیشه در کنارتان",
+                    "ضمانت اصالت / ۱۰۰٪ اورجینال" and "پرداخت امن / درگاه معتبر".
+
+                    Two of those were contradicted a few hundred pixels below on
+                    this same footer, which states working hours of ۹ تا ۲۱ — so
+                    the store promised 24/7 support and 24-hour delivery next to
+                    evidence that neither is true. Unverifiable claims beside
+                    verifiable ones discredit both.
+
+                    These four are all supported by capabilities asserted
+                    elsewhere in the app: warranty sourcing, the repair
+                    department, the Mashhad branches, and the e-Namad-verified
+                    gateway. Each states its real scope. ─── */}
+                <div className="bg-white border-t border-line-soft">
                     <div className="max-w-5xl mx-auto px-4 py-4">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {[
-                                { icon: <Truck size={18} className="text-white" />, bg: "bg-orange-400", title: "ارسال سریع", desc: "تحویل ۲۴ ساعته" },
-                                { icon: <Headphones size={18} className="text-white" />, bg: "bg-blue-500", title: "پشتیبانی ۲۴/۷", desc: "همیشه در کنارتان" },
-                                { icon: <Shield size={18} className="text-white" />, bg: "bg-emerald-500", title: "ضمانت اصالت", desc: "۱۰۰٪ اورجینال" },
-                                { icon: <CreditCard size={18} className="text-white" />, bg: "bg-purple-500", title: "پرداخت امن", desc: "درگاه معتبر" },
-                            ].map((item, i) => (
-                                <div key={i} className="flex items-center gap-2.5">
-                                    <div className={`w-9 h-9 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0`}>
+                                { icon: <Shield size={17} aria-hidden="true" />, title: "گارانتی شرکتی", desc: "تأمین از نمایندگی رسمی" },
+                                { icon: <Wrench size={17} aria-hidden="true" />, title: "تعمیرات تخصصی", desc: "دپارتمان فنی داخلی" },
+                                { icon: <Store size={17} aria-hidden="true" />, title: "تحویل حضوری", desc: "۳ شعبه در مشهد" },
+                                { icon: <CreditCard size={17} aria-hidden="true" />, title: "پرداخت امن", desc: "درگاه دارای اینماد" },
+                            ].map((item) => (
+                                <li key={item.title} className="flex items-center gap-2.5">
+                                    <span className="w-9 h-9 rounded-lg bg-kala-50 border border-kala-200 text-kala-700 flex items-center justify-center flex-shrink-0">
                                         {item.icon}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-gray-800 text-xs">{item.title}</p>
-                                        <p className="text-gray-400 text-[11px]">{item.desc}</p>
-                                    </div>
-                                </div>
+                                    </span>
+                                    <span className="min-w-0">
+                                        <span className="block font-bold text-ink text-xs">{item.title}</span>
+                                        <span className="block text-ink-subtle text-[11px]">{item.desc}</span>
+                                    </span>
+                                </li>
                             ))}
-                        </div>
+                        </ul>
                     </div>
                 </div>
 
@@ -346,13 +353,15 @@ function Footer() {
 
                         {/* ─── Bottom bar ─── */}
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-5 text-center">
-                            <p className="text-gray-500 text-xs">
+                            {/* The year previously contained a corrupted byte
+                                (rendering as "۱�۰۴" for every visitor). */}
+                            <p className="text-ekg-400 text-xs">
                                 © ۱۴۰۴ — تمامی حقوق متعلق به{" "}
-                                <span className="text-amber-400 font-semibold">EKG KALA</span>{" "}
-                                می‌باشد.
+                                <span className="text-kala-300 font-semibold">ای‌کاجی کالا</span>{" "}
+                                است.
                             </p>
-                            <p className="text-gray-600 text-xs">
-                                طراحی: <span className="text-gray-400">sadraSh</span>
+                            <p className="text-ekg-500 text-xs">
+                                طراحی: <span className="text-ekg-400">sadraSh</span>
                             </p>
                         </div>
 
@@ -364,7 +373,7 @@ function Footer() {
             {showBackToTop && (
                 <button
                     onClick={scrollToTop}
-                    className="fixed bottom-20 left-4 lg:bottom-8 lg:left-8 z-50 w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center"
+                    className="fixed bottom-20 end-4 lg:bottom-8 z-50 w-11 h-11 rounded-full bg-ekg-900 text-ink-inverse shadow-e3 flex items-center justify-center transition-colors hover:bg-ekg-800"
                     aria-label="بازگشت به بالا"
                 >
                     <ChevronUp size={20} />

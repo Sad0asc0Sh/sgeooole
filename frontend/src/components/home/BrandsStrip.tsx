@@ -1,142 +1,116 @@
 "use client";
 
-import { SectionTitle } from "@/components/ui/SectionTitle";
-import { brandService, HomepageBrand } from "@/services/brandService";
-import { useRef, useState, MouseEvent, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
-import { useRouter } from "next/navigation";
+import SectionHeader from "@/components/ui/SectionHeader";
+import { brandService, HomepageBrand } from "@/services/brandService";
 
+/**
+ * Brands carried.
+ * ============================================================================
+ * WHY THIS IS KEPT
+ * Brand is a primary filter in this category — an installer very often arrives
+ * knowing they need Dahua or Hikvision and nothing else. So this is real
+ * discovery, not a logo wall, and it links straight into the filtered listing.
+ *
+ * WHAT WAS FIXED
+ *   - Each logo was a `<div onClick>` with mouse-only drag-to-scroll built from
+ *     five pieces of local state (`isDown`, `startX`, `scrollLeft`,
+ *     `isDragging`, `hoveredBrand`). Not focusable, not keyboard-operable, and
+ *     inert under touch. They are now real `<Link>`s: keyboard, middle-click,
+ *     "open in new tab" and native touch scrolling all work, and the five state
+ *     variables plus four mouse handlers are gone.
+ *   - Each brand supplied its own `textColor` and `hoverColor` from the API and
+ *     applied them inline, so this strip could render arbitrary colours that
+ *     belong to no palette. Brand *logos* keep their own colours (correct — that
+ *     is the brand's identity); the surrounding chrome is now EKGKala's.
+ *   - `SectionTitle`'s gold highlighter swipe is replaced by the shared header.
+ */
 export default function BrandsStrip() {
-  const router = useRouter();
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const [isDown, setIsDown] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [brands, setBrands] = useState<HomepageBrand[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hoveredBrand, setHoveredBrand] = useState<string | null>(null);
+    const [brands, setBrands] = useState<HomepageBrand[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch homepage brands
-  useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        setLoading(true);
-        const data = await brandService.getHomepageBrands();
-        setBrands(data);
-      } catch (error) {
-        console.error("Error fetching homepage brands:", error);
-        setBrands([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    useEffect(() => {
+        let isMounted = true;
 
-    fetchBrands();
-  }, []);
+        brandService
+            .getHomepageBrands()
+            .then((data) => {
+                if (isMounted) setBrands(data);
+            })
+            .catch(() => {
+                if (isMounted) setBrands([]);
+            })
+            .finally(() => {
+                if (isMounted) setIsLoading(false);
+            });
 
-  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
-    if (!sliderRef.current) return;
-    setIsDown(true);
-    setIsDragging(false);
-    setStartX(e.pageX - sliderRef.current.offsetLeft);
-    setScrollLeft(sliderRef.current.scrollLeft);
-  };
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
-  const handleMouseLeave = () => {
-    setIsDown(false);
-    setIsDragging(false);
-  };
+    if (!isLoading && brands.length === 0) return null;
 
-  const handleMouseUp = () => {
-    setIsDown(false);
-    setTimeout(() => setIsDragging(false), 0);
-  };
-
-  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!isDown || !sliderRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - sliderRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    sliderRef.current.scrollLeft = scrollLeft - walk;
-
-    if (Math.abs(x - startX) > 5) {
-      setIsDragging(true);
-    }
-  };
-
-  const handleBrandClick = (brandKey?: string) => {
-    if (isDragging) return;
-
-    const value = (brandKey || "").trim();
-    if (!value) return;
-
-    // Go straight to the products listing with brand filter
-    router.push(`/products?brand=${encodeURIComponent(value)}`);
-  };
-
-  // Don't render the section if there are no brands
-  if (!loading && brands.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="py-8 bg-white">
-      <SectionTitle>برندهای همکار</SectionTitle>
-
-      {loading ? (
-        // Loading skeleton
-        <div className="flex items-center justify-center px-6 gap-8 md:gap-12">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <div
-              key={i}
-              className="animate-pulse bg-gray-200 rounded h-8 w-24"
+    return (
+        <div className="space-y-5">
+            {/* No `actionHref`: the app has `/brands/[slug]` but no `/brands`
+                index, so a "all brands" link would 404. */}
+            <SectionHeader
+                id="home-brands"
+                title="برندهای موجود"
+                description="تأمین از نمایندگی‌های رسمی."
             />
-          ))}
-        </div>
-      ) : (
-        <div
-          ref={sliderRef}
-          className={`
-            flex items-center justify-between px-6 py-4 overflow-x-auto gap-8 md:justify-center md:gap-12
-            no-scrollbar cursor-grab active:cursor-grabbing select-none
-          `}
-          onMouseDown={handleMouseDown}
-          onMouseLeave={handleMouseLeave}
-          onMouseUp={handleMouseUp}
-          onMouseMove={handleMouseMove}
-        >
-          {brands.map((brand) => (
-            <div
-              key={brand._id}
-              onClick={() => handleBrandClick(brand.slug || brand._id)}
-              onMouseEnter={() => setHoveredBrand(brand._id)}
-              onMouseLeave={() => setHoveredBrand(null)}
-              className="min-w-max transition-all duration-300 transform hover:scale-110 flex flex-col items-center gap-3 cursor-pointer p-2"
-              style={{
-                color: hoveredBrand === brand._id ? brand.hoverColor : brand.textColor,
-              }}
-            >
-              {/* Show logo if available */}
-              {brand.logo?.url && (
-                <div className="relative w-24 h-24 rounded">
-                  <ResilientImage
-                    src={brand.logo.url}
-                    alt={brand.name}
-                    fill
-                    className="object-contain"
-                    sizes="96px"
-                    fallbackSrc="/placeholder.png"
-                  />
+
+            {isLoading ? (
+                <div className="flex gap-3 overflow-hidden" aria-hidden="true">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={index} className="skeleton h-20 w-32 shrink-0 rounded-xl" />
+                    ))}
                 </div>
-              )}
-              <span className="text-sm font-bold tracking-wide text-center">
-                {brand.name}
-              </span>
-            </div>
-          ))}
+            ) : (
+                <ul
+                    aria-labelledby="home-brands"
+                    className="no-scrollbar flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible lg:grid-cols-6"
+                    style={{ scrollSnapType: "x proximity" }}
+                >
+                    {brands.map((brand) => (
+                        <li
+                            key={brand._id}
+                            className="w-32 shrink-0 sm:w-auto"
+                            style={{ scrollSnapAlign: "start" }}
+                        >
+                            <Link
+                                href={`/products?brand=${encodeURIComponent(brand.slug || brand._id)}`}
+                                className="flex h-full flex-col items-center justify-center gap-2 rounded-xl border border-line-soft bg-surface px-3 py-4 transition-colors hover:border-kala-200 hover:bg-kala-50/40"
+                            >
+                                {brand.logo?.url ? (
+                                    <div className="relative h-9 w-full">
+                                        <ResilientImage
+                                            src={brand.logo.url}
+                                            alt=""
+                                            fill
+                                            aria-hidden="true"
+                                            // Logos are grayscale at rest so the
+                                            // strip reads as one calm band, then
+                                            // resolve to full colour on hover.
+                                            // Keeps a dozen competing brand
+                                            // palettes from fighting each other.
+                                            className="object-contain grayscale opacity-70 transition-[filter,opacity] duration-300 hover:grayscale-0 hover:opacity-100"
+                                            sizes="128px"
+                                            fallbackSrc="/placeholder.svg"
+                                        />
+                                    </div>
+                                ) : null}
+                                <span className="text-center text-[11.5px] font-semibold tracking-wide text-ink-muted">
+                                    {brand.name}
+                                </span>
+                            </Link>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
