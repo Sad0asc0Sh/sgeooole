@@ -271,9 +271,30 @@ exports.updateSettings = async (req, res) => {
 
     // For nested objects (Shipping Settings)
     if (updates.shippingSettings) {
-      settings.shippingSettings = {
-        ...(settings.shippingSettings?.toObject?.() || {}),
-        ...updates.shippingSettings,
+      const currentShippingSettings = settings.shippingSettings?.toObject?.() || {}
+      const incomingCouriers = updates.shippingSettings.couriers
+
+      if (Array.isArray(incomingCouriers)) {
+        // Ignore unfinished rows instead of allowing one blank row to reject
+        // the entire settings document. Tracking URLs are optional for local
+        // couriers, so an empty template is preserved as an empty string.
+        const couriers = incomingCouriers
+          .map((courier) => ({
+            name: String(courier?.name || '').trim(),
+            trackingUrlTemplate: String(courier?.trackingUrlTemplate || '').trim(),
+            isActive: courier?.isActive !== false,
+          }))
+          .filter((courier) => courier.name)
+
+        settings.shippingSettings = {
+          ...currentShippingSettings,
+          couriers,
+        }
+      } else {
+        settings.shippingSettings = {
+          ...currentShippingSettings,
+          ...updates.shippingSettings,
+        }
       }
     }
 
@@ -286,9 +307,11 @@ exports.updateSettings = async (req, res) => {
     })
   } catch (error) {
     console.error('Error updating settings:', error)
-    res.status(500).json({
+    res.status(error.name === 'ValidationError' ? 400 : 500).json({
       success: false,
-      message: 'خطا در به‌روزرسانی تنظیمات سایت',
+      message: error.name === 'ValidationError'
+        ? 'اطلاعات تنظیمات نامعتبر است'
+        : 'خطا در به‌روزرسانی تنظیمات سایت',
       error: error.message,
     })
   }
