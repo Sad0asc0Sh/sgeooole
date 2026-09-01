@@ -27,6 +27,9 @@ import {
   GlobalOutlined,
   CheckCircleOutlined,
   EditOutlined,
+  DeleteOutlined,
+  StarOutlined,
+  StarFilled,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -104,6 +107,9 @@ function OrderDetail() {
   const [newCourierName, setNewCourierName] = useState('')
   const [newCourierTemplate, setNewCourierTemplate] = useState('')
   const [savingCourier, setSavingCourier] = useState(false)
+  const [isManageCouriersModalOpen, setIsManageCouriersModalOpen] = useState(false)
+  const [managedCouriers, setManagedCouriers] = useState([])
+  const [savingManagedCouriers, setSavingManagedCouriers] = useState(false)
 
   const defaultCouriers = [
     { name: 'پست پیشتاز', trackingUrlTemplate: 'https://tracking.post.ir/?id={{code}}' },
@@ -118,12 +124,17 @@ function OrderDetail() {
       const res = await api.get('/settings/public')
       const fetchedCouriers = res?.data?.data?.shippingSettings?.couriers
       if (Array.isArray(fetchedCouriers) && fetchedCouriers.length > 0) {
-        setCouriersList(fetchedCouriers)
+        const hasDefault = fetchedCouriers.some((courier) => courier.isDefault === true)
+        setCouriersList(fetchedCouriers.map((courier, index) => ({
+          ...courier,
+          isActive: courier.isActive !== false,
+          isDefault: courier.isDefault === true || (!hasDefault && index === 0),
+        })))
       } else {
-        setCouriersList(defaultCouriers)
+        setCouriersList(defaultCouriers.map((courier, index) => ({ ...courier, isActive: true, isDefault: index === 0 })))
       }
     } catch {
-      setCouriersList(defaultCouriers)
+      setCouriersList(defaultCouriers.map((courier, index) => ({ ...courier, isActive: true, isDefault: index === 0 })))
     }
   }
 
@@ -164,6 +175,14 @@ function OrderDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
+  useEffect(() => {
+    if (order && !courierName && couriersList.length > 0) {
+      const defaultCourier = couriersList.find((courier) => courier.isDefault && courier.isActive)
+        || couriersList.find((courier) => courier.isActive)
+      if (defaultCourier) setCourierName(defaultCourier.name)
+    }
+  }, [order, courierName, couriersList])
+
   const handleCourierSelect = (selectedName) => {
     setCourierName(selectedName)
     const courierObj = couriersList.find((c) => c.name === selectedName)
@@ -201,20 +220,28 @@ function OrderDetail() {
 
     setSavingCourier(true)
     try {
+      const existingCourier = couriersList.find((courier) => courier.name === newCourierName.trim())
       const newEntry = {
         name: newCourierName.trim(),
         trackingUrlTemplate: newCourierTemplate.trim(),
         isActive: true,
+        isDefault: existingCourier?.isDefault === true || couriersList.length === 0 || !couriersList.some((courier) => courier.isDefault),
       }
       const updatedList = [...couriersList.filter((c) => c.name !== newEntry.name), newEntry]
 
       // Save to global settings
+      const normalizedList = updatedList.map((courier) => ({
+        name: String(courier.name || '').trim(),
+        trackingUrlTemplate: String(courier.trackingUrlTemplate || '').trim(),
+        isActive: courier.isActive !== false,
+        isDefault: courier.isDefault === true,
+      }))
       await api.put('/settings', {
-        shippingSettings: { couriers: updatedList },
+        shippingSettings: { couriers: normalizedList },
       })
 
       message.success(`شرکت پستی «${newEntry.name}» با موفقیت ثبت دائم گردید.`)
-      setCouriersList(updatedList)
+      setCouriersList(normalizedList)
       setCourierName(newEntry.name)
 
       if (newEntry.trackingUrlTemplate && trackingCode) {
@@ -235,6 +262,50 @@ function OrderDetail() {
       message.error(msg)
     } finally {
       setSavingCourier(false)
+    }
+  }
+
+  const openManageCouriers = () => {
+    setManagedCouriers(couriersList.map((courier) => ({ ...courier })))
+    setIsManageCouriersModalOpen(true)
+  }
+
+  const setManagedDefaultCourier = (name) => {
+    setManagedCouriers((current) => current.map((courier) => ({
+      ...courier,
+      isDefault: courier.name === name,
+    })))
+  }
+
+  const handleSaveManagedCouriers = async () => {
+    const normalizedCouriers = managedCouriers
+      .map((courier) => ({
+        name: String(courier.name || '').trim(),
+        trackingUrlTemplate: String(courier.trackingUrlTemplate || '').trim(),
+        isActive: courier.isActive !== false,
+        isDefault: courier.isDefault === true,
+      }))
+      .filter((courier) => courier.name)
+
+    if (normalizedCouriers.length > 0 && !normalizedCouriers.some((courier) => courier.isDefault)) {
+      const fallback = normalizedCouriers.find((courier) => courier.isActive) || normalizedCouriers[0]
+      fallback.isDefault = true
+    }
+
+    setSavingManagedCouriers(true)
+    try {
+      await api.put('/settings', { shippingSettings: { couriers: normalizedCouriers } })
+      setCouriersList(normalizedCouriers)
+      if (courierName && !normalizedCouriers.some((courier) => courier.name === courierName)) {
+        setCourierName(normalizedCouriers.find((courier) => courier.isDefault)?.name || '')
+        setPreparedTrackingUrl('')
+      }
+      setIsManageCouriersModalOpen(false)
+      message.success('فهرست شرکت‌های حمل‌ونقل ذخیره شد')
+    } catch (err) {
+      message.error(err?.response?.data?.message || err?.message || 'خطا در ذخیره شرکت‌های حمل‌ونقل')
+    } finally {
+      setSavingManagedCouriers(false)
     }
   }
 
@@ -619,16 +690,28 @@ marginBottom: 16,
 marginBottom: 8,
         }}>
                         <label style={{ fontWeight: 'bold' }}>شرکت حمل‌ونقل:</label>
-                        <Button
-                          type="link"
-                          size="small"
-                          icon={<PlusOutlined />}
-                          onClick={() => setIsAddCourierModalOpen(true)}
-                          disabled={!canUpdateStatus}
-                          style={{ padding: 0 }}
-                        >
-                          + افزودن شرکت جدید
-                        </Button>
+                        <Space size="small">
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={openManageCouriers}
+                            disabled={!canUpdateStatus}
+                            style={{ padding: 0 }}
+                          >
+                            مدیریت شرکت‌ها
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={() => setIsAddCourierModalOpen(true)}
+                            disabled={!canUpdateStatus}
+                            style={{ padding: 0 }}
+                          >
+                            + افزودن شرکت جدید
+                          </Button>
+                        </Space>
                       </div>
                       <Select
                         value={courierName || undefined}
@@ -657,6 +740,15 @@ marginBottom: 8,
                         placeholder="کد ۲۴ رقمی یا شماره مرسوله"
                         style={{ fontFamily: 'monospace' }}
                         disabled={!canUpdateStatus}
+                        addonAfter={
+                          preparedTrackingUrl ? (
+                            <Tooltip title="باز کردن مستقیم سایت شرکت پستی">
+                              <a href={preparedTrackingUrl} target="_blank" rel="noopener noreferrer" aria-label="باز کردن مستقیم لینک رهگیری">
+                                <LinkOutlined />
+                              </a>
+                            </Tooltip>
+                          ) : null
+                        }
                       />
                     </div>
 
@@ -801,6 +893,64 @@ marginBottom: 8,
           </Card>
         </Col>
       </Row>
+
+      <Modal
+        title="مدیریت شرکت‌های حمل‌ونقل"
+        open={isManageCouriersModalOpen}
+        onOk={handleSaveManagedCouriers}
+        onCancel={() => setIsManageCouriersModalOpen(false)}
+        confirmLoading={savingManagedCouriers}
+        okText="ذخیره تغییرات"
+        cancelText="انصراف"
+        width={760}
+      >
+        <Alert
+          type="info"
+          showIcon
+          message="ستاره را روی شرکت پیش‌فرض بزنید"
+          description="هنگام ثبت اطلاعات ارسال سفارش، شرکت پیش‌فرض به‌صورت خودکار انتخاب می‌شود. لینک می‌تواند شامل {{code}} باشد."
+          style={{ marginBottom: 16 }}
+        />
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          {managedCouriers.length === 0 && <Alert type="warning" message="شرکتی ثبت نشده است" />}
+          {managedCouriers.map((courier, index) => (
+            <div key={`${courier.name}-${index}`} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <Button
+                type="text"
+                aria-label={`انتخاب ${courier.name || 'شرکت'} به‌عنوان پیش‌فرض`}
+                icon={courier.isDefault ? <StarFilled style={{ color: '#faad14', fontSize: 20 }} /> : <StarOutlined style={{ fontSize: 20 }} />}
+                onClick={() => setManagedDefaultCourier(courier.name)}
+              />
+              <Input
+                value={courier.name}
+                placeholder="نام شرکت"
+                onChange={(e) => setManagedCouriers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, name: e.target.value } : item))}
+                style={{ flex: 1 }}
+              />
+              <Input
+                value={courier.trackingUrlTemplate || ''}
+                placeholder="https://...{{code}}"
+                dir="ltr"
+                onChange={(e) => setManagedCouriers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, trackingUrlTemplate: e.target.value } : item))}
+                style={{ flex: 2, fontFamily: 'monospace' }}
+              />
+              <Switch
+                checked={courier.isActive !== false}
+                checkedChildren="فعال"
+                unCheckedChildren="خاموش"
+                onChange={(checked) => setManagedCouriers((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, isActive: checked } : item))}
+              />
+              <Button
+                danger
+                type="text"
+                icon={<DeleteOutlined />}
+                aria-label={`حذف ${courier.name || 'شرکت'}`}
+                onClick={() => setManagedCouriers((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+              />
+            </div>
+          ))}
+        </Space>
+      </Modal>
 
       {/* Modal for adding any new Courier company on the fly (e.g. DekaPost) */}
       <Modal

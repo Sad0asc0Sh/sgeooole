@@ -51,7 +51,7 @@ exports.getPublicSettings = async (req, res) => {
         aparat: settings.socialLinks?.aparat || '',
       },
       shippingSettings: {
-        couriers: (settings.shippingSettings?.couriers && settings.shippingSettings.couriers.length > 0)
+        couriers: Array.isArray(settings.shippingSettings?.couriers)
           ? settings.shippingSettings.couriers
           : [
               { name: 'پست پیشتاز', trackingUrlTemplate: 'https://tracking.post.ir/?id={{code}}', isActive: true },
@@ -283,8 +283,21 @@ exports.updateSettings = async (req, res) => {
             name: String(courier?.name || '').trim(),
             trackingUrlTemplate: String(courier?.trackingUrlTemplate || '').trim(),
             isActive: courier?.isActive !== false,
+            isDefault: courier?.isDefault === true,
           }))
           .filter((courier) => courier.name)
+
+        // Persist exactly one default courier. Existing data without a
+        // default remains backward-compatible by selecting the first active one.
+        let defaultAssigned = false
+        couriers.forEach((courier) => {
+          courier.isDefault = courier.isDefault && !defaultAssigned
+          if (courier.isDefault) defaultAssigned = true
+        })
+        if (!defaultAssigned && couriers.length > 0) {
+          const fallback = couriers.find((courier) => courier.isActive) || couriers[0]
+          fallback.isDefault = true
+        }
 
         settings.shippingSettings = {
           ...currentShippingSettings,
