@@ -28,6 +28,24 @@ export default function SettingsPage() {
         try {
             setSaving(true);
             setSaveSuccess(false);
+
+            // The backend requires both courier name and tracking URL template.
+            // Validate before sending so a newly added, unfinished row cannot
+            // cause a Mongoose validation error for the whole settings document.
+            const couriers = (settings.shippingSettings?.couriers || []).map((courier: any) => ({
+                name: String(courier.name || '').trim(),
+                trackingUrlTemplate: String(courier.trackingUrlTemplate || '').trim(),
+                isActive: courier.isActive !== false,
+            }));
+            const invalidCourierIndex = couriers.findIndex(
+                (courier: any) => !courier.name || !courier.trackingUrlTemplate,
+            );
+
+            if (invalidCourierIndex !== -1) {
+                alert(`لطفاً نام و الگوی URL رهگیری شرکت پستی ردیف ${invalidCourierIndex + 1} را کامل کنید`);
+                return;
+            }
+
             const payload = {
                 storeName: settings.storeName || '',
                 storeEmail: settings.storeEmail || '',
@@ -39,14 +57,15 @@ export default function SettingsPage() {
                     maxTokens: Number(settings.aiConfig?.maxTokens || 500),
                 },
                 ...(settings.cartSettings ? { cartSettings: settings.cartSettings } : {}),
+                shippingSettings: { couriers },
             };
             await api.put("/settings", payload);
             window.dispatchEvent(new Event("settings:updated"));
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 3000);
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            alert("خطا در ذخیره تنظیمات");
+            alert(err?.response?.data?.message || "خطا در ذخیره تنظیمات");
         } finally {
             setSaving(false);
         }
@@ -376,7 +395,7 @@ export default function SettingsPage() {
                                     <label className="block text-xs font-bold text-gray-500 mb-1">نام شرکت پیک</label>
                                     <input
                                         type="text"
-                                        value={courier.name}
+                                        value={courier.name || ''}
                                         onChange={(e) => {
                                             const updated = [...(settings.shippingSettings?.couriers || [])];
                                             updated[idx] = { ...updated[idx], name: e.target.value };
@@ -390,7 +409,7 @@ export default function SettingsPage() {
                                     <label className="block text-xs font-bold text-gray-500 mb-1">الگوی URL رهگیری</label>
                                     <input
                                         type="text"
-                                        value={courier.trackingUrlTemplate}
+                                        value={courier.trackingUrlTemplate || ''}
                                         onChange={(e) => {
                                             const updated = [...(settings.shippingSettings?.couriers || [])];
                                             updated[idx] = { ...updated[idx], trackingUrlTemplate: e.target.value };
