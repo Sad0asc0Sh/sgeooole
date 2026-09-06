@@ -17,7 +17,7 @@ export default function CategoriesSheet({ isOpen, onClose }: CategoriesSheetProp
                     animate={{ x: 0 }}
                     exit={{ x: "100%" }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                    className="fixed inset-0 z-[10001] bg-white flex flex-col pb-16"
+                    className="fixed inset-0 z-bottom-sheet bg-white flex flex-col pb-[var(--bottom-nav-total-height)]"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-100">

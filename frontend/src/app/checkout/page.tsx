@@ -1074,7 +1074,7 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* Mobile Sticky Submit Button (Hidden on Desktop) */}
-                <div className="lg:hidden fixed bottom-[65px] left-0 w-full bg-white border-t border-gray-200 p-4 z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+                <div className="lg:hidden fixed bottom-nav-offset left-0 w-full bg-white border-t border-gray-200 p-4 z-40 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
                     <button
                         onClick={handlePlaceOrder}
                         disabled={isSubmitting || !selectedAddressId}

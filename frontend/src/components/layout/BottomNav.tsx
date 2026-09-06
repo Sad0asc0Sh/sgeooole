@@ -47,8 +47,8 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
 
     return (
         <>
-            <nav className={`md:hidden fixed bottom-0 w-full bg-white border-t border-ekg-200 pb-safe-area z-[10002] transition-transform duration-300 ease-in-out ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
-                <div className="flex justify-between items-center px-4 h-16">
+            <nav className={`md:hidden fixed bottom-0 w-full bg-white border-t border-ekg-200 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
+                <div className="flex justify-between items-center px-4 h-[var(--bottom-nav-height)]">
                     {navItems.map((item) => {
                         const isCat = item.href === "/categories";
                         const isHome = item.href === "/";

@@ -35,7 +35,7 @@ const branches = [
     {
         id: 1,
         name: "شعبه ۱",
-        address: "بلوار پیروزی نبش پیروزی ۷۸ (کنار املاک) پلاک 78",
+        address: "پیروزی 75 بین ولایتی 9و11",
         phones: ["05135021720"],
         color: "from-kala-500 to-blue-600",
         bgColor: "from-kala-50 to-blue-50",

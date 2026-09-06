@@ -445,7 +445,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     </div>
 
                     {/* 3. Footer Input (Static Flex Item) */}
-                    <div className="shrink-0 w-full p-4 pb-19 bg-white border-t border-gray-100 z-40">
+                    <div className="shrink-0 w-full p-4 pb-[calc(var(--bottom-nav-total-height)_+_0.75rem)] bg-white border-t border-gray-100 z-40">
                         <div className="flex items-end gap-2 bg-white p-2 pr-4 rounded-[1.5rem] border border-gray-200 shadow-sm focus-within:border-kala-400 focus-within:ring-1 focus-within:ring-kala-200 transition-all">
                             <textarea
                                 ref={textareaRef}

@@ -1039,7 +1039,7 @@ function ProductListingContent() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10003] lg:hidden"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-bottom-backdrop lg:hidden"
                   onClick={() => setShowFilters(false)}
                 />
                 {/* Full-height Sheet Modal */}
@@ -1048,7 +1048,7 @@ function ProductListingContent() {
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 top-12 sm:top-16 z-[10004] lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
+                  className="fixed inset-x-0 bottom-0 top-12 sm:top-16 z-bottom-drawer lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
                 >
                   {/* Drag Handle */}
                   <div className="flex justify-center pt-3 pb-1">
@@ -1288,7 +1288,7 @@ function ProductListingContent() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10003]"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-bottom-backdrop"
               onClick={() => setShowSortSheet(false)}
             />
             <motion.div
@@ -1296,7 +1296,7 @@ function ProductListingContent() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-[10004] shadow-2xl overflow-hidden overscroll-contain"
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-bottom-drawer shadow-2xl overflow-hidden overscroll-contain"
             >
               {/* Drag Handle */}
               <div className="flex justify-center pt-3 pb-1">

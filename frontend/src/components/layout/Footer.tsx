@@ -364,7 +364,7 @@ function Footer() {
             {showBackToTop && (
                 <button
                     onClick={scrollToTop}
-                    className="fixed bottom-20 left-4 lg:bottom-8 lg:left-8 z-50 w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center"
+                    className="fixed bottom-[calc(var(--bottom-nav-total-height)_+_1rem)] left-4 lg:bottom-8 lg:left-8 z-50 w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center"
                     aria-label="بازگشت به بالا"
                 >
                     <ChevronUp size={20} />

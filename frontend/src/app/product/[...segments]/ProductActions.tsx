@@ -199,7 +199,7 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
 
     // Mobile fixed bottom bar layout (default)
     return (
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 pb-[calc(1rem_+_var(--safe-area-bottom))] z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
             <div className="flex flex-col">
                 {/* Show old price and discount badge only when there's an active promotion */}
                 {product.oldPrice && hasActivePromotion && (

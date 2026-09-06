@@ -214,7 +214,7 @@ export default function CartPage() {
             </div>
 
             {/* Mobile Sticky Checkout Footer (Fixed ABOVE Bottom Nav, Hidden on Desktop) */}
-            <div className="lg:hidden fixed bottom-[65px] left-0 w-full bg-white border-t border-gray-200 p-4 z-40 flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
+            <div className="lg:hidden fixed bottom-nav-offset left-0 w-full bg-white border-t border-gray-200 p-4 z-40 flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
                 {/* Total Price Section */}
                 <div className="flex flex-col items-start">
                     <span className="text-[10px] text-gray-500">مبلغ قابل پرداخت</span>

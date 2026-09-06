@@ -67,7 +67,7 @@
         </div>
 
         {/* Sticky action bar placeholder */}
-        <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 p-3">
+        <div className="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-100 p-3 pb-[calc(0.75rem_+_var(--safe-area-bottom))]">
           <div className="h-11 rounded-xl bg-gray-200 animate-pulse" />
         </div>
       </div>

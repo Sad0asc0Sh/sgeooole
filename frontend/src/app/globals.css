@@ -87,6 +87,60 @@
   @apply w-full px-4 mx-auto max-w-md overflow-x-hidden;
 }
 
+/* ---------- Bottom navigation layout contract ----------
+   Single source of truth for the mobile BottomNav geometry, safe-area
+   handling and the bottom stacking order. Components must reference these
+   tokens instead of hardcoding px values (e.g. bottom-[65px], pb-16, pb-19).
+
+   Safe-area note: env(safe-area-inset-bottom) evaluates to 0px today because
+   the app intentionally does NOT set viewport-fit=cover. Enabling cover also
+   activates the TOP inset and would require safe-area-top compensation in the
+   fixed/sticky headers (Header, ProductHeader, cart/checkout/tracking/...).
+   Do not enable it without auditing every top-anchored header. */
+:root {
+  /* Fixed content height of the BottomNav row (mirrored by BottomNav.tsx inner row). */
+  --bottom-nav-height: 4rem;
+  /* Real bottom safe-area inset; 0px on devices/browsers without one. */
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* Fully rendered height of the fixed BottomNav: content + 1px top border + inset. */
+  --bottom-nav-total-height: calc(var(--bottom-nav-height) + 1px + var(--safe-area-bottom));
+
+  /* Bottom-navigation stacking layers (ascending). */
+  --z-bottom-sheet: 10001; /* full-screen sheets the nav floats above (e.g. CategoriesSheet) */
+  --z-bottom-nav: 10002; /* BottomNav itself */
+  --z-bottom-backdrop: 10003; /* backdrops that intentionally cover the nav */
+  --z-bottom-drawer: 10004; /* drawers/sheets above that backdrop (e.g. products filters) */
+}
+
+/* Bottom safe-area padding — for the fixed bottom-0 BottomNav to respect the home indicator. */
+@utility pb-safe-area {
+  padding-bottom: var(--safe-area-bottom);
+}
+
+/* Content clearance for the scrollable page area beneath the fixed BottomNav. */
+@utility pb-nav-clearance {
+  padding-bottom: calc(var(--bottom-nav-total-height) + 4rem);
+}
+
+/* Anchors a fixed element directly on top of the BottomNav (cart/checkout summary bars). */
+@utility bottom-nav-offset {
+  bottom: var(--bottom-nav-total-height);
+}
+
+/* z-index utilities bound to the bottom-navigation layer stack. */
+@utility z-bottom-sheet {
+  z-index: var(--z-bottom-sheet);
+}
+@utility z-bottom-nav {
+  z-index: var(--z-bottom-nav);
+}
+@utility z-bottom-backdrop {
+  z-index: var(--z-bottom-backdrop);
+}
+@utility z-bottom-drawer {
+  z-index: var(--z-bottom-drawer);
+}
+
 /* --- HIDE SCROLLBARS GLOBALLY --- */
 @layer utilities {
   *::-webkit-scrollbar {
