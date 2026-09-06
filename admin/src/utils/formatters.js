@@ -11,6 +11,30 @@ export const formatCurrency = (value) => {
 }
 
 /**
+ * تبدیل ارقام فارسی و عربی به انگلیسی
+ * @param {string|number} value
+ * @returns {string}
+ */
+export const normalizeDigits = (value) => {
+  if (value == null) return ''
+  return String(value)
+    .replace(/[۰-۹]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1728))
+    .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1584))
+}
+
+/**
+ * پارس ورودی عددی با پشتیبانی از ارقام فارسی، کاما و فاصله
+ * @param {string|number} value
+ * @returns {string}
+ */
+export const parseNumericInput = (value) => {
+  if (value == null) return ''
+  return normalizeDigits(value)
+    .replace(/[\$\s,٬]/g, '')
+    .replace(/[^\d.-]/g, '')
+}
+
+/**
  * فرمت عدد با جداکننده هزارگان فارسی (بدون واحد)
  * @param {number|string} value
  * @returns {string}

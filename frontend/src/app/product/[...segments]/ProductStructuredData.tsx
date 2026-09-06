@@ -46,7 +46,7 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
         offers: {
             "@type": "Offer" as const,
             priceCurrency: "IRR",
-            price: relProd.price,
+            price: Math.round((relProd.price || 0) * 10),
             availability: relProd.countInStock > 0
                 ? "https://schema.org/InStock"
                 : "https://schema.org/OutOfStock",
@@ -68,7 +68,7 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
                 offers: {
                     "@type": "Offer",
                     priceCurrency: "IRR",
-                    price: product.price,
+                    price: Math.round((product.price || 0) * 10),
                     itemCondition: "https://schema.org/NewCondition",
                     availability: product.countInStock > 0
                         ? "https://schema.org/InStock"

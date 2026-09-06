@@ -11,6 +11,7 @@ import {
   message,
   Checkbox,
   Upload,
+  Radio,
 } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import {
@@ -74,6 +75,28 @@ const parseCsvText = (text = '') => {
   const matrix = []
   const parseErrors = []
 
+  // Auto-detect delimiter from the first non-empty line
+  const firstLine = text.split(/[\r\n]+/)[0] || ''
+  let commaCount = 0
+  let semiCount = 0
+  let tabCount = 0
+  let inQ = false
+  for (let i = 0; i < firstLine.length; i++) {
+    const c = firstLine[i]
+    if (c === '"') inQ = !inQ
+    if (!inQ) {
+      if (c === ',') commaCount++
+      else if (c === ';') semiCount++
+      else if (c === '\t') tabCount++
+    }
+  }
+  const delimiter =
+    semiCount > commaCount && semiCount >= tabCount
+      ? ';'
+      : tabCount > commaCount && tabCount > semiCount
+        ? '\t'
+        : ','
+
   let row = []
   let field = ''
   let inQuotes = false
@@ -97,7 +120,7 @@ const parseCsvText = (text = '') => {
 
     if (char === '"') {
       inQuotes = true
-    } else if (char === ',') {
+    } else if (char === delimiter) {
       row.push(field)
       field = ''
     } else if (char === '\n') {
@@ -212,6 +235,7 @@ function ProductsList({ mode }) {
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [importUpdateMode, setImportUpdateMode] = useState(false)
+  const [importCurrency, setImportCurrency] = useState('toman')
   const [timerModalVisible, setTimerModalVisible] = useState(false)
   const [specialOfferEndTime, setSpecialOfferEndTime] = useState('')
   const [flashTimerModalVisible, setFlashTimerModalVisible] = useState(false)
@@ -251,7 +275,7 @@ function ProductsList({ mode }) {
       params.set('sort', '-createdAt')
       params.set(
         'fields',
-        'name,sku,price,stock,isActive,images,_id,category,productType,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,discount',
+        'name,sku,price,stock,isActive,images,_id,category,productType,variants,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,discount',
       )
       // ✅ FIX: Get raw prices for admin panel (without discount calculation)
       params.set('skipDiscount', 'true')
@@ -429,10 +453,25 @@ function ProductsList({ mode }) {
       title: 'قیمت',
       dataIndex: 'price',
       key: 'price',
-      render: (price) =>
-        price != null
+      render: (price, record) => {
+        if (record.productType === 'variable') {
+          if (Array.isArray(record.variants) && record.variants.length > 0) {
+            const prices = record.variants.map((v) => Number(v.price) || 0).filter((p) => p > 0)
+            if (prices.length > 0) {
+              const minP = Math.min(...prices)
+              const maxP = Math.max(...prices)
+              if (minP === maxP) {
+                return `${new Intl.NumberFormat('fa-IR').format(minP)} تومان`
+              }
+              return `از ${new Intl.NumberFormat('fa-IR').format(minP)} تومان`
+            }
+          }
+          return <Tag color="blue">متغیر</Tag>
+        }
+        return price != null
           ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
-          : '-',
+          : '—'
+      },
     },
     {
       title: 'موجودی',
@@ -657,7 +696,7 @@ function ProductsList({ mode }) {
     }
   }
 
-  const importLargeCsvInChunks = async (file, updateMode = false) => {
+  const importLargeCsvInChunks = async (file, updateMode = false, currency = 'toman') => {
     const fileText = await file.text()
     const { headers, rows, parseErrors } = parseCsvText(fileText)
 
@@ -691,7 +730,9 @@ function ProductsList({ mode }) {
       let lastError = null
 
       for (let attempt = 1; attempt <= CSV_CHUNK_RETRY_COUNT; attempt++) {
-        const importUrl = updateMode ? '/products/import/csv?mode=update' : '/products/import/csv'
+        const importUrl = updateMode
+          ? `/products/import/csv?mode=update&currency=${currency}`
+          : `/products/import/csv?currency=${currency}`
         try {
           const chunkFormData = new FormData()
           chunkFormData.append(
@@ -737,30 +778,34 @@ function ProductsList({ mode }) {
       totalChunks: chunks.length,
     }
   }
-  // Upload props for CSV import
+  // Upload props for CSV & Excel import
   const uploadProps = {
     name: 'file',
     multiple: false,
-    accept: '.csv',
+    accept: '.csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel',
     showUploadList: false,
     customRequest: async ({ file, onSuccess, onError }) => {
       setUploading(true)
-      const shouldUseChunkImport = file.size > CSV_DIRECT_UPLOAD_LIMIT_BYTES
+      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls')
+      const shouldUseChunkImport = !isExcel && file.size > CSV_DIRECT_UPLOAD_LIMIT_BYTES
 
       const updateMode = importUpdateMode
+      const currency = importCurrency
 
       try {
         let data
 
         if (shouldUseChunkImport) {
-          data = await importLargeCsvInChunks(file, updateMode)
+          data = await importLargeCsvInChunks(file, updateMode, currency)
         } else {
           const formData = new FormData()
           formData.append('file', file)
 
-          const importUrl = updateMode ? '/products/import/csv?mode=update' : '/products/import/csv'
+          const importUrl = updateMode
+            ? `/products/import?mode=update&currency=${currency}`
+            : `/products/import?currency=${currency}`
           const response = await api.post(importUrl, formData, {
-            timeout: 600000, // 10 minutes timeout for large CSVs
+            timeout: 600000, // 10 minutes timeout for large files
             maxBodyLength: Infinity,
             maxContentLength: Infinity,
           })
@@ -1260,47 +1305,64 @@ function ProductsList({ mode }) {
 
       {/* Import Modal */}
       <Modal
-        title={importUpdateMode ? 'به‌روزرسانی محصولات از CSV' : 'درون‌ریزی محصولات از CSV'}
+        title={importUpdateMode ? 'به‌روزرسانی محصولات از فایل (CSV / Excel)' : 'درون‌ریزی محصولات از فایل (CSV / Excel)'}
         open={importModalVisible}
         onCancel={() => { setImportModalVisible(false); setImportUpdateMode(false) }}
         footer={null}
-        width={600}
+        width={650}
       >
+        {/* Currency Selection Box */}
+        <div style={{ marginBottom: 16, padding: 12, background: importCurrency === 'rial' ? '#fffbe6' : '#f6ffed', border: `1px solid ${importCurrency === 'rial' ? '#ffe58f' : '#b7eb8f'}`, borderRadius: 8 }}>
+          <div style={{ fontWeight: 'bold', marginBottom: 8, color: importCurrency === 'rial' ? '#874d00' : '#135200' }}>
+            واحد قیمت در فایل ورودی:
+          </div>
+          <Radio.Group
+            value={importCurrency}
+            onChange={(e) => setImportCurrency(e.target.value)}
+            buttonStyle="solid"
+          >
+            <Radio.Button value="toman">تومان (پیش‌فرض فروشگاه)</Radio.Button>
+            <Radio.Button value="rial">ریال (تبدیل خودکار به تومان با حذف صفر)</Radio.Button>
+          </Radio.Group>
+          <div style={{ marginTop: 8, fontSize: '0.85em', color: importCurrency === 'rial' ? '#d46b08' : '#389e0d' }}>
+            {importCurrency === 'rial'
+              ? '⚠️ توجه: قیمت‌ها از فایل بر حسب ریال خوانده شده و با تقسیم بر ۱۰، به تومان در سیستم ثبت می‌شوند (مناسب فایل‌های خروجی سپیدار، هلو و فاکتورهای رسمی پخش‌کنندگان).'
+              : 'قیمت‌های فایل مستقیماً به عنوان تومان در سیستم ذخیره می‌شوند.'}
+          </div>
+        </div>
+
         <div style={{ marginBottom: 16 }}>
           {importUpdateMode ? (
             <>
               <p>
-                فایل CSV خود را آپلود کنید. محصولات موجود بر اساس <strong>SKU</strong> یا <strong>کد محصول (productCode)</strong> شناسایی و به‌روزرسانی می‌شوند.
+                فایل <strong>CSV</strong> یا <strong>Excel (.xlsx)</strong> خود را آپلود کنید. محصولات موجود بر اساس <strong>SKU</strong> یا <strong>کد محصول (productCode)</strong> شناسایی و به‌روزرسانی می‌شوند.
               </p>
               <p style={{ fontSize: '0.9em', color: '#666', marginTop: 8 }}>
-                ✅ تصاویر و سایر اطلاعات حفظ می‌شوند — فقط فیلدهای موجود در CSV به‌روز می‌شوند.
+                ✅ تصاویر و سایر اطلاعات حفظ می‌شوند — فقط فیلدهای موجود در فایل به‌روز می‌شوند.
               </p>
               <p style={{ fontSize: '0.9em', color: '#666' }}>
                 ✅ اگر محصولی با SKU/کد محصول یافت نشود، به عنوان محصول جدید ایجاد می‌شود.
               </p>
+              <p style={{ fontSize: '0.9em', color: '#1890ff' }}>
+                💡 از هر دو هدر فارسی (نام محصول، قیمت، موجودی، ...) یا انگلیسی (name, price, stock, ...) می‌توانید استفاده کنید.
+              </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
                 name,sku,productCode,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
               </code>
-              <p style={{ fontSize: '0.85em', color: '#666', marginTop: 8 }}>
-                ستون <strong>imageUrls</strong> را با URL کامل تصاویر ابری پر کنید (برای چند تصویر از جداکننده <code>;</code> استفاده کنید).
-              </p>
-              <p style={{ fontSize: '0.85em', color: '#999' }}>
-                نکته: ابتدا فایل CSV را از «برون‌ریزی CSV» دانلود کنید، تغییرات لازم را اعمال کرده و مجدداً آپلود کنید.
-              </p>
             </>
           ) : (
             <>
               <p>
-                فایل CSV خود را با فرمت زیر آماده کنید:
+                فایل <strong>CSV</strong> یا <strong>Excel (.xlsx)</strong> خود را با فرمت ستون‌های زیر آماده کنید:
+              </p>
+              <p style={{ fontSize: '0.9em', color: '#1890ff' }}>
+                💡 هم هدرهای فارسی (نام محصول، قیمت، موجودی، دسته‌بندی، برند، ...) و هم هدرهای انگلیسی پشتیبانی می‌شوند.
               </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
                 name,sku,productType,price,compareAtPrice,stock,category,brand,description,isActive,isFeatured,imageUrls
               </code>
               <p style={{ fontSize: '0.9em', color: '#666' }}>
-                نکته: نام دسته‌بندی و برند باید دقیقاً با نام موجود در سیستم مطابقت داشته باشد.
-              </p>
-              <p style={{ fontSize: '0.9em', color: '#666' }}>
-                برای بازیابی تصاویر، ستون <strong>imageUrls</strong> را با لینک کامل تصاویر ابری تکمیل کنید (چند لینک را با <code>;</code> جدا کنید).
+                نکته: نام دسته‌بندی و برند با انعطاف‌پذیری کاراکترهای فارسی با سیستم مطابقت داده می‌شوند.
               </p>
             </>
           )}
@@ -1311,10 +1373,10 @@ function ProductsList({ mode }) {
             <InboxOutlined />
           </p>
           <p className="ant-upload-text">
-            فایل CSV را اینجا بکشید یا کلیک کنید
+            فایل CSV یا Excel (.xlsx) را اینجا بکشید یا کلیک کنید
           </p>
           <p className="ant-upload-hint">
-            فقط فایل‌های با پسوند .csv پذیرفته می‌شوند
+            پشتیبانی کامل از فایل‌های .csv و .xlsx اکسل با جداکننده‌های کاما و نقطه ویرگول (;)
           </p>
         </Dragger>
       </Modal>

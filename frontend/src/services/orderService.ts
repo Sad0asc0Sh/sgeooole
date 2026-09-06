@@ -29,6 +29,7 @@ export interface OrderItem {
   image: string;
   price: number;
   product: string;
+  variantOptions?: { name: string; value: string }[];
 }
 
 /**

@@ -101,10 +101,10 @@ function FlashOfferRail() {
           {activeFlashDeals.map((product, index) => {
             // All products here have active countdowns (filtered by activeFlashDeals)
             // Only need to check special offer countdown for price display logic
-            const isSpecialOfferCountdownActive = Boolean(
-              product.isSpecialOffer &&
-              product.specialOfferEndTime &&
-              new Date(product.specialOfferEndTime).getTime() > now
+            const isFlashDealCountdownActive = Boolean(
+              product.isFlashDeal &&
+              product.flashDealEndTime &&
+              new Date(product.flashDealEndTime).getTime() > now
             );
 
             // Flash deals in this section always have discount applied (they're active)
@@ -113,7 +113,7 @@ function FlashOfferRail() {
             const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
 
             const displayPrice =
-              (!isSpecialOfferCountdownActive && product.isSpecialOffer && product.oldPrice)
+              (!isFlashDealCountdownActive && product.isFlashDeal && product.oldPrice)
                 ? product.oldPrice
                 : product.price;
 

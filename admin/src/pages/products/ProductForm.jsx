@@ -28,6 +28,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
 import { createBlobPreview, optimizeImageFile } from '../../utils/imageOptimizer'
+import { parseNumericInput } from '../../utils/formatters'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const modules = {
@@ -258,7 +259,7 @@ function ProductForm() {
     }
 
     const values = newAttributeValues
-      .split(',')
+      .split(/[,،]/)
       .map((v) => v.trim())
       .filter(Boolean)
 
@@ -281,7 +282,7 @@ function ProductForm() {
   }
 
   // ============================================
-  // تولید خودکار متغیرها از ویژگی‌ها
+  // تولید خودکار متغیرها از ویژگی‌ها با حفظ قیمت و موجودی قبلی
   // ============================================
   const generateVariants = () => {
     if (attributes.length === 0) {
@@ -306,15 +307,27 @@ function ProductForm() {
       [[]],
     )
 
-    // ساخت متغیرها
-    const newVariants = combinations.map((options, index) => ({
-      _id: `variant-${Date.now()}-${index}`,
-      sku: '',
-      price: 0,
-      stock: 0,
-      options,
-      images: [],
-    }))
+    // ساخت متغیرها با حفظ قیمت و موجودی متغیرهای از قبل موجود
+    const newVariants = combinations.map((options, index) => {
+      const existing = variants.find((oldV) =>
+        Array.isArray(oldV.options) &&
+        oldV.options.length === options.length &&
+        oldV.options.every((oldOpt) =>
+          options.some(
+            (opt) => opt.name === oldOpt.name && opt.value === oldOpt.value,
+          ),
+        ),
+      )
+
+      return {
+        _id: existing?._id || `variant-${Date.now()}-${index}`,
+        sku: existing?.sku || '',
+        price: existing?.price || 0,
+        stock: existing?.stock || 0,
+        options,
+        images: existing?.images || [],
+      }
+    })
 
     setVariants(newVariants)
     message.success(`${newVariants.length} متغیر ایجاد شد`)
@@ -369,6 +382,8 @@ function ProductForm() {
           }
           min={0}
           style={{ width: '100%' }}
+          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+          parser={parseNumericInput}
         />
       ),
     },
@@ -385,6 +400,7 @@ function ProductForm() {
           }
           min={0}
           style={{ width: '100%' }}
+          parser={parseNumericInput}
         />
       ),
     },
@@ -604,7 +620,7 @@ function ProductForm() {
         // Include uploaded images directly in payload
         payload.images = uploadedImages
 
-        const res = await api.post('/v1/admin/products', payload)
+        const res = await api.post('/products', payload)
         const newId = res?.data?.data?._id
 
         message.success({ content: 'محصول با موفقیت ایجاد شد', key: 'save' })
@@ -793,7 +809,7 @@ function ProductForm() {
                             formatter={(value) =>
                               `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                             }
-                            parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                            parser={parseNumericInput}
                           />
                         </Form.Item>
 
@@ -811,6 +827,7 @@ function ProductForm() {
                             style={{ width: '100%' }}
                             min={0}
                             step={1}
+                            parser={parseNumericInput}
                           />
                         </Form.Item>
                       </>
@@ -973,6 +990,7 @@ function ProductForm() {
                           max={100}
                           style={{ width: '200px' }}
                           placeholder="مثلاً: 20"
+                          parser={parseNumericInput}
                         />
                         <p style={{ marginTop: 8, color: '#888', fontSize: '13px' }}>
                           این تخفیف روی کارت محصول نمایش داده می‌شود

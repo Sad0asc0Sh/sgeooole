@@ -577,6 +577,7 @@ export default function CheckoutPage() {
                 quantity: item.qty,
                 image: item.image,
                 price: item.price,
+                variantOptions: item.variantOptions,
             }));
 
             const shippingAddress: ShippingAddress = {

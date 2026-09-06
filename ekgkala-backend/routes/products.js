@@ -102,13 +102,15 @@ const csvUpload = multer({
       'application/csv',
       'text/plain',
       'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/octet-stream',
     ])
 
-    if (allowedMimeTypes.has(file.mimetype) || path.extname(file.originalname).toLowerCase() === '.csv') {
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (allowedMimeTypes.has(file.mimetype) || ext === '.csv' || ext === '.xlsx' || ext === '.xls') {
       cb(null, true)
     } else {
-      cb(new Error('فقط فایل‌های CSV مجاز هستند'))
+      cb(new Error('فقط فایل‌های CSV و Excel (.xlsx) مجاز هستند'))
     }
   },
 })
@@ -134,14 +136,88 @@ const normalizeDigits = (value) => {
     .replace(/[٠-٩]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 1584))
 }
 
-const parseCsvNumber = (value, fallback = 0) => {
+const normalizePersianText = (value) => {
+  if (value == null) return ''
+  return String(value)
+    .replace(/[​‌‍﻿]/g, ' ')
+    .replace(/[ي]/g, 'ی')
+    .replace(/[ك]/g, 'ک')
+    .replace(/[ة]/g, 'ه')
+    .replace(/[آأإ]/g, 'ا')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+}
+
+const parseCsvNumber = (value, fallback = 0, currency = 'toman') => {
   if (value === undefined || value === null || value === '') return fallback
-  const normalized = normalizeDigits(value)
-    .replace(/,/g, '')
-    .replace(/[^\d.-]/g, '')
-  if (!normalized) return fallback
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : fallback
+  let str = normalizeDigits(value).trim()
+
+  // Remove currency words and symbols
+  str = str.replace(/(تومان|ریال|ت|ر|IRR|TOMAN|IR[RT])/gi, '').trim()
+
+  // Remove spaces and invisible characters
+  str = str.replace(/[\s ​‌﻿]/g, '')
+
+  // Replace Persian/Arabic momayyez (٫) with dot
+  str = str.replace(/٫/g, '.')
+  // Remove Arabic thousands separator (٬)
+  str = str.replace(/٬/g, '')
+
+  // Check if both comma and dot exist
+  const hasComma = str.includes(',')
+  const hasDot = str.includes('.')
+
+  if (hasComma && hasDot) {
+    const firstComma = str.indexOf(',')
+    const firstDot = str.indexOf('.')
+    if (firstComma < firstDot) {
+      // 1,234,567.89 -> comma is thousands separator, dot is decimal
+      str = str.replace(/,/g, '')
+    } else {
+      // 1.234.567,89 -> dot is thousands separator, comma is decimal
+      str = str.replace(/\./g, '').replace(/,/g, '.')
+    }
+  } else if (hasDot) {
+    // If multiple dots (e.g. 1.100.000 or 11.000.000) -> all are thousands separators
+    const dotCount = (str.match(/\./g) || []).length
+    if (dotCount > 1) {
+      str = str.replace(/\./g, '')
+    } else {
+      // Single dot: e.g. 100.000 (with 3 digits after) or 10.5 (decimal)
+      const parts = str.split('.')
+      if (parts[1] && parts[1].length === 3 && parts[0].length >= 1) {
+        str = parts[0] + parts[1]
+      }
+    }
+  } else if (hasComma) {
+    // Commas only: e.g. 1,100,000 or 1,5
+    const commaCount = (str.match(/,/g) || []).length
+    if (commaCount > 1) {
+      str = str.replace(/,/g, '')
+    } else {
+      const parts = str.split(',')
+      if (parts[1] && parts[1].length === 3 && parts[0].length >= 1) {
+        str = parts[0] + parts[1]
+      } else if (parts[1] && parts[1].length <= 2) {
+        str = parts[0] + '.' + parts[1]
+      } else {
+        str = str.replace(/,/g, '')
+      }
+    }
+  }
+
+  const cleaned = str.replace(/[^\d.-]/g, '')
+  if (!cleaned) return fallback
+  let parsed = Number(cleaned)
+  if (!Number.isFinite(parsed)) return fallback
+
+  // Convert Rial to Toman if currency is Rial (e.g. 11,000,000 Rials -> 1,100,000 Tomans)
+  if (currency === 'rial' || currency === 'irr') {
+    parsed = Math.round(parsed / 10)
+  }
+
+  return parsed
 }
 
 const parseCsvBoolean = (value) => {
@@ -229,11 +305,45 @@ const getCsvImageSourceValue = (row = {}) =>
   row.imageURLs ??
   row.ImageUrls
 
+const detectCsvDelimiter = (filePath) => {
+  try {
+    const fd = fs.openSync(filePath, 'r')
+    const buffer = Buffer.alloc(4096)
+    const bytesRead = fs.readSync(fd, buffer, 0, 4096, 0)
+    fs.closeSync(fd)
+    const sample = buffer.toString('utf8', 0, bytesRead)
+
+    const firstLine = sample.split(/[\r\n]+/)[0] || ''
+    let commaCount = 0
+    let semiCount = 0
+    let tabCount = 0
+    let inQuote = false
+
+    for (let i = 0; i < firstLine.length; i++) {
+      const char = firstLine[i]
+      if (char === '"') inQuote = !inQuote
+      if (!inQuote) {
+        if (char === ',') commaCount++
+        else if (char === ';') semiCount++
+        else if (char === '\t') tabCount++
+      }
+    }
+
+    if (semiCount > commaCount && semiCount >= tabCount) return ';'
+    if (tabCount > commaCount && tabCount > semiCount) return '\t'
+    return ','
+  } catch (_) {
+    return ','
+  }
+}
+
 const parseCsvFile = (filePath) => new Promise((resolve, reject) => {
   const rows = []
+  const delimiter = detectCsvDelimiter(filePath)
 
   fs.createReadStream(filePath)
     .pipe(csv({
+      separator: delimiter,
       mapHeaders: ({ header }) => (header || '').replace(/\uFEFF/g, '').trim(),
       mapValues: ({ value }) => (typeof value === 'string' ? value.trim() : value),
     }))
@@ -241,6 +351,135 @@ const parseCsvFile = (filePath) => new Promise((resolve, reject) => {
     .on('end', () => resolve(rows))
     .on('error', reject)
 })
+
+const parseExcelFile = async (filePath) => {
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.readFile(filePath)
+  const worksheet = workbook.worksheets[0]
+  if (!worksheet) return []
+
+  const rows = []
+  let headers = []
+
+  worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const values = Array.isArray(row.values) ? row.values.slice(1) : []
+    if (rowNumber === 1) {
+      headers = values.map((val) => {
+        if (val == null) return ''
+        if (typeof val === 'object' && val.richText) {
+          return val.richText.map((t) => t.text).join('').trim()
+        }
+        if (typeof val === 'object' && val.text) return String(val.text).trim()
+        return String(val).replace(/\uFEFF/g, '').trim()
+      })
+    } else {
+      const rowObject = {}
+      let hasAnyValue = false
+      headers.forEach((header, idx) => {
+        if (!header) return
+        let val = values[idx]
+        if (val != null) {
+          if (typeof val === 'object' && val.result !== undefined) {
+            val = val.result
+          } else if (typeof val === 'object' && val.richText) {
+            val = val.richText.map((t) => t.text).join('')
+          } else if (typeof val === 'object' && val.text) {
+            val = val.text
+          }
+          const strVal = String(val).trim()
+          if (strVal !== '') {
+            hasAnyValue = true
+            rowObject[header] = strVal
+          }
+        }
+      })
+      if (hasAnyValue) {
+        rows.push(rowObject)
+      }
+    }
+  })
+
+  return rows
+}
+
+const parseImportFile = async (filePath, originalName) => {
+  const ext = path.extname(originalName || filePath).toLowerCase()
+  if (ext === '.xlsx' || ext === '.xls') {
+    return await parseExcelFile(filePath)
+  }
+  return await parseCsvFile(filePath)
+}
+
+const HEADER_ALIASES = {
+  name: ['name', 'title', '\u0646\u0627\u0645 \u0645\u062D\u0635\u0648\u0644', '\u0646\u0627\u0645 \u06A9\u0627\u0644\u0627', '\u0646\u0627\u0645', '\u0639\u0646\u0648\u0627\u0646', '\u0639\u0646\u0648\u0627\u0646 \u06A9\u0627\u0644\u0627'],
+  sku: ['sku', '\u06A9\u062F \u06A9\u0627\u0644\u0627', '\u06A9\u062F \u0627\u0646\u0628\u0627\u0631', '\u0628\u0627\u0631\u06A9\u062F', '\u0634\u0646\u0627\u0633\u0647', '\u0634\u0646\u0627\u0633\u0647 \u06A9\u0627\u0644\u0627', '\u0634\u0646\u0627\u0633\u0647 \u0627\u0646\u0628\u0627\u0631'],
+  productCode: ['productcode', 'product_code', '\u06A9\u062F \u0645\u062D\u0635\u0648\u0644', '\u0634\u0646\u0627\u0633\u0647 \u0645\u062D\u0635\u0648\u0644'],
+  productType: ['producttype', 'product_type', 'type', '\u0646\u0648\u0639 \u0645\u062D\u0635\u0648\u0644', '\u0646\u0648\u0639'],
+  price: ['price', '\u0642\u06CC\u0645\u062A', '\u0642\u06CC\u0645\u062A \u0641\u0631\u0648\u0634', '\u0645\u0628\u0644\u063A', '\u0645\u0628\u0644\u063A \u0641\u0631\u0648\u0634', '\u0646\u0631\u062E', '\u0646\u0631\u062E \u0641\u0631\u0648\u0634', '\u0642\u06CC\u0645\u062A (\u062A\u0648\u0645\u0627\u0646)', '\u0642\u06CC\u0645\u062A_\u062A\u0648\u0645\u0627\u0646', '\u0642\u06CC\u0645\u062A \u0628\u0647 \u062A\u0648\u0645\u0627\u0646', '\u0642\u06CC\u0645\u062A \u062A\u0648\u0645\u0627\u0646'],
+  priceRial: ['price_rial', 'price_irr', '\u0642\u06CC\u0645\u062A (\u0631\u06CC\u0627\u0644)', '\u0642\u06CC\u0645\u062A_\u0631\u06CC\u0627\u0644', '\u0642\u06CC\u0645\u062A \u0628\u0647 \u0631\u06CC\u0627\u0644', '\u0642\u06CC\u0645\u062A \u0631\u06CC\u0627\u0644', '\u0645\u0628\u0644\u063A (\u0631\u06CC\u0627\u0644)', '\u0645\u0628\u0644\u063A_\u0631\u06CC\u0627\u0644', '\u0646\u0631\u062E \u0631\u06CC\u0627\u0644', '\u0642\u06CC\u0645\u062A \u0631\u06CC\u0627\u0644\u06CC'],
+  compareAtPrice: ['compareatprice', 'compare_at_price', 'regular_price', 'oldprice', '\u0642\u06CC\u0645\u062A \u0645\u0642\u0627\u06CC\u0633\u0647', '\u0642\u06CC\u0645\u062A \u0642\u0628\u0644 \u0627\u0632 \u062A\u062E\u0641\u06CC\u0641', '\u0642\u06CC\u0645\u062A \u062E\u0637 \u062E\u0648\u0631\u062F\u0647', '\u0642\u06CC\u0645\u062A \u0627\u0635\u0644\u06CC', '\u0642\u06CC\u0645\u062A \u0645\u0635\u0631\u0641 \u06A9\u0646\u0646\u062F\u0647', '\u0642\u06CC\u0645\u062A \u0642\u0628\u0644 \u062A\u062E\u0641\u06CC\u0641'],
+  compareAtPriceRial: ['compareatprice_rial', 'compare_at_price_rial', '\u0642\u06CC\u0645\u062A \u0645\u0642\u0627\u06CC\u0633\u0647 (\u0631\u06CC\u0627\u0644)', '\u0642\u06CC\u0645\u062A \u0642\u0628\u0644 \u0627\u0632 \u062A\u062E\u0641\u06CC\u0641 (\u0631\u06CC\u0627\u0644)'],
+  stock: ['stock', 'quantity', 'qty', 'count', '\u0645\u0648\u062C\u0648\u062F\u06CC', '\u062A\u0639\u062F\u0627\u062F', '\u0645\u0648\u062C\u0648\u062F\u06CC \u0627\u0646\u0628\u0627\u0631', '\u062A\u0639\u062F\u0627\u062F \u0645\u0648\u062C\u0648\u062F', '\u0645\u0648\u062C\u0648\u062F\u06CC \u06A9\u0627\u0644\u0627'],
+  category: ['category', '\u062F\u0633\u062A\u0647\u200C\u0628\u0646\u062F\u06CC', '\u062F\u0633\u062A\u0647 \u0628\u0646\u062F\u06CC', '\u062F\u0633\u062A\u0647', '\u06AF\u0631\u0648\u0647 \u06A9\u0627\u0644\u0627', '\u06AF\u0631\u0648\u0647'],
+  brand: ['brand', '\u0628\u0631\u0646\u062F', '\u0633\u0627\u0632\u0646\u062F\u0647', '\u0634\u0631\u06A9\u062A \u0633\u0627\u0632\u0646\u062F\u0647', '\u0645\u0627\u0631\u06A9'],
+  description: ['description', 'desc', '\u062A\u0648\u0636\u06CC\u062D\u0627\u062A', '\u062A\u0648\u0636\u06CC\u062D\u0627\u062A \u0645\u062D\u0635\u0648\u0644', '\u0634\u0631\u062D', '\u0634\u0631\u062D \u06A9\u0627\u0644\u0627', '\u062A\u0648\u0636\u06CC\u062D'],
+  isActive: ['isactive', 'is_active', 'active', 'status', '\u0648\u0636\u0639\u06CC\u062A', '\u0641\u0639\u0627\u0644', '\u0648\u0636\u0639\u06CC\u062A \u0641\u0639\u0627\u0644'],
+  isFeatured: ['isfeatured', 'is_featured', 'featured', '\u0648\u06CC\u0698\u0647', '\u0645\u062D\u0635\u0648\u0644 \u0648\u06CC\u0698\u0647', '\u067E\u06CC\u0634\u0646\u0647\u0627\u062F \u0648\u06CC\u0698\u0647'],
+  imageUrls: ['imageurls', 'image_urls', 'images', 'imageurl', 'image_url', '\u062A\u0635\u0627\u0648\u06CC\u0631', '\u062A\u0635\u0648\u06CC\u0631', '\u0639\u06A9\u0633', '\u0644\u06CC\u0646\u06A9 \u062A\u0635\u0648\u06CC\u0631', '\u0644\u06CC\u0646\u06A9 \u0639\u06A9\u0633'],
+}
+
+const normalizeImportRow = (rawRow = {}, globalCurrency = 'toman') => {
+  const normalized = {}
+  const rawKeys = Object.keys(rawRow)
+
+  for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
+    for (const key of rawKeys) {
+      const cleanKey = String(key || '').trim().toLowerCase().replace(/[\s_\-]+/g, '')
+      const matched = aliases.some((alias) => {
+        const cleanAlias = alias.toLowerCase().replace(/[\s_\-]+/g, '')
+        return cleanKey === cleanAlias || key.trim() === alias
+      })
+      if (matched && rawRow[key] !== undefined && rawRow[key] !== '') {
+        normalized[field] = rawRow[key]
+        break
+      }
+    }
+  }
+
+  let rawPriceVal = normalized.price
+  let rowCurrency = globalCurrency
+
+  if (normalized.priceRial !== undefined && normalized.priceRial !== '') {
+    rawPriceVal = normalized.priceRial
+    rowCurrency = 'rial'
+  }
+
+  let rawCompareVal = normalized.compareAtPrice
+  let compareCurrency = globalCurrency
+  if (normalized.compareAtPriceRial !== undefined && normalized.compareAtPriceRial !== '') {
+    rawCompareVal = normalized.compareAtPriceRial
+    compareCurrency = 'rial'
+  }
+
+  return {
+    rawRow,
+    name: normalized.name,
+    sku: normalized.sku,
+    productCode: normalized.productCode,
+    productType: normalized.productType,
+    rawPrice: rawPriceVal,
+    priceCurrency: rowCurrency,
+    rawCompareAtPrice: rawCompareVal,
+    compareCurrency: compareCurrency,
+    stock: normalized.stock,
+    category: normalized.category,
+    brand: normalized.brand,
+    description: normalized.description,
+    isActive: normalized.isActive,
+    isFeatured: normalized.isFeatured,
+    imageUrls: normalized.imageUrls,
+  }
+}
 
 const handleCsvUpload = (req, res, next) => {
   csvUpload.single('file')(req, res, (err) => {
@@ -906,6 +1145,30 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
       }
     }
 
+    // Helper to apply discounts to root price and all variants
+    const applyDiscountToProduct = (item, discountPct) => {
+      if (discountPct > 0) {
+        if (item.price !== undefined && item.price > 0) {
+          const orig = item.compareAtPrice && item.compareAtPrice > item.price ? item.compareAtPrice : item.price
+          const dAmount = (orig * discountPct) / 100
+          item.price = Math.round(orig - dAmount)
+          item.compareAtPrice = orig
+        }
+        if (Array.isArray(item.variants) && item.variants.length > 0) {
+          item.variants = item.variants.map((v) => {
+            const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+            if (vObj.price > 0) {
+              const origV = vObj.compareAtPrice && vObj.compareAtPrice > vObj.price ? vObj.compareAtPrice : vObj.price
+              const vDiscount = (origV * discountPct) / 100
+              vObj.price = Math.round(origV - vDiscount)
+              vObj.compareAtPrice = origV
+            }
+            return vObj
+          })
+        }
+      }
+    }
+
     // Apply discounts to products (skip if skipDiscount is true for admin panel)
     const itemsWithCampaign = skipDiscount ? items : items.map((item) => {
       const productId = item._id ? item._id.toString() : null
@@ -929,19 +1192,11 @@ router.get('/', cacheMiddleware(300), async (req, res) => {
           newItem.discount = campaignInfo.discount
           newItem.isSpecialOffer = true
           newItem.specialOfferEndTime = campaignInfo.endDate
-
-          // Calculate final price
-          const originalPrice = newItem.price
-          const discountAmount = (originalPrice * campaignInfo.discount) / 100
-          newItem.price = originalPrice - discountAmount
-          newItem.compareAtPrice = originalPrice
+          applyDiscountToProduct(newItem, campaignInfo.discount)
         }
       } else if (newItem.discount > 0) {
         // Apply direct product discount (e.g. Flash Deal without Campaign)
-        const originalPrice = newItem.price
-        const discountAmount = (originalPrice * newItem.discount) / 100
-        newItem.price = originalPrice - discountAmount
-        newItem.compareAtPrice = originalPrice
+        applyDiscountToProduct(newItem, newItem.discount)
 
         if (newItem.isFlashDeal) {
           newItem.campaignLabel = 'پیشنهاد لحظه‌ای'
@@ -1324,6 +1579,29 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
       }
     }
 
+    const applyDiscountToProductObj = (target, discountPct) => {
+      if (discountPct > 0) {
+        if (target.price !== undefined && target.price > 0) {
+          const orig = target.compareAtPrice && target.compareAtPrice > target.price ? target.compareAtPrice : target.price
+          const dAmount = (orig * discountPct) / 100
+          target.price = Math.round(orig - dAmount)
+          target.compareAtPrice = orig
+        }
+        if (Array.isArray(target.variants) && target.variants.length > 0) {
+          target.variants = target.variants.map((v) => {
+            const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+            if (vObj.price > 0) {
+              const origV = vObj.compareAtPrice && vObj.compareAtPrice > vObj.price ? vObj.compareAtPrice : vObj.price
+              const vDiscount = (origV * discountPct) / 100
+              vObj.price = Math.round(origV - vDiscount)
+              vObj.compareAtPrice = origV
+            }
+            return vObj
+          })
+        }
+      }
+    }
+
     if (activeSale) {
       productObj.campaignLabel = activeSale.name
       productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
@@ -1332,19 +1610,11 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
         productObj.isSpecialOffer = true
         productObj.isFromActiveSale = true
         productObj.specialOfferEndTime = activeSale.endDate
-
-        // Calculate final price
-        const originalPrice = productObj.price
-        const discountAmount = (originalPrice * activeSale.discountPercentage) / 100
-        productObj.price = originalPrice - discountAmount
-        productObj.compareAtPrice = originalPrice
+        applyDiscountToProductObj(productObj, activeSale.discountPercentage)
       }
     } else if (productObj.discount > 0) {
       // Apply direct product discount
-      const originalPrice = productObj.price
-      const discountAmount = (originalPrice * productObj.discount) / 100
-      productObj.price = originalPrice - discountAmount
-      productObj.compareAtPrice = originalPrice
+      applyDiscountToProductObj(productObj, productObj.discount)
 
       if (productObj.isFlashDeal) {
         productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
@@ -2281,165 +2551,190 @@ router.get(
 )
 
 // ============================================
-// POST /api/products/import/csv - Import products from CSV
+// POST /api/products/import/csv
+// POST /api/products/import/excel
+// POST /api/products/import
+// Universal Import: Supports CSV and Excel (.xlsx/.xls)
 // Supports ?mode=update to update existing products by SKU/productCode
-// without deleting images or other preserved data
+// Supports ?currency=toman (default) or ?currency=rial (auto-divides by 10)
+// Auto-detects Rial headers, Persian headers, and semicolons
 // ============================================
-router.post(
-  '/import/csv',
-  protect,
-  checkPermission(PERMISSIONS.PRODUCT_IMPORT),
-  handleCsvUpload,
-  async (req, res) => {
-    req.setTimeout(CSV_IMPORT_TIMEOUT_MS)
-    res.setTimeout(CSV_IMPORT_TIMEOUT_MS)
+const handleProductImport = async (req, res) => {
+  req.setTimeout(CSV_IMPORT_TIMEOUT_MS)
+  res.setTimeout(CSV_IMPORT_TIMEOUT_MS)
 
-    try {
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message: 'CSV file was not uploaded',
-        })
-      }
+  const filePath = req.file?.path
+  const startedAt = Date.now()
 
-      const filePath = req.file.path
-      const startedAt = Date.now()
-      const importMode = (req.query.mode || req.body.mode || 'create').toLowerCase()
-      const products = await parseCsvFile(filePath)
-      const errors = []
-      const hasImageColumn = products.some((row) =>
-        ['imageUrls', 'image_urls', 'images', 'imageURLs', 'ImageUrls'].some((key) => key in row),
-      )
-      const isPriceOnlyCsv = products.length > 0 && products.every((row) => {
-        const keys = Object.keys(row || {}).map((key) => String(key).trim())
-        if (!keys.includes('sku') || !keys.includes('price')) return false
-        return keys.every((key) => ['sku', 'title', 'price'].includes(key))
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'فایلی جهت درون‌ریزی بارگذاری نشده است (CSV یا Excel)',
       })
+    }
 
-      if (!products.length) {
-        safeUnlink(filePath)
-        return res.status(400).json({
-          success: false,
-          message: 'CSV file is empty or has no valid rows',
-        })
+    const importMode = (req.query.mode || req.body.mode || 'create').toLowerCase()
+    const globalCurrency = (req.query.currency || req.body.currency || 'toman').toLowerCase().trim()
+
+    const rawProducts = await parseImportFile(filePath, req.file.originalname)
+    const errors = []
+
+    if (!rawProducts || !rawProducts.length) {
+      safeUnlink(filePath)
+      return res.status(400).json({
+        success: false,
+        message: 'فایل بارگذاری شده خالی است یا سطرهای معتبری ندارد',
+      })
+    }
+
+    // Normalize all rows using Persian & English header aliases and currency detection
+    const products = rawProducts.map((rawRow) => normalizeImportRow(rawRow, globalCurrency))
+
+    const hasImageColumn = products.some((row) =>
+      row.imageUrls !== undefined && String(row.imageUrls).trim() !== '',
+    )
+
+    const isPriceOnlyCsv = products.length > 0 && products.every((row) => {
+      const hasSku = Boolean(row.sku)
+      const hasPrice = row.rawPrice !== undefined && row.rawPrice !== ''
+      const hasOther = Boolean(row.name || row.category || row.brand || row.description)
+      return hasSku && hasPrice && !hasOther
+    })
+
+    // Fetch all categories and brands for resilient matching
+    const allCategories = await Category.find({}).select('_id name').lean()
+    const allBrands = await Brand.find({}).select('_id name').lean()
+
+    const resolveCategoryId = (inputVal) => {
+      if (!inputVal) return null
+      const raw = String(inputVal).trim()
+      const norm = normalizePersianText(raw)
+      const stripped = norm.replace(/\s+/g, '')
+
+      for (const cat of allCategories) {
+        if (!cat.name) continue
+        const cRaw = cat.name.trim()
+        const cNorm = normalizePersianText(cRaw)
+        if (cRaw === raw || cNorm === norm || cNorm.replace(/\s+/g, '') === stripped) {
+          return cat._id
+        }
+      }
+      return null
+    }
+
+    const resolveBrandId = (inputVal) => {
+      if (!inputVal) return null
+      const raw = String(inputVal).trim()
+      const norm = normalizePersianText(raw)
+      const stripped = norm.replace(/\s+/g, '')
+
+      for (const br of allBrands) {
+        if (!br.name) continue
+        const bRaw = br.name.trim()
+        const bNorm = normalizePersianText(bRaw)
+        if (bRaw === raw || bNorm === norm || bNorm.replace(/\s+/g, '') === stripped) {
+          return br._id
+        }
+      }
+      return null
+    }
+
+    // Load existing productCodes to ensure unique collision-free productCode assignment
+    const existingCodeDocs = await Product.find({ productCode: { $exists: true } }).select('productCode').lean()
+    const assignedCodeSet = new Set(
+      existingCodeDocs
+        .map((p) => String(p.productCode || '').trim().toUpperCase())
+        .filter(Boolean),
+    )
+
+    const assignProductCode = (sku, index) => {
+      let baseCode = ''
+      if (sku) {
+        const digits = normalizeDigits(sku).replace(/\D/g, '')
+        if (digits.length > 0) {
+          baseCode = digits.slice(-7).padStart(7, '0')
+        }
+      }
+      if (!baseCode) {
+        const uniqueNum = ((Date.now() % 10000000) + index) % 10000000
+        baseCode = uniqueNum.toString().padStart(7, '0')
       }
 
-      // 1. Collect all unique category and brand names
-      const categoryNames = new Set()
-      const brandNames = new Set()
+      let candidate = `KY-${baseCode}`
+      let counter = 1
+      while (assignedCodeSet.has(candidate)) {
+        const nextNum = (parseInt(baseCode, 10) + counter) % 10000000
+        candidate = `KY-${nextNum.toString().padStart(7, '0')}`
+        counter++
+      }
+      assignedCodeSet.add(candidate)
+      return candidate
+    }
 
+    if (importMode === 'update') {
+      let totalUpdated = 0
+      let totalCreated = 0
+
+      const skuSet = new Set()
+      const codeSet = new Set()
       products.forEach((row) => {
-        if (row.category) categoryNames.add(String(row.category).trim())
-        if (row.brand) brandNames.add(String(row.brand).trim())
+        if (row.sku) skuSet.add(String(row.sku).trim())
+        if (row.productCode) codeSet.add(String(row.productCode).trim().toUpperCase())
       })
 
-      // 2. Bulk fetch categories and brands
-      const categories = await Category.find({
-        name: { $in: Array.from(categoryNames) },
-      }).select('_id name').lean()
+      const existingByQuery = []
+      if (skuSet.size > 0) {
+        const bySkus = await Product.find({ sku: { $in: Array.from(skuSet) } }).lean()
+        existingByQuery.push(...bySkus)
+      }
+      if (codeSet.size > 0) {
+        const byCodes = await Product.find({ productCode: { $in: Array.from(codeSet) } }).lean()
+        existingByQuery.push(...byCodes)
+      }
 
-      const brands = await Brand.find({
-        name: { $in: Array.from(brandNames) },
-      }).select('_id name').lean()
+      const existingBySkuMap = new Map()
+      const existingByCodeMap = new Map()
+      existingByQuery.forEach((p) => {
+        if (p.sku) existingBySkuMap.set(String(p.sku).trim(), p)
+        if (p.productCode) existingByCodeMap.set(String(p.productCode).trim().toUpperCase(), p)
+      })
 
-      // 3. Create lookup maps (Name -> ID)
-      const categoryMap = new Map(categories.map((c) => [c.name, c._id]))
-      const brandMap = new Map(brands.map((b) => [b.name, b._id]))
+      const productsToCreate = []
 
-      if (importMode === 'update') {
-        // ============================================
-        // UPDATE MODE: Find existing products by SKU or productCode
-        // and update only the specified fields. Images and other
-        // unspecified data are preserved.
-        // ============================================
-        let totalUpdated = 0
-        let totalCreated = 0
+      for (let i = 0; i < products.length; i++) {
+        const row = products[i]
 
-        const skuSet = new Set()
-        const codeSet = new Set()
-        products.forEach((row) => {
-          if (row.sku) skuSet.add(String(row.sku).trim())
-          if (row.productCode) codeSet.add(String(row.productCode).trim().toUpperCase())
-        })
+        try {
+          const rowSku = row.sku ? String(row.sku).trim() : ''
+          const rowCode = row.productCode ? String(row.productCode).trim().toUpperCase() : ''
 
-        const existingByQuery = []
-        if (skuSet.size > 0) {
-          const bySkus = await Product.find({ sku: { $in: Array.from(skuSet) } }).lean()
-          existingByQuery.push(...bySkus)
-        }
-        if (codeSet.size > 0) {
-          const byCodes = await Product.find({ productCode: { $in: Array.from(codeSet) } }).lean()
-          existingByQuery.push(...byCodes)
-        }
+          let existingProduct = null
+          if (rowCode) existingProduct = existingByCodeMap.get(rowCode)
+          if (!existingProduct && rowSku) existingProduct = existingBySkuMap.get(rowSku)
 
-        const existingBySkuMap = new Map()
-        const existingByCodeMap = new Map()
-        existingByQuery.forEach((p) => {
-          if (p.sku) existingBySkuMap.set(p.sku, p)
-          if (p.productCode) existingByCodeMap.set(p.productCode, p)
-        })
+          const categoryId = row.category ? resolveCategoryId(row.category) : undefined
+          const brandId = row.brand ? resolveBrandId(row.brand) : undefined
 
-        const productsToCreate = []
+          if (existingProduct) {
+            const updateFields = {}
+            const imageSourceValue = hasImageColumn ? row.imageUrls : undefined
+            const hasExplicitImageValue = imageSourceValue !== undefined && String(imageSourceValue).trim() !== ''
+            const parsedImages = hasExplicitImageValue ? parseCsvImageUrls(row.rawRow, req) : null
 
-        for (let i = 0; i < products.length; i++) {
-          const row = products[i]
-
-          try {
-            const rowSku = row.sku ? String(row.sku).trim() : ''
-            const rowCode = row.productCode ? String(row.productCode).trim().toUpperCase() : ''
-
-            let existingProduct = null
-            if (rowCode) existingProduct = existingByCodeMap.get(rowCode)
-            if (!existingProduct && rowSku) existingProduct = existingBySkuMap.get(rowSku)
-
-            let categoryId = undefined
-            if (row.category) {
-              const resolved = categoryMap.get(String(row.category).trim())
-              if (resolved) categoryId = resolved
-            }
-
-            let brandId = undefined
-            if (row.brand) {
-              const resolved = brandMap.get(String(row.brand).trim())
-              if (resolved) brandId = resolved
-            }
-
-            if (existingProduct) {
-              const updateFields = {}
-              const imageSourceValue = hasImageColumn ? getCsvImageSourceValue(row) : undefined
-              const hasExplicitImageValue = imageSourceValue !== undefined && String(imageSourceValue).trim() !== ''
-              const parsedImages = hasExplicitImageValue ? parseCsvImageUrls(row, req) : null
-
-              if (isPriceOnlyCsv) {
-                if (row.price !== undefined && row.price !== '') {
-                  updateFields.price = parseCsvNumber(row.price, existingProduct.price)
-                }
-
-                if (Object.keys(updateFields).length > 0) {
-                  await Product.updateOne(
-                    { _id: existingProduct._id },
-                    { $set: updateFields },
-                    { runValidators: false },
-                  )
-                  totalUpdated++
-                }
-                continue
+            if (isPriceOnlyCsv) {
+              if (row.rawPrice !== undefined && row.rawPrice !== '') {
+                updateFields.price = parseCsvNumber(row.rawPrice, existingProduct.price, row.priceCurrency)
               }
 
-              if (row.name !== undefined && row.name !== '') updateFields.name = row.name
-              if (row.productType !== undefined && row.productType !== '') updateFields.productType = row.productType
-              if (row.price !== undefined && row.price !== '') updateFields.price = parseCsvNumber(row.price, existingProduct.price)
-              if (row.compareAtPrice !== undefined && row.compareAtPrice !== '') updateFields.compareAtPrice = parseCsvNumber(row.compareAtPrice, existingProduct.compareAtPrice)
-              if (row.stock !== undefined && row.stock !== '') updateFields.stock = Math.max(0, Math.floor(parseCsvNumber(row.stock, existingProduct.stock)))
-              if (categoryId !== undefined) updateFields.category = categoryId
-              if (brandId !== undefined) updateFields.brand = brandId
-              if (row.description !== undefined && row.description !== '') updateFields.description = row.description
-              if (row.isActive !== undefined && row.isActive !== '') updateFields.isActive = parseCsvBoolean(row.isActive)
-              if (row.isFeatured !== undefined && row.isFeatured !== '') updateFields.isFeatured = parseCsvBoolean(row.isFeatured)
-              if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
-              if (parsedImages) updateFields.images = parsedImages
-
               if (Object.keys(updateFields).length > 0) {
+                if (existingProduct.productType === 'variable' && Array.isArray(existingProduct.variants)) {
+                  updateFields.variants = existingProduct.variants.map((v) => ({
+                    ...v,
+                    price: updateFields.price,
+                  }))
+                }
+
                 await Product.updateOne(
                   { _id: existingProduct._id },
                   { $set: updateFields },
@@ -2447,170 +2742,109 @@ router.post(
                 )
                 totalUpdated++
               }
-            } else {
-              const mongoose = require('mongoose')
-              const productData = {
-                name: row.name || `Product ${i + 1}`,
-                sku: rowSku,
-                productType: row.productType || 'simple',
-                price: parseCsvNumber(row.price, 0),
-                compareAtPrice: row.compareAtPrice ? parseCsvNumber(row.compareAtPrice, undefined) : undefined,
-                stock: Math.max(0, Math.floor(parseCsvNumber(row.stock, 0))),
-                category: categoryId || null,
-                brand: brandId || null,
-                description: row.description || '',
-                isActive: parseCsvBoolean(row.isActive),
-                isFeatured: parseCsvBoolean(row.isFeatured),
-                images: hasImageColumn ? parseCsvImageUrls(row, req) : [],
-              }
-
-              if (productData.name) {
-                const base = productData.name.toString().trim().toLowerCase()
-                let slug = base
-                  .replace(/\s+/g, '-')
-                  .replace(/[^\p{L}\p{N}\-]+/gu, '')
-                  .replace(/\-+/g, '-')
-                  .replace(/^-+/, '')
-                  .replace(/-+$/, '')
-                if (!slug) slug = new mongoose.Types.ObjectId().toString()
-                const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
-                productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
-              }
-
-              if (productData.sku) {
-                const skuDigits = normalizeDigits(productData.sku).replace(/\D/g, '')
-                if (skuDigits.length > 0) {
-                  productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
-                }
-              }
-              if (!productData.productCode) {
-                const uniqueNum = (Date.now() % 10000000) + i
-                const code = (uniqueNum % 10000000).toString().padStart(7, '0')
-                productData.productCode = `KY-${code}`
-              }
-
-              productsToCreate.push(productData)
+              continue
             }
-          } catch (rowError) {
-            errors.push(`Row ${i + 1} processing error: ${rowError.message}`)
-          }
-        }
 
-        for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
-          const chunk = productsToCreate.slice(i, i + CSV_IMPORT_BATCH_SIZE)
-          try {
-            const result = await Product.insertMany(chunk, { ordered: false })
-            totalCreated += result.length
-          } catch (batchError) {
-            console.error(`Error importing batch ${i / CSV_IMPORT_BATCH_SIZE + 1}:`, batchError.message)
-            if (batchError.insertedDocs) {
-              totalCreated += batchError.insertedDocs.length
+            if (row.name !== undefined && row.name !== '') updateFields.name = row.name
+            if (row.productType !== undefined && row.productType !== '') updateFields.productType = row.productType
+            if (row.rawPrice !== undefined && row.rawPrice !== '') {
+              updateFields.price = parseCsvNumber(row.rawPrice, existingProduct.price, row.priceCurrency)
             }
-            errors.push(`Batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1} save error: ${batchError.message}`)
-          }
-        }
-
-        clearCacheByPrefix('/api/products')
-        clearCacheByPrefix('/api/v1/admin/products')
-        safeUnlink(filePath)
-
-        const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
-        const messageParts = []
-        if (totalUpdated > 0) messageParts.push(`${totalUpdated} updated`)
-        if (totalCreated > 0) messageParts.push(`${totalCreated} created`)
-        if (messageParts.length === 0) messageParts.push('No changes made')
-
-        return res.json({
-          success: true,
-          message: messageParts.join(', '),
-          updated: totalUpdated,
-          created: totalCreated,
-          imported: totalUpdated + totalCreated,
-          durationSeconds,
-          errors: errors.length > 0 ? errors : undefined,
-        })
-      }
-
-      // ============================================
-      // CREATE MODE (default): Insert all as new products
-      // ============================================
-      const productsToCreate = []
-
-      for (let i = 0; i < products.length; i++) {
-        const row = products[i]
-
-        try {
-          let categoryId = null
-          if (row.category) {
-            categoryId = categoryMap.get(String(row.category).trim())
-          }
-
-          let brandId = null
-          if (row.brand) {
-            brandId = brandMap.get(String(row.brand).trim())
-          }
-
-          const mongoose = require('mongoose')
-          const productData = {
-            name: row.name || `Product ${i + 1}`,
-            sku: row.sku || '',
-            productType: row.productType || 'simple',
-            price: parseCsvNumber(row.price, 0),
-            compareAtPrice: row.compareAtPrice ? parseCsvNumber(row.compareAtPrice, undefined) : undefined,
-            stock: Math.max(0, Math.floor(parseCsvNumber(row.stock, 0))),
-            category: categoryId,
-            brand: brandId,
-            description: row.description || '',
-            isActive: parseCsvBoolean(row.isActive),
-            isFeatured: parseCsvBoolean(row.isFeatured),
-            images: hasImageColumn ? parseCsvImageUrls(row, req) : [],
-          }
-
-          if (productData.name) {
-            const base = productData.name.toString().trim().toLowerCase()
-            let slug = base
-              .replace(/\s+/g, '-')
-              .replace(/[^\p{L}\p{N}\-]+/gu, '')
-              .replace(/\-+/g, '-')
-              .replace(/^-+/, '')
-              .replace(/-+$/, '')
-            if (!slug) slug = new mongoose.Types.ObjectId().toString()
-            const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
-            productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
-          }
-
-          if (productData.sku) {
-            const skuDigits = normalizeDigits(productData.sku).replace(/\D/g, '')
-            if (skuDigits.length > 0) {
-              productData.productCode = `KY-${skuDigits.slice(-7).padStart(7, '0')}`
+            if (row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== '') {
+              updateFields.compareAtPrice = parseCsvNumber(row.rawCompareAtPrice, existingProduct.compareAtPrice, row.compareCurrency)
             }
-          }
+            if (row.stock !== undefined && row.stock !== '') {
+              updateFields.stock = Math.max(0, Math.floor(parseCsvNumber(row.stock, existingProduct.stock, 'toman')))
+            }
+            if (categoryId !== undefined && categoryId !== null) updateFields.category = categoryId
+            if (brandId !== undefined && brandId !== null) updateFields.brand = brandId
+            if (row.description !== undefined && row.description !== '') updateFields.description = row.description
+            if (row.isActive !== undefined && row.isActive !== '') updateFields.isActive = parseCsvBoolean(row.isActive)
+            if (row.isFeatured !== undefined && row.isFeatured !== '') updateFields.isFeatured = parseCsvBoolean(row.isFeatured)
+            if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
+            if (parsedImages) updateFields.images = parsedImages
 
-          if (!productData.productCode) {
-            const uniqueNum = (Date.now() % 10000000) + i
-            const code = (uniqueNum % 10000000).toString().padStart(7, '0')
-            productData.productCode = `KY-${code}`
-          }
+            if (Object.keys(updateFields).length > 0) {
+              if (updateFields.price !== undefined && existingProduct.productType === 'variable' && Array.isArray(existingProduct.variants)) {
+                updateFields.variants = existingProduct.variants.map((v) => ({
+                  ...v,
+                  price: updateFields.price,
+                }))
+              }
 
-          productsToCreate.push(productData)
+              await Product.updateOne(
+                { _id: existingProduct._id },
+                { $set: updateFields },
+                { runValidators: false },
+              )
+              totalUpdated++
+            }
+          } else {
+            const mongoose = require('mongoose')
+            const priceVal = parseCsvNumber(row.rawPrice, 0, row.priceCurrency)
+            const compareVal = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
+              ? parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency)
+              : undefined
+            const stockVal = Math.max(0, Math.floor(parseCsvNumber(row.stock, 0, 'toman')))
+
+            const productData = {
+              name: row.name || `Product ${i + 1}`,
+              sku: rowSku,
+              productType: row.productType || 'simple',
+              price: priceVal,
+              compareAtPrice: compareVal,
+              stock: stockVal,
+              category: categoryId || null,
+              brand: brandId || null,
+              description: row.description || '',
+              isActive: row.isActive !== undefined ? parseCsvBoolean(row.isActive) : true,
+              isFeatured: row.isFeatured !== undefined ? parseCsvBoolean(row.isFeatured) : false,
+              images: hasImageColumn ? parseCsvImageUrls(row.rawRow, req) : [],
+            }
+
+            if (productData.name) {
+              const base = productData.name.toString().trim().toLowerCase()
+              let slug = base
+                .replace(/\s+/g, '-')
+                .replace(/[^\p{L}\p{N}\-]+/gu, '')
+                .replace(/\-+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '')
+              if (!slug) slug = new mongoose.Types.ObjectId().toString()
+              const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
+              productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
+            }
+
+            productData.productCode = assignProductCode(rowSku, i)
+
+            if (productData.productType === 'variable') {
+              productData.variants = [{
+                sku: productData.sku,
+                price: productData.price,
+                stock: productData.stock,
+                options: [{ name: 'پیش‌فرض', value: 'اصلی' }],
+              }]
+              productData.attributes = [{ name: 'پیش‌فرض', values: ['اصلی'] }]
+            }
+
+            productsToCreate.push(productData)
+          }
         } catch (rowError) {
-          errors.push(`Row ${i + 1} processing error: ${rowError.message}`)
+          errors.push(`سطر ${i + 1}: ${rowError.message}`)
         }
       }
-
-      let totalImported = 0
 
       for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
         const chunk = productsToCreate.slice(i, i + CSV_IMPORT_BATCH_SIZE)
         try {
           const result = await Product.insertMany(chunk, { ordered: false })
-          totalImported += result.length
+          totalCreated += result.length
         } catch (batchError) {
-          console.error(`Error importing batch ${i / CSV_IMPORT_BATCH_SIZE + 1}:`, batchError.message)
+          console.error(`Error importing batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1}:`, batchError.message)
           if (batchError.insertedDocs) {
-            totalImported += batchError.insertedDocs.length
+            totalCreated += batchError.insertedDocs.length
           }
-          errors.push(`Batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1} save error: ${batchError.message}`)
+          errors.push(`خطا در ثبت بسته ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1}: ${batchError.message}`)
         }
       }
 
@@ -2619,25 +2853,153 @@ router.post(
       safeUnlink(filePath)
 
       const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
-      const resultMessage = `${totalImported} products imported successfully`
+      const messageParts = []
+      if (totalUpdated > 0) messageParts.push(`${totalUpdated} به‌روزرسانی شد`)
+      if (totalCreated > 0) messageParts.push(`${totalCreated} ایجاد شد`)
+      if (messageParts.length === 0) messageParts.push('هیچ تغییری اعمال نشد')
 
       return res.json({
         success: true,
-        message: resultMessage,
-        imported: totalImported,
+        message: messageParts.join('، '),
+        updated: totalUpdated,
+        created: totalCreated,
+        imported: totalUpdated + totalCreated,
+        currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
         durationSeconds,
         errors: errors.length > 0 ? errors : undefined,
       })
-    } catch (error) {
-      console.error('Error importing products from CSV:', error)
-      safeUnlink(req.file?.path)
-      return res.status(500).json({
-        success: false,
-        message: 'Error importing products from CSV',
-        error: error.message,
-      })
     }
-  },
+
+    // ============================================
+    // CREATE MODE (default): Insert all as new products
+    // ============================================
+    const productsToCreate = []
+
+    for (let i = 0; i < products.length; i++) {
+      const row = products[i]
+
+      try {
+        const categoryId = row.category ? resolveCategoryId(row.category) : null
+        const brandId = row.brand ? resolveBrandId(row.brand) : null
+        const rowSku = row.sku ? String(row.sku).trim() : ''
+
+        const priceVal = parseCsvNumber(row.rawPrice, 0, row.priceCurrency)
+        const compareVal = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
+          ? parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency)
+          : undefined
+        const stockVal = Math.max(0, Math.floor(parseCsvNumber(row.stock, 0, 'toman')))
+
+        const mongoose = require('mongoose')
+        const productData = {
+          name: row.name || `Product ${i + 1}`,
+          sku: rowSku,
+          productType: row.productType || 'simple',
+          price: priceVal,
+          compareAtPrice: compareVal,
+          stock: stockVal,
+          category: categoryId,
+          brand: brandId,
+          description: row.description || '',
+          isActive: row.isActive !== undefined ? parseCsvBoolean(row.isActive) : true,
+          isFeatured: row.isFeatured !== undefined ? parseCsvBoolean(row.isFeatured) : false,
+          images: hasImageColumn ? parseCsvImageUrls(row.rawRow, req) : [],
+        }
+
+        if (productData.name) {
+          const base = productData.name.toString().trim().toLowerCase()
+          let slug = base
+            .replace(/\s+/g, '-')
+            .replace(/[^\p{L}\p{N}\-]+/gu, '')
+            .replace(/\-+/g, '-')
+            .replace(/^-+/, '')
+            .replace(/-+$/, '')
+          if (!slug) slug = new mongoose.Types.ObjectId().toString()
+          const uniqueSuffix = Math.floor(Math.random() * 1000).toString()
+          productData.slug = `${slug}-${uniqueSuffix}-${Date.now()}`
+        }
+
+        productData.productCode = assignProductCode(rowSku, i)
+
+        if (productData.productType === 'variable') {
+          productData.variants = [{
+            sku: productData.sku,
+            price: productData.price,
+            stock: productData.stock,
+            options: [{ name: 'پیش‌فرض', value: 'اصلی' }],
+          }]
+          productData.attributes = [{ name: 'پیش‌فرض', values: ['اصلی'] }]
+        }
+
+        productsToCreate.push(productData)
+      } catch (rowError) {
+        errors.push(`سطر ${i + 1}: ${rowError.message}`)
+      }
+    }
+
+    let totalImported = 0
+
+    for (let i = 0; i < productsToCreate.length; i += CSV_IMPORT_BATCH_SIZE) {
+      const chunk = productsToCreate.slice(i, i + CSV_IMPORT_BATCH_SIZE)
+      try {
+        const result = await Product.insertMany(chunk, { ordered: false })
+        totalImported += result.length
+      } catch (batchError) {
+        console.error(`Error importing batch ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1}:`, batchError.message)
+        if (batchError.insertedDocs) {
+          totalImported += batchError.insertedDocs.length
+        }
+        errors.push(`خطا در ثبت بسته ${Math.floor(i / CSV_IMPORT_BATCH_SIZE) + 1}: ${batchError.message}`)
+      }
+    }
+
+    clearCacheByPrefix('/api/products')
+    clearCacheByPrefix('/api/v1/admin/products')
+    safeUnlink(filePath)
+
+    const durationSeconds = Math.round((Date.now() - startedAt) / 1000)
+    const resultMessage = `${totalImported} محصول با موفقیت در سیستم ثبت شد`
+
+    return res.json({
+      success: true,
+      message: resultMessage,
+      imported: totalImported,
+      currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
+      durationSeconds,
+      errors: errors.length > 0 ? errors : undefined,
+    })
+  } catch (error) {
+    console.error('Error importing products:', error)
+    safeUnlink(filePath)
+    return res.status(500).json({
+      success: false,
+      message: 'خطا در درون‌ریزی محصولات',
+      error: error.message,
+    })
+  }
+}
+
+router.post(
+  '/import/csv',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_IMPORT),
+  handleCsvUpload,
+  handleProductImport,
+)
+
+router.post(
+  '/import/excel',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_IMPORT),
+  handleCsvUpload,
+  handleProductImport,
+)
+
+router.post(
+  '/import',
+  protect,
+  checkPermission(PERMISSIONS.PRODUCT_IMPORT),
+  handleCsvUpload,
+  handleProductImport,
 )
 
 // ============================================
@@ -2718,6 +3080,29 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
         }
       }
 
+      const applyDiscountToProductObj = (target, discountPct) => {
+        if (discountPct > 0) {
+          if (target.price !== undefined && target.price > 0) {
+            const orig = target.compareAtPrice && target.compareAtPrice > target.price ? target.compareAtPrice : target.price
+            const dAmount = (orig * discountPct) / 100
+            target.price = Math.round(orig - dAmount)
+            target.compareAtPrice = orig
+          }
+          if (Array.isArray(target.variants) && target.variants.length > 0) {
+            target.variants = target.variants.map((v) => {
+              const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+              if (vObj.price > 0) {
+                const origV = vObj.compareAtPrice && vObj.compareAtPrice > vObj.price ? vObj.compareAtPrice : vObj.price
+                const vDiscount = (origV * discountPct) / 100
+                vObj.price = Math.round(origV - vDiscount)
+                vObj.compareAtPrice = origV
+              }
+              return vObj
+            })
+          }
+        }
+      }
+
       if (activeSale) {
         productObj.campaignLabel = activeSale.name
         productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
@@ -2726,19 +3111,11 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
           productObj.isSpecialOffer = true
           productObj.isFromActiveSale = true
           productObj.specialOfferEndTime = activeSale.endDate
-
-          // Calculate final price
-          const originalPrice = productObj.price
-          const discountAmount = (originalPrice * activeSale.discountPercentage) / 100
-          productObj.price = originalPrice - discountAmount
-          productObj.compareAtPrice = originalPrice
+          applyDiscountToProductObj(productObj, activeSale.discountPercentage)
         }
       } else if (productObj.discount > 0) {
         // Apply direct product discount
-        const originalPrice = productObj.price
-        const discountAmount = (originalPrice * productObj.discount) / 100
-        productObj.price = originalPrice - discountAmount
-        productObj.compareAtPrice = originalPrice
+        applyDiscountToProductObj(productObj, productObj.discount)
 
         if (productObj.isFlashDeal) {
           productObj.campaignLabel = 'پیشنهاد لحظه‌ای'

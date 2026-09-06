@@ -19,26 +19,25 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
     // Check if flash deal countdown is still active
     const isFlashDealActive = Boolean(
         product.isFlashDeal &&
-        product.flashDealEndTime &&
-        new Date(product.flashDealEndTime).getTime() > now
+        (!product.flashDealEndTime || new Date(product.flashDealEndTime).getTime() > now)
     );
 
-    const hasSpecialOfferCountdown = Boolean(
+    const isSpecialOfferActive = Boolean(
         product.isSpecialOffer &&
-        product.specialOfferEndTime &&
-        new Date(product.specialOfferEndTime).getTime() > now
+        (!product.specialOfferEndTime || new Date(product.specialOfferEndTime).getTime() > now)
     );
 
     // Any active countdown (flash deal or special offer)
-    const hasActivePromotion = isFlashDealActive || hasSpecialOfferCountdown;
+    const hasActivePromotion = isFlashDealActive || isSpecialOfferActive || Boolean(product.campaignLabel);
 
-    // Price reversion: when flash deal or special offer expires, revert to original price
+    // Price reversion: when flash deal or special offer with an end date expires, revert to original price
+    const flashExpired = Boolean(product.isFlashDeal && product.flashDealEndTime && new Date(product.flashDealEndTime).getTime() <= now);
+    const specialExpired = Boolean(product.isSpecialOffer && product.specialOfferEndTime && new Date(product.specialOfferEndTime).getTime() <= now);
+
     const displayPrice =
-        (!isFlashDealActive && product.isFlashDeal && product.oldPrice)
+        (flashExpired || specialExpired) && product.oldPrice
             ? product.oldPrice
-            : (!hasSpecialOfferCountdown && product.isSpecialOffer && product.oldPrice)
-                ? product.oldPrice
-                : product.price;
+            : product.price;
 
     // Calculate quantity for the SPECIFIC selected variant
     const [quantity, setQuantity] = useState(0);
