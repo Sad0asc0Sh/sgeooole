@@ -327,8 +327,10 @@ const settingsSchema = new mongoose.Schema(
       couriers: [
         {
           name: { type: String, required: true }, // مثل "دیجی‌اکسپرس", "تیپاکس"
-          trackingUrlTemplate: { type: String, required: true }, // مثل "https://tipaxco.com/tracking?id={{code}}"
-          isActive: { type: Boolean, default: true }
+          // لینک رهگیری برای پیک‌های داخلی اختیاری است.
+          trackingUrlTemplate: { type: String, default: '' }, // مثل "https://tipaxco.com/tracking?id={{code}}"
+          isActive: { type: Boolean, default: true },
+          isDefault: { type: Boolean, default: false }
         }
       ]
     },

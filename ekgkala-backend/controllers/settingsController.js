@@ -51,7 +51,7 @@ exports.getPublicSettings = async (req, res) => {
         aparat: settings.socialLinks?.aparat || '',
       },
       shippingSettings: {
-        couriers: (settings.shippingSettings?.couriers && settings.shippingSettings.couriers.length > 0)
+        couriers: Array.isArray(settings.shippingSettings?.couriers)
           ? settings.shippingSettings.couriers
           : [
               { name: 'پست پیشتاز', trackingUrlTemplate: 'https://tracking.post.ir/?id={{code}}', isActive: true },
@@ -271,9 +271,43 @@ exports.updateSettings = async (req, res) => {
 
     // For nested objects (Shipping Settings)
     if (updates.shippingSettings) {
-      settings.shippingSettings = {
-        ...(settings.shippingSettings?.toObject?.() || {}),
-        ...updates.shippingSettings,
+      const currentShippingSettings = settings.shippingSettings?.toObject?.() || {}
+      const incomingCouriers = updates.shippingSettings.couriers
+
+      if (Array.isArray(incomingCouriers)) {
+        // Ignore unfinished rows instead of allowing one blank row to reject
+        // the entire settings document. Tracking URLs are optional for local
+        // couriers, so an empty template is preserved as an empty string.
+        const couriers = incomingCouriers
+          .map((courier) => ({
+            name: String(courier?.name || '').trim(),
+            trackingUrlTemplate: String(courier?.trackingUrlTemplate || '').trim(),
+            isActive: courier?.isActive !== false,
+            isDefault: courier?.isDefault === true,
+          }))
+          .filter((courier) => courier.name)
+
+        // Persist exactly one default courier. Existing data without a
+        // default remains backward-compatible by selecting the first active one.
+        let defaultAssigned = false
+        couriers.forEach((courier) => {
+          courier.isDefault = courier.isDefault && !defaultAssigned
+          if (courier.isDefault) defaultAssigned = true
+        })
+        if (!defaultAssigned && couriers.length > 0) {
+          const fallback = couriers.find((courier) => courier.isActive) || couriers[0]
+          fallback.isDefault = true
+        }
+
+        settings.shippingSettings = {
+          ...currentShippingSettings,
+          couriers,
+        }
+      } else {
+        settings.shippingSettings = {
+          ...currentShippingSettings,
+          ...updates.shippingSettings,
+        }
       }
     }
 
@@ -286,9 +320,11 @@ exports.updateSettings = async (req, res) => {
     })
   } catch (error) {
     console.error('Error updating settings:', error)
-    res.status(500).json({
+    res.status(error.name === 'ValidationError' ? 400 : 500).json({
       success: false,
-      message: 'خطا در به‌روزرسانی تنظیمات سایت',
+      message: error.name === 'ValidationError'
+        ? 'اطلاعات تنظیمات نامعتبر است'
+        : 'خطا در به‌روزرسانی تنظیمات سایت',
       error: error.message,
     })
   }

@@ -403,6 +403,11 @@ exports.getOrderById = async (req, res) => {
         const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
         const couriers = settings?.shippingSettings?.couriers || []
         const matched = couriers.find((c) => c.name === order.courierName)
+          || (!order.courierName
+            ? couriers.find((c) => c.isDefault && c.isActive !== false)
+              || couriers.find((c) => c.isActive !== false)
+            : null)
+        if (matched && !order.courierName) order.courierName = matched.name
         if (matched && matched.trackingUrlTemplate) {
           order.preparedTrackingUrl = matched.trackingUrlTemplate
             .replace('{{code}}', String(order.trackingCode).trim())
@@ -485,9 +490,25 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     // Auto-generate preparedTrackingUrl if courierName and trackingCode are present but preparedTrackingUrl is empty
-    const currentCourier = updates.courierName !== undefined ? updates.courierName : order.courierName
     const currentCode = updates.trackingCode !== undefined ? updates.trackingCode : order.trackingCode
+    let currentCourier = updates.courierName !== undefined ? updates.courierName : order.courierName
     let currentUrl = updates.preparedTrackingUrl !== undefined ? updates.preparedTrackingUrl : order.preparedTrackingUrl
+
+    if ((!currentCourier || String(currentCourier).trim() === '') && currentCode && String(currentCode).trim() !== '') {
+      try {
+        const Settings = require('../models/Settings')
+        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+        const couriers = settings?.shippingSettings?.couriers || []
+        const defaultCourier = couriers.find((courier) => courier.isDefault && courier.isActive !== false)
+          || couriers.find((courier) => courier.isActive !== false)
+        if (defaultCourier) {
+          currentCourier = defaultCourier.name
+          updates.courierName = defaultCourier.name
+        }
+      } catch (err) {
+        console.error('Error resolving default courier in updateOrderStatus:', err)
+      }
+    }
 
     if ((!currentUrl || String(currentUrl).trim() === '') && currentCourier && currentCode && String(currentCode).trim() !== '') {
       try {
