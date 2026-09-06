@@ -1,10 +1,12 @@
 const Product = require('../models/Product');
+const Order = require('../models/Order');
 const ChatHistory = require('../models/ChatHistory');
 const Settings = require('../models/Settings');
 const {
   generateExpertResponse,
   streamExpertResponse,
   AIServiceError,
+  stripThinkingTags,
 } = require('../utils/groqService');
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -128,12 +130,12 @@ async function loadConversation(req) {
     userLimit,
     history: (chatSession.messages || []).slice(-MAX_HISTORY_MESSAGES).map((item) => ({
       role: item.role,
-      content: item.content,
+      content: stripThinkingTags(item.content),
     })),
   };
 }
 
-async function buildChatContext(message, settings) {
+async function buildChatContext(message, settings, userId = null) {
   const terms = [...new Set(
     message
       .split(/\s+/)
@@ -167,22 +169,81 @@ async function buildChatContext(message, settings) {
     }).join('\n----------------\n');
   }
 
-  const storeInfo = [
+  const orderStatusMap = {
+    Pending: 'در انتظار بررسی یا پرداخت',
+    Processing: 'در حال پردازش و آماده‌سازی',
+    Shipped: 'تحویل به شرکت حمل‌ونقل شده (ارسال شده)',
+    Delivered: 'تحویل داده شده',
+    Cancelled: 'لغو شده',
+  };
+
+  const ordersList = [];
+  if (userId) {
+    const userOrders = await Order.find({ user: userId })
+      .select('orderCode orderStatus totalPrice createdAt trackingCode courierName preparedTrackingUrl')
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .lean();
+    ordersList.push(...userOrders);
+  }
+
+  const orderCodeMatches = message.match(/\b([A-Za-z]{2,4}-?\d{5,8})\b/gi);
+  if (orderCodeMatches) {
+    for (const rawCode of orderCodeMatches) {
+      const normalizedCode = rawCode.toUpperCase();
+      const codeWithoutDash = normalizedCode.replace('-', '');
+      const foundOrder = await Order.findOne({
+        $or: [{ orderCode: normalizedCode }, { orderCode: codeWithoutDash }],
+      })
+        .select('orderCode orderStatus totalPrice createdAt trackingCode courierName preparedTrackingUrl')
+        .lean();
+      if (foundOrder && !ordersList.some((o) => String(o._id) === String(foundOrder._id))) {
+        ordersList.push(foundOrder);
+      }
+    }
+  }
+
+  let ordersContextText = '';
+  if (ordersList.length > 0) {
+    ordersContextText = ordersList.map((ord) => {
+      const statusText = orderStatusMap[ord.orderStatus] || ord.orderStatus || 'نامشخص';
+      const priceText = Number(ord.totalPrice || 0).toLocaleString('fa-IR');
+      const dateText = ord.createdAt ? new Date(ord.createdAt).toLocaleDateString('fa-IR') : '—';
+      const tracking = ord.trackingCode ? `کد رهگیری: ${ord.trackingCode}` : 'کد رهگیری پستی: هنوز صادر نشده';
+      const courier = ord.courierName ? `ارسال از طریق: ${ord.courierName}` : '';
+      const link = ord.preparedTrackingUrl ? `لینک رهگیری مستقیم: ${ord.preparedTrackingUrl}` : '';
+      return `- کد سفارش: ${ord.orderCode || ord._id}\n  وضعیت: ${statusText}\n  مبلغ: ${priceText} تومان\n  تاریخ ثبت: ${dateText}\n  ${tracking}${courier ? `\n  ${courier}` : ''}${link ? `\n  ${link}` : ''}`;
+    }).join('\n----------------\n');
+  }
+
+  const storeInfoParts = [
     settings?.storeName ? `نام فروشگاه: ${settings.storeName}` : 'نام فروشگاه: ای‌کا‌جی کالا',
-    settings?.storePhone ? `تلفن: ${settings.storePhone}` : '',
+    settings?.storePhone ? `تلفن پشتیبانی: ${settings.storePhone}` : '',
     settings?.storeEmail ? `ایمیل: ${settings.storeEmail}` : '',
     settings?.storeAddress ? `آدرس: ${settings.storeAddress}` : '',
     settings?.socialLinks?.telegram ? `تلگرام: ${settings.socialLinks.telegram}` : '',
     settings?.socialLinks?.instagram ? `اینستاگرام: ${settings.socialLinks.instagram}` : '',
-  ].filter(Boolean).join('\n');
+    '',
+    '### راهنمای پیگیری سفارشات:',
+    '- کاربران وارد شده به سایت می‌توانند با مراجعه به بخش «پروفایل > سفارش‌های من» (/profile/orders) وضعیت تمام سفارش‌های خود را مشاهده کنند.',
+    '- تمام مشتریان (از جمله کاربران مهمان) در صورتی که کد سفارش دارند، می‌توانند به صفحه «پیگیری سفارش» (/tracking) رفته و با وارد کردن کد سفارش وضعیت بسته را لحظه‌ای ببینند.',
+    ordersContextText
+      ? `### اطلاعات سفارش‌های مرتبط با این کاربر/پیام:\n${ordersContextText}`
+      : (userId
+        ? 'این کاربر فعلاً سفارش ثبت‌شده‌ای در سیستم ندارد.'
+        : 'کاربر هنوز وارد حساب کاربری نشده است. اگر کد سفارش دارد، او را به صفحه پیگیری سفارش (/tracking) یا ورود به حساب راهنمایی کنید.')
+  ];
+
+  const storeInfo = storeInfoParts.filter((p) => p !== undefined && p !== null).join('\n');
 
   return { productContext, storeInfoContext: storeInfo };
 }
 
 async function saveCompletedTurn(chatSession, userMessage, reply) {
-  if (!reply || !reply.trim()) return;
+  const cleanReply = stripThinkingTags(reply);
+  if (!cleanReply) return;
   chatSession.messages.push({ role: 'user', content: userMessage });
-  chatSession.messages.push({ role: 'assistant', content: reply.trim() });
+  chatSession.messages.push({ role: 'assistant', content: cleanReply });
   if (chatSession.messages.length > MAX_STORED_MESSAGES) {
     chatSession.messages = chatSession.messages.slice(-MAX_STORED_MESSAGES);
   }
@@ -216,7 +277,7 @@ exports.handleMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
-    const context = await buildChatContext(message, conversation.settings);
+    const context = await buildChatContext(message, conversation.settings, conversation.identity.query?.userId);
     const result = await generateExpertResponse(message, context.productContext, conversation.history, context.storeInfoContext);
     await saveCompletedTurn(conversation.chatSession, message, result.message);
 
@@ -263,7 +324,7 @@ exports.handleStreamMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
-    const context = await buildChatContext(message, conversation.settings);
+    const context = await buildChatContext(message, conversation.settings, conversation.identity.query?.userId);
 
     res.status(200);
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -363,4 +424,5 @@ exports.__private__ = {
   escapeRegex,
   getLocalDayStart,
   activeConversations,
+  buildChatContext,
 };

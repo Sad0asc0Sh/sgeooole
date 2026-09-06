@@ -23,6 +23,15 @@ interface SuggestionItem {
     prompt: string;
 }
 
+export function stripThinkingTags(text: string): string {
+    if (!text) return "";
+    return text
+        .replace(/<\s*(think|thought|reasoning)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+        .replace(/<\s*(think|thought|reasoning)\b[^>]*>[\s\S]*$/gi, '')
+        .replace(/<\s*\/\s*(think|thought|reasoning)\s*>/gi, '')
+        .trim();
+}
+
 export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -155,14 +164,15 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     fullReply += tokenBuffer;
                     fullReplyRef.current = fullReply;
                     tokenBuffer = '';
+                    const cleanReply = stripThinkingTags(fullReply);
                     setMessages((prev: Message[]) => {
                         const last = prev[prev.length - 1];
                         if (last?.role === 'ai') {
                             const updated = [...prev];
                             updated[updated.length - 1] = {
                                 ...last,
-                                content: fullReply,
-                                isLoading: false,
+                                content: cleanReply,
+                                isLoading: !cleanReply,
                             };
                             return updated;
                         }
@@ -201,13 +211,14 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             rafId = null;
                         }
                         flushBuffer();
+                        const cleanReply = stripThinkingTags(fullReply);
                         setMessages((prev: Message[]) => {
                             const last = prev[prev.length - 1];
                             if (last?.role !== 'ai') return prev;
                             const updated = [...prev];
                             updated[updated.length - 1] = {
                                 ...last,
-                                content: `${fullReply}\n\n${payload.error}`,
+                                content: cleanReply ? `${cleanReply}\n\n${payload.error || ''}` : (payload.error || 'خطایی رخ داد.'),
                                 isLoading: false,
                                 isError: true,
                             };
@@ -228,7 +239,8 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         rafId = null;
                     }
                     flushBuffer();
-                    if (!fullReply && !lastError) {
+                    const cleanReply = stripThinkingTags(fullReply);
+                    if (!cleanReply && !lastError) {
                         setMessages((prev: Message[]) => {
                             const last = prev[prev.length - 1];
                             if (last?.role === 'ai') {
@@ -237,6 +249,21 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                     role: 'ai',
                                     content: 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
                                     isError: true,
+                                    isLoading: false,
+                                };
+                                return updated;
+                            }
+                            return prev;
+                        });
+                    } else if (cleanReply) {
+                        setMessages((prev: Message[]) => {
+                            const last = prev[prev.length - 1];
+                            if (last?.role === 'ai') {
+                                const updated = [...prev];
+                                updated[updated.length - 1] = {
+                                    ...last,
+                                    content: cleanReply,
+                                    isLoading: false,
                                 };
                                 return updated;
                             }
@@ -264,8 +291,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             }
             flushBuffer();
 
+            const finalClean = stripThinkingTags(fullReply);
             // Stream ended normally — show error if no tokens were received
-            if (!fullReply && lastError) {
+            if (!finalClean && lastError) {
                 setMessages((prev: Message[]) => {
                     const last = prev[prev.length - 1];
                     if (last?.role === 'ai' && last.isLoading) {
@@ -274,6 +302,21 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             role: 'ai',
                             content: lastError || 'پاسخی دریافت نشد. لطفاً دوباره تلاش کنید.',
                             isError: true,
+                            isLoading: false,
+                        };
+                        return updated;
+                    }
+                    return prev;
+                });
+            } else if (finalClean) {
+                setMessages((prev: Message[]) => {
+                    const last = prev[prev.length - 1];
+                    if (last?.role === 'ai') {
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            ...last,
+                            content: finalClean,
+                            isLoading: false,
                         };
                         return updated;
                     }
@@ -401,7 +444,18 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                 <h2 className="text-xl font-bold text-gray-800 mb-8">چطور می‌توانم کمکتان کنم؟</h2>
                                 <div className="grid grid-cols-2 gap-3 w-full max-w-sm mb-4">
                                     {suggestions.map((item: SuggestionItem, idx: number) => (
-                                        <button key={idx} onClick={() => setInput(item.prompt)} className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-kala-300 hover:shadow-md transition-all active:scale-95 cursor-pointer">
+                                        <button
+                                            key={idx}
+                                            onClick={() => {
+                                                setInput(item.prompt);
+                                                if (textareaRef.current) {
+                                                    textareaRef.current.focus();
+                                                    textareaRef.current.style.height = "auto";
+                                                    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+                                                }
+                                            }}
+                                            className="flex flex-col items-center gap-3 p-4 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:border-kala-300 hover:shadow-md transition-all active:scale-95 cursor-pointer"
+                                        >
                                             <item.icon className="text-kala-500" size={24} />
                                             <span className="text-xs font-medium text-gray-600">{item.label}</span>
                                         </button>
@@ -413,7 +467,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         {/* Messages List */}
                         {messages.length > 0 && (
                             <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 mt-4 px-1">
-                                {messages.map((msg: Message, index: number) => (
+                                {messages.map((msg: Message, index: number) => {
+                                    const displayContent = msg.role === 'ai' ? stripThinkingTags(msg.content) : msg.content;
+                                    return (
                                     <div key={index} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-1 ${msg.role === 'user' ? 'bg-gray-200' : msg.isError ? 'bg-red-100' : 'bg-kala-100'}`}>
                                             {msg.role === 'user' ? (
@@ -424,17 +480,28 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                 <Sparkles size={14} className="text-kala-600" />
                                             )}
                                         </div>
-                                        <div className={`px-3.5 py-2 rounded-2xl text-[13px] leading-6 shadow-sm max-w-[85%] break-words whitespace-pre-wrap ${msg.role === 'user' ? 'bg-gray-800 text-white rounded-br-sm' : msg.isError ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm' : 'bg-orange-100 border border-orange-200 text-orange-900 rounded-bl-sm'}`}>
-                                            {msg.content || (msg.isLoading ? '\u00A0' : '')}
+                                        <div className={`px-3.5 py-2 rounded-2xl text-[13px] leading-6 shadow-sm max-w-[85%] break-words whitespace-pre-wrap ${msg.role === 'user' ? 'bg-gray-800 text-white rounded-br-sm' : msg.isError ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm' : 'bg-kala-50/80 border border-kala-200/80 text-gray-800 rounded-bl-sm'}`}>
+                                            {displayContent ? (
+                                                displayContent
+                                            ) : msg.isLoading ? (
+                                                <div className="flex items-center gap-1.5 py-1 px-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.3s]"></span>
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.15s]"></span>
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce"></span>
+                                                </div>
+                                            ) : (
+                                                '\u00A0'
+                                            )}
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                                 {isTyping && (
                                     <div className="flex gap-2 animate-pulse mt-1">
                                         <div className="w-6 h-6 rounded-full bg-kala-50 flex items-center justify-center">
                                             <Sparkles size={12} className="text-kala-400" />
                                         </div>
-                                        <span className="text-[10px] text-gray-400 pt-1">در حال فکر کردن...</span>
+                                        <span className="text-[10px] text-gray-400 pt-1">در حال آماده‌سازی پاسخ...</span>
                                     </div>
                                 )}
                             </div>

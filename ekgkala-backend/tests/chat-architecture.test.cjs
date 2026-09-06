@@ -36,6 +36,53 @@ test('عبارت جست‌وجو را برای regex ایمن می‌کند', ()
   assert.equal(chat.escapeRegex('a+b?(test)'), 'a\\+b\\?\\(test\\)');
 });
 
+test('تگ‌های تفکر <think> و استدلال‌های مدل را از متن نهایی پاک می‌کند', () => {
+  const sampleWithThink = '<think>مشتری می‌خواهد بداند سفارشش کجاست. من به عنوان مشاور فروش این فروشگاه، به اطلاعات سفارشات مشتریان دسترسی ندارم.\n</think>سلام! برای پیگیری سفارش خود می‌توانید به صفحه پیگیری سفارش مراجعه کنید.';
+  assert.equal(ai.stripThinkingTags(sampleWithThink), 'سلام! برای پیگیری سفارش خود می‌توانید به صفحه پیگیری سفارش مراجعه کنید.');
+
+  const sampleUnclosed = '<think>این یک استدلال ناتمام است';
+  assert.equal(ai.stripThinkingTags(sampleUnclosed), '');
+
+  const sampleThoughtTag = '<thought>فکر مدل</thought>پاسخ واقعی';
+  assert.equal(ai.stripThinkingTags(sampleThoughtTag), 'پاسخ واقعی');
+
+  const sampleReasoningTag = '<reasoning>استدلال</reasoning>پاسخ نهایی';
+  assert.equal(ai.stripThinkingTags(sampleReasoningTag), 'پاسخ نهایی');
+
+  const sampleNormal = 'سلام، چطور می‌توانم به شما کمک کنم؟';
+  assert.equal(ai.stripThinkingTags(sampleNormal), sampleNormal);
+});
+
+test('فیلتر استریم توکن‌های <think> را در زمان واقعی فیلتر می‌کند و مانع نشت فرآیند فکر می‌شود', () => {
+  const filter = new ai.ThinkingFilter();
+  let streamed = '';
+
+  // شبیه‌سازی توکن‌های تکه‌تکه
+  streamed += filter.process('<');
+  streamed += filter.process('th');
+  streamed += filter.process('ink>');
+  streamed += filter.process('مشتری می‌خواهد بداند سفارشش کجاست...');
+  streamed += filter.process('</');
+  streamed += filter.process('think');
+  streamed += filter.process('>\n\n');
+  streamed += filter.process('سلام! ');
+  streamed += filter.process('سفارش شما در حال پردازش است.');
+  streamed += filter.flush();
+
+  assert.equal(streamed, 'سلام! سفارش شما در حال پردازش است.');
+  assert.equal(streamed.includes('مشتری می‌خواهد'), false);
+  assert.equal(streamed.includes('<think>'), false);
+  assert.equal(streamed.includes('</think>'), false);
+});
+
+test('فیلتر استریم متن‌های بدون تگ تفکر یا علامت کوچکتری را بدون تأخیر عبور می‌دهد', () => {
+  const filter = new ai.ThinkingFilter();
+  let streamed = '';
+  streamed += filter.process('قیمت این کالا < 5000 تومان است.');
+  streamed += filter.flush();
+  assert.equal(streamed, 'قیمت این کالا < 5000 تومان است.');
+});
+
 test('parser رویداد SSE استاندارد را می‌خواند', () => {
   const event = ai.parseSseBlock('data: {"choices":[{"delta":{"content":"سلام"}}]}');
   assert.equal(event.choices[0].delta.content, 'سلام');
