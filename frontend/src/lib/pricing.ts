@@ -50,24 +50,40 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const discountEligible = hasActivePromotion || (!hasPromotionFlag && rawDiscount > 0);
   const discount = discountEligible ? rawDiscount : 0;
 
-  // Derive base price (original) first
+  // If no discount is active, the final selling price MUST ALWAYS be the product's actual price (rawPrice)
+  if (discount <= 0) {
+    const hasValidComparePrice = Boolean(
+      input.compareAtPrice &&
+      input.compareAtPrice > rawPrice
+    );
+
+    return {
+      basePrice: rawPrice,
+      finalPrice: rawPrice,
+      discount: 0,
+      flashActive: false,
+      specialActive: false,
+      hasActivePromotion: false,
+      oldPrice: hasValidComparePrice ? Math.round(input.compareAtPrice!) : undefined,
+    };
+  }
+
+  // If a discount is active:
+  // Base price (original before discount)
   const basePrice = (() => {
-    if (input.compareAtPrice && input.compareAtPrice > 0) {
+    if (input.compareAtPrice && input.compareAtPrice > rawPrice) {
       return Math.round(input.compareAtPrice);
     }
-    if (rawDiscount > 0 && rawDiscount < 100 && rawPrice > 0) {
-      return Math.round(rawPrice / (1 - rawDiscount / 100));
+    if (discount > 0 && discount < 100 && rawPrice > 0) {
+      return Math.round(rawPrice / (1 - discount / 100));
     }
     return rawPrice;
   })();
 
-  // Decide which price to expose right now
-  let finalPrice = basePrice;
-  if (discount > 0 && basePrice > 0) {
-    const discountedFromBase = Math.round(basePrice * (1 - discount / 100));
-    const looksAlreadyDiscounted = Math.abs(discountedFromBase - rawPrice) <= 1;
-    finalPrice = looksAlreadyDiscounted ? rawPrice : discountedFromBase;
-  }
+  // Final selling price with discount applied
+  const discountedFromBase = Math.round(basePrice * (1 - discount / 100));
+  const looksAlreadyDiscounted = Math.abs(discountedFromBase - rawPrice) <= 1;
+  const finalPrice = looksAlreadyDiscounted ? rawPrice : discountedFromBase;
 
   return {
     basePrice,
@@ -75,7 +91,7 @@ export function resolvePricing(input: PricingInput): PricingResult {
     discount,
     flashActive,
     specialActive,
-    hasActivePromotion: discountEligible,
-    oldPrice: discount > 0 ? basePrice : undefined,
+    hasActivePromotion: true,
+    oldPrice: basePrice > finalPrice ? basePrice : undefined,
   };
 }

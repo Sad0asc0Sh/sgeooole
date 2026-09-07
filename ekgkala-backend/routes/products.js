@@ -1925,9 +1925,17 @@ router.put(
       console.log(`[UPDATE PRODUCT] Category in updates:`, updates.category)
       console.log(`[UPDATE PRODUCT] Brand in updates:`, updates.brand)
 
+      const updateMongoQuery = { $set: updates }
+
+      // If compareAtPrice is explicitly null, empty or 0, unset it from database so it doesn't inflate pricing
+      if (updates.compareAtPrice === null || updates.compareAtPrice === '' || updates.compareAtPrice === 0) {
+        delete updates.compareAtPrice
+        updateMongoQuery.$unset = { compareAtPrice: "" }
+      }
+
       const updatedProduct = await Product.findByIdAndUpdate(
         req.params.id,
-        { $set: updates },
+        updateMongoQuery,
         { new: true, runValidators: false }
       )
 

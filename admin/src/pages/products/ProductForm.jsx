@@ -163,6 +163,7 @@ function ProductForm() {
               name: p.name,
               sku: p.sku,
               price: p.price,
+              compareAtPrice: p.compareAtPrice || undefined,
               stock: p.stock,
               category: categoryId,
               brand: brandId,
@@ -558,6 +559,7 @@ function ProductForm() {
       // برای محصولات ساده، price و stock اضافه کن
       if (productType === 'simple') {
         payload.price = values.price
+        payload.compareAtPrice = values.compareAtPrice !== undefined && values.compareAtPrice !== null && values.compareAtPrice !== '' ? values.compareAtPrice : null
         payload.stock = values.stock
       }
 
@@ -810,6 +812,23 @@ function ProductForm() {
                               `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
                             }
                             parser={parseNumericInput}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          name="compareAtPrice"
+                          label="قیمت قبل از تخفیف / خط‌خورده (تومان)"
+                          tooltip="اختیاری - اگر این فیلد پر باشد، قیمت به عنوان قیمت خط‌خورده قبلی نمایش داده می‌شود"
+                        >
+                          <InputNumber
+                            style={{ width: '100%' }}
+                            min={0}
+                            step={10000}
+                            formatter={(value) =>
+                              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                            }
+                            parser={parseNumericInput}
+                            placeholder="اختیاری (مثلاً: ۳،۵۰۰،۰۰۰)"
                           />
                         </Form.Item>
 
