@@ -74,7 +74,7 @@ export default function CartSummary({
 
             {discount > 0 && (
                 <div className="flex justify-between text-[10px] text-gray-400">
-                    <span>کد تخفیف ({appliedCouponCode || code})</span>
+                    <span>کد تخفیف{appliedCouponCode || code ? ` (${appliedCouponCode || code})` : ""}</span>
                     <span>{discount.toLocaleString("fa-IR")} - تومان</span>
                 </div>
             )}

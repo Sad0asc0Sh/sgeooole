@@ -447,10 +447,41 @@ function OrderDetail() {
       title: 'قیمت واحد',
       dataIndex: 'price',
       key: 'price',
-      render: (price) =>
-        price != null
-          ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
-          : '—',
+      render: (price, record) => {
+        const hasDiscount = Boolean(
+          (record.discount && record.discount > 0) ||
+          (record.originalPrice && record.originalPrice > price) ||
+          (record.product?.discount && record.product.discount > 0)
+        )
+        const origPrice =
+          record.originalPrice ||
+          record.product?.compareAtPrice ||
+          (record.product?.price && record.product.price > price ? record.product.price : null)
+        const discountPct =
+          record.discount ||
+          record.product?.discount ||
+          (origPrice && origPrice > price ? Math.round((1 - price / origPrice) * 100) : 0)
+
+        return (
+          <Space direction="vertical" size={2}>
+            <span>
+              {price != null
+                ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
+                : '—'}
+            </span>
+            {hasDiscount && origPrice && origPrice > price && (
+              <span style={{ fontSize: '0.85em', color: '#999', textDecoration: 'line-through' }}>
+                {new Intl.NumberFormat('fa-IR').format(origPrice)} تومان
+              </span>
+            )}
+            {discountPct > 0 && (
+              <Tag color="red" style={{ fontSize: '0.8em', lineHeight: '18px', padding: '0 4px', margin: 0 }}>
+                {discountPct}% تخفیف
+              </Tag>
+            )}
+          </Space>
+        )
+      },
     },
     {
       title: 'جمع جزء',
@@ -878,6 +909,18 @@ marginBottom: 8,
                 <Descriptions.Item label="مبلغ محصولات">
                   {new Intl.NumberFormat('fa-IR').format(order.itemsPrice || 0)} تومان
                 </Descriptions.Item>
+                {Boolean(order.totalDiscount && order.totalDiscount > 0) && (
+                  <Descriptions.Item label="مجموع تخفیف">
+                    <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                      {new Intl.NumberFormat('fa-IR').format(order.totalDiscount)} - تومان
+                    </span>
+                  </Descriptions.Item>
+                )}
+                {order.couponCode && (
+                  <Descriptions.Item label="کد تخفیف">
+                    <Tag color="magenta">{order.couponCode}</Tag>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="هزینه ارسال">
                   {new Intl.NumberFormat('fa-IR').format(order.shippingPrice || 0)} تومان
                 </Descriptions.Item>

@@ -57,33 +57,36 @@ export function resolvePricing(input: PricingInput): PricingResult {
       input.compareAtPrice > rawPrice
     );
 
+    // If a timed promotion was configured but is now expired, revert selling price to the base price (compareAtPrice)
+    const wasTimedPromotionExpired = hasPromotionFlag && hasValidComparePrice;
+    const finalPrice = wasTimedPromotionExpired ? Math.round(input.compareAtPrice!) : rawPrice;
+    const basePrice = wasTimedPromotionExpired ? finalPrice : rawPrice;
+
     return {
-      basePrice: rawPrice,
-      finalPrice: rawPrice,
+      basePrice,
+      finalPrice,
       discount: 0,
       flashActive: false,
       specialActive: false,
       hasActivePromotion: false,
-      oldPrice: hasValidComparePrice ? Math.round(input.compareAtPrice!) : undefined,
+      oldPrice: !wasTimedPromotionExpired && hasValidComparePrice ? Math.round(input.compareAtPrice!) : undefined,
     };
   }
 
   // If a discount is active:
-  // Base price (original before discount)
-  const basePrice = (() => {
-    if (input.compareAtPrice && input.compareAtPrice > rawPrice) {
-      return Math.round(input.compareAtPrice);
-    }
-    if (discount > 0 && discount < 100 && rawPrice > 0) {
-      return Math.round(rawPrice / (1 - discount / 100));
-    }
-    return rawPrice;
-  })();
+  // If compareAtPrice is explicitly provided and greater than rawPrice, rawPrice was already precomputed/discounted.
+  // Otherwise, rawPrice is the base price from which discount should be calculated.
+  const hasPrecomputedDiscount = Boolean(
+    input.compareAtPrice && input.compareAtPrice > rawPrice
+  );
 
-  // Final selling price with discount applied
-  const discountedFromBase = Math.round(basePrice * (1 - discount / 100));
-  const looksAlreadyDiscounted = Math.abs(discountedFromBase - rawPrice) <= 1;
-  const finalPrice = looksAlreadyDiscounted ? rawPrice : discountedFromBase;
+  const basePrice = hasPrecomputedDiscount
+    ? Math.round(input.compareAtPrice!)
+    : rawPrice;
+
+  const finalPrice = hasPrecomputedDiscount
+    ? rawPrice
+    : Math.round(basePrice * (1 - discount / 100));
 
   return {
     basePrice,

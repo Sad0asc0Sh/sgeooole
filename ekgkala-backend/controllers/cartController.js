@@ -4,7 +4,7 @@ const Product = require('../models/Product')
 const Settings = require('../models/Settings')
 const { sendReminderEmail, sendReminderSMS, sendExpiryWarningEmail, sendExpiryWarningSMS } = require('../utils/notificationService')
 
-const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants'
+const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants category'
 
 // Helper function to get cart settings
 async function getCartSettings() {
@@ -35,7 +35,8 @@ const {
   normalizeVariantOptions,
   getVariantKey,
   findMatchingVariant,
-  computeItemPricing
+  computeItemPricing,
+  getActiveSalesCampaignContext,
 } = require('../services/pricingService')
 
 const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => {
@@ -58,9 +59,10 @@ const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => 
   }
 
   const now = new Date()
+  const campaignContext = await getActiveSalesCampaignContext(now)
 
   const enhancedItems = (populatedCart.items || []).map((item) => {
-    const pricing = computeItemPricing(item, now)
+    const pricing = computeItemPricing(item, now, campaignContext)
     const product = item.product || {}
 
     const normalizedImage =
@@ -78,14 +80,14 @@ const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => 
       finalPrice: pricing.finalPrice,
       discount: pricing.discount,
       campaignLabel: pricing.campaignLabel,
-      isFlashDeal: Boolean(product.isFlashDeal),
+      isFlashDeal: Boolean(product.isFlashDeal || pricing.flashActive),
       flashDealEndTime: product.flashDealEndTime
         ? new Date(product.flashDealEndTime).toISOString()
         : undefined,
-      isSpecialOffer: Boolean(product.isSpecialOffer),
+      isSpecialOffer: Boolean(product.isSpecialOffer || pricing.specialActive),
       specialOfferEndTime: product.specialOfferEndTime
         ? new Date(product.specialOfferEndTime).toISOString()
-        : undefined,
+        : (pricing.specialOfferEndTime ? new Date(pricing.specialOfferEndTime).toISOString() : undefined),
       quantity: Number(item.quantity || item.qty || 1),
       qty: Number(item.quantity || item.qty || 1),
       totalItemPrice: pricing.finalPrice * (Number(item.quantity || item.qty || 1)),
@@ -152,29 +154,51 @@ exports.getAbandonedCarts = async (req, res) => {
 
     const carts = await Cart.find(filter)
       .populate('user', 'name email mobile')
-      .populate('items.product', 'name images sku price')
+      .populate('items.product', CART_PRODUCT_FIELDS)
       .sort({ updatedAt: -1 })
       .lean()
 
-    console.log(`[ABANDONED] Found ${carts.length} carts`)
+    const now = new Date()
+    const campaignContext = await getActiveSalesCampaignContext(now)
+
+    // Enhance cart items with pricing and discount details
+    const enhancedCarts = carts.map((cart) => {
+      const items = (cart.items || []).map((item) => {
+        const pricing = computeItemPricing(item, now, campaignContext)
+        return {
+          ...item,
+          price: pricing.basePrice,
+          originalPrice: pricing.basePrice,
+          finalPrice: pricing.finalPrice,
+          discount: pricing.discount,
+          campaignLabel: pricing.campaignLabel,
+        }
+      })
+      return {
+        ...cart,
+        items,
+      }
+    })
+
+    console.log(`[ABANDONED] Found ${enhancedCarts.length} carts`)
 
     // محاسبه آمار
-    const totalItems = carts.reduce((sum, cart) => {
+    const totalItems = enhancedCarts.reduce((sum, cart) => {
       return sum + cart.items.reduce((itemSum, item) => itemSum + item.quantity, 0)
     }, 0)
 
-    const totalValue = carts.reduce((sum, cart) => {
+    const totalValue = enhancedCarts.reduce((sum, cart) => {
       return (
         sum +
-        cart.items.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0)
+        cart.items.reduce((itemSum, item) => itemSum + ((item.finalPrice ?? item.price) || 0) * item.quantity, 0)
       )
     }, 0)
 
     res.json({
       success: true,
-      data: carts,
+      data: enhancedCarts,
       stats: {
-        totalCarts: carts.length,
+        totalCarts: enhancedCarts.length,
         totalItems,
         totalValue,
       },

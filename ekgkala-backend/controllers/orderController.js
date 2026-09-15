@@ -375,7 +375,7 @@ exports.getOrderById = async (req, res) => {
 
     const order = await Order.findById(req.params.id)
       .populate('user', 'name email mobile')
-      .populate('orderItems.product', 'name images sku')
+      .populate('orderItems.product', 'name images sku price compareAtPrice discount')
       .lean()
 
     if (!order) {

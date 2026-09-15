@@ -213,9 +213,14 @@ export default function LoginPage() {
                 return;
             }
 
-            const localCart = JSON.parse(localCartData);
+            const parsed = JSON.parse(localCartData);
+            const rawItems: any[] = Array.isArray(parsed)
+                ? parsed
+                : Array.isArray(parsed?.data)
+                    ? parsed.data
+                    : [];
 
-            const itemsToSync = localCart.map((item: any) => ({
+            const itemsToSync = rawItems.map((item: any) => ({
                 product: item.id || item.product,
                 quantity: item.qty || item.quantity || 1,
                 variantOptions: item.variantOptions,

@@ -397,7 +397,7 @@ function AbandonedCartsPage() {
       width: 150,
       render: (_, record) => {
         const total = record.items?.reduce(
-          (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+          (sum, item) => sum + ((item.finalPrice ?? item.price) || 0) * (item.quantity || 0),
           0,
         ) || 0
         return `${new Intl.NumberFormat('fa-IR').format(total)} تومان`
@@ -852,9 +852,24 @@ function AbandonedCartsPage() {
                           <div style={{ fontWeight: 'bold' }}>{item.name || 'محصول'}</div>
                           <div style={{ fontSize: '0.9em', color: '#666' }}>
                             قیمت واحد:{' '}
-                            {item.price
-                              ? `${new Intl.NumberFormat('fa-IR').format(item.price)} تومان`
+                            {item.finalPrice ?? item.price
+                              ? `${new Intl.NumberFormat('fa-IR').format(item.finalPrice ?? item.price)} تومان`
                               : '—'}{' '}
+                            {item.discount > 0 && item.originalPrice && item.originalPrice > (item.finalPrice ?? item.price) && (
+                              <span style={{ fontSize: '0.85em', color: '#999', textDecoration: 'line-through', marginRight: 6 }}>
+                                {new Intl.NumberFormat('fa-IR').format(item.originalPrice)} تومان
+                              </span>
+                            )}
+                            {item.discount > 0 && (
+                              <Tag color="red" size="small" style={{ marginRight: 6 }}>
+                                {item.discount}% تخفیف
+                              </Tag>
+                            )}
+                            {item.campaignLabel && (
+                              <Tag color="orange" size="small" style={{ marginRight: 4 }}>
+                                {item.campaignLabel}
+                              </Tag>
+                            )}
                             | تعداد: {item.quantity}
                           </div>
                           {item.variantOptions && item.variantOptions.length > 0 && (
@@ -869,7 +884,7 @@ function AbandonedCartsPage() {
                         </div>
                         <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
                           {new Intl.NumberFormat('fa-IR').format(
-                            (item.price || 0) * (item.quantity || 0),
+                            ((item.finalPrice ?? item.price) || 0) * (item.quantity || 0),
                           )}{' '}
                           تومان
                         </div>
@@ -889,7 +904,7 @@ function AbandonedCartsPage() {
                   title="مجموع ارزش سبد"
                   value={
                     selectedCart.items?.reduce(
-                      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+                      (sum, item) => sum + ((item.finalPrice ?? item.price) || 0) * (item.quantity || 0),
                       0,
                     ) || 0
                   }

@@ -577,6 +577,8 @@ export default function CheckoutPage() {
                 quantity: item.qty,
                 image: item.image,
                 price: item.price,
+                originalPrice: item.originalPrice ?? item.compareAtPrice ?? item.price,
+                discount: item.discount ?? 0,
                 variantOptions: item.variantOptions,
             }));
 

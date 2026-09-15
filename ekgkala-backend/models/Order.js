@@ -18,6 +18,16 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  originalPrice: {
+    type: Number,
+    min: 0,
+  },
+  discount: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 100,
+  },
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Product',
