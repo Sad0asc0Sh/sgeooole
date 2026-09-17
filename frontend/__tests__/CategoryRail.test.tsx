@@ -25,6 +25,7 @@ test("recovers categories in the browser after a failed server fetch", async () 
   expect(await screen.findByText(category.name)).toBeInTheDocument();
   expect(fetchCategories).toHaveBeenCalledWith("featured");
   expect(screen.getByRole("list").scrollLeft).toBe(-40);
+  expect(screen.getByRole("link", { name: "همه دسته‌بندی‌ها" })).toHaveAttribute("href", "/products#category-filters");
 });
 
 test("keeps valid server categories when background refresh fails", async () => {

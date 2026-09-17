@@ -8,6 +8,7 @@ import { useResilientImage } from "@/components/ui/ResilientImage";
 import { categoryService, type Category } from "@/services/categoryService";
 import { trackCategoryView, trackCategoryClick } from "@/lib/categoryTracking";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
+import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import styles from "./CategoryRail.module.css";
 
 function ResilientCategoryImg({ url, name }: { url: string; name: string }) {
@@ -79,7 +80,7 @@ export default function CategoryRail({ title, data, variant }: CategoryRailProps
       <div className={styles.container}>
         <header className={styles.header}>
           <h2 id={headingId}>{title}</h2>
-          <Link href="/categories" className={styles.viewAll}>همه دسته‌بندی‌ها <ChevronLeft size={16} aria-hidden /></Link>
+          <Link href={CATEGORY_FILTER_HREF} className={styles.viewAll}>همه دسته‌بندی‌ها <ChevronLeft size={16} aria-hidden /></Link>
         </header>
         {hasCategories ? (
           <ul ref={containerRef} className={`${styles.items} ${variant === "card" ? styles.cards : ""}`} aria-label={title}>

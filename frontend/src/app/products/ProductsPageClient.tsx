@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo } 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useProductListing } from "@/hooks/useProductListing";
+import { useCategoryFilterNavigation } from "@/hooks/useCategoryFilterNavigation";
 import { useCategoryTree } from "@/hooks/useCategories";
 import { motion, AnimatePresence } from "framer-motion";
 import Slider from "rc-slider";
@@ -295,6 +296,7 @@ function ProductListingContent() {
   const [sliderValue, setSliderValue] = useState<[number, number]>([0, 0]);
   const [showFilters, setShowFilters] = useState(false);
   const [showSortSheet, setShowSortSheet] = useState(false);
+  const { desktopCategoryRef, categoryFilterRequest } = useCategoryFilterNavigation(setShowFilters);
 
   // ─── Freeze underlying page when modals are open ───
   useEffect(() => {
@@ -308,7 +310,7 @@ function ProductListingContent() {
   }, [showFilters, showSortSheet]);
 
   // Category/Brand data for filters
-  const { categoryTree } = useCategoryTree();
+  const { categoryTree, isLoading: categoriesLoading, error: categoriesError, refresh: refreshCategories } = useCategoryTree();
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [brandSearchQuery, setBrandSearchQuery] = useState("");
 
@@ -712,14 +714,32 @@ function ProductListingContent() {
       )}
 
       {/* Category Filter */}
-      {categoryTree.length > 0 && (
+      <div
+        id={isMobile ? "mobile-category-filters" : "category-filters"}
+        ref={isMobile ? undefined : desktopCategoryRef}
+        tabIndex={-1}
+        aria-label="فیلتر دسته‌بندی محصولات"
+        style={{ scrollMarginTop: "calc(var(--header-height, 136px) + 1rem)" }}
+        className="rounded-2xl focus-visible:outline-2 focus-visible:outline-kala-500"
+      >
         <FilterSection
+          key={`categories-${categoryFilterRequest}`}
           title="دسته‌بندی"
           icon={<LayoutGrid size={16} />}
           defaultOpen={true}
           badge={categorySlug ? 1 : 0}
         >
           <div className="max-h-[320px] overflow-y-auto -mx-1 px-1 custom-scrollbar">
+            {categoryTree.length === 0 && (
+              <div role="status" className="py-3 text-sm text-gray-500">
+                {categoriesLoading ? "در حال بارگذاری دسته‌بندی‌ها…" : categoriesError ? (
+                  <>
+                    <p>بارگذاری دسته‌بندی‌ها انجام نشد.</p>
+                    <button type="button" className="mt-2 text-kala-700" onClick={() => { void refreshCategories(); }}>تلاش مجدد</button>
+                  </>
+                ) : "دسته‌بندی‌ای برای نمایش وجود ندارد."}
+              </div>
+            )}
             {categoryTree.map((cat) => (
               <CategoryTreeItem
                 key={cat._id}
@@ -732,7 +752,7 @@ function ProductListingContent() {
             ))}
           </div>
         </FilterSection>
-      )}
+      </div>
 
       {/* Brand Filter */}
       {allBrands.length > 0 && (
