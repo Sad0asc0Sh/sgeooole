@@ -75,7 +75,8 @@
   width: 100%;
   min-width: 0;
   height: 100%;
-  padding: 12px;
+  --card-padding: 12px;
+  padding: var(--card-padding);
   overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -83,14 +84,31 @@
   transition: border-color 180ms ease;
 }
 .card:hover { border-color: #d97706; }
-.badges { display: flex; flex-wrap: wrap; align-content: flex-start; align-items: center; gap: 4px 6px; min-height: 44px; }
-.promotionLabel { display: flex; min-width: 0; max-width: 100%; }
-.promotionLabel > span { display: block; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
-.stock { color: #be123c; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.promotionSlot { min-height: 36px; margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) 10px; }
+.promotionHeader { --promotion-color: #2563eb; --promotion-stripe: linear-gradient(to right, #60a5fa, #6366f1); border-bottom: 1px solid #f1f5f9; }
+.promotionHeader[data-promotion-theme="flash"] { --promotion-color: #b45309; --promotion-stripe: #f59e0b; }
+.promotionHeader[data-promotion-theme="amazing"] { --promotion-color: #ef4444; --promotion-stripe: #ef4444; }
+.promotionHeader[data-promotion-theme="gold"] { --promotion-color: #d97706; --promotion-stripe: linear-gradient(to right, #fbbf24, #f97316); }
+.promotionHeader[data-promotion-theme="fire"] { --promotion-color: #e11d48; --promotion-stripe: linear-gradient(to right, #f43f5e, #7e22ce); }
+.promotionHeader[data-promotion-theme="lime"] { --promotion-color: #4d7c0f; --promotion-stripe: linear-gradient(to right, #a3e635, #22c55e); }
+.promotionStripe { height: 4px; width: 100%; background: var(--promotion-stripe); }
+.promotionLabel { display: block; min-width: 0; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--promotion-color); font-size: 10px; font-weight: 700; line-height: 20px; }
+.stock { position: absolute; bottom: 4px; left: 4px; max-width: calc(100% - 8px); display: flex; align-items: center; gap: 3px; padding: 4px 5px; border-radius: 6px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; }
+.stock svg { flex-shrink: 0; }
+.cardTimer { max-width: calc(100% - 4px); }
+.cardTimer > div { padding-inline: 4px; }
+.cardTimer > div > div { gap: 2px; font-size: 10px; letter-spacing: 0; }
+.flash { color: #b45309; }
+.amazing { color: #ef4444; }
+.gold { color: #d97706; }
+.fire { color: #e11d48; }
+.lime { color: #4d7c0f; }
+.blue { color: #2563eb; }
+.discountBadge { flex-shrink: 0; padding: 2px 6px; border-radius: 6px; background: #ef394e; color: #fff; font-size: 10px; font-weight: 700; }
+.discountRose { background: #e11d48; }
 .imageFrame { border-radius: 8px; }
 .unavailable { position: absolute; inset: 0; display: grid; place-items: center; background: #ffffff66; }
 .unavailable span { padding: 4px 10px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; }
-.timer { display: flex; justify-content: center; align-items: center; min-height: 36px; margin-top: 4px; }
 .productName {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -127,7 +145,7 @@
   .header { gap: 12px; }
   .actions { gap: 8px; }
   .navigation { display: none; }
-  .card { padding: 10px; }
+  .card { --card-padding: 10px; }
   .productName { font-size: 12px; }
   .price { font-size: 15px; }
   .skeletonCard { height: 340px; }

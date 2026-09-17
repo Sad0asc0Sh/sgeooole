@@ -3,8 +3,8 @@
 import { memo } from "react";
 import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
-import Countdown from "@/components/ui/Countdown";
-import PromotionBadge from "@/components/promotion/PromotionBadge";
+import { AlertTriangle } from "lucide-react";
+import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
@@ -23,18 +23,23 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
   const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
   const originalPrice = product.compareAtPrice || product.oldPrice || product.price;
   const hasDiscount = !isOutOfStock && effectiveDiscount > 0 && originalPrice > displayPrice;
-  const label = kind === "flash" ? "زمان‌دار" : kind === "campaign"
-    ? product.campaignLabel || "فروش ویژه" : kind === "amazing" ? "منتخب" : null;
+  const label = kind === "flash" ? "پیشنهاد لحظه‌ای" : kind === "campaign"
+    ? product.campaignLabel || "فروش ویژه" : kind === "amazing" ? "شگفت‌انگیز" : null;
+  const campaignTheme = product.campaignTheme || "";
+  const theme = kind === "flash" ? "flash" : kind === "amazing" ? "amazing"
+    : ["gold-red", "gold"].includes(campaignTheme) ? "gold"
+    : ["red-purple", "fire", "red"].includes(campaignTheme) ? "fire"
+    : ["lime-orange", "lime"].includes(campaignTheme) ? "lime" : "blue";
 
   return (
     <Link href={buildProductUrl(product)} className={styles.card} data-home-product={product.id}>
-      <div className={styles.badges}>
+      <div className={styles.promotionSlot}>
         {label && (
-          <span className={styles.promotionLabel} title={label}>
-            <PromotionBadge label={label} tone={kind === "flash" ? "timed" : kind === "campaign" ? "campaign" : "curated"} />
-          </span>
+          <div className={styles.promotionHeader} data-promotion-theme={theme}>
+            <div className={styles.promotionStripe} aria-hidden />
+            <span className={styles.promotionLabel} title={label}>{label}</span>
+          </div>
         )}
-        {isLowStock && <span className={styles.stock}>تنها {product.countInStock.toLocaleString("fa-IR")} عدد</span>}
       </div>
 
       <div className={`${imageStyles.frame} ${styles.imageFrame}`}>
@@ -50,21 +55,22 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
           blurDataURL={getBlurDataURL()}
           fallbackSrc="/placeholder.png"
         />
+        {endTime && !isOutOfStock && (
+          <ProductTimerBadge key={endTime} targetDate={endTime} color="" className={`${styles.cardTimer} ${styles[theme]}`} />
+        )}
+        {isLowStock && <span className={styles.stock}><AlertTriangle size={12} aria-hidden />تنها {product.countInStock.toLocaleString("fa-IR")} عدد</span>}
         {isOutOfStock && (
           <div className={styles.unavailable}><span>ناموجود</span></div>
         )}
       </div>
 
-      <div className={styles.timer}>
-        {endTime && !isOutOfStock && <Countdown targetDate={endTime} variant="compact" />}
-      </div>
       <h3 className={`${styles.productName} ${isOutOfStock ? "text-gray-400" : "text-ekg-800"}`} title={product.name}>
         {product.name}
       </h3>
       <div className={styles.pricing}>
         <div className={styles.discountRow}>
           {hasDiscount && <>
-            <PromotionBadge label={`${effectiveDiscount.toLocaleString("fa-IR")}٪`} tone="discount" />
+            <span className={`${styles.discountBadge} ${campaignTheme === "red-purple" ? styles.discountRose : ""}`}>{effectiveDiscount.toLocaleString("fa-IR")}٪</span>
             <del className={styles.originalPrice}>{originalPrice.toLocaleString("fa-IR")}</del>
           </>}
         </div>

@@ -31,8 +31,41 @@ test("uses the shared product URL and correct comparison price", () => {
 test("removes expired pricing and promotion labels", () => {
   const { container } = render(<HomeProductCard product={{ ...product, isFlashDeal: true, flashDealEndTime: new Date(now - 1000).toISOString() }} now={now} />);
   expect(container.querySelector("del")).toBeNull();
-  expect(screen.queryByText("زمان‌دار")).not.toBeInTheDocument();
+  expect(screen.queryByText("پیشنهاد لحظه‌ای")).not.toBeInTheDocument();
+  expect(container.querySelector("[data-promotion-theme]")).toBeNull();
   expect(screen.getByText((1000000).toLocaleString("fa-IR"))).toBeInTheDocument();
+});
+
+test.each([
+  ["gold-red", "gold"], ["gold", "gold"],
+  ["red-purple", "fire"], ["fire", "fire"], ["red", "fire"],
+  ["lime-orange", "lime"], ["lime", "lime"], ["blue", "blue"],
+])("restores campaign label and stripe for %s", (campaignTheme, theme) => {
+  const { container } = render(<HomeProductCard product={{ ...product, campaignTheme, campaignLabel: "جشنواره فروش ویژه" }} now={now} />);
+  expect(screen.getByText("جشنواره فروش ویژه")).toBeInTheDocument();
+  expect(container.querySelector("[data-promotion-theme]")).toHaveAttribute("data-promotion-theme", theme);
+  expect(screen.getByText("۲۰٪")).toHaveClass("discountBadge");
+});
+
+test("restores flash and amazing labels without changing discount calculations", () => {
+  const endTime = new Date(now + 60000).toISOString();
+  const { rerender, container } = render(<HomeProductCard product={{ ...product, isFlashDeal: true, flashDealEndTime: endTime }} now={now} />);
+  expect(screen.getByText("پیشنهاد لحظه‌ای")).toBeInTheDocument();
+  expect(container.querySelector("[data-promotion-theme]")).toHaveAttribute("data-promotion-theme", "flash");
+  rerender(<HomeProductCard product={{ ...product, isSpecialOffer: true, specialOfferEndTime: endTime }} now={now} />);
+  expect(screen.getByText("شگفت‌انگیز")).toBeInTheDocument();
+  expect(screen.getByText("۲۰٪")).toBeInTheDocument();
+  expect(screen.getByText((800000).toLocaleString("fa-IR"))).toBeInTheDocument();
+  rerender(<HomeProductCard product={{ ...product, isSpecialOffer: true, specialOfferEndTime: endTime }} now={now + 60001} />);
+  expect(screen.queryByText("شگفت‌انگیز")).not.toBeInTheDocument();
+  expect(screen.queryByText("۲۰٪")).not.toBeInTheDocument();
+  expect(screen.getByText((1000000).toLocaleString("fa-IR"))).toBeInTheDocument();
+});
+
+test("ordinary discounts do not manufacture a promotion header", () => {
+  const { container } = render(<HomeProductCard product={product} now={now} />);
+  expect(container.querySelector("[data-promotion-theme]")).toBeNull();
+  expect(screen.getByText("۲۰٪")).toHaveClass("discountBadge");
 });
 
 test("does not advertise a purchasable price for an out-of-stock item", () => {
