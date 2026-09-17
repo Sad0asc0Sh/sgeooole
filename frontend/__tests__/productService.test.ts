@@ -79,5 +79,36 @@ describe("productService", () => {
     expect(product.oldPrice).toBe(480000);
     expect(product.price).toBe(422400);
   });
+
+  it("sends listing filter params including stock, sale, rating and multi-value properties", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: { success: true, data: [], pagination: { totalItems: 0, totalPages: 1, currentPage: 1 } },
+    });
+
+    await productService.getProducts({
+      page: 2,
+      limit: 24,
+      sort: "priceAsc",
+      brand: "apple,samsung",
+      inStock: true,
+      onSale: true,
+      minRating: 4,
+      minPrice: 0,
+      maxPrice: 5_000_000,
+      properties: { رنگ: ["آبی", "قرمز"], گارانتی: "۱۸ ماهه" },
+    });
+
+    const url = mockedApi.get.mock.calls[0][0] as string;
+    const params = new URLSearchParams(url.split("?")[1]);
+
+    expect(params.get("page")).toBe("2");
+    expect(params.get("brand")).toBe("apple,samsung");
+    expect(params.get("inStock")).toBe("true");
+    expect(params.get("onSale")).toBe("true");
+    expect(params.get("minRating")).toBe("4");
+    expect(params.get("minPrice")).toBe("0");
+    expect(params.getAll("properties[رنگ]")).toEqual(["آبی", "قرمز"]);
+    expect(params.getAll("properties[گارانتی]")).toEqual(["۱۸ ماهه"]);
+  });
 });
 

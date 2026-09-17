@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo, useRef, useId } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
 import { useProductListing } from "@/hooks/useProductListing";
@@ -26,14 +26,16 @@ import {
   Sparkles,
   Flame,
   TrendingUp,
+  Star,
 } from "lucide-react";
 import ProductCard from "@/components/product/ProductCard";
-import { productService, CategoryProperty, CategoryDetails } from "@/services/productService";
+import { productService, CategoryDetails } from "@/services/productService";
 import { brandService, Brand } from "@/services/brandService";
 import { Category } from "@/services/categoryService";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import ProductListingSkeleton from "@/components/product/ProductListingSkeleton";
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
+import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -45,129 +47,115 @@ const SORT_OPTIONS = [
   { value: "discount", label: "بیشترین تخفیف", icon: Flame },
 ] as const;
 
+function containsCategory(category: Category, slug: string | null): boolean {
+  return category.slug === slug || !!category.children?.some((child) => containsCategory(child, slug));
+}
+
+// Each sheet owns keyboard focus without interfering with route scroll restoration.
+function useSheetDialog(open: boolean, onClose: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusable = () => Array.from(ref.current?.querySelectorAll<HTMLElement>(
+      'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
+    ) || []).filter((element) => element.getClientRects().length > 0);
+    const focusFirst = () => (focusable()[0] || ref.current)?.focus({ preventScroll: true });
+    const frame = requestAnimationFrame(focusFirst);
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+      if (event.key !== "Tab") return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (!first) {
+        event.preventDefault();
+        ref.current?.focus();
+      } else if (event.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const handleFocus = (event: FocusEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) focusFirst();
+    };
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const handleResize = () => { if (desktop.matches) onClose(); };
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("focusin", handleFocus);
+    desktop.addEventListener("change", handleResize);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("focusin", handleFocus);
+      desktop.removeEventListener("change", handleResize);
+      document.body.style.overflow = originalOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+    };
+  }, [open, onClose]);
+  return ref;
+}
+
 // ─── CategoryTreeItem: Accordion drawer for categories ─────────
 function CategoryTreeItem({
   category,
-  level = 0,
   currentSlug,
   onSelect,
 }: {
   category: Category;
-  level?: number;
   currentSlug: string | null;
   onSelect: (slug: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(() => {
-    // Auto-expand if this category or a child is currently selected
-    if (category.slug === currentSlug) return true;
-    if (category.children?.some((c) => c.slug === currentSlug)) return true;
-    return false;
-  });
-
-  const hasChildren = category.children && category.children.length > 0;
+  const hasActiveChild = !!category.children?.some((child) => containsCategory(child, currentSlug));
+  const [expanded, setExpanded] = useState(() => containsCategory(category, currentSlug));
+  const childrenId = useId();
+  const hasChildren = !!category.children?.length;
   const isActive = category.slug === currentSlug;
-  const hasActiveChild = category.children?.some((c) => c.slug === currentSlug);
+
+  useEffect(() => {
+    if (hasActiveChild || isActive) setExpanded(true);
+  }, [currentSlug, hasActiveChild, isActive]);
 
   return (
     <div className="mb-1">
-      <div
-        className={`flex items-center justify-between gap-2 rounded-xl cursor-pointer transition-all duration-200 group py-2.5 px-3
-          ${isActive
-            ? "bg-kala-50 text-kala-700 font-bold border border-kala-200/60 shadow-xs"
-            : hasActiveChild
-            ? "bg-amber-50/60 text-gray-800 font-semibold"
-            : "hover:bg-gray-50 text-gray-700 font-medium"
-          }`}
-        style={{ paddingRight: `${12 + level * 14}px` }}
-        onClick={(e) => {
-          if (hasChildren) {
-            e.stopPropagation();
-            setExpanded(!expanded);
-          } else {
-            onSelect(category.slug);
-          }
-        }}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {hasChildren ? (
-            <span
-              className={`w-6 h-6 rounded-lg bg-gray-100/80 flex items-center justify-center text-gray-500 group-hover:bg-gray-200/80 transition-transform duration-200 flex-shrink-0 ${
-                expanded ? "rotate-180 text-kala-600 bg-kala-100/80" : ""
-              }`}
-            >
-              <ChevronDown size={14} />
-            </span>
-          ) : (
-            <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  isActive ? "bg-kala-500 scale-125 ring-4 ring-kala-100" : "bg-gray-300"
-                }`}
-              />
-            </span>
-          )}
-          <span className={`text-sm truncate ${level === 0 ? "font-bold text-gray-900" : "text-gray-700"}`}>
-            {category.name}
-          </span>
-        </div>
-
-        {/* Quick select badge for parent categories */}
-        {hasChildren && (
+      <div className={`flex items-center gap-2 rounded-xl py-1 px-2 transition-colors ${
+        isActive ? "bg-kala-50 text-kala-700 border border-kala-200/60" : hasActiveChild ? "bg-amber-50/60 text-gray-800" : "text-gray-700 hover:bg-gray-50"
+      }`}>
+        {hasChildren ? (
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(category.slug);
-            }}
-            className={`text-[11px] px-2 py-0.5 rounded-lg font-bold transition-all flex-shrink-0 ${
-              isActive
-                ? "bg-kala-500 text-white shadow-xs"
-                : "bg-gray-100 text-gray-500 hover:bg-kala-100 hover:text-kala-700"
-            }`}
-            title={`فیلتر بر اساس کل ${category.name}`}
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-controls={childrenId}
+            aria-label={`${expanded ? "بستن" : "باز کردن"} زیرشاخه‌های ${category.name}`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100/80 text-gray-500 hover:bg-kala-100 focus-visible:outline-2 focus-visible:outline-kala-500"
           >
-            {isActive ? "انتخاب شده" : "همه"}
+            <ChevronDown size={15} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
           </button>
-        )}
+        ) : <span aria-hidden="true" className={`mx-3 h-2 w-2 shrink-0 rounded-full ${isActive ? "bg-kala-500" : "bg-gray-300"}`} />}
+        <button
+          type="button"
+          onClick={() => onSelect(category.slug)}
+          aria-pressed={isActive}
+          className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-lg py-2.5 text-right text-sm font-medium focus-visible:outline-2 focus-visible:outline-kala-500"
+        >
+          <span className="break-words">{category.name}</span>
+          {isActive ? <Check size={14} className="shrink-0 text-kala-600" /> : hasChildren && <span className="shrink-0 text-[11px] text-gray-500">همه</span>}
+        </button>
       </div>
-
-      <AnimatePresence initial={false}>
-        {expanded && hasChildren && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden mr-3 pr-2 border-r-2 border-kala-200/60 my-1 space-y-1"
-          >
-            {/* Direct option to select "All products in [Category]" inside accordion */}
-            <div
-              onClick={() => onSelect(category.slug)}
-              className={`flex items-center justify-between py-2 px-3 rounded-xl text-xs cursor-pointer transition-colors ${
-                isActive
-                  ? "bg-kala-100/80 text-kala-800 font-bold"
-                  : "bg-gray-50/70 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-kala-500" />
-                <span>همه محصولات {category.name}</span>
-              </div>
-              {isActive && <Check size={13} className="text-kala-600" />}
-            </div>
-
-            {category.children!.map((child) => (
-              <CategoryTreeItem
-                key={child._id}
-                category={child}
-                level={level + 1}
-                currentSlug={currentSlug}
-                onSelect={onSelect}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div id={childrenId} hidden={!expanded || !hasChildren} className="mr-3 my-1 space-y-1 border-r-2 border-kala-200/60 pr-2">
+        {category.children?.map((child) => (
+          <CategoryTreeItem key={child._id} category={child} currentSlug={currentSlug} onSelect={onSelect} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -187,10 +175,14 @@ function FilterSection({
   badge?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={contentId}
         onClick={() => setOpen(!open)}
         className="w-full flex items-center gap-2.5 p-4 text-right transition-colors hover:bg-gray-50/50"
       >
@@ -209,6 +201,7 @@ function FilterSection({
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
+            id={contentId}
             initial={{ height: 0 }}
             animate={{ height: "auto" }}
             exit={{ height: 0 }}
@@ -270,153 +263,87 @@ function ProductListingContent() {
   const { markRoutePending, markRouteReady } = useRouteLoadingState();
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
-  // URL Params
-  const categorySlug = searchParams.get("category");
-  const brandSlug = searchParams.get("brand");
-  const searchQuery = searchParams.get("search");
-  const rawSort = searchParams.get("sort");
-  const sortParam = useMemo(() => {
-    if (!rawSort) return "newest";
-    if (rawSort === "bestseller" || rawSort === "bestSellers") return "bestSelling";
-    if (rawSort === "flash" || rawSort === "special") return "discount";
-    return rawSort;
-  }, [rawSort]);
-  const pageParam = parseInt(searchParams.get("page") || "1", 10) || 1;
-  const minPriceParam = searchParams.get("minPrice");
-  const maxPriceParam = searchParams.get("maxPrice");
-  const includeChildrenParam = searchParams.get("includeChildren") === "true";
-  const inStockParam = searchParams.get("inStock") === "true";
-  const listingScrollKey = useMemo(
-    () => `/products${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
-    [searchParams],
-  );
+  // The URL is the only committed filter state. Drafts exist only for submitted inputs.
+  const queryString = searchParams.toString();
+  const listingQuery = useMemo(() => parseProductFilters(new URLSearchParams(queryString)), [queryString]);
+  const categorySlug = listingQuery.category || null;
+  const brandSlug = listingQuery.brand;
+  const selectedBrands = useMemo(() => brandSlug?.split(",") || [], [brandSlug]);
+  const searchQuery = listingQuery.search;
+  const sortParam = listingQuery.sort;
+  const minPriceParam = listingQuery.minPrice;
+  const maxPriceParam = listingQuery.maxPrice;
+  const hasPriceFilter = minPriceParam !== undefined || maxPriceParam !== undefined;
+  const inStockParam = !!listingQuery.inStock;
+  const selectedProperties = listingQuery.properties;
+  const listingScrollKey = `/products${queryString ? `?${queryString}` : ""}`;
 
-  // ─── State ──────────────────────────────────────────
-  const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
-  const [sliderValue, setSliderValue] = useState<[number, number]>([0, 0]);
+  // Pending URL writes are composed so rapid toggles cannot overwrite each other.
+  // This ref is navigation bookkeeping, never a second source for rendered selections.
+  const navigation = useRef({ observed: queryString, pending: queryString });
+  useLayoutEffect(() => {
+    if (navigation.current.observed !== queryString) {
+      navigation.current = { observed: queryString, pending: queryString };
+    }
+  }, [queryString]);
+
+  const [priceDraft, setPriceDraft] = useState<[string, string]>(["", ""]);
+  const [priceError, setPriceError] = useState("");
+  const [searchDraft, setSearchDraft] = useState(searchQuery || "");
   const [showFilters, setShowFilters] = useState(false);
   const [showSortSheet, setShowSortSheet] = useState(false);
+  const closeFilters = useCallback(() => setShowFilters(false), []);
+  const closeSort = useCallback(() => setShowSortSheet(false), []);
+  const filterDialogRef = useSheetDialog(showFilters, closeFilters);
+  const sortDialogRef = useSheetDialog(showSortSheet, closeSort);
   const { desktopCategoryRef, categoryFilterRequest } = useCategoryFilterNavigation(setShowFilters);
 
-  // ─── Freeze underlying page when modals are open ───
-  useEffect(() => {
-    if (showFilters || showSortSheet) {
-      const originalStyle = window.getComputedStyle(document.body).overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalStyle;
-      };
-    }
-  }, [showFilters, showSortSheet]);
-
-  // Category/Brand data for filters
   const { categoryTree, isLoading: categoriesLoading, error: categoriesError, refresh: refreshCategories } = useCategoryTree();
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
+  const [brandsLoading, setBrandsLoading] = useState(true);
+  const [brandsError, setBrandsError] = useState(false);
   const [brandSearchQuery, setBrandSearchQuery] = useState("");
-
-  // Category properties state for dynamic filters
   const [categoryDetails, setCategoryDetails] = useState<CategoryDetails | null>(null);
-  const [selectedProperties, setSelectedProperties] = useState<Record<string, string>>({});
-
-  // Brand state
   const [brandDetails, setBrandDetails] = useState<Brand | null>(null);
-  const [expandedFilters, setExpandedFilters] = useState<Record<string, boolean>>({});
+  const singleBrandSlug = selectedBrands.length === 1 ? selectedBrands[0] : undefined;
 
-  // ─── Data Fetching ──────────────────────────────────
-  // Fetch all brands for filter
   useEffect(() => {
-    const fetchBrands = async () => {
-      try {
-        const brands = await brandService.getAll({ fields: "name,slug,logo" });
-        setAllBrands(brands);
-      } catch (error) {
-        console.error("Failed to fetch brands for filters:", error);
-      }
-    };
-    fetchBrands();
+    setSearchDraft(searchQuery || "");
+  }, [searchQuery]);
+
+  useEffect(() => {
+    let active = true;
+    brandService.getAll({ fields: "name,slug,logo" }).then((brands) => {
+      if (active) setAllBrands(brands);
+    }).catch(() => {
+      if (active) setBrandsError(true);
+    }).finally(() => {
+      if (active) setBrandsLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
-  // Parse property filters from URL
-  const getPropertyFiltersFromUrl = useCallback(() => {
-    const props: Record<string, string> = {};
-    searchParams.forEach((value, key) => {
-      if (key.startsWith('prop_')) {
-        const propName = key.replace('prop_', '');
-        props[propName] = value;
-      }
-    });
-    return props;
-  }, [searchParams]);
-
-  // Fetch category details when category changes
   useEffect(() => {
-    const fetchCategoryDetails = async () => {
-      if (categorySlug) {
-        const details = await productService.getCategoryBySlug(categorySlug);
-        setCategoryDetails(details);
-        if (details?.properties) {
-          const expanded: Record<string, boolean> = {};
-          details.properties.forEach((p: CategoryProperty, i: number) => {
-            expanded[p.name] = i < 3;
-          });
-          setExpandedFilters(expanded);
-        }
-      } else {
-        setCategoryDetails(null);
-      }
-    };
-    fetchCategoryDetails();
+    let active = true;
+    setCategoryDetails(null);
+    if (categorySlug) {
+      productService.getCategoryBySlug(categorySlug).then((details) => {
+        if (active) setCategoryDetails(details);
+      }).catch(() => { if (active) setCategoryDetails(null); });
+    }
+    return () => { active = false; };
   }, [categorySlug]);
 
-  // Fetch brand details when brand changes
   useEffect(() => {
-    const fetchBrandDetails = async () => {
-      if (brandSlug) {
-        try {
-          const brand = await brandService.getBySlug(brandSlug);
-          setBrandDetails(brand);
-        } catch (error) {
-          console.error("Failed to fetch brand:", error);
-          setBrandDetails(null);
-        }
-      } else {
-        setBrandDetails(null);
-      }
-    };
-    fetchBrandDetails();
-  }, [brandSlug]);
-
-  // Sync URL property filters to state
-  useEffect(() => {
-    setSelectedProperties(getPropertyFiltersFromUrl());
-  }, [getPropertyFiltersFromUrl]);
-
-  const listingQuery = useMemo(
-    () => ({
-      page: pageParam,
-      sort: sortParam,
-      category: categorySlug || undefined,
-      brand: brandSlug || undefined,
-      search: searchQuery || undefined,
-      minPrice: minPriceParam ? Number(minPriceParam) : undefined,
-      maxPrice: maxPriceParam ? Number(maxPriceParam) : undefined,
-      includeChildren: includeChildrenParam,
-      inStock: inStockParam,
-      properties: getPropertyFiltersFromUrl(),
-    }),
-    [
-      pageParam,
-      sortParam,
-      categorySlug,
-      brandSlug,
-      searchQuery,
-      minPriceParam,
-      maxPriceParam,
-      includeChildrenParam,
-      inStockParam,
-      getPropertyFiltersFromUrl,
-    ],
-  );
+    let active = true;
+    setBrandDetails(null);
+    if (singleBrandSlug) {
+      brandService.getBySlug(singleBrandSlug).then((brand) => {
+        if (active) setBrandDetails(brand);
+      }).catch(() => { if (active) setBrandDetails(null); });
+    }
+    return () => { active = false; };
+  }, [singleBrandSlug]);
 
   const {
     products,
@@ -424,7 +351,9 @@ function ProductListingContent() {
     totalPages,
     currentPage,
     priceRange: fetchedPriceRange,
+    facets,
     isReady,
+    isValidating,
     showSkeleton,
     showError,
     error,
@@ -450,127 +379,115 @@ function ProductListingContent() {
   });
 
   useEffect(() => {
-    if (!fetchedPriceRange) return;
+    setPriceDraft([minPriceParam === undefined ? "" : String(minPriceParam), maxPriceParam === undefined ? "" : String(maxPriceParam)]);
+    setPriceError("");
+  }, [minPriceParam, maxPriceParam]);
 
-    setPriceRange(fetchedPriceRange);
-    if (!minPriceParam && !maxPriceParam) {
-      setSliderValue([0, fetchedPriceRange.max]);
-      return;
-    }
-
-    setSliderValue([
-      minPriceParam ? Number(minPriceParam) : fetchedPriceRange.min,
-      maxPriceParam ? Number(maxPriceParam) : fetchedPriceRange.max,
-    ]);
-  }, [fetchedPriceRange, minPriceParam, maxPriceParam]);
+  const sliderMax = Math.max(
+    0,
+    Number.isFinite(fetchedPriceRange?.max) ? fetchedPriceRange!.max : 0,
+    minPriceParam || 0,
+    maxPriceParam || 0,
+  );
+  const sliderValue: [number, number] = [
+    Math.min(parsePriceInput(priceDraft[0]) ?? 0, sliderMax),
+    Math.min(parsePriceInput(priceDraft[1]) ?? sliderMax, sliderMax),
+  ].sort((a, b) => a - b) as [number, number];
 
   // ─── Handlers ───────────────────────────────────────
-  const handleSortChange = useCallback((sort: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("sort", sort);
-    params.delete("page"); // Reset to page 1 on sort change
-    const targetPath = `/products?${params.toString()}`;
+  const updateFilters = useCallback((change: (params: URLSearchParams) => void, resetPage = true) => {
+    const params = new URLSearchParams(navigation.current.pending);
+    change(params);
+    if (resetPage) params.delete("page");
+    const qs = params.toString();
+    navigation.current.pending = qs;
+    const targetPath = `/products${qs ? `?${qs}` : ""}`;
     getScrollManager().clear(targetPath);
-    router.push(targetPath);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [searchParams, router]);
+    // Keep the sheet and its scroll position stable during immediate multi-selection.
+    router.push(targetPath, { scroll: false });
+    if (!showFilters) window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [router, showFilters]);
+
+  const removeFilter = useCallback((key: string) => {
+    updateFilters((params) => params.delete(key));
+  }, [updateFilters]);
+
+  const handleSortChange = useCallback((sort: string) => {
+    updateFilters((params) => params.set("sort", sort));
+  }, [updateFilters]);
 
   const handlePriceFilter = useCallback(() => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("minPrice", sliderValue[0].toString());
-    params.set("maxPrice", sliderValue[1].toString());
-    params.delete("page");
-    const targetPath = `/products?${params.toString()}`;
-    getScrollManager().clear(targetPath);
-    router.push(targetPath);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [searchParams, router, sliderValue]);
+    const min = parsePriceInput(priceDraft[0]);
+    const max = parsePriceInput(priceDraft[1]);
+    if ((priceDraft[0].trim() && min === undefined) || (priceDraft[1].trim() && max === undefined)) {
+      setPriceError("قیمت را با عدد غیرمنفی و معتبر وارد کنید.");
+      return;
+    }
+    if (min !== undefined && max !== undefined && min > max) {
+      setPriceError("قیمت «از» نباید بیشتر از قیمت «تا» باشد.");
+      return;
+    }
+    setPriceError("");
+    updateFilters((params) => {
+      if (min === undefined) params.delete("minPrice"); else params.set("minPrice", String(min));
+      if (max === undefined) params.delete("maxPrice"); else params.set("maxPrice", String(max));
+    });
+  }, [priceDraft, updateFilters]);
 
   const handleCategorySelect = useCallback((slug: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (slug === categorySlug) {
-      // Deselect: remove category filter
-      params.delete("category");
-      params.delete("includeChildren");
-    } else {
-      params.set("category", slug);
-      params.set("includeChildren", "true");
-    }
-    params.delete("page");
-    // Remove property filters when category changes
-    const keysToDelete: string[] = [];
-    params.forEach((_, key) => {
-      if (key.startsWith("prop_")) keysToDelete.push(key);
+    updateFilters((params) => {
+      if (params.get("category") === slug) {
+        params.delete("category");
+        params.delete("includeChildren");
+      } else {
+        params.set("category", slug);
+        params.set("includeChildren", "true");
+      }
+      Array.from(params.keys()).filter((key) => key.startsWith("prop_")).forEach((key) => params.delete(key));
     });
-    keysToDelete.forEach((k) => params.delete(k));
-
-    const targetPath = `/products?${params.toString()}`;
-    getScrollManager().clear(targetPath);
-    router.push(targetPath);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [searchParams, router, categorySlug]);
+  }, [updateFilters]);
 
   const handleBrandSelect = useCallback((slug: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (slug === brandSlug) {
-      // Deselect: remove brand filter
+    updateFilters((params) => {
+      const brands = new Set(parseProductFilters(params).brand?.split(",") || []);
+      if (brands.has(slug)) brands.delete(slug); else brands.add(slug);
       params.delete("brand");
-    } else {
-      params.set("brand", slug);
-    }
-    params.delete("page");
-    const targetPath = `/products?${params.toString()}`;
-    getScrollManager().clear(targetPath);
-    router.push(targetPath);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [searchParams, router, brandSlug]);
+      if (brands.size) params.set("brand", Array.from(brands).join(","));
+    });
+  }, [updateFilters]);
 
   const handlePageChange = useCallback((page: number) => {
     if (page < 1 || page > totalPages || page === currentPage) return;
-    const params = new URLSearchParams(searchParams.toString());
-    if (page === 1) {
-      params.delete("page");
-    } else {
-      params.set("page", page.toString());
-    }
-    const targetPath = `/products${params.toString() ? `?${params.toString()}` : ""}`;
-    getScrollManager().clear(targetPath);
-    router.push(targetPath);
-    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
-  }, [searchParams, router, totalPages, currentPage]);
+    updateFilters((params) => {
+      if (page === 1) params.delete("page"); else params.set("page", String(page));
+    }, false);
+  }, [updateFilters, totalPages, currentPage]);
 
   const handleClearFilters = useCallback(() => {
-    const params = new URLSearchParams();
-    // Keep search query if present
-    if (searchQuery) params.set("search", searchQuery);
-    const qs = params.toString();
-    router.push(`/products${qs ? `?${qs}` : ""}`);
-  }, [router, searchQuery]);
+    updateFilters((params) => {
+      Array.from(params.keys()).forEach((key) => {
+        if (key !== "search" && key !== "sort") params.delete(key);
+      });
+    });
+    setPriceDraft(["", ""]);
+    setPriceError("");
+  }, [updateFilters]);
 
   const handlePropertyFilter = useCallback((propertyName: string, value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    const key = `prop_${propertyName}`;
-
-    if (value) {
-      params.set(key, value);
-    } else {
+    updateFilters((params) => {
+      const key = `prop_${propertyName}`;
+      const values = new Set(params.getAll(key));
+      if (values.has(value)) values.delete(value); else if (value.trim()) values.add(value.trim());
       params.delete(key);
-    }
+      values.forEach((entry) => params.append(key, entry));
+    });
+  }, [updateFilters]);
 
-    router.push(`/products?${params.toString()}`);
-  }, [searchParams, router]);
-
-  const handleInStockToggle = useCallback((checked: boolean) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (checked) params.set("inStock", "true");
-    else params.delete("inStock");
-    params.delete("page");
-    router.push(`/products?${params.toString()}`);
-  }, [searchParams, router]);
-
-  const toggleFilterExpanded = useCallback((name: string) => {
-    setExpandedFilters(prev => ({ ...prev, [name]: !prev[name] }));
-  }, []);
+  const handleToggle = useCallback((key: "inStock" | "onSale") => {
+    updateFilters((params) => {
+      if (params.get(key) === "true") params.delete(key); else params.set(key, "true");
+    });
+  }, [updateFilters]);
 
   // ─── Derived Values ─────────────────────────────────
   const getPageNumbers = (): (number | "...")[] => {
@@ -588,23 +505,38 @@ function ProductListingContent() {
     return pages;
   };
 
-  // Count active filters
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (categorySlug) count++;
-    if (brandSlug) count++;
-    if (minPriceParam || maxPriceParam) count++;
-    if (inStockParam) count++;
-    count += Object.keys(selectedProperties).length;
-    return count;
-  }, [categorySlug, brandSlug, minPriceParam, maxPriceParam, inStockParam, selectedProperties]);
+  const activeFilterCount = (categorySlug ? 1 : 0) + selectedBrands.length + (hasPriceFilter ? 1 : 0)
+    + (inStockParam ? 1 : 0) + (listingQuery.onSale ? 1 : 0) + (listingQuery.minRating ? 1 : 0)
+    + (searchQuery ? 1 : 0) + Object.values(selectedProperties).reduce((sum, values) => sum + values.length, 0);
 
-  // Filtered brands for search
-  const filteredBrands = useMemo(() => {
-    if (!brandSearchQuery.trim()) return allBrands;
-    const q = brandSearchQuery.trim().toLowerCase();
-    return allBrands.filter((b) => b.name.toLowerCase().includes(q));
-  }, [allBrands, brandSearchQuery]);
+  const availableBrands = useMemo(() => {
+    const brands: Array<{ slug: string; name: string; logo?: Brand["logo"]; count?: number }> = facets?.brands
+      ? facets.brands.map((brand) => ({ ...brand, logo: allBrands.find((item) => item.slug === brand.slug)?.logo }))
+      : [...allBrands];
+    selectedBrands.forEach((slug) => {
+      if (!brands.some((brand) => brand.slug === slug)) {
+        const known = allBrands.find((brand) => brand.slug === slug);
+        brands.push({ slug, name: known?.name || (brandDetails?.slug === slug ? brandDetails.name : slug), logo: known?.logo });
+      }
+    });
+    return brands;
+  }, [allBrands, facets?.brands, selectedBrands, brandDetails]);
+  const filteredBrands = availableBrands.filter((brand) => brand.name.toLowerCase().includes(brandSearchQuery.trim().toLowerCase()));
+
+  const propertyOptions = useMemo(() => {
+    const metadata = categoryDetails?.slug === categorySlug ? categoryDetails.properties.filter((prop) => prop.isFilterable !== false) : [];
+    const properties: Array<{ name: string; unit?: string; values: Array<{ value: string; count?: number }> }> = facets?.properties
+      ? facets.properties.map((prop) => ({ ...prop, unit: metadata.find((item) => item.name === prop.name)?.unit, values: [...prop.values] }))
+      : metadata.map((prop) => ({ name: prop.name, unit: prop.unit, values: (prop.options || []).map((value) => ({ value })) }));
+    Object.entries(selectedProperties).forEach(([name, selected]) => {
+      let property = properties.find((prop) => prop.name === name);
+      if (!property) { property = { name, values: [] }; properties.push(property); }
+      selected.forEach((value) => {
+        if (!property.values.some((entry) => entry.value === value)) property.values.push({ value });
+      });
+    });
+    return properties;
+  }, [categoryDetails, categorySlug, facets?.properties, selectedProperties]);
 
   // Find active category name for chips
   const activeCategoryName = useMemo(() => {
@@ -647,7 +579,6 @@ function ProductListingContent() {
             <button
               onClick={() => {
                 handleClearFilters();
-                if (isMobile) setShowFilters(false);
               }}
               className="text-[10px] text-red-500 hover:text-red-600 font-bold transition-colors"
             >
@@ -659,8 +590,7 @@ function ProductListingContent() {
               <button
                 onClick={() => {
                   handleCategorySelect(categorySlug);
-                  if (isMobile) setShowFilters(false);
-                }}
+                  }}
                 className="bg-kala-50 text-kala-700 text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 hover:bg-kala-100 font-medium transition-colors"
               >
                 <LayoutGrid size={11} />
@@ -668,50 +598,44 @@ function ProductListingContent() {
                 <X size={11} />
               </button>
             )}
-            {brandSlug && brandDetails && (
-              <button
-                onClick={() => {
-                  handleBrandSelect(brandSlug);
-                  if (isMobile) setShowFilters(false);
-                }}
-                className="bg-kala-50 text-kala-700 text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 hover:bg-kala-100 font-medium transition-colors"
-              >
-                <Tag size={11} />
-                {brandDetails.name}
-                <X size={11} />
+                <div className="flex flex-wrap gap-2">
+                  {selectedBrands.map((slug) => (
+                    <button key={slug} type="button" aria-label={`حذف برند ${availableBrands.find((brand) => brand.slug === slug)?.name || slug}`} onClick={() => handleBrandSelect(slug)} className="bg-kala-50 text-kala-700 text-xs px-2.5 py-2 rounded-lg flex items-center gap-1.5">
+                      {availableBrands.find((brand) => brand.slug === slug)?.name || slug}<X size={12} />
+                    </button>
+                  ))}
+                </div>
+            {[
+              ...(minPriceParam !== undefined ? [{ key: "minPrice", label: `از ${minPriceParam.toLocaleString("fa-IR")} تومان` }] : []),
+              ...(maxPriceParam !== undefined ? [{ key: "maxPrice", label: `تا ${maxPriceParam.toLocaleString("fa-IR")} تومان` }] : []),
+              ...(inStockParam ? [{ key: "inStock", label: "فقط موجود" }] : []),
+              ...(listingQuery.onSale ? [{ key: "onSale", label: "فقط تخفیف‌دار" }] : []),
+              ...(listingQuery.minRating ? [{ key: "minRating", label: `امتیاز ${listingQuery.minRating.toLocaleString("fa-IR")} و بالاتر` }] : []),
+              ...(searchQuery ? [{ key: "search", label: `جستجو: ${searchQuery}` }] : []),
+            ].map((chip) => <button key={chip.key} type="button" aria-label={`حذف ${chip.label}`} onClick={() => removeFilter(chip.key)} className="bg-kala-50 text-kala-700 text-xs px-2.5 py-2 rounded-lg flex items-center gap-1.5 break-words">{chip.label}<X size={12} className="shrink-0" /></button>)}
+            {Object.entries(selectedProperties).flatMap(([key, values]) => values.map((value) => (
+              <button key={`${key}-${value}`} type="button" aria-label={`حذف ${key}: ${value}`} onClick={() => handlePropertyFilter(key, value)} className="bg-kala-50 text-kala-700 text-xs px-2.5 py-2 rounded-lg flex items-center gap-1.5 hover:bg-kala-100 font-medium">
+                {key}: {value}<X size={12} />
               </button>
-            )}
-            {minPriceParam && (
-              <span className="bg-gray-100 text-gray-600 text-[11px] px-2.5 py-1 rounded-lg font-medium">
-                از {Number(minPriceParam).toLocaleString()} تومان
-              </span>
-            )}
-            {maxPriceParam && (
-              <span className="bg-gray-100 text-gray-600 text-[11px] px-2.5 py-1 rounded-lg font-medium">
-                تا {Number(maxPriceParam).toLocaleString()} تومان
-              </span>
-            )}
-            {inStockParam && (
-              <span className="bg-emerald-50 text-emerald-700 text-[11px] px-2.5 py-1 rounded-lg font-medium">
-                فقط موجود
-              </span>
-            )}
-            {Object.entries(selectedProperties).map(([key, value]) => (
-              <button
-                key={key}
-                onClick={() => {
-                  handlePropertyFilter(key, '');
-                  if (isMobile) setShowFilters(false);
-                }}
-                className="bg-kala-50 text-kala-700 text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1.5 hover:bg-kala-100 font-medium transition-colors"
-              >
-                {key}: {value}
-                <X size={11} />
-              </button>
-            ))}
+            )))}
           </div>
         </div>
       )}
+
+      <FilterSection title="جستجو در محصولات" icon={<Search size={16} />}>
+        <form role="search" aria-label="جستجو در محصولات" onSubmit={(event) => {
+          event.preventDefault();
+          updateFilters((params) => {
+            const value = searchDraft.trim();
+            if (value) params.set("search", value); else params.delete("search");
+          });
+        }} className="flex gap-2">
+          <input type="search" aria-label="نام محصول یا عبارت جستجو" placeholder="نام محصول…" maxLength={200}
+            value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)}
+            className="min-w-0 w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-kala-200" />
+          <button type="submit" aria-label="جستجو" className="rounded-xl bg-gray-900 text-white p-3 hover:bg-gray-800"><Search size={16} /></button>
+        </form>
+      </FilterSection>
 
       {/* Category Filter */}
       <div
@@ -755,15 +679,15 @@ function ProductListingContent() {
       </div>
 
       {/* Brand Filter */}
-      {allBrands.length > 0 && (
+      {(availableBrands.length > 0 || brandsLoading || brandsError) && (
         <FilterSection
           title="برند"
           icon={<Tag size={16} />}
-          defaultOpen={!!brandSlug}
-          badge={brandSlug ? 1 : 0}
+          defaultOpen={true}
+          badge={selectedBrands.length}
         >
           {/* Brand Search */}
-          {allBrands.length > 6 && (
+          {availableBrands.length > 6 && (
             <div className="relative mb-3">
               <Search
                 size={14}
@@ -780,14 +704,14 @@ function ProductListingContent() {
           )}
           <div className="max-h-[240px] overflow-y-auto space-y-1 custom-scrollbar">
             {filteredBrands.map((brand) => {
-              const isActive = brandSlug === brand.slug;
+              const isActive = selectedBrands.includes(brand.slug);
               return (
                 <button
-                  key={brand._id}
+                  key={brand.slug}
+                  aria-pressed={isActive}
                   onClick={() => {
                     handleBrandSelect(brand.slug);
-                    if (isMobile) setShowFilters(false);
-                  }}
+                      }}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-all duration-200
                     ${isActive
                       ? "bg-kala-50 text-kala-700 font-bold"
@@ -823,16 +747,22 @@ function ProductListingContent() {
       <FilterSection
         title="بازه قیمت (تومان)"
         icon={<Sparkles size={16} />}
-        defaultOpen={!!(minPriceParam || maxPriceParam)}
-        badge={minPriceParam || maxPriceParam ? 1 : 0}
+        defaultOpen={true}
+        badge={hasPriceFilter ? 1 : 0}
       >
         <div className="px-1 mb-5" dir="ltr">
           <Slider
             range
             min={0}
-            max={priceRange.max}
+            max={sliderMax || 1}
+            disabled={sliderMax <= 0}
+            ariaLabelForHandle={["حداقل قیمت به تومان", "حداکثر قیمت به تومان"]}
             value={sliderValue}
-            onChange={(val) => setSliderValue(val as [number, number])}
+            onChange={(value) => {
+              const [min, max] = value as [number, number];
+              setPriceDraft([String(min), String(max)]);
+              setPriceError("");
+            }}
             reverse={true}
             trackStyle={[{ backgroundColor: "#f59e0b", height: 5 }]}
             handleStyle={[
@@ -842,118 +772,84 @@ function ProductListingContent() {
             railStyle={{ backgroundColor: "#e5e7eb", height: 5, borderRadius: 4 }}
           />
         </div>
-        <div className="flex items-center justify-between text-xs text-gray-600 mb-4 font-bold">
-          <span>{sliderValue[0].toLocaleString()}</span>
-          <span className="text-gray-300">—</span>
-          <span>{sliderValue[1].toLocaleString()}</span>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {([0, 1] as const).map((index) => (
+            <label key={index} className="text-xs font-medium text-gray-600">
+              {index === 0 ? "از" : "تا"}
+              <input type="text" inputMode="decimal" dir="ltr" aria-label={index === 0 ? "حداقل قیمت" : "حداکثر قیمت"}
+                aria-invalid={!!priceError} aria-describedby={priceError ? `price-error-${isMobile ? "mobile" : "desktop"}` : undefined}
+                value={priceDraft[index]} placeholder={index === 0 ? "۰" : "بدون سقف"}
+                onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); handlePriceFilter(); } }}
+                onChange={(event) => { setPriceDraft((previous) => index === 0 ? [event.target.value, previous[1]] : [previous[0], event.target.value]); setPriceError(""); }}
+                className="mt-1 w-full min-w-0 px-2 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-center focus:outline-none focus:ring-2 focus:ring-kala-200" />
+            </label>
+          ))}
         </div>
+        {priceError && <p role="alert" id={`price-error-${isMobile ? "mobile" : "desktop"}`} className="mb-3 text-xs leading-5 text-red-600">{priceError}</p>}
         <button
-          onClick={() => {
-            handlePriceFilter();
-            if (isMobile) setShowFilters(false);
-          }}
+          onClick={handlePriceFilter}
           className="w-full bg-gray-900 text-white text-xs font-bold py-2.5 rounded-xl hover:bg-gray-800 transition-colors active:scale-[0.98]"
         >
           اعمال بازه قیمت
         </button>
       </FilterSection>
 
-      {/* Availability Toggle */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-        <span className="text-sm font-bold text-gray-700">فقط کالاهای موجود</span>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={inStockParam}
-            onChange={(e) => {
-              handleInStockToggle(e.target.checked);
-              if (isMobile) setShowFilters(false);
-            }}
-          />
-          <div className="w-10 h-[22px] bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all after:shadow-sm peer-checked:bg-kala-500"></div>
-        </label>
+      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        {([{ key: "inStock", label: "فقط کالاهای موجود", checked: inStockParam }, { key: "onSale", label: "فقط کالاهای تخفیف‌دار", checked: !!listingQuery.onSale }] as const).map((toggle) => (
+          <label key={toggle.key} className="flex items-center justify-between gap-3 cursor-pointer">
+            <span className="text-sm font-bold text-gray-700">{toggle.label}</span>
+            <span className="relative inline-flex shrink-0" dir="ltr">
+              <input type="checkbox" className="sr-only peer" checked={toggle.checked} onChange={() => handleToggle(toggle.key)} />
+              <span className="w-10 h-[22px] bg-gray-200 rounded-full peer-focus-visible:ring-2 peer-focus-visible:ring-kala-500 peer-focus-visible:ring-offset-2 peer-checked:after:translate-x-[18px] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[18px] after:w-[18px] after:transition-transform after:shadow-sm peer-checked:bg-kala-500" />
+            </span>
+          </label>
+        ))}
       </div>
 
-      {/* Dynamic Category Properties Filters */}
-      {categoryDetails && categoryDetails.properties.length > 0 && (
-        <div className="space-y-3">
-          {categoryDetails.properties.map((prop) => (
-            <div key={prop.name} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <button
-                onClick={() => toggleFilterExpanded(prop.name)}
-                className="w-full flex items-center justify-between p-4 text-right transition-colors hover:bg-gray-50/50"
-              >
-                <span className="font-bold text-sm text-gray-800">
-                  {prop.name}
-                  {prop.unit && <span className="font-normal text-gray-500 text-xs mr-1">({prop.unit})</span>}
-                </span>
-                <ChevronDown
-                  className={`text-gray-400 transition-transform duration-200 ${expandedFilters[prop.name] ? 'rotate-180' : ''}`}
-                  size={16}
-                />
-              </button>
-
-              <AnimatePresence initial={false}>
-                {expandedFilters[prop.name] && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    exit={{ height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="px-4 pb-4">
-                      {prop.type === 'select' && prop.options && prop.options.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {prop.options.map((option) => {
-                            const isSelected = selectedProperties[prop.name] === option;
-                            return (
-                              <button
-                                key={option}
-                                onClick={() => {
-                                  handlePropertyFilter(prop.name, isSelected ? '' : option);
-                                  if (isMobile) setShowFilters(false);
-                                }}
-                                className={`
-                                  px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
-                                  ${isSelected
-                                    ? 'bg-kala-500 text-white shadow-sm shadow-kala-200'
-                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                  }
-                                `}
-                              >
-                                {option}
-                                {isSelected && <Check size={12} className="inline mr-1" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <input
-                          type={prop.type === 'number' ? 'number' : 'text'}
-                          placeholder={`جستجو در ${prop.name}...`}
-                          value={selectedProperties[prop.name] || ''}
-                          onChange={(e) => handlePropertyFilter(prop.name, e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-kala-200 focus:border-kala-300 transition-all"
-                        />
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          ))}
-        </div>
-      )}
+      <FilterSection title="امتیاز خریداران" icon={<Star size={16} />} defaultOpen={!!listingQuery.minRating}>
+        <select aria-label="حداقل امتیاز خریداران" value={listingQuery.minRating || ""} onChange={(event) => {
+          const value = event.target.value;
+          updateFilters((params) => { if (value) params.set("minRating", value); else params.delete("minRating"); });
+        }} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm">
+          <option value="">همه امتیازها</option>
+          {listingQuery.minRating && ![1, 2, 3, 4, 5].includes(listingQuery.minRating) && <option value={listingQuery.minRating}>{listingQuery.minRating.toLocaleString("fa-IR")} و بالاتر</option>}
+          {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating.toLocaleString("fa-IR")} و بالاتر</option>)}
+        </select>
+      </FilterSection>
+      {propertyOptions.map((prop, index) => (
+        <FilterSection key={`${categorySlug}-${prop.name}`} title={`${prop.name}${prop.unit ? ` (${prop.unit})` : ""}`} defaultOpen={index < 3 || !!selectedProperties[prop.name]?.length} badge={selectedProperties[prop.name]?.length}>
+          <div className="flex flex-wrap gap-2">
+            {prop.values.map(({ value, count }) => {
+              const selected = !!selectedProperties[prop.name]?.includes(value);
+              return <button type="button" key={value} aria-pressed={selected} onClick={() => handlePropertyFilter(prop.name, value)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${selected ? "bg-kala-500 text-white shadow-sm shadow-kala-200" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                {value}{count !== undefined && <span>({count.toLocaleString("fa-IR")})</span>}{selected && <Check size={12} />}
+              </button>;
+            })}
+          </div>
+          {!facets?.properties && !categoryDetails?.properties.find((item) => item.name === prop.name)?.options?.length && (
+            <form className="flex gap-2 mt-2" onSubmit={(event) => {
+              event.preventDefault();
+              const form = event.currentTarget;
+              const value = String(new FormData(form).get("value") || "").trim();
+              if (value) { handlePropertyFilter(prop.name, value); form.reset(); }
+            }}>
+              <input name="value" aria-label={`مقدار ${prop.name}`} placeholder={`مقدار ${prop.name}…`} maxLength={200} className="min-w-0 w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-kala-200" />
+              <button type="submit" className="px-3 rounded-xl bg-gray-900 text-white text-xs">افزودن</button>
+            </form>
+          )}
+          {prop.values.length > 1 && <p className="mt-2 text-[11px] leading-5 text-gray-500">نمایش محصولات با هر یک از گزینه‌های انتخاب‌شده</p>}
+        </FilterSection>
+      ))}
     </div>
   );
 
   // ─── Render ─────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 pb-20 lg:pb-8 pt-6">
+    <div dir="rtl" className="product-listing min-h-screen bg-gray-50 pb-20 lg:pb-8 pt-6">
       {/* Custom scrollbar styles */}
       <style jsx global>{`
+        .product-listing :is(button, input, select):focus-visible { outline: 2px solid #d97706; outline-offset: 2px; }
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }
@@ -1001,7 +897,7 @@ function ProductListingContent() {
                 </p>
               </div>
               <button
-                onClick={() => router.push('/products')}
+                onClick={() => removeFilter("search")}
                 className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
               >
                 <X className="w-4 h-4" />
@@ -1068,7 +964,10 @@ function ProductListingContent() {
                   animate={{ y: 0 }}
                   exit={{ y: "100%" }}
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                  className="fixed inset-x-0 bottom-0 top-12 sm:top-16 z-bottom-drawer lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
+                  ref={filterDialogRef}
+                  id="product-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="product-filter-title" tabIndex={-1}
+                  style={{ height: "calc(100dvh - 3rem)", maxHeight: "calc(100dvh - 3rem)" }}
+                  className="fixed inset-x-0 bottom-0 z-bottom-drawer lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
                 >
                   {/* Drag Handle */}
                   <div className="flex justify-center pt-3 pb-1">
@@ -1078,7 +977,7 @@ function ProductListingContent() {
                   <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
                     <div className="flex items-center gap-2">
                       <SlidersHorizontal size={18} className="text-gray-600" />
-                      <span className="font-bold text-lg text-gray-800">فیلترها</span>
+                      <h2 id="product-filter-title" className="font-bold text-lg text-gray-800">فیلترها</h2>
                       {activeFilterCount > 0 && (
                         <span className="bg-kala-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                           {activeFilterCount}
@@ -1086,22 +985,22 @@ function ProductListingContent() {
                       )}
                     </div>
                     <button
-                      onClick={() => setShowFilters(false)}
+                      aria-label="بستن فیلترها"
+                      onClick={closeFilters}
                       className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                     >
                       <X size={18} className="text-gray-600" />
                     </button>
                   </div>
                   {/* Scrollable Content */}
-                  <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-5 custom-scrollbar">
                     {renderFilterContent(true)}
                   </div>
                   {/* Bottom Actions */}
-                  <div className="border-t border-gray-100 px-6 py-4 flex items-center gap-3 bg-white">
+                  <div style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }} className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center gap-3 bg-white">
                     <button
                       onClick={() => {
                         handleClearFilters();
-                        setShowFilters(false);
                       }}
                       className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors"
                     >
@@ -1111,7 +1010,7 @@ function ProductListingContent() {
                       onClick={() => setShowFilters(false)}
                       className="flex-1 py-3 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors active:scale-[0.98]"
                     >
-                      مشاهده {total} محصول
+                      {isValidating || showInitialLoader ? "در حال به‌روزرسانی…" : `مشاهده ${total.toLocaleString("fa-IR")} محصول`}
                     </button>
                   </div>
                 </motion.div>
@@ -1129,7 +1028,8 @@ function ProductListingContent() {
               <div className="flex items-center gap-2">
                 {/* Mobile Sort Button */}
                 <button
-                  onClick={() => setShowSortSheet(true)}
+                  aria-haspopup="dialog" aria-expanded={showSortSheet} aria-controls="product-sort-dialog"
+                  onClick={() => { setShowFilters(false); setShowSortSheet(true); }}
                   className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300"
                   aria-label="مرتب‌سازی"
                 >
@@ -1141,7 +1041,8 @@ function ProductListingContent() {
 
                 {/* Mobile Filter Button */}
                 <button
-                  onClick={() => setShowFilters(true)}
+                  aria-label="فیلترها" aria-haspopup="dialog" aria-expanded={showFilters} aria-controls="product-filter-dialog"
+                  onClick={() => { setShowSortSheet(false); setShowFilters(true); }}
                   className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-800 px-3 py-2 rounded-xl text-xs font-bold transition-colors hover:border-gray-300 relative"
                 >
                   <SlidersHorizontal size={15} className="text-gray-600 flex-shrink-0" />
@@ -1159,6 +1060,7 @@ function ProductListingContent() {
               </div>
             </div>
 
+            <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{showInitialLoader || isValidating ? "در حال بارگذاری محصولات…" : showError ? "بارگذاری محصولات انجام نشد" : `${total.toLocaleString("fa-IR")} محصول یافت شد`}</p>
             {/* Products Grid */}
             {showInitialLoader ? (
               <ProductListingSkeleton />
@@ -1182,6 +1084,8 @@ function ProductListingContent() {
                 <Search size={48} className="mb-4" />
                 <p className="text-lg font-bold">محصولی یافت نشد</p>
                 <p className="text-sm">فیلترها را تغییر دهید یا عبارت دیگری جستجو کنید</p>
+                {activeFilterCount > 0 && <button type="button" onClick={handleClearFilters} className="mt-5 rounded-xl bg-gray-900 px-5 py-3 text-sm font-bold text-white">پاک کردن فیلترها</button>}
+                {searchQuery && <button type="button" onClick={() => removeFilter("search")} className="mt-3 text-sm text-kala-700">حذف عبارت جستجو</button>}
               </div>
             ) : (
               <motion.div
@@ -1316,7 +1220,9 @@ function ProductListingContent() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-bottom-drawer shadow-2xl overflow-hidden overscroll-contain"
+              ref={sortDialogRef} id="product-sort-dialog" role="dialog" aria-modal="true" aria-labelledby="product-sort-title" tabIndex={-1}
+              style={{ maxHeight: "calc(100dvh - 3rem)", paddingBottom: "env(safe-area-inset-bottom)" }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-bottom-drawer shadow-2xl overflow-y-auto overscroll-contain"
             >
               {/* Drag Handle */}
               <div className="flex justify-center pt-3 pb-1">
@@ -1325,10 +1231,11 @@ function ProductListingContent() {
               <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100">
                 <div className="flex items-center gap-2">
                   <ArrowUpDown size={18} className="text-kala-500" />
-                  <h3 className="font-bold text-lg text-gray-800">مرتب‌سازی بر اساس</h3>
+                  <h2 id="product-sort-title" className="font-bold text-lg text-gray-800">مرتب‌سازی بر اساس</h2>
                 </div>
                 <button
-                  onClick={() => setShowSortSheet(false)}
+                  aria-label="بستن مرتب‌سازی"
+                  onClick={closeSort}
                   className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors"
                 >
                   <X size={18} className="text-gray-600" />

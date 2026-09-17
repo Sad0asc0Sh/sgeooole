@@ -15,6 +15,7 @@
 
 import api from "@/lib/api";
 import { resolvePricing } from "@/lib/pricing";
+import { appendPropertyFilters, type ProductFilterProperties, type ProductFilterFacets } from "@/lib/productFilters";
 
 // Re-export types from the SSR-safe types file for backward compatibility
 // This allows existing client components to continue using `import { Product } from "@/services/productService"`
@@ -539,9 +540,12 @@ export const productService = {
     search?: string;
     minPrice?: number;
     maxPrice?: number;
-    properties?: Record<string, string>;
+    properties?: ProductFilterProperties;
     includeChildren?: boolean;
-  }): Promise<{ products: Product[]; total: number; totalPages: number; currentPage: number; priceRange?: { min: number; max: number } }> => {
+    inStock?: boolean;
+    onSale?: boolean;
+    minRating?: number;
+  }): Promise<{ products: Product[]; total: number; totalPages: number; currentPage: number; priceRange?: { min: number; max: number }; facets?: ProductFilterFacets }> => {
     try {
       const queryParams = new URLSearchParams();
       if (params.page) queryParams.set("page", params.page.toString());
@@ -558,11 +562,12 @@ export const productService = {
         queryParams.set("maxPrice", params.maxPrice.toString());
       }
       if (params.includeChildren) queryParams.set("includeChildren", "true");
+      if (params.inStock) queryParams.set("inStock", "true");
+      if (params.onSale) queryParams.set("onSale", "true");
+      if (params.minRating !== undefined) queryParams.set("minRating", params.minRating.toString());
 
       if (params.properties) {
-        Object.entries(params.properties).forEach(([key, value]) => {
-          queryParams.set(`properties[${key}]`, value);
-        });
+        appendPropertyFilters(queryParams, params.properties);
       }
 
       // Listing cards must reflect promotion edits promptly. The backend treats
@@ -578,16 +583,17 @@ export const productService = {
 
       // Extract pagination from backend response
       const pagination = data.pagination || {};
-      const total = pagination.totalItems || data.total || products.length;
-      const totalPages = pagination.totalPages || Math.ceil(total / (params.limit || 24)) || 1;
-      const currentPage = pagination.currentPage || params.page || 1;
+      const total = pagination.totalItems ?? data.total ?? products.length;
+      const totalPages = pagination.totalPages ?? (Math.ceil(total / (params.limit || 24)) || 1);
+      const currentPage = pagination.currentPage ?? params.page ?? 1;
 
       return {
         products,
         total,
         totalPages,
         currentPage,
-        priceRange: data.priceRange
+        priceRange: data.priceRange,
+        facets: data.facets,
       };
     } catch (error) {
       console.error("Error fetching products with filters:", error);

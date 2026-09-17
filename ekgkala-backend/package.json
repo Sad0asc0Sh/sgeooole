@@ -14,7 +14,7 @@
     "migrate:product-codes": "node scripts/generate-product-codes.js",
     "migrate:product-codes:dry": "node scripts/generate-product-codes.js --dry-run --verbose",
     "migrate:all": "npm run migrate:slugs && npm run migrate:product-codes",
-    "test": "node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js",
+    "test": "node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js && node tests/product-listing.test.cjs",
     "test:torob-acceptance": "node tests/torob-acceptance.js"
   },
   "keywords": [
@@ -60,6 +60,7 @@
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
+    "mingo": "^6.7.2",
     "nodemon": "^3.1.10"
   },
   "overrides": {

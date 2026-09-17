@@ -1,0 +1,325 @@
+const mongoose = require('mongoose')
+
+const MAX_PAGE = 100000
+const MAX_LIMIT = 100
+const OPERATORS = new Set(['eq', 'lt', 'gt', 'gte', 'lte'])
+const NUMBERS = new Set(['price', 'stock', 'discount', 'rating', 'numReviews', 'views', 'salesCount', 'clickCount'])
+const BOOLEANS = new Set(['isActive', 'isFeatured', 'isOnSale', 'isFlashDeal', 'isSpecialOffer'])
+const DATES = new Set(['createdAt', 'updatedAt', 'flashDealEndTime', 'specialOfferEndTime'])
+const STRINGS = new Set(['name', 'sku', 'slug', 'productCode', 'productType'])
+const IDS = new Set(['_id', 'brand', 'category'])
+const INTERNAL = '__listing'
+
+class ListingQueryError extends Error {
+  constructor(message) {
+    super(message)
+    this.statusCode = 400
+  }
+}
+
+function text(value, name, max = 200) {
+  if (typeof value !== 'string' || !value.trim() || value.length > max) {
+    throw new ListingQueryError(`Invalid ${name}`)
+  }
+  return value.trim()
+}
+
+function number(value, name, max = Number.MAX_SAFE_INTEGER) {
+  if (!['string', 'number'].includes(typeof value) || String(value).trim() === '') {
+    throw new ListingQueryError(`Invalid ${name}`)
+  }
+  const result = Number(value)
+  if (!Number.isFinite(result) || result < 0 || result > max) {
+    throw new ListingQueryError(`${name} must be a finite nonnegative number <= ${max}`)
+  }
+  return result
+}
+
+function boolean(value, name) {
+  if ([true, 'true', 1, '1'].includes(value)) return true
+  if ([false, 'false', 0, '0'].includes(value)) return false
+  throw new ListingQueryError(`Invalid ${name}`)
+}
+
+function boundedInteger(value, fallback, max, name) {
+  if (value === undefined) return fallback
+  const result = number(value, name)
+  if (!Number.isSafeInteger(result) || result < 1) throw new ListingQueryError(`Invalid ${name}`)
+  return Math.min(result, max)
+}
+
+const objectId = (value) => typeof value === 'string' && /^[a-f\d]{24}$/i.test(value)
+  ? new mongoose.Types.ObjectId(value) : null
+
+// Literal search with the same Persian/Arabic equivalents as the legacy listing.
+function searchPattern(value) {
+  const groups = ['یيئ', 'کك', 'هة', 'آأإا', 'وؤ', '۰٠0', '۱١1', '۲٢2', '۳٣3', '۴٤4', '۵٥5', '۶٦6', '۷٧7', '۸٨8', '۹٩9']
+  return [...value].map((char) => {
+    const group = groups.find((item) => item.includes(char))
+    return group ? `[${group}]` : char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  }).join('')
+}
+
+function parseProjection(value) {
+  if (value === undefined) return null
+  const projection = {}
+  const fields = text(value, 'fields', 2000).split(/[\s,]+/)
+  for (const token of fields) {
+    const field = token.replace(/^-/, '')
+    if (!/^[a-zA-Z_][\w]*(\.[a-zA-Z_][\w]*)*$/.test(field) || field.startsWith(INTERNAL)) {
+      throw new ListingQueryError('Invalid fields')
+    }
+    projection[field] = token.startsWith('-') ? 0 : 1
+  }
+  const modes = new Set(Object.entries(projection).filter(([key]) => key !== '_id').map(([, mode]) => mode))
+  if (modes.size > 1) throw new ListingQueryError('Cannot mix included and excluded fields')
+  const names = Object.keys(projection)
+  if (names.some((name) => names.some((other) => other.startsWith(`${name}.`)))) {
+    throw new ListingQueryError('Conflicting fields')
+  }
+  return projection
+}
+
+function parseListingQuery(query = {}) {
+  const options = {
+    page: boundedInteger(query.page, 1, MAX_PAGE, 'page'),
+    limit: boundedInteger(query.limit, 20, MAX_LIMIT, 'limit'),
+    skipDiscount: query.skipDiscount === undefined ? false : boolean(query.skipDiscount, 'skipDiscount'),
+    inStock: query.inStock === undefined ? false : boolean(query.inStock, 'inStock'),
+    onSale: query.onSale === undefined ? false : boolean(query.onSale, 'onSale'),
+    includeChildren: query.includeChildren === undefined ? false : boolean(query.includeChildren, 'includeChildren'),
+    projection: parseProjection(query.fields),
+    conditions: [],
+    priceConditions: [],
+    properties: new Map(),
+    brands: [],
+  }
+  let includeInactive = query.includeInactive
+  if (Array.isArray(includeInactive)) includeInactive = includeInactive.some((v) => [true, 'true', 1, '1'].includes(v))
+  let active = includeInactive !== undefined && boolean(includeInactive, 'includeInactive') ? undefined : true
+  for (const key of ['minPrice', 'maxPrice']) {
+    if (query[key] !== undefined) options[key] = number(query[key], key)
+  }
+  if (options.minPrice !== undefined && options.maxPrice !== undefined && options.minPrice > options.maxPrice) {
+    throw new ListingQueryError('minPrice must not exceed maxPrice')
+  }
+  if (options.minPrice !== undefined) options.priceConditions.push({ [`${INTERNAL}.price`]: { $gte: options.minPrice } })
+  if (options.maxPrice !== undefined) options.priceConditions.push({ [`${INTERNAL}.price`]: { $lte: options.maxPrice } })
+  if (query.minRating !== undefined) options.conditions.push({ rating: { $gte: number(query.minRating, 'minRating', 5) } })
+  if (query.minSalesCount !== undefined) options.conditions.push({ salesCount: { $gte: number(query.minSalesCount, 'minSalesCount') } })
+  for (const field of BOOLEANS) {
+    if (query[field] !== undefined && typeof query[field] !== 'object') {
+      const value = boolean(query[field], field)
+      if (field === 'isActive') active = value
+      else options.conditions.push({ [field]: value })
+    }
+  }
+  if (query.productType === 'variable') options.conditions.push({ productType: 'variable' })
+  else if (query.productType === 'simple') options.conditions.push({ $or: [{ productType: { $exists: false } }, { productType: { $in: [null, '', 'simple'] } }] })
+  else if (query.productType !== undefined && typeof query.productType !== 'object') throw new ListingQueryError('Invalid productType')
+
+  const advanced = (field, op, raw) => {
+    if (!OPERATORS.has(op)) throw new ListingQueryError('Invalid filter operator')
+    let value = Array.isArray(raw) ? raw[0] : raw // Legacy advanced filter arrays used first value.
+    if (NUMBERS.has(field)) value = number(value, field)
+    else if (BOOLEANS.has(field)) {
+      if (op !== 'eq') throw new ListingQueryError('Boolean filters only support eq')
+      value = boolean(value, field)
+    } else if (DATES.has(field)) {
+      value = new Date(text(value, field))
+      if (!Number.isFinite(value.getTime())) throw new ListingQueryError(`Invalid ${field}`)
+    } else if (IDS.has(field)) {
+      value = objectId(value)
+      if (!value) throw new ListingQueryError(`Invalid ${field}`)
+    } else if (STRINGS.has(field)) value = text(value, field)
+    else throw new ListingQueryError(`Unsupported filter field: ${field}`)
+    if (field === 'isActive') active = value
+    else if (field === 'price') options.priceConditions.push({ [`${INTERNAL}.price`]: { [`$${op}`]: value } })
+    else options.conditions.push({ [field]: { [`$${op}`]: value } })
+  }
+  for (const [field, value] of Object.entries(query)) {
+    if (field !== 'properties' && value && typeof value === 'object' && !Array.isArray(value)) {
+      for (const [op, raw] of Object.entries(value)) advanced(field, op, raw)
+    }
+    const match = field.match(/^([^\[\]]+)\[(eq|lt|gt|gte|lte)\]$/)
+    if (match && match[1] !== 'properties') advanced(match[1], match[2], value)
+  }
+  if (active !== undefined) options.conditions.push({ isActive: active })
+  if (query.category !== undefined && (typeof query.category !== 'object' || Array.isArray(query.category))) options.category = text(query.category, 'category')
+  if (query.brand !== undefined && (typeof query.brand !== 'object' || Array.isArray(query.brand))) {
+    const rawBrands = Array.isArray(query.brand) ? query.brand.map((value) => text(value, 'brand')).join(',') : query.brand
+    options.brands = [...new Set(text(rawBrands, 'brand', 6000).split(',').map((v) => v.trim()).filter(Boolean))]
+    if (!options.brands.length || options.brands.length > 30) throw new ListingQueryError('Between 1 and 30 brands are allowed')
+  }
+  const addProperty = (name, raw) => {
+    name = text(name, 'property name', 100)
+    if (['__proto__', 'constructor', 'prototype'].includes(name)) throw new ListingQueryError('Invalid property name')
+    const values = (Array.isArray(raw) ? raw : [raw]).map((v) => text(v, 'property value'))
+    const combined = [...new Set([...(options.properties.get(name) || []), ...values])]
+    if (!combined.length || combined.length > 30) throw new ListingQueryError('At most 30 values per property are allowed')
+    options.properties.set(name, combined)
+  }
+  if (query.properties !== undefined) {
+    if (!query.properties || typeof query.properties !== 'object' || Array.isArray(query.properties)) throw new ListingQueryError('Invalid properties')
+    for (const [name, value] of Object.entries(query.properties)) addProperty(name, value)
+  }
+  for (const [key, value] of Object.entries(query)) {
+    const match = key.match(/^properties\[([^\[\]]+)\](?:\[\])?$/)
+    if (match) addProperty(match[1], value)
+  }
+  if (options.properties.size > 30) throw new ListingQueryError('At most 30 properties are allowed')
+  for (const [label, values] of options.properties) options.conditions.push({ properties: { $elemMatch: { label, value: { $in: values } } } })
+  if (query.search !== undefined) {
+    options.search = text(query.search, 'search')
+    const regex = { $regex: searchPattern(options.search), $options: 'i' }
+    options.conditions.push(query.searchField === 'name' ? { name: regex } : {
+      $or: [...(query.searchField === 'sku' ? [] : [{ name: regex }]), { sku: regex }, { 'variants.sku': regex }],
+    })
+  }
+  const aliases = { newest: '-createdAt', oldest: 'createdAt', priceAsc: 'price', priceDesc: '-price', popularity: '-views', mostVisited: '-views', bestSelling: '-salesCount', discount: '-discount', rating: '-rating' }
+  const sort = query.sort === undefined ? '-createdAt' : text(query.sort, 'sort')
+  options.sort = {}
+  if (options.search) options.sort[`${INTERNAL}.priority`] = -1
+  const sortParts = (aliases[sort] || sort).split(/[\s,]+/)
+  for (const part of sortParts) {
+    const field = part.replace(/^-/, '')
+    if (![...NUMBERS, ...DATES, 'name', 'sku', '_id'].includes(field)) continue
+    const key = field === 'price' ? `${INTERNAL}.price` : field === 'discount' && !options.skipDiscount ? `${INTERNAL}.discount` : field
+    if (field !== '_id') options.sort[key] = part.startsWith('-') ? -1 : 1
+  }
+  if (!Object.keys(options.sort).some((key) => key !== `${INTERNAL}.priority`)) options.sort.createdAt = -1
+  options.sort._id = 1
+  return options
+}
+
+// Sales/category metadata is small; products are never loaded or filtered in JS.
+// Explicit ObjectId casting matters: Mongoose does NOT cast aggregation matches.
+async function resolveListingContext(options, { Category, Brand, Sale }, now) {
+  const conditions = [...options.conditions]
+  const descendants = new Map()
+  const categoryIds = async (id) => {
+    const key = String(id)
+    if (!descendants.has(key)) {
+      descendants.set(key, Category.aggregate([
+        { $match: { _id: objectId(key) } },
+        { $graphLookup: { from: Category.collection.name, startWith: '$_id', connectFromField: '_id', connectToField: 'parent', as: 'descendants', maxDepth: 20 } },
+        { $project: { ids: '$descendants._id' } },
+      ]).then((rows) => [objectId(key), ...(rows[0]?.ids || [])]))
+    }
+    return descendants.get(key)
+  }
+  if (options.category) {
+    const id = objectId(options.category)
+    const category = await Category.findOne(id ? { $or: [{ slug: options.category }, { _id: id }] } : { slug: options.category }).select('_id').lean()
+    conditions.push({ category: { $in: category ? options.includeChildren ? await categoryIds(category._id) : [category._id] : [] } })
+  }
+  if (options.brands.length) {
+    const brands = await Brand.find({ slug: { $in: options.brands } }).select('_id').lean()
+    conditions.push({ brand: { $in: [...brands.map((b) => b._id), ...options.brands.map(objectId).filter(Boolean)] } })
+  }
+  const campaigns = []
+  if (!options.skipDiscount) {
+    const sales = await Sale.find({ isActive: true, startDate: { $lte: now }, endDate: { $gt: now } })
+      .select('name products categories discountPercentage badgeTheme endDate includeSubcategories').sort({ _id: 1 }).lean()
+    for (const sale of sales) {
+      const categories = []
+      for (const id of sale.categories || []) categories.push(...(sale.includeSubcategories !== false ? await categoryIds(id) : [id]))
+      campaigns.push({ ...sale, categories })
+    }
+  }
+  return { conditions, campaigns }
+}
+
+const literal = (value) => ({ $literal: value })
+const numeric = (path) => ({ $convert: { input: path, to: 'double', onNull: 0, onError: 0 } })
+// Mongo $round uses banker's rounding; storefront pricing uses Math.round.
+const round = (value) => ({ $floor: { $add: [value, 0.5] } })
+const ref = (key) => `$${INTERNAL}.${key}`
+const timedActive = (flag, end, now) => ({ $and: [flag, { $or: [{ $eq: [{ $ifNull: [end, null] }, null] }, { $gt: [end, now] }] }] })
+
+function pricingStages(campaigns, now) {
+  // Direct assignment wins over category assignment, regardless of discount size.
+  // Within a tier use oldest ObjectId, making overlapping campaigns deterministic.
+  const branches = ['products', 'categories'].flatMap((key) => campaigns.filter((c) => c[key]?.length).map((sale) => ({
+    case: { $in: [key === 'products' ? '$_id' : '$category', literal(sale[key])] },
+    then: literal({ name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme || 'green-orange', endDate: sale.endDate }),
+  })))
+  const hasCampaign = { $ne: [ref('campaign'), null] }
+  const priceObject = (source) => {
+    const price = numeric(`${source}.price`)
+    const compare = numeric(`${source}.compareAtPrice`)
+    const base = { $max: [price, compare] }
+    return {
+      price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [ref('discount'), 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, ref('discount')] }, 100] }] }), price] }] },
+      compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [ref('discount'), 0] }] }, base, compare] },
+    }
+  }
+  return [
+    { $addFields: { [INTERNAL]: { campaign: branches.length ? { $switch: { branches, default: null } } : null } } },
+    { $addFields: {
+      [`${INTERNAL}.eligible`]: { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now), { $and: [{ $not: ['$isFlashDeal'] }, { $not: ['$isSpecialOffer'] }] }] },
+      [`${INTERNAL}.variable`]: { $and: [{ $eq: ['$productType', 'variable'] }, { $gt: [{ $size: { $ifNull: ['$variants', []] } }, 0] }] },
+    } },
+    { $addFields: {
+      [`${INTERNAL}.discount`]: { $cond: [ref('eligible'), { $min: [100, { $max: [0, { $cond: [hasCampaign, ref('campaign.discount'), numeric('$discount')] }] }] }, 0] },
+      [`${INTERNAL}.expired`]: { $not: [ref('eligible')] },
+      [`${INTERNAL}.stock`]: { $cond: [{ $eq: ['$productType', 'variable'] }, { $sum: '$variants.stock' }, numeric('$stock')] },
+    } },
+    { $addFields: {
+      [`${INTERNAL}.root`]: priceObject('$$ROOT'),
+      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant')] } } },
+    } },
+    { $addFields: {
+      [`${INTERNAL}.display`]: { $cond: [ref('variable'), { $reduce: { input: ref('variants'), initialValue: null, in: { $cond: [{ $or: [{ $eq: ['$$value', null] }, { $lt: ['$$this.price', '$$value.price'] }] }, '$$this', '$$value'] } } }, ref('root')] },
+    } },
+    { $addFields: {
+      [`${INTERNAL}.price`]: ref('display.price'),
+      [`${INTERNAL}.onSale`]: { $gt: [ref('display.compareAtPrice'), ref('display.price')] },
+    } },
+  ]
+}
+
+function buildListingPipeline(options, { conditions = options.conditions, campaigns = [] } = {}, now = new Date()) {
+  const stages = conditions.length ? [{ $match: { $and: conditions } }] : []
+  if (options.skipDiscount) {
+    stages.push({ $addFields: { [INTERNAL]: { price: numeric('$price'), stock: numeric('$stock'), onSale: { $gt: [numeric('$compareAtPrice'), numeric('$price')] } } } })
+  } else stages.push(...pricingStages(campaigns, now))
+  const effectiveConditions = []
+  if (options.inStock) effectiveConditions.push({ [`${INTERNAL}.stock`]: { $gt: 0 } })
+  if (options.onSale) effectiveConditions.push({ [`${INTERNAL}.onSale`]: true })
+  if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
+  if (options.search) stages.push({ $addFields: { [`${INTERNAL}.priority`]: { $cond: [{ $or: [{ $eq: ['$sku', literal(options.search)] }, { $in: [literal(options.search), { $ifNull: ['$variants.sku', []] }] }] }, 1, 0] } } })
+  const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
+  const data = [...priceMatch, { $sort: options.sort }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
+  if (!options.skipDiscount) data.push({ $addFields: {
+    price: ref('price'), stock: ref('stock'), compareAtPrice: ref('display.compareAtPrice'),
+    variants: ref('variants'), discount: ref('discount'),
+    campaignLabel: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.name'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'پیشنهاد لحظه‌ای', { $ifNull: ['$campaignLabel', '$$REMOVE'] }] }] },
+    campaignTheme: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.theme'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'gold-red', { $ifNull: ['$campaignTheme', '$$REMOVE'] }] }] },
+    isSpecialOffer: { $cond: [{ $gt: [ref('campaign.discount'), 0] }, true, '$isSpecialOffer'] },
+    specialOfferEndTime: { $cond: [{ $gt: [ref('campaign.discount'), 0] }, ref('campaign.endDate'), '$specialOfferEndTime'] },
+  } })
+  data.push({ $project: { [INTERNAL]: 0 } })
+  if (options.projection) data.push({ $project: options.projection })
+  stages.push({ $facet: {
+    data,
+    total: [...priceMatch, { $count: 'count' }],
+    priceRange: [{ $group: { _id: null, min: { $min: ref('price') }, max: { $max: ref('price') } } }],
+  } })
+  return stages
+}
+
+async function listProducts(query, models, now = new Date()) {
+  const options = parseListingQuery(query)
+  const context = await resolveListingContext(options, models, now)
+  const [result] = await models.Product.aggregate(buildListingPipeline(options, context, now)).allowDiskUse(true)
+  const total = result?.total[0]?.count || 0
+  return {
+    success: true,
+    data: result?.data || [],
+    pagination: { currentPage: options.page, itemsPerPage: options.limit, totalItems: total, totalPages: Math.ceil(total / options.limit) || 1 },
+    priceRange: { min: result?.priceRange[0]?.min ?? 0, max: result?.priceRange[0]?.max ?? 0 },
+  }
+}
+
+module.exports = { listProducts, parseListingQuery, buildListingPipeline, resolveListingContext, ListingQueryError }
