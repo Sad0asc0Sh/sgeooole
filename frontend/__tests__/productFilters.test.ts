@@ -1,4 +1,20 @@
 import { parsePriceInput, parseProductFilters, appendPropertyFilters } from "@/lib/productFilters";
+import { normalizeProductSort } from "@/lib/productSorting";
+
+describe("normalizeProductSort", () => {
+  it("defaults to relevance with search and newest without", () => {
+    expect(normalizeProductSort(undefined, true)).toBe("relevance");
+    expect(normalizeProductSort(undefined, false)).toBe("newest");
+    expect(normalizeProductSort("relevance", false)).toBe("newest");
+  });
+
+  it("normalizes legacy home rail aliases and rejects unknown values", () => {
+    expect(normalizeProductSort("bestseller")).toBe("bestSelling");
+    expect(normalizeProductSort("popularity")).toBe("mostVisited");
+    expect(normalizeProductSort("-salesCount")).toBe("bestSelling");
+    expect(normalizeProductSort("banana")).toBe("newest");
+  });
+});
 
 describe("parsePriceInput", () => {
   it("parses Persian and Arabic digits with separators", () => {

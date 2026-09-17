@@ -1,3 +1,5 @@
+import { normalizeProductSort } from "@/lib/productSorting";
+
 export type ProductFilterProperties = Record<string, string | string[]>;
 
 export type ProductFilterFacets = {
@@ -16,15 +18,7 @@ export function parsePriceInput(value: string): number | undefined {
   return Number.isFinite(result) && result <= Number.MAX_SAFE_INTEGER ? result : undefined;
 }
 
-const SORT_ALIASES: Record<string, string> = {
-  bestseller: "bestSelling", bestSellers: "bestSelling", flash: "discount", special: "discount",
-  "-createdAt": "newest", price: "priceAsc", "-price": "priceDesc",
-};
-const SORTS = new Set(["newest", "oldest", "bestSelling", "priceAsc", "priceDesc", "popularity", "mostVisited", "discount", "rating"]);
-
 export function parseProductFilters(params: URLSearchParams) {
-  const rawSort = params.get("sort") || "newest";
-  const sort = SORT_ALIASES[rawSort] || rawSort;
   const rawPage = Number(params.get("page") || 1);
   const properties: Record<string, string[]> = Object.create(null);
   params.forEach((value, key) => {
@@ -43,7 +37,7 @@ export function parseProductFilters(params: URLSearchParams) {
   const minRating = Number(params.get("minRating"));
   return {
     page: Number.isSafeInteger(rawPage) && rawPage > 0 ? Math.min(rawPage, 100000) : 1,
-    sort: SORTS.has(sort) ? sort : "newest",
+    sort: normalizeProductSort(params.get("sort"), !!params.get("search")?.trim()),
     category: params.get("category")?.trim() || undefined,
     brand: brands.join(",") || undefined,
     search: params.get("search")?.trim().slice(0, 200) || undefined,

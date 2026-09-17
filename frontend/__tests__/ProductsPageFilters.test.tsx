@@ -63,7 +63,25 @@ it("keeps mobile filters open, composes rapid toggles, resets page, and restores
 it("opens the labelled sort dialog and closes it with Escape", async () => {
   await act(async () => { render(<ProductsPageClient />); });
   fireEvent.click(screen.getByRole("button", { name: "مرتب‌سازی" }));
-  expect(screen.getByRole("dialog", { name: "مرتب‌سازی بر اساس" })).toHaveAttribute("aria-modal", "true");
+  const dialog = screen.getByRole("dialog", { name: "مرتب‌سازی بر اساس" });
+  expect(dialog).toHaveAttribute("aria-modal", "true");
   fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("sort selection preserves filters, resets page, and offers relevance only for search", async () => {
+  query = "page=3&category=cameras&inStock=true&sort=newest";
+  await act(async () => { render(<ProductsPageClient />); });
+  const buttons = screen.getAllByRole("button", { name: /ارزان‌ترین/ });
+  const desktop = buttons.find((button) => button.closest('[aria-label="مرتب‌سازی محصولات"]'));
+  fireEvent.click(desktop || buttons[0]);
+  const params = new URLSearchParams(push.mock.calls.at(-1)[0].split("?")[1]);
+  expect(params.get("sort")).toBe("priceAsc");
+  expect(params.get("category")).toBe("cameras");
+  expect(params.get("inStock")).toBe("true");
+  expect(params.has("page")).toBe(false);
+  expect(screen.queryByRole("button", { name: "مرتبط‌ترین" })).toBeNull();
+  query = "search=دوربین";
+  await act(async () => { render(<ProductsPageClient />); });
+  expect(screen.getAllByRole("button", { name: "مرتبط‌ترین" }).length).toBeGreaterThan(0);
 });

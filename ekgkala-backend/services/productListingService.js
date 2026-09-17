@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const { resolveSort, buildSort, sortStages } = require('./productSorting')
 
 const MAX_PAGE = 100000
 const MAX_LIMIT = 100
@@ -176,19 +177,8 @@ function parseListingQuery(query = {}) {
       $or: [...(query.searchField === 'sku' ? [] : [{ name: regex }]), { sku: regex }, { 'variants.sku': regex }],
     })
   }
-  const aliases = { newest: '-createdAt', oldest: 'createdAt', priceAsc: 'price', priceDesc: '-price', popularity: '-views', mostVisited: '-views', bestSelling: '-salesCount', discount: '-discount', rating: '-rating' }
-  const sort = query.sort === undefined ? '-createdAt' : text(query.sort, 'sort')
-  options.sort = {}
-  if (options.search) options.sort[`${INTERNAL}.priority`] = -1
-  const sortParts = (aliases[sort] || sort).split(/[\s,]+/)
-  for (const part of sortParts) {
-    const field = part.replace(/^-/, '')
-    if (![...NUMBERS, ...DATES, 'name', 'sku', '_id'].includes(field)) continue
-    const key = field === 'price' ? `${INTERNAL}.price` : field === 'discount' && !options.skipDiscount ? `${INTERNAL}.discount` : field
-    if (field !== '_id') options.sort[key] = part.startsWith('-') ? -1 : 1
-  }
-  if (!Object.keys(options.sort).some((key) => key !== `${INTERNAL}.priority`)) options.sort.createdAt = -1
-  options.sort._id = 1
+  options.sortMode = resolveSort(query.sort === undefined ? undefined : text(query.sort, 'sort'), options)
+  options.sort = buildSort(options, new Set([...NUMBERS, ...DATES, 'name', 'sku', '_id']))
   return options
 }
 
@@ -288,9 +278,8 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
   if (options.inStock) effectiveConditions.push({ [`${INTERNAL}.stock`]: { $gt: 0 } })
   if (options.onSale) effectiveConditions.push({ [`${INTERNAL}.onSale`]: true })
   if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
-  if (options.search) stages.push({ $addFields: { [`${INTERNAL}.priority`]: { $cond: [{ $or: [{ $eq: ['$sku', literal(options.search)] }, { $in: [literal(options.search), { $ifNull: ['$variants.sku', []] }] }] }, 1, 0] } } })
   const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
-  const data = [...priceMatch, { $sort: options.sort }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
+  const data = [...priceMatch, ...sortStages(options, searchPattern), { $sort: options.sort }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
   if (!options.skipDiscount) data.push({ $addFields: {
     price: ref('price'), stock: ref('stock'), compareAtPrice: ref('display.compareAtPrice'),
     variants: ref('variants'), discount: ref('discount'),
@@ -312,7 +301,11 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
 async function listProducts(query, models, now = new Date()) {
   const options = parseListingQuery(query)
   const context = await resolveListingContext(options, models, now)
-  const [result] = await models.Product.aggregate(buildListingPipeline(options, context, now)).allowDiskUse(true)
+  const aggregation = models.Product.aggregate(buildListingPipeline(options, context, now))
+  if (options.sortMode === 'nameAsc' || options.sortMode === 'nameDesc') {
+    aggregation.collation({ locale: 'fa', numericOrdering: true, strength: 2 })
+  }
+  const [result] = await aggregation.allowDiskUse(true)
   const total = result?.total[0]?.count || 0
   return {
     success: true,
