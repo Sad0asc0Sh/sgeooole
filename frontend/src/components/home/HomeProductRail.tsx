@@ -98,11 +98,10 @@ export default function HomeProductRail({
             longSwipes={false}
             speed={300}
             spaceBetween={12}
-            slidesPerView={1.65}
+            slidesPerView={2.3}
             breakpointsBase="container"
             breakpoints={{
-              360: { slidesPerView: 2 },
-              480: { slidesPerView: 2.5 },
+              440: { slidesPerView: 2.5 },
               640: { slidesPerView: 3 },
               800: { slidesPerView: 4 },
               1040: { slidesPerView: 5 },

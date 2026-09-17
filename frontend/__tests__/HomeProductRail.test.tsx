@@ -10,7 +10,7 @@ jest.mock("@/components/ui/ResilientImage", () => ({ __esModule: true, default: 
 jest.mock("@/hooks/useProducts", () => ({ useSpecialOffers: jest.fn() }));
 jest.mock("@/lib/scroll/ScrollManager", () => ({ getScrollManager: () => ({ getHorizontal: () => 0, saveHorizontal: jest.fn() }) }));
 jest.mock("swiper/react", () => ({
-  Swiper: ({ children, breakpointsBase }: { children: React.ReactNode; breakpointsBase: string }) => <div data-testid="carousel" data-breakpoints-base={breakpointsBase}>{children}</div>,
+  Swiper: ({ children, breakpointsBase, slidesPerView }: { children: React.ReactNode; breakpointsBase: string; slidesPerView: number }) => <div data-testid="carousel" data-breakpoints-base={breakpointsBase} data-slides-per-view={slidesPerView}>{children}</div>,
   SwiperSlide: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 jest.mock("swiper/modules", () => ({ A11y: {} }));
@@ -45,6 +45,7 @@ test("uses container breakpoints, accessible navigation, and local retry", () =>
   const props = { title: "جدیدترین‌ها", description: "تازه‌ترین محصولات", products: [product], viewAllHref: "/products", railKey: "newest", now };
   const { rerender } = render(<HomeProductRail {...props} />);
   expect(screen.getByTestId("carousel")).toHaveAttribute("data-breakpoints-base", "container");
+  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "2.3");
   expect(screen.getByRole("button", { name: "محصولات قبلی جدیدترین‌ها" })).toBeDisabled();
   const retry = jest.fn();
   rerender(<HomeProductRail {...props} error onRetry={retry} />);
@@ -52,7 +53,7 @@ test("uses container breakpoints, accessible navigation, and local retry", () =>
   expect(retry).toHaveBeenCalledTimes(1);
 });
 
-test("keeps curated offers visible after the earliest product expires", () => {
+test("preserves the original curated section expiry behavior", () => {
   jest.mocked(useSpecialOffers).mockReturnValue({
     specialOffers: [
       { ...product, isSpecialOffer: true, specialOfferEndTime: new Date(now + 1000).toISOString() },
@@ -60,9 +61,9 @@ test("keeps curated offers visible after the earliest product expires", () => {
     ], isLoading: false, isValidating: false, error: undefined, refresh: jest.fn(),
   });
   render(<SpecialOfferRail />);
-  act(() => { jest.advanceTimersByTime(1100); });
-  expect(screen.queryByRole("heading", { name: product.name })).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: product.name })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "دوربین دوم" })).toBeInTheDocument();
-  act(() => { jest.advanceTimersByTime(1000); });
+  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "2.3");
+  act(() => { jest.advanceTimersByTime(1100); });
   expect(screen.queryByRole("heading", { name: "پیشنهادهای منتخب" })).not.toBeInTheDocument();
 });

@@ -130,9 +130,9 @@
   .card { padding: 10px; }
   .productName { font-size: 12px; }
   .price { font-size: 15px; }
-  .skeletonCard { flex-basis: calc((100% - 12px) / 2); height: 340px; }
+  .skeletonCard { height: 340px; }
 }
-@container (max-width: 359px) { .skeletonCard { flex-basis: calc((100% - 8px) / 1.65); } }
+@container (max-width: 439px) { .skeletonCard { flex-basis: calc((100% - 15.6px) / 2.3); } }
 @media (prefers-reduced-motion: reduce) {
   .card { transition: none; }
   .carousel :global(.swiper-wrapper) { transition-duration: 0ms !important; }
