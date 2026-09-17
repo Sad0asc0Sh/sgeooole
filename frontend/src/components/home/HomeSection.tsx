@@ -20,7 +20,7 @@ export default function HomeSection({ variant, children }: HomeSectionProps) {
     <div
       data-home-section={variant}
       className={[
-        "w-full empty:hidden",
+        "w-full min-w-0 empty:hidden",
         token.spacingClassName,
         backgroundClassName,
       ]

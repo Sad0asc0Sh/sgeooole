@@ -40,6 +40,13 @@ export interface SingleCategoryResponse {
 }
 
 export const categoryService = {
+  getHomepage: async (kind: "featured" | "popular"): Promise<Category[]> => {
+    const { data } = await api.get<CategoryResponse>(`/categories/${kind}`);
+    if (data.success !== true || !Array.isArray(data.data)) {
+      throw new Error("Invalid homepage category response");
+    }
+    return data.data;
+  },
   /**
    * Get all categories in a tree structure (hierarchical)
    * This includes parent-child relationships

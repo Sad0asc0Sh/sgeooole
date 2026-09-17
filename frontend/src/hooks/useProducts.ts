@@ -70,7 +70,7 @@ export function useSpecialOffers(limit: number = 10) {
  */
 export function useNewestProducts(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `newest-products-${limit}`,
+        limit > 0 ? `newest-products-${limit}` : null,
         () => productService.getNewest(limit),
         {
             ...swrConfig,
@@ -97,7 +97,7 @@ export function useNewestProducts(limit: number = 10) {
  */
 export function useBestSellers(limit: number = 10) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
-        `best-sellers-${limit}`,
+        limit > 0 ? `best-sellers-${limit}` : null,
         () => productService.getBestSellers(limit),
         {
             ...swrConfig,

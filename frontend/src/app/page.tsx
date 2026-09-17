@@ -25,7 +25,7 @@ const OG_IMAGE = process.env.NEXT_PUBLIC_OG_IMAGE || (SITE_URL ? `${SITE_URL}/og
 
 type ApiResponse<T> = { data?: T };
 
-const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit & { next?: any }, timeoutMs: number): Promise<T | null> => {
+const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit & { next?: { revalidate: number } }, timeoutMs: number): Promise<T | null> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -46,31 +46,20 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
   }
 };
 
-async function fetchFeaturedCategories(): Promise<Category[]> {
+async function fetchHomeCategories(kind: "featured" | "popular"): Promise<Category[] | null> {
   try {
-    const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
-      `${API_BASE}/categories/featured?_t=${Date.now()}`,
+    const json = await fetchJsonWithTimeout<ApiResponse<Category[]> & { success?: boolean }>(
+      `${API_BASE}/categories/${kind}`,
       { next: { revalidate } },
       IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
-    return Array.isArray(json?.data) ? json.data : [];
+    if (json?.success !== true || !Array.isArray(json.data)) {
+      throw new Error(`Invalid ${kind} categories response`);
+    }
+    return json.data;
   } catch (error) {
-    logBuildFetchWarning("[home] Failed to fetch featured categories", error);
-    return [];
-  }
-}
-
-async function fetchPopularCategories(): Promise<Category[]> {
-  try {
-    const json = await fetchJsonWithTimeout<ApiResponse<Category[]>>(
-      `${API_BASE}/categories/popular?_t=${Date.now()}`,
-      { next: { revalidate } },
-      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
-    );
-    return Array.isArray(json?.data) ? json.data : [];
-  } catch (error) {
-    logBuildFetchWarning("[home] Failed to fetch popular categories", error);
-    return [];
+    logBuildFetchWarning(`[home] Failed to fetch ${kind} categories`, error);
+    return null;
   }
 }
 
@@ -129,8 +118,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const [featuredCats, popularCats, banners] = await Promise.all([
-    fetchFeaturedCategories(),
-    fetchPopularCategories(),
+    fetchHomeCategories("featured"),
+    fetchHomeCategories("popular"),
     fetchBanners(),
   ]);
 
