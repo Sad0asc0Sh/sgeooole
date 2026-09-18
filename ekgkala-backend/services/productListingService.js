@@ -264,7 +264,7 @@ function pricingStages(campaigns, now) {
     } },
     { $addFields: {
       [`${INTERNAL}.price`]: ref('display.price'),
-      [`${INTERNAL}.onSale`]: { $gt: [ref('display.compareAtPrice'), ref('display.price')] },
+      [`${INTERNAL}.onSale`]: { $or: [{ $gt: [ref('discount'), 0] }, { $gt: [ref('display.compareAtPrice'), ref('display.price')] }] },
     } },
   ]
 }

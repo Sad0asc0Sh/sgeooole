@@ -37,6 +37,11 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const rawPrice = Number.isFinite(input.price) ? input.price : 0;
   const rawDiscount = Number.isFinite(input.discount ?? 0) ? (input.discount as number) : 0;
 
+  const hasValidComparePrice = Boolean(
+    input.compareAtPrice &&
+    input.compareAtPrice > rawPrice
+  );
+
   const flashFlag = Boolean(input.isFlashDeal);
   const specialFlag = Boolean(input.isSpecialOffer);
   const flashActive = Boolean(flashFlag && (!input.flashDealEndTime || isFuture(input.flashDealEndTime)));
@@ -47,8 +52,13 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const hasPromotionFlag = Boolean(flashFlag || specialFlag || input.campaignLabel);
   const hasActivePromotion = flashActive || specialActive || labelActive;
 
-  const discountEligible = hasActivePromotion || (!hasPromotionFlag && rawDiscount > 0);
-  const discount = discountEligible ? rawDiscount : 0;
+  let effectiveRawDiscount = rawDiscount;
+  if (effectiveRawDiscount <= 0 && hasValidComparePrice && !hasPromotionFlag) {
+    effectiveRawDiscount = Math.round(((input.compareAtPrice! - rawPrice) / input.compareAtPrice!) * 100);
+  }
+
+  const discountEligible = hasActivePromotion || (!hasPromotionFlag && effectiveRawDiscount > 0);
+  const discount = discountEligible ? effectiveRawDiscount : 0;
 
   // If no discount is active, the final selling price MUST ALWAYS be the product's actual price (rawPrice)
   if (discount <= 0) {

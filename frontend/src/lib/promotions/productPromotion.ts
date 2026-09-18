@@ -79,7 +79,9 @@ export function resolveProductPromotion(
   const hasActiveTimedPromotion = kind !== "none";
   const rawDiscount = Number.isFinite(product.discount) && Number(product.discount) > 0
     ? Number(product.discount)
-    : 0;
+    : (product.oldPrice && product.oldPrice > product.price
+        ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
+        : 0);
 
   const effectiveDiscount = rawDiscount > 0 &&
     (hasActiveTimedPromotion || !hasPromotionFlag)

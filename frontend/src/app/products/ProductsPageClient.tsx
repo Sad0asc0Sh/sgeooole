@@ -40,7 +40,6 @@ import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
   { value: "newest", label: "جدیدترین", icon: Sparkles },
-  { value: "bestSelling", label: "پرفروش‌ترین", icon: TrendingUp },
   { value: "priceAsc", label: "ارزان‌ترین", icon: ArrowUpDown },
   { value: "priceDesc", label: "گران‌ترین", icon: ArrowUpDown },
   { value: "popularity", label: "محبوب‌ترین", icon: LayoutGrid },

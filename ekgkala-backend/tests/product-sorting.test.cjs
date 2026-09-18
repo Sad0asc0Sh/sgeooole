@@ -21,7 +21,7 @@ test('discount order uses actual price reduction including compare-only markdown
 
 for (const [sort, expected] of [
   ['newest', [3, 2, 1]], ['oldest', [1, 2, 3]], ['priceAsc', [2, 3, 1]], ['priceDesc', [1, 3, 2]],
-  ['bestSelling', [2, 1, 3]], ['mostVisited', [3, 1, 2]], ['popularity', [3, 1, 2]],
+  ['mostVisited', [3, 1, 2]], ['popularity', [3, 1, 2]],
   ['rating', [2, 1, 3]],
 ]) {
   test(`${sort}: correct ordering without changing result membership`, () => {
@@ -55,7 +55,7 @@ test('relevance defaults for search and normalizes Persian/Arabic exact SKU and 
 
 test('missing numeric metrics sort as zero; rating ties use review count', () => {
   const items = [product(1), product(2, { salesCount: null, views: null }), product(3, { salesCount: 10, views: 5 })]
-  assert.deepEqual(ids(run(items, { sort: 'bestSelling' })), [3, 1, 2])
+  assert.deepEqual(ids(run(items, { sort: 'popularity' })), [3, 1, 2])
   assert.deepEqual(ids(run(items, { sort: 'mostVisited' })), [3, 1, 2])
 })
 

@@ -9,10 +9,10 @@ describe("normalizeProductSort", () => {
   });
 
   it("normalizes legacy home rail aliases and valid values", () => {
-    expect(normalizeProductSort("bestseller")).toBe("bestSelling");
+    expect(normalizeProductSort("bestseller")).toBe("popularity");
     expect(normalizeProductSort("popularity")).toBe("popularity");
     expect(normalizeProductSort("mostVisited")).toBe("popularity");
-    expect(normalizeProductSort("-salesCount")).toBe("bestSelling");
+    expect(normalizeProductSort("-salesCount")).toBe("popularity");
     expect(normalizeProductSort("priceAsc")).toBe("priceAsc");
     expect(normalizeProductSort("discount")).toBe("discount");
   });
@@ -37,7 +37,7 @@ describe("parsePriceInput", () => {
 
 describe("parseProductFilters", () => {
   it("normalizes sort aliases and defaults", () => {
-    expect(parseProductFilters(new URLSearchParams("sort=bestseller")).sort).toBe("bestSelling");
+    expect(parseProductFilters(new URLSearchParams("sort=bestseller")).sort).toBe("popularity");
     expect(parseProductFilters(new URLSearchParams("sort=flash")).sort).toBe("discount");
     expect(parseProductFilters(new URLSearchParams("sort=banana")).sort).toBe("newest");
     expect(parseProductFilters(new URLSearchParams()).sort).toBe("newest");

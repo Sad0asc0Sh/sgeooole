@@ -1,6 +1,5 @@
 export const PRODUCT_SORT_OPTIONS = [
   { value: "newest", label: "جدیدترین" },
-  { value: "bestSelling", label: "پرفروش‌ترین" },
   { value: "priceAsc", label: "ارزان‌ترین" },
   { value: "priceDesc", label: "گران‌ترین" },
   { value: "popularity", label: "محبوب‌ترین" },
@@ -10,8 +9,9 @@ export const PRODUCT_SORT_OPTIONS = [
 export type ProductSort = (typeof PRODUCT_SORT_OPTIONS)[number]["value"];
 
 const aliases: Record<string, ProductSort> = {
-  bestseller: "bestSelling",
-  bestSellers: "bestSelling",
+  bestseller: "popularity",
+  bestSellers: "popularity",
+  bestSelling: "popularity",
   flash: "discount",
   special: "discount",
   popularity: "popularity",
@@ -20,7 +20,7 @@ const aliases: Record<string, ProductSort> = {
   "-price": "priceDesc",
   "-createdAt": "newest",
   createdAt: "newest",
-  "-salesCount": "bestSelling",
+  "-salesCount": "popularity",
   "-views": "popularity",
   "-discount": "discount",
 };

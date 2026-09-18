@@ -3,8 +3,9 @@ const field = (name) => `${PREFIX}.sort.${name}`
 const numeric = (input) => ({ $max: [0, { $convert: { input, to: 'double', onNull: 0, onError: 0 } }] })
 
 const ALIASES = new Map(Object.entries({
-  bestseller: 'bestSelling',
-  bestSellers: 'bestSelling',
+  bestseller: 'popularity',
+  bestSellers: 'popularity',
+  bestSelling: 'popularity',
   popularity: 'popularity',
   mostVisited: 'popularity',
   flash: 'discount',
@@ -13,13 +14,13 @@ const ALIASES = new Map(Object.entries({
   createdAt: 'oldest',
   price: 'priceAsc',
   '-price': 'priceDesc',
-  '-salesCount': 'bestSelling',
+  '-salesCount': 'popularity',
   '-views': 'popularity',
   '-rating': 'rating',
   '-discount': 'discount',
 }))
 
-const MODES = new Set(['relevance', 'newest', 'oldest', 'priceAsc', 'priceDesc', 'bestSelling', 'popularity', 'discount', 'rating'])
+const MODES = new Set(['relevance', 'newest', 'oldest', 'priceAsc', 'priceDesc', 'popularity', 'discount', 'rating'])
 
 function resolveSort(raw, { search }) {
   const requested = raw || (search ? 'relevance' : 'newest')
@@ -55,6 +56,7 @@ function buildSort(options, legacyFields) {
       sort[metric('salesCount')] = -1
       sort.createdAt = -1
       break
+    case 'bestSelling':
     case 'popularity':
       sort[metric('views')] = -1
       sort[metric('rating')] = -1
@@ -97,10 +99,7 @@ function sortStages(options, searchPattern) {
   const fields = {}
 
   if (!options.skipDiscount) {
-    if (mode === 'bestSelling') {
-      fields[field('salesCount')] = numeric('$salesCount')
-    }
-    if (mode === 'popularity') {
+    if (mode === 'bestSelling' || mode === 'popularity') {
       fields[field('views')] = numeric('$views')
       fields[field('rating')] = { $min: [5, numeric('$rating')] }
       fields[field('salesCount')] = numeric('$salesCount')
@@ -110,14 +109,21 @@ function sortStages(options, searchPattern) {
       fields[field('numReviews')] = numeric('$numReviews')
     }
     if (mode === 'discount') {
+      // __listing.discount is already the effective discount percentage (0-100)
+      // computed by pricingStages from campaign/flash/direct discount.
+      // For products with only compareAtPrice (no numeric discount), fall back
+      // to the effective savings percentage derived from display prices.
       const base = `$${PREFIX}.display.compareAtPrice`
       const price = `$${PREFIX}.price`
-      fields[field('discount')] = {
+      const fromCompare = {
         $cond: [
           { $and: [{ $gt: [base, 0] }, { $gt: [base, price] }] },
           { $multiply: [100, { $divide: [{ $subtract: [base, price] }, base] }] },
           0,
         ],
+      }
+      fields[field('discount')] = {
+        $max: [numeric(`$${PREFIX}.discount`), fromCompare],
       }
     }
   }

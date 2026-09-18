@@ -32,7 +32,12 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
     const isOutOfStock = product.countInStock <= 0;
     const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
         resolveProductPromotion(product, Date.now());
-    const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
+    const hasOldPriceMarkdown = Boolean(product.oldPrice && product.oldPrice > displayPrice);
+    const calculatedDiscount = hasOldPriceMarkdown
+        ? Math.round(((product.oldPrice! - displayPrice) / product.oldPrice!) * 100)
+        : (product.discount && product.discount > 0 ? product.discount : 0);
+    const finalDiscount = effectiveDiscount > 0 ? effectiveDiscount : calculatedDiscount;
+    const showSpecialOfferPricing = finalDiscount > 0 && hasOldPriceMarkdown;
 
     // ProductTimerBadge owns its second-by-second display. The card itself only
     // needs another render when the nearest promotion crosses its end boundary.
@@ -215,9 +220,9 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                     <div className={`${styles.priceColumn} flex flex-col`}>
                         {product.oldPrice && showSpecialOfferPricing && (
                             <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1`}>
-                                {effectiveDiscount > 0 && (
+                                {finalDiscount > 0 && (
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                        {effectiveDiscount}%
+                                        {finalDiscount}%
                                     </span>
                                 )}
                                 <span className={`${styles.oldPriceValue} text-[11px] text-gray-400 line-through decoration-red-500/50`}>
