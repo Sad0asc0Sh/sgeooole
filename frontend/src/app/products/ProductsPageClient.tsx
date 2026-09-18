@@ -37,12 +37,15 @@ import ProductListingSkeleton from "@/components/product/ProductListingSkeleton"
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
 
-import { getProductSortOptions } from "@/lib/productSorting";
-
-const SORT_OPTIONS = getProductSortOptions(true).map((option) => ({
-  ...option,
-  icon: option.value === "rating" ? Star : option.value === "discount" ? Flame : option.value === "bestSelling" ? TrendingUp : ArrowUpDown,
-}));
+// ─── Sort Options ────────────────────────────────────────────────
+const SORT_OPTIONS = [
+  { value: "newest", label: "جدیدترین", icon: Sparkles },
+  { value: "bestSelling", label: "پرفروش‌ترین", icon: TrendingUp },
+  { value: "priceAsc", label: "ارزان‌ترین", icon: ArrowUpDown },
+  { value: "priceDesc", label: "گران‌ترین", icon: ArrowUpDown },
+  { value: "popularity", label: "محبوب‌ترین", icon: LayoutGrid },
+  { value: "discount", label: "بیشترین تخفیف", icon: Flame },
+] as const;
 
 function containsCategory(category: Category, slug: string | null): boolean {
   return category.slug === slug || !!category.children?.some((child) => containsCategory(child, slug));
@@ -217,21 +220,19 @@ function FilterSection({
 function DesktopSortBar({
   currentSort,
   onSort,
-  hasSearch,
 }: {
   currentSort: string;
   onSort: (sort: string) => void;
-  hasSearch: boolean;
 }) {
   return (
     <div className="hidden lg:flex items-center justify-between bg-white border border-gray-100 p-2 rounded-2xl shadow-sm mb-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 text-xs font-bold border-l border-gray-100 ml-1">
           <ArrowUpDown size={15} className="text-kala-500" />
           <span className="text-gray-600">مرتب‌سازی:</span>
         </div>
-        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="مرتب‌سازی محصولات">
-          {SORT_OPTIONS.filter((option) => option.value !== "relevance" || hasSearch).map((option) => {
+        <div className="flex items-center gap-1" role="group" aria-label="مرتب‌سازی محصولات">
+          {SORT_OPTIONS.map((option) => {
             const isActive = currentSort === option.value;
             const Icon = option.icon;
             return (
@@ -239,7 +240,6 @@ function DesktopSortBar({
                 key={option.value}
                 type="button"
                 aria-pressed={isActive}
-                title={option.description}
                 onClick={() => onSort(option.value)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 ${
                   isActive
@@ -1023,7 +1023,7 @@ function ProductListingContent() {
           {/* Main Content (Grid) - 9 cols on desktop */}
           <main className="lg:col-span-9">
             {/* Desktop Sort Bar */}
-            <DesktopSortBar currentSort={sortParam} onSort={handleSortChange} hasSearch={!!searchQuery} />
+            <DesktopSortBar currentSort={sortParam} onSort={handleSortChange} />
 
             {/* Mobile Filter & Sort Bar */}
             <div className="lg:hidden flex items-center justify-between mb-4 gap-2">
@@ -1244,7 +1244,7 @@ function ProductListingContent() {
                 </button>
               </div>
               <div className="p-4 pb-8 space-y-2">
-                {SORT_OPTIONS.filter((option) => option.value !== "relevance" || !!searchQuery).map((option) => {
+                {SORT_OPTIONS.map((option) => {
                   const isActive = sortParam === option.value;
                   const Icon = option.icon;
                   return (
@@ -1252,7 +1252,6 @@ function ProductListingContent() {
                       key={option.value}
                       type="button"
                       aria-pressed={isActive}
-                      title={option.description}
                       onClick={() => {
                         handleSortChange(option.value);
                         setShowSortSheet(false);

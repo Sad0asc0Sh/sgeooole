@@ -2,17 +2,19 @@ import { parsePriceInput, parseProductFilters, appendPropertyFilters } from "@/l
 import { normalizeProductSort } from "@/lib/productSorting";
 
 describe("normalizeProductSort", () => {
-  it("defaults to relevance with search and newest without", () => {
-    expect(normalizeProductSort(undefined, true)).toBe("relevance");
-    expect(normalizeProductSort(undefined, false)).toBe("newest");
-    expect(normalizeProductSort("relevance", false)).toBe("newest");
+  it("defaults to newest when undefined or invalid", () => {
+    expect(normalizeProductSort(undefined)).toBe("newest");
+    expect(normalizeProductSort(null)).toBe("newest");
+    expect(normalizeProductSort("banana")).toBe("newest");
   });
 
-  it("normalizes legacy home rail aliases and rejects unknown values", () => {
+  it("normalizes legacy home rail aliases and valid values", () => {
     expect(normalizeProductSort("bestseller")).toBe("bestSelling");
-    expect(normalizeProductSort("popularity")).toBe("mostVisited");
+    expect(normalizeProductSort("popularity")).toBe("popularity");
+    expect(normalizeProductSort("mostVisited")).toBe("popularity");
     expect(normalizeProductSort("-salesCount")).toBe("bestSelling");
-    expect(normalizeProductSort("banana")).toBe("newest");
+    expect(normalizeProductSort("priceAsc")).toBe("priceAsc");
+    expect(normalizeProductSort("discount")).toBe("discount");
   });
 });
 

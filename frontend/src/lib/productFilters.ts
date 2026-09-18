@@ -37,7 +37,7 @@ export function parseProductFilters(params: URLSearchParams) {
   const minRating = Number(params.get("minRating"));
   return {
     page: Number.isSafeInteger(rawPage) && rawPage > 0 ? Math.min(rawPage, 100000) : 1,
-    sort: normalizeProductSort(params.get("sort"), !!params.get("search")?.trim()),
+    sort: normalizeProductSort(params.get("sort")),
     category: params.get("category")?.trim() || undefined,
     brand: brands.join(",") || undefined,
     search: params.get("search")?.trim().slice(0, 200) || undefined,

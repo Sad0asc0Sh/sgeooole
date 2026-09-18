@@ -10,11 +10,37 @@ interface AIChatSheetProps {
     onOpenChange: (open: boolean) => void;
 }
 
+interface ChatProductSpec {
+    label: string;
+    value: string;
+}
+
+interface ChatProduct {
+    id: string;
+    name: string;
+    slug?: string;
+    productCode?: string;
+    price: number;
+    oldPrice?: number;
+    discount?: number;
+    image: string;
+    category?: string;
+    brand?: string;
+    rating?: number;
+    reviewCount?: number;
+    countInStock: number;
+    inStock: boolean;
+    url: string;
+    specs?: ChatProductSpec[];
+    guarantee?: string;
+}
+
 interface Message {
     role: 'user' | 'ai';
     content: string;
     isLoading?: boolean;
     isError?: boolean;
+    products?: ChatProduct[];
 }
 
 interface SuggestionItem {
@@ -30,6 +56,37 @@ export function stripThinkingTags(text: string): string {
         .replace(/<\s*(think|thought|reasoning)\b[^>]*>[\s\S]*$/gi, '')
         .replace(/<\s*\/\s*(think|thought|reasoning)\s*>/gi, '')
         .trim();
+}
+
+/** استخراج دکمه‌های دوگزینه‌ای [[CHOICE:الف|ب]] از متن هوش مصنوعی */
+export function parseChoices(text: string): { clean: string; groups: string[][] } {
+    if (!text) return { clean: "", groups: [] };
+    const groups: string[][] = [];
+    const clean = text.replace(/\[\[CHOICE:([^\]]+)\]\]/g, (_m, inner: string) => {
+        const opts = String(inner).split("|").map((s) => s.trim()).filter(Boolean).slice(0, 2);
+        if (opts.length === 2) groups.push(opts);
+        return "";
+    }).replace(/\n{3,}/g, "\n\n").trim();
+    return { clean, groups };
+}
+
+function resolveChatImage(src: string | undefined): string {
+    if (!src || !src.trim()) return "/placeholder.svg";
+    const s = src.trim();
+    if (s.startsWith("http://") || s.startsWith("https://")) return s;
+    if (s.startsWith("/")) {
+        try {
+            const base = (typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> })?.env?.NEXT_PUBLIC_API_URL) || "https://www.ekgkala.ir/api";
+            return `${String(base).replace(/\/api\/?$/, "")}${s}`;
+        } catch {
+            return s;
+        }
+    }
+    return s;
+}
+
+function formatFaPrice(n: number | undefined): string {
+    return Number(n || 0).toLocaleString("fa-IR");
 }
 
 export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
@@ -92,8 +149,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     // Ref for accumulated reply to avoid stale closure issues
     const fullReplyRef = useRef<string>('');
 
-    const handleSend = async () => {
-        if (!input.trim() || isTyping) return;
+    const handleSend = async (overrideText?: string) => {
+        const rawText = typeof overrideText === "string" ? overrideText : input;
+        if (!rawText.trim() || isTyping) return;
         // Guard against duplicate requests
         if (pendingRequestRef.current) {
             console.warn('[AI Chat] Duplicate request blocked');
@@ -101,7 +159,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
         pendingRequestRef.current = true;
 
-        const currentInput = input.trim();
+        const currentInput = rawText.trim();
         const userMsg: Message = { role: 'user', content: currentInput };
         setMessages((prev: Message[]) => [...prev, userMsg]);
         setInput("");
@@ -195,6 +253,8 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     error?: string;
                     usage?: { current: number; limit: number; remaining: number };
                     partial?: boolean;
+                    products?: ChatProduct[];
+                    meta?: { requestId?: string };
                 };
                 try {
                     payload = JSON.parse(jsonStr);
@@ -203,6 +263,19 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                 }
 
                 if (payload.usage) setUsage(payload.usage);
+                if (Array.isArray(payload.products) && payload.products.length > 0) {
+                    const incoming = payload.products;
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role !== 'ai') return prev;
+                        const updated = [...prev];
+                        updated[updated.length - 1] = {
+                            ...last,
+                            products: [...(last.products || []), ...incoming].slice(0, 6),
+                        };
+                        return updated;
+                    });
+                }
                 if (payload.error) {
                     lastError = payload.error;
                     if (payload.partial) {
@@ -468,7 +541,11 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         {messages.length > 0 && (
                             <div className="flex flex-col gap-3 w-full animate-in fade-in slide-in-from-bottom-4 duration-500 mt-4 px-1">
                                 {messages.map((msg: Message, index: number) => {
-                                    const displayContent = msg.role === 'ai' ? stripThinkingTags(msg.content) : msg.content;
+                                    const rawDisplay = msg.role === 'ai' ? stripThinkingTags(msg.content) : msg.content;
+                                    const { clean: displayContent, groups: choiceGroups } = msg.role === 'ai'
+                                        ? parseChoices(rawDisplay)
+                                        : { clean: rawDisplay, groups: [] as string[][] };
+                                    const isLastAi = msg.role === 'ai' && index === messages.length - 1;
                                     return (
                                     <div key={index} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-1 ${msg.role === 'user' ? 'bg-gray-200' : msg.isError ? 'bg-red-100' : 'bg-kala-100'}`}>
@@ -480,17 +557,85 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                 <Sparkles size={14} className="text-kala-600" />
                                             )}
                                         </div>
-                                        <div className={`px-3.5 py-2 rounded-2xl text-[13px] leading-6 shadow-sm max-w-[85%] break-words whitespace-pre-wrap ${msg.role === 'user' ? 'bg-gray-800 text-white rounded-br-sm' : msg.isError ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm' : 'bg-kala-50/80 border border-kala-200/80 text-gray-800 rounded-bl-sm'}`}>
-                                            {displayContent ? (
-                                                displayContent
-                                            ) : msg.isLoading ? (
-                                                <div className="flex items-center gap-1.5 py-1 px-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.3s]"></span>
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.15s]"></span>
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce"></span>
+                                        <div className={`flex flex-col gap-2 min-w-0 ${msg.role === 'user' ? 'items-end max-w-[85%]' : 'items-start max-w-[92%] flex-1'}`}>
+                                            <div className={`px-3.5 py-2 rounded-2xl text-[13px] leading-6 shadow-sm break-words whitespace-pre-wrap ${msg.role === 'user' ? 'bg-gray-800 text-white rounded-br-sm max-w-full' : msg.isError ? 'bg-red-50 border border-red-200 text-red-800 rounded-bl-sm max-w-full' : 'bg-kala-50/80 border border-kala-200/80 text-gray-800 rounded-bl-sm max-w-full'}`}>
+                                                {displayContent ? (
+                                                    displayContent
+                                                ) : msg.isLoading ? (
+                                                    <div className="flex items-center gap-1.5 py-1 px-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.3s]"></span>
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce [animation-delay:-0.15s]"></span>
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-kala-500 animate-bounce"></span>
+                                                    </div>
+                                                ) : (
+                                                    '\u00A0'
+                                                )}
+                                            </div>
+                                            {/* دکمه‌های دوگزینه‌ای مشاور */}
+                                            {msg.role === 'ai' && choiceGroups.length > 0 && (
+                                                <div className="flex flex-col gap-2 w-full">
+                                                    {choiceGroups.map((opts, gi) => (
+                                                        <div key={gi} className="grid grid-cols-2 gap-2 w-full">
+                                                            {opts.map((opt, oi) => (
+                                                                <button
+                                                                    key={oi}
+                                                                    disabled={isTyping || !isLastAi}
+                                                                    onClick={() => handleSend(opt)}
+                                                                    className="px-3 py-2.5 rounded-xl border border-kala-300 bg-white text-kala-700 text-xs font-bold shadow-sm hover:bg-kala-500 hover:text-white hover:border-kala-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                                >
+                                                                    {opt}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ) : (
-                                                '\u00A0'
+                                            )}
+                                            {/* کارت محصولات مرتبط از دیتابیس */}
+                                            {msg.role === 'ai' && msg.products && msg.products.length > 0 && (
+                                                <div className="grid grid-cols-1 gap-2 w-full">
+                                                    {msg.products.map((p) => (
+                                                        <a
+                                                            key={p.id}
+                                                            href={p.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex gap-3 p-2.5 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.05)] hover:border-kala-300 hover:shadow-md transition-all cursor-pointer"
+                                                        >
+                                                            <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
+                                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                <img
+                                                                    src={resolveChatImage(p.image)}
+                                                                    alt={p.name}
+                                                                    className="w-full h-full object-cover"
+                                                                    loading="lazy"
+                                                                    onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }}
+                                                                />
+                                                                {!p.inStock && (
+                                                                    <span className="absolute inset-x-0 bottom-0 bg-gray-900/70 text-white text-[10px] font-bold text-center py-0.5">ناموجود</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex flex-col flex-1 min-w-0 gap-1">
+                                                                <span className="text-[12px] font-bold text-gray-800 leading-5 line-clamp-2">{p.name}</span>
+                                                                {(p.brand || p.category) && (
+                                                                    <span className="text-[10px] text-gray-400 truncate">{[p.brand, p.category].filter(Boolean).join(" • ")}</span>
+                                                                )}
+                                                                {p.specs && p.specs.length > 0 && (
+                                                                    <span className="text-[10px] text-gray-500 truncate">
+                                                                        {p.specs.slice(0, 2).map((s) => `${s.label}: ${s.value}`).join(" | ")}
+                                                                    </span>
+                                                                )}
+                                                                <div className="flex items-center justify-between mt-auto">
+                                                                    <span className={`text-[12px] font-black ${p.inStock ? "text-gray-900" : "text-gray-400"}`}>
+                                                                        {formatFaPrice(p.price)} <span className="text-[10px] font-medium text-gray-500">تومان</span>
+                                                                    </span>
+                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.inStock ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-100 text-gray-500 border border-gray-200"}`}>
+                                                                        {p.inStock ? `موجود (${Number(p.countInStock).toLocaleString("fa-IR")})` : "ناموجود"}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </a>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -529,7 +674,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                 <button className="p-2 text-gray-400 hover:text-kala-600 transition"><Camera size={20} /></button>
                             </div>
                             <button
-                                onClick={handleSend}
+                                onClick={() => handleSend()}
                                 disabled={!input.trim() || isTyping}
                                 className={`mb-1 p-3 rounded-full transition-all duration-300 ${input.trim() && !isTyping ? 'bg-kala-500 text-white shadow-lg shadow-kala-500/30 rotate-0 scale-100 hover:bg-kala-600' : 'bg-gray-100 text-gray-300 rotate-90 scale-90 cursor-not-allowed'}`}
                             >

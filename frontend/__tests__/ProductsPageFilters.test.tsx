@@ -69,7 +69,7 @@ it("opens the labelled sort dialog and closes it with Escape", async () => {
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
-it("sort selection preserves filters, resets page, and offers relevance only for search", async () => {
+it("sort selection preserves filters, resets page, and presents only the core 6 options", async () => {
   query = "page=3&category=cameras&inStock=true&sort=newest";
   await act(async () => { render(<ProductsPageClient />); });
   const buttons = screen.getAllByRole("button", { name: /ارزان‌ترین/ });
@@ -80,8 +80,16 @@ it("sort selection preserves filters, resets page, and offers relevance only for
   expect(params.get("category")).toBe("cameras");
   expect(params.get("inStock")).toBe("true");
   expect(params.has("page")).toBe(false);
-  expect(screen.queryByRole("button", { name: "مرتبط‌ترین" })).toBeNull();
-  query = "search=دوربین";
-  await act(async () => { render(<ProductsPageClient />); });
-  expect(screen.getAllByRole("button", { name: "مرتبط‌ترین" }).length).toBeGreaterThan(0);
+
+  // Verify only the clean 6 sort options exist
+  const sortGroup = screen.getByLabelText("مرتب‌سازی محصولات");
+  expect(within(sortGroup).getByRole("button", { name: /جدیدترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /پرفروش‌ترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /ارزان‌ترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /گران‌ترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /محبوب‌ترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /بیشترین تخفیف/ })).toBeInTheDocument();
+  expect(within(sortGroup).queryByRole("button", { name: /مرتبط‌ترین/ })).toBeNull();
+  expect(within(sortGroup).queryByRole("button", { name: /قدیمی‌ترین/ })).toBeNull();
+  expect(within(sortGroup).queryByRole("button", { name: /نام/ })).toBeNull();
 });

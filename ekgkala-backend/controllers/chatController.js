@@ -1,4 +1,3 @@
-const Product = require('../models/Product');
 const Order = require('../models/Order');
 const ChatHistory = require('../models/ChatHistory');
 const Settings = require('../models/Settings');
@@ -8,15 +7,24 @@ const {
   AIServiceError,
   stripThinkingTags,
 } = require('../utils/groqService');
+const {
+  searchProducts,
+  formatProductContext,
+  toCardPayload,
+  isAdvisoryRequest,
+} = require('../utils/chatRetrieval');
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_STORED_MESSAGES = 50;
-const MAX_SEARCH_TERMS = 6;
 const activeConversations = new Map();
 
 function getLocalDayStart(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function escapeRegex(value) {
@@ -135,39 +143,23 @@ async function loadConversation(req) {
   };
 }
 
-async function buildChatContext(message, settings, userId = null) {
-  const terms = [...new Set(
-    message
-      .split(/\s+/)
-      .map((term) => term.trim())
-      .filter((term) => term.length >= 3 && term.length <= 48)
-      .slice(0, MAX_SEARCH_TERMS),
-  )];
-
-  let productContext = '';
-  if (terms.length > 0) {
-    const products = await Product.find({
-      isActive: true,
-      $or: terms.flatMap((term) => {
-        const safeTerm = escapeRegex(term);
-        return [
-          { name: { $regex: safeTerm, $options: 'i' } },
-          { description: { $regex: safeTerm, $options: 'i' } },
-        ];
-      }),
-    })
-      .select('name price stock description')
-      .sort({ updatedAt: -1 })
-      .limit(5)
-      .lean();
-
-    productContext = products.map((product) => {
-      const price = Number(product.price || 0).toLocaleString('fa-IR');
-      const stockState = Number(product.stock || 0) > 0 ? 'موجود' : 'ناموجود';
-      const description = product.description ? String(product.description).slice(0, 180) : '—';
-      return `- مدل: ${product.name}\n  قیمت: ${price} تومان\n  وضعیت: ${stockState}\n  توضیح: ${description}`;
-    }).join('\n----------------\n');
+async function buildChatContext(message, settings, userId = null, history = []) {
+  // موتور بازیابی دقیق فارسی: نام + دسته + برند + مشخصات فنی + موجودی واقعی
+  let products = [];
+  try {
+    const result = await searchProducts(message, history);
+    products = result.products || [];
+  } catch (err) {
+    console.warn('[chat] product retrieval failed:', err?.message);
+    products = [];
   }
+
+  const productContext = formatProductContext(products);
+  const advisoryHint = isAdvisoryRequest(message);
+  // در نوبت اول نیازسنجی (هنوز کاربر به سوال‌ها جواب نداده) کارت نشان نده —
+  // اول سوال دوگزینه‌ای، بعداً در نوبت‌های بعدی معرفی نهایی با کارت.
+  const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
+  const productCards = (advisoryHint && priorUserCount < 1) ? [] : products.map(toCardPayload);
 
   const orderStatusMap = {
     Pending: 'در انتظار بررسی یا پرداخت',
@@ -236,7 +228,7 @@ async function buildChatContext(message, settings, userId = null) {
 
   const storeInfo = storeInfoParts.filter((p) => p !== undefined && p !== null).join('\n');
 
-  return { productContext, storeInfoContext: storeInfo };
+  return { productContext, storeInfoContext: storeInfo, products: productCards, advisoryHint };
 }
 
 async function saveCompletedTurn(chatSession, userMessage, reply) {
@@ -277,14 +269,26 @@ exports.handleMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
-    const context = await buildChatContext(message, conversation.settings, conversation.identity.query?.userId);
-    const result = await generateExpertResponse(message, context.productContext, conversation.history, context.storeInfoContext);
+    const context = await buildChatContext(
+      message,
+      conversation.settings,
+      conversation.identity.query?.userId,
+      conversation.history,
+    );
+    const result = await generateExpertResponse(
+      message,
+      context.productContext,
+      conversation.history,
+      context.storeInfoContext,
+      { advisoryHint: context.advisoryHint },
+    );
     await saveCompletedTurn(conversation.chatSession, message, result.message);
 
     return res.json({
       success: true,
       data: {
         message: result.message,
+        products: context.products || [],
         timestamp: new Date(),
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: result.provider,
@@ -324,7 +328,12 @@ exports.handleStreamMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
-    const context = await buildChatContext(message, conversation.settings, conversation.identity.query?.userId);
+    const context = await buildChatContext(
+      message,
+      conversation.settings,
+      conversation.identity.query?.userId,
+      conversation.history,
+    );
 
     res.status(200);
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -334,6 +343,10 @@ exports.handleStreamMessage = async (req, res) => {
     res.setHeader('Content-Encoding', 'identity');
     res.flushHeaders?.();
     res.write(`data: ${JSON.stringify({ meta: { requestId } })}\n\n`);
+    // ارسال فوری کارت محصولات تا فرانت بدون انتظار برای LLM رندر کند
+    if (context.products && context.products.length > 0) {
+      res.write(`data: ${JSON.stringify({ products: context.products })}\n\n`);
+    }
 
     const abortController = new AbortController();
     const onClose = () => {
@@ -354,7 +367,7 @@ exports.handleStreamMessage = async (req, res) => {
       context.productContext,
       conversation.history,
       context.storeInfoContext,
-      { signal: abortController.signal },
+      { signal: abortController.signal, advisoryHint: context.advisoryHint },
     );
 
     if (streamResult.message) {
@@ -366,6 +379,7 @@ exports.handleStreamMessage = async (req, res) => {
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: streamResult.provider,
         partial: streamResult.partial || false,
+        products: context.products || [],
       })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();

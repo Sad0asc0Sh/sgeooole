@@ -301,11 +301,7 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
 async function listProducts(query, models, now = new Date()) {
   const options = parseListingQuery(query)
   const context = await resolveListingContext(options, models, now)
-  const aggregation = models.Product.aggregate(buildListingPipeline(options, context, now))
-  if (options.sortMode === 'nameAsc' || options.sortMode === 'nameDesc') {
-    aggregation.collation({ locale: 'fa', numericOrdering: true, strength: 2 })
-  }
-  const [result] = await aggregation.allowDiskUse(true)
+  const [result] = await models.Product.aggregate(buildListingPipeline(options, context, now)).allowDiskUse(true)
   const total = result?.total[0]?.count || 0
   return {
     success: true,
