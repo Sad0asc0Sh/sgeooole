@@ -510,6 +510,36 @@ async function runWizardFlowTest() {
   }
 }
 
+async function runWizardNeedsGatingTest() {
+  const restore = mockWizardCatalog();
+  try {
+    const chat = require('../controllers/chatController').__private__;
+    const session = { packWizard: { active: false }, messages: [], save: async () => {} };
+
+    // نوبت ۱: درخواست پک → فقط فاز نیازسنجی، بدون هیچ گزینه‌ای
+    let prep = await chat.preparePackWizard('میخوام پک دوربین ببندم', session, []);
+    assert.equal(prep.wizardCreated, true);
+    assert.equal(prep.view.phase, 'needs', 'نوبت اول فقط نیازسنجی است');
+    assert.equal(prep.view.current, null, 'در نیازسنجی گزینه‌ای نشان داده نمی‌شود');
+
+    // نوبت ۲: جواب اول → هنوز نیازسنجی
+    session.messages.push({ role: 'user', content: 'میخوام پک دوربین ببندم', timestamp: new Date(Date.now() - 60000) });
+    prep = await chat.preparePackWizard('دو تا', session, []);
+    assert.equal(prep.view.phase, 'needs', 'با یک جواب هنوز محصولی نشان داده نمی‌شود');
+    assert.equal(prep.view.current, null);
+
+    // نوبت ۳: جواب دوم → ورود به مرحله‌ها از دوربین
+    session.messages.push({ role: 'user', content: 'دو تا', timestamp: new Date() });
+    prep = await chat.preparePackWizard('داخل منزل', session, []);
+    assert.equal(prep.wizardStepsBegun, true, 'با دو جواب وارد مرحله‌ها می‌شود');
+    assert.equal(prep.view.phase, 'steps');
+    assert.ok(prep.view.current && prep.view.current.key === 'camera', 'اولین قدم دوربین است');
+    assert.ok(prep.view.current.options.length > 0, 'حالا گزینه‌های قدم اول نمایش داده می‌شود');
+  } finally {
+    restore();
+  }
+}
+
 async function runWizardNeedsTest() {
   const restore = mockWizardCatalog();
   try {
@@ -553,6 +583,7 @@ async function runWizardNeedsTest() {
   await asyncTest('بسته پک فقط از کالاهای واقعی موجود و مرتبط ساخته می‌شود', runBuildPackageTest);
   await asyncTest('ویزارد پک: شروع از دسته‌بندی‌ها، ترتیب تازگی قیمت، انتخاب/برگشت/بسته نهایی', runWizardFlowTest);
   await asyncTest('ویزارد پک: فاز نیازسنجی، کردیت، رد سوالات و تطابق اسمی سخت‌گیرانه', runWizardNeedsTest);
+  await asyncTest('ویزارد پک: گیتینگ نوبت‌ها — حین نیازسنجی محصولی نیست، بعدش قدم اول', runWizardNeedsGatingTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

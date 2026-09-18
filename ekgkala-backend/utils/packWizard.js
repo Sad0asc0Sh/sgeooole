@@ -168,6 +168,7 @@ function newWizardState(domain, steps) {
     phase: 'needs',
     createdAt: new Date(),
     needsCredit: 0,
+    needsAnswers: 0,
     steps: steps.map((s) => ({ ...s, status: 'pending' })),
     currentIndex: 0,
     selections: [],
@@ -202,6 +203,11 @@ function countUserAnswersSince(messages, since) {
 
 function needsRequired(domain) {
   return Number(domain?.needsRequired) || NEEDS_REQUIRED_DEFAULT;
+}
+
+function needsRequiredFor(domainId) {
+  const domain = WIZARD_DOMAINS.find((d) => d.id === domainId) || null;
+  return needsRequired(domain);
 }
 
 /** ورود به فاز مرحله‌ها: بررسی موجودی، علامت unavailable، رفتن به اولین مرحله قابل ارائه */
@@ -369,6 +375,7 @@ function restartWizard(state) {
   state.phase = 'needs';
   state.createdAt = new Date();
   state.needsCredit = 0;
+  state.needsAnswers = 0;
   state.steps.forEach((s) => { s.status = 'pending'; });
   state.updatedAt = new Date();
   return state;
@@ -540,6 +547,7 @@ module.exports = {
   enterStepsPhase,
   skipNeedsPhase,
   initialNeedsCredit,
+  needsRequiredFor,
   countUserAnswersSince,
   ensureCurrentViable,
   selectOption,

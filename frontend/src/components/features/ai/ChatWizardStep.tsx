@@ -40,7 +40,7 @@ export interface ChatWizard {
     progress: { done: number; total: number };
 }
 
-type PackAction = "skip-needs" | "skip" | "back" | "restart";
+type PackAction = "select" | "skip-needs" | "skip" | "back" | "restart";
 
 function img(src: string | undefined): string {
     if (!src || !src.trim()) return "/placeholder.svg";
@@ -76,11 +76,10 @@ interface Props {
     wizard: ChatWizard;
     disabled?: boolean;
     loading?: boolean;
-    onAction: (action: PackAction) => void;
-    onNavigate: (url: string) => void;
+    onAction: (action: PackAction, productId?: string) => void;
 }
 
-export default function ChatWizardStep({ wizard, disabled, loading, onAction, onNavigate }: Props) {
+export default function ChatWizardStep({ wizard, disabled, loading, onAction }: Props) {
     const stepNo = Math.min(wizard.currentIndex + 1, wizard.progress.total);
     const pct = wizard.progress.total > 0 ? Math.round((wizard.progress.done / wizard.progress.total) * 100) : 0;
     const busy = Boolean(disabled || loading);
@@ -186,20 +185,28 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction, on
                                                 <FreshBadge count={o.priceUpdateCount} />
                                             </span>
                                             {i === 0 && !out && (
-                                                <span className="text-[9px] font-bold text-kala-600">مرتب اول: تازه‌ترین قیمت</span>
+                                                <span className="text-[9px] font-black text-kala-700 bg-kala-100 rounded-full px-1.5 py-px w-fit">پیشنهاد هوش مصنوعی</span>
                                             )}
                                         </span>
                                         <span className="flex flex-col items-stretch gap-1 shrink-0">
                                             <span className={`text-[9px] font-bold px-1.5 py-px rounded-full whitespace-nowrap text-center ${o.inStock ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                                                 {o.inStock ? `موجود (${fa(o.countInStock)})` : "ناموجود"}
                                             </span>
+                                            <a
+                                                href={o.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-[10px] font-bold text-center text-kala-600 border border-kala-200 rounded-lg px-2 py-1 hover:bg-kala-50 transition-all"
+                                            >
+                                                جزئیات
+                                            </a>
                                             <button
-                                                onClick={() => onNavigate(`${o.url}?pack=1`)}
+                                                onClick={() => onAction("select", o.id)}
                                                 disabled={busy || out}
                                                 className="text-[10px] font-black text-center text-white bg-kala-500 rounded-lg px-2 py-1 hover:bg-kala-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1"
                                             >
                                                 {loading ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} strokeWidth={3} />}
-                                                مشاهده و انتخاب
+                                                انتخاب و ادامه
                                             </button>
                                         </span>
                                     </div>

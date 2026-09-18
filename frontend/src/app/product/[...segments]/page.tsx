@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ProductDetailClient from "./ProductDetailClient";
-import PackConfirmBar from "./PackConfirmBar";
 import ProductStructuredData from "./ProductStructuredData";
 import RelatedProducts from "./RelatedProducts";
 import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/productData";
@@ -141,10 +140,6 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         <>
             <ProductStructuredData product={product} relatedProducts={[]} />
             <ProductDetailClient product={product} />
-            {/* نوار تأیید نهایی پک — فقط وقتی از ویزارد چت آمده باشد (?pack=1) */}
-            <Suspense fallback={null}>
-                <PackConfirmBar productId={product.id} />
-            </Suspense>
 
             {categoryPath.length > 0 && (
                 <Suspense fallback={

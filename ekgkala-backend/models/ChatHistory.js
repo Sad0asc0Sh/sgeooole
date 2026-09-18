@@ -46,6 +46,8 @@ const chatHistorySchema = new mongoose.Schema({
         phase: { type: String, enum: ['needs', 'steps'], default: 'steps' },
         createdAt: { type: Date, default: Date.now },
         needsCredit: { type: Number, default: 0 },
+        // شمارنده قطعی جواب‌های نیازسنجی (هر نوبت چت = یک جواب) — جایگزین مقایسه زمانی
+        needsAnswers: { type: Number, default: 0 },
         steps: { type: [stepSchema], default: [] },
         currentIndex: { type: Number, default: 0 },
         selections: { type: [selectionSchema], default: [] },

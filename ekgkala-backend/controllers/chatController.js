@@ -20,7 +20,7 @@ const {
   startWizard,
   enterStepsPhase,
   skipNeedsPhase,
-  countUserAnswersSince,
+  needsRequiredFor,
   getWizardView,
   selectOption,
   skipCurrent,
@@ -29,7 +29,6 @@ const {
   deactivateWizard,
   buildFinalPackage,
   formatWizardContext,
-  productInStep,
 } = require('../utils/packWizard');
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -195,12 +194,11 @@ async function preparePackWizard(message, chatSession, history = []) {
       out.wizardRestarted = true;
     }
 
-    // فاز نیازسنجی: پیام فعلی هم یک جواب حساب می‌شود
+    // فاز نیازسنجی: هر نوبت چت دقیقاً یک جواب حساب می‌شود (شمارنده قطعی، بدون وابستگی به ساعت)
     if (wiz.active && wiz.phase === 'needs' && !out.wizardRestarted) {
-      const required = 2;
-      const given = countUserAnswersSince(chatSession.messages, wiz.createdAt)
-        + (Number(wiz.needsCredit) || 0) + 1;
-      if (given >= required) {
+      wiz.needsAnswers = (Number(wiz.needsAnswers) || 0) + 1;
+      const given = wiz.needsAnswers + (Number(wiz.needsCredit) || 0);
+      if (given >= needsRequiredFor(wiz.domainId)) {
         const entered = await enterStepsPhase(wiz, history);
         if (entered.ok) {
           out.wizardStepsBegun = true;
@@ -253,17 +251,21 @@ async function preparePackWizard(message, chatSession, history = []) {
 
 async function buildChatContext(message, settings, userId = null, history = [], wizardView = null) {
   const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
+  // فاز نیازسنجی: هیچ محصولی — نه جست‌وجو، نه کانتکست، نه کارت — تا سوالات تمام شود
+  const needsPhase = Boolean(wizardView && wizardView.phase === 'needs');
 
   let products = [];
-  try {
-    const result = await searchProducts(message, history);
-    products = result.products || [];
-  } catch (err) {
-    console.warn('[chat] product retrieval failed:', err?.message);
-    products = [];
+  if (!needsPhase) {
+    try {
+      const result = await searchProducts(message, history);
+      products = result.products || [];
+    } catch (err) {
+      console.warn('[chat] product retrieval failed:', err?.message);
+      products = [];
+    }
   }
 
-  let productContext = formatProductContext(products);
+  let productContext = needsPhase ? '' : formatProductContext(products);
   if (wizardView) {
     const wizText = formatWizardContext(wizardView);
     if (wizText) productContext = `${productContext}\n\n${wizText}`;
@@ -773,65 +775,6 @@ function fallbackPackMessage(action, view, finalPackage) {
   }
   return 'انجام شد.';
 }
-
-/**
- * GET /api/chat/pack/state?productId=
- * وضعیت فقط‌خواندنی ویزارد برای صفحه محصول (بدون مصرف سهمیه روزانه).
- * اگر productId داده شود، اعتبار آن برای قدم فعلی هم بررسی می‌شود.
- */
-exports.getPackState = async (req, res) => {
-  try {
-    const identity = getIdentity(req);
-    if (!identity) {
-      return res.status(400).json({ success: false, message: 'شناسه گفت‌وگو معتبر نیست.' });
-    }
-    const chatSession = await ChatHistory.findOne(identity.query).lean();
-    const wiz = chatSession && chatSession.packWizard && chatSession.packWizard.active
-      ? chatSession.packWizard
-      : null;
-    if (!wiz) {
-      return res.json({ success: true, data: { wizard: null } });
-    }
-
-    const history = (chatSession.messages || []).slice(-MAX_HISTORY_MESSAGES).map((item) => ({
-      role: item.role,
-      content: stripThinkingTags(item.content),
-    }));
-    const view = await getWizardView(wiz, history);
-    if (!view) {
-      return res.json({ success: true, data: { wizard: null } });
-    }
-
-    const productId = String(req.query?.productId || '').trim();
-    let validForStep = null;
-    let stepTitle = view.current ? view.current.title : '';
-    if (productId && view.current) {
-      const Product = require('../models/Product');
-      let product = null;
-      try {
-        product = await Product.findById(productId)
-          .populate('category', 'name slug')
-          .select('name isActive productType price stock variants category')
-          .lean();
-      } catch { product = null; }
-      const { effectiveStock } = require('../utils/chatRetrieval');
-      if (!product) {
-        validForStep = { ok: false, reason: 'این کالا در فروشگاه یافت نشد.' };
-      } else if (product.isActive === false || effectiveStock(product) <= 0) {
-        validForStep = { ok: false, reason: `«${product.name}» فعلاً ناموجود یا غیرفعال است.` };
-      } else if (!productInStep(product, view.current)) {
-        validForStep = { ok: false, reason: `«${product.name}» مربوط به قدم «${view.current.title}» نیست.` };
-      } else {
-        validForStep = { ok: true, name: product.name };
-      }
-    }
-
-    return res.json({ success: true, data: { wizard: view, validForStep, stepTitle } });
-  } catch (error) {
-    console.error('[chat] getPackState failed:', error?.message);
-    return res.status(500).json({ success: false, message: 'خطا در دریافت وضعیت پک.' });
-  }
-};
 
 exports.__private__ = {
   normalizeMessage,
