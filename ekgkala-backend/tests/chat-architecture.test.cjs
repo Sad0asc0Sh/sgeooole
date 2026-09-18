@@ -4,6 +4,10 @@ const AiProvider = require('../models/AiProvider');
 const Settings = require('../models/Settings');
 const ChatHistory = require('../models/ChatHistory');
 const chatController = require('../controllers/chatController');
+const chatRetrieval = require('../utils/chatRetrieval');
+const Product = require('../models/Product');
+const Category = require('../models/Category');
+const Brand = require('../models/Brand');
 const { __private__: chat } = chatController;
 const aiService = require('../utils/groqService');
 const { __private__: ai } = aiService;
@@ -272,11 +276,99 @@ async function runFailoverTest() {
   }
 }
 
+test('درخواست پک دوربین تشخیص داده می‌شود و غیرپک نه', () => {
+  const r1 = chatRetrieval.detectPackRequest('میخوام یه پک کامل دوربین مداربسته بخرم', []);
+  assert.equal(r1.isPack, true);
+  assert.equal(r1.domain && r1.domain.id, 'camera');
+
+  const r2 = chatRetrieval.detectPackRequest('قیمت دوربین چقدره؟', []);
+  assert.equal(r2.isPack, false);
+
+  const r3 = chatRetrieval.detectPackRequest('یه پک تغذیه ورزشی میخوام', []);
+  assert.equal(r3.isPack, true);
+  assert.equal(r3.domain, null);
+});
+
+function mockPackCatalog(canned) {
+  const originals = { productFind: Product.find, categoryFind: Category.find, brandFind: Brand.find };
+  const norm = chatRetrieval.normalizeFa;
+  Category.find = () => ({ select: () => ({ lean: async () => [] }) });
+  Brand.find = () => ({ select: () => ({ lean: async () => [] }) });
+  Product.find = (filter) => {
+    const terms = [];
+    for (const cond of ((filter && filter.$or) || [])) {
+      for (const v of Object.values(cond)) {
+        if (v && typeof v === 'object' && v.$regex) terms.push(norm(String(v.$regex)));
+      }
+    }
+    const hits = canned.filter((p) => terms.some((t) => t.length >= 2 && norm(p.name).includes(t)));
+    const chain = {
+      populate: () => chain,
+      select: () => chain,
+      limit: () => chain,
+      lean: async () => hits,
+    };
+    return chain;
+  };
+  return () => {
+    Product.find = originals.productFind;
+    Category.find = originals.categoryFind;
+    Brand.find = originals.brandFind;
+  };
+}
+
+const packCanned = [
+  { _id: 'cam1', name: 'دوربین مداربسته تحت شبکه ۴ مگاپیکسل', productType: 'simple', price: 2500000, stock: 5, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4.5, numReviews: 10, guarantee: '۱۸ ماهه' },
+  { _id: 'cam2', name: 'دوربین مداربسته آنالوگ ۲ مگاپیکسل', productType: 'simple', price: 1200000, stock: 3, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4, numReviews: 5, guarantee: '' },
+  { _id: 'cam3', name: 'دوربین مداربسته قدیمی', productType: 'simple', price: 500000, stock: 0, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 3, numReviews: 2, guarantee: '' },
+  { _id: 'nvr1', name: 'دستگاه ضبط NVR چهار کانال', productType: 'simple', price: 3800000, stock: 2, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4.2, numReviews: 7, guarantee: '' },
+  { _id: 'hdd1', name: 'هارددیسک یک ترابایت', productType: 'simple', price: 2900000, stock: 4, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4.8, numReviews: 20, guarantee: '' },
+  { _id: 'psu1', name: 'آداپتور ۱۲ ولت ۲ آمپر', productType: 'simple', price: 180000, stock: 10, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4, numReviews: 3, guarantee: '' },
+  { _id: 'cable1', name: 'کابل شبکه CAT6', productType: 'simple', price: 90000, stock: 20, images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4.1, numReviews: 8, guarantee: '' },
+];
+
+async function runBuildPackageTest() {
+  const restore = mockPackCatalog(packCanned);
+  try {
+    const history = [{ role: 'user', content: 'میخوام یه پک کامل دوربین بخرم' }, { role: 'assistant', content: 'چند عدد؟' }];
+    const pkg = await chatRetrieval.buildPackage('داخل منزل', history);
+    assert.ok(pkg, 'بسته باید ساخته شود');
+    assert.equal(pkg.domainId, 'camera');
+
+    // جزء اصلی + حداقل ۲ بخش
+    assert.ok(pkg.sections.some((s) => s.key === 'camera'), 'بخش دوربین الزامی است');
+    assert.ok(pkg.sections.length >= 2, 'حداقل دو بخش لازم است');
+
+    // همه گزینه‌ها موجودند و شناسه واقعی دارند (بدون توهم)
+    const allIds = new Set(packCanned.filter((p) => p.stock > 0).map((p) => p._id));
+    for (const s of pkg.sections) {
+      assert.ok(s.options.length > 0 && s.options.length <= 3, `بخش ${s.key} باید ۱ تا ۳ گزینه داشته باشد`);
+      for (const o of s.options) {
+        assert.ok(allIds.has(o.id), `شناسه ${o.id} باید واقعی و موجود باشد`);
+        assert.equal(o.inStock, true);
+      }
+      assert.ok(s.options.some((o) => o.id === s.defaultId), 'گزینه پیش‌فرض باید از گزینه‌ها باشد');
+    }
+
+    // دقت معنایی: دوربین نباید در بخش سوئیچ بیاید؛ سوئیچ/مانیتور بدون موجودی‌اند
+    assert.ok(!pkg.sections.some((s) => s.key === 'switch'), 'بخش سوئیچ نباید با کالای نامرتبط پر شود');
+    assert.ok(pkg.missing.includes('سوئیچ شبکه'), 'سوئیچ باید در missing اعلام شود');
+
+    // متن grounding شامل بخش‌ها و هشدار missing است
+    const ctx = chatRetrieval.formatPackageContext(pkg);
+    assert.ok(ctx.includes('دوربین مداربسته'), 'متن باید بخش دوربین را داشته باشد');
+    assert.ok(ctx.includes('بدون موجودی'), 'متن باید missing را اعلام کند');
+  } finally {
+    restore();
+  }
+}
+
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
   await asyncTest('مدل ناشناخته (404) پیام راهنمای تنظیمات می‌دهد', runUnknownModel404Test);
   await asyncTest('پاک‌سازی گفتگو برای مهمان و کاربر با هویت درست انجام می‌شود', runClearMyHistoryTest);
+  await asyncTest('بسته پک فقط از کالاهای واقعی موجود و مرتبط ساخته می‌شود', runBuildPackageTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

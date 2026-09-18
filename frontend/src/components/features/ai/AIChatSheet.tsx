@@ -4,18 +4,19 @@ import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, User, AlertCircle } from "lucide-react";
 import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { authService } from "@/services/authService";
+import ChatPackageBuilder from "./ChatPackageBuilder";
 
 interface AIChatSheetProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
-interface ChatProductSpec {
+export interface ChatProductSpec {
     label: string;
     value: string;
 }
 
-interface ChatProduct {
+export interface ChatProduct {
     id: string;
     name: string;
     slug?: string;
@@ -33,6 +34,24 @@ interface ChatProduct {
     url: string;
     specs?: ChatProductSpec[];
     guarantee?: string;
+    productType?: string;
+    defaultVariantOptions?: Array<{ name: string; value: string }>;
+}
+
+export interface ChatPackageSection {
+    key: string;
+    title: string;
+    hint?: string;
+    optional?: boolean;
+    options: ChatProduct[];
+    defaultId: string;
+}
+
+export interface ChatPackage {
+    domainId: string;
+    title: string;
+    sections: ChatPackageSection[];
+    missing?: string[];
 }
 
 interface Message {
@@ -41,6 +60,7 @@ interface Message {
     isLoading?: boolean;
     isError?: boolean;
     products?: ChatProduct[];
+    package?: ChatPackage | null;
 }
 
 interface SuggestionItem {
@@ -70,7 +90,7 @@ export function parseChoices(text: string): { clean: string; groups: string[][] 
     return { clean, groups };
 }
 
-function resolveChatImage(src: string | undefined): string {
+export function resolveChatImage(src: string | undefined): string {
     if (!src || !src.trim()) return "/placeholder.svg";
     const s = src.trim();
     if (s.startsWith("http://") || s.startsWith("https://")) return s;
@@ -85,7 +105,7 @@ function resolveChatImage(src: string | undefined): string {
     return s;
 }
 
-function formatFaPrice(n: number | undefined): string {
+export function formatFaPrice(n: number | undefined): string {
     return Number(n || 0).toLocaleString("fa-IR");
 }
 
@@ -301,6 +321,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     usage?: { current: number; limit: number; remaining: number };
                     partial?: boolean;
                     products?: ChatProduct[];
+                    package?: ChatPackage | null;
                     meta?: { requestId?: string };
                 };
                 try {
@@ -320,6 +341,17 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             ...last,
                             products: [...(last.products || []), ...incoming].slice(0, 6),
                         };
+                        return updated;
+                    });
+                }
+                if (payload.package && Array.isArray(payload.package.sections) && payload.package.sections.length > 0) {
+                    const incomingPkg = payload.package;
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role !== 'ai') return prev;
+                        const updated = [...prev];
+                        // هر پیام فقط یک بسته دارد — جایگزین می‌شود نه الحاق (جلوگیری از قاطی‌شدن)
+                        updated[updated.length - 1] = { ...last, package: incomingPkg };
                         return updated;
                     });
                 }
@@ -650,8 +682,12 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                     ))}
                                                 </div>
                                             )}
+                                            {/* بسته پیشنهادی (پک) جایگزین کارت‌های تکی می‌شود تا قاطی نشود */}
+                                            {msg.role === 'ai' && !streamActive && msg.package && Array.isArray(msg.package.sections) && msg.package.sections.length > 0 ? (
+                                                <ChatPackageBuilder pkg={msg.package} />
+                                            ) : null}
                                             {/* کارت محصولات مرتبط از دیتابیس (بعد از اتمام استریم + انیمیشن ورود) */}
-                                            {msg.role === 'ai' && !streamActive && msg.products && msg.products.length > 0 && (
+                                            {msg.role === 'ai' && !streamActive && !msg.package && msg.products && msg.products.length > 0 && (
                                                 <div className="grid grid-cols-1 gap-2 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
                                                     {msg.products.map((p) => (
                                                         <a

@@ -72,13 +72,50 @@ function effectiveStock(p) {
   return Number(p.stock) || 0;
 }
 
-/** قیمت واقعی: simple → price ، variable → کمترین قیمت وariant */
+/** قیمت پایه: simple → price ، variable → کمترین قیمت وariant موجود (وگرنه کمترین کل) */
 function effectivePrice(p) {
   if (p.productType === 'variable' && Array.isArray(p.variants) && p.variants.length > 0) {
-    const prices = p.variants.map((v) => Number(v.price)).filter((n) => Number.isFinite(n) && n > 0);
-    if (prices.length) return Math.min(...prices);
+    const inStock = p.variants
+      .filter((v) => (Number(v.stock) || 0) > 0)
+      .map((v) => Number(v.price))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (inStock.length) return Math.min(...inStock);
+    const all = p.variants.map((v) => Number(v.price)).filter((n) => Number.isFinite(n) && n > 0);
+    if (all.length) return Math.min(...all);
   }
   return Number(p.price) || 0;
+}
+
+/** قیمت نهایی فروش — آینه منطق resolvePricing فرانت (بدون промو زمانی): compare بالاتر یعنی price نهایی است */
+function finalPriceOf(p) {
+  const raw = effectivePrice(p);
+  const cmp = Number(p.compareAtPrice) || 0;
+  if (cmp > raw) return raw;
+  const d = Number(p.discount) || 0;
+  if (d > 0 && d < 100) return Math.round(raw * (1 - d / 100));
+  return raw;
+}
+
+function oldPriceOf(p, fin) {
+  const cmp = Number(p.compareAtPrice) || 0;
+  if (cmp > fin) return cmp;
+  const d = Number(p.discount) || 0;
+  const raw = effectivePrice(p);
+  if (d > 0 && raw > fin) return raw;
+  return undefined;
+}
+
+/** ارزان‌ترین وariant موجود — برای افزودن دقیق محصول متغیر به سبد بدون حدس */
+function defaultVariantOptions(p) {
+  if (p.productType !== 'variable' || !Array.isArray(p.variants) || p.variants.length === 0) return null;
+  const inStock = p.variants.filter((v) => (Number(v.stock) || 0) > 0 && Number(v.price) > 0);
+  if (inStock.length === 0) return null;
+  inStock.sort((a, b) => Number(a.price) - Number(b.price));
+  const opts = inStock[0].options;
+  if (!Array.isArray(opts) || opts.length === 0) return null;
+  return opts
+    .filter((o) => o && o.name && o.value)
+    .map((o) => ({ name: String(o.name), value: String(o.value) }));
 }
 
 function firstImageUrl(p) {
@@ -214,7 +251,7 @@ function formatProductContext(products) {
   }
   return products.map((p, i) => {
     const stock = effectiveStock(p);
-    const price = effectivePrice(p);
+    const price = finalPriceOf(p);
     const priceFa = Number(price || 0).toLocaleString('fa-IR');
     const stockFa = stock > 0 ? `موجود (${Number(stock).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
     const catName = (p.category && p.category.name) || '—';
@@ -224,8 +261,9 @@ function formatProductContext(products) {
       ? specs.map((s) => `    - ${s.label}: ${s.value}`).join('\n')
       : '    - مشخصات فنی ثبت نشده';
     const desc = p.description ? String(p.description).replace(/\s+/g, ' ').slice(0, 220) : '—';
-    const oldPrice = Number(p.compareAtPrice) > Number(price)
-      ? `\n  قیمت قبل تخفیف: ${Number(p.compareAtPrice).toLocaleString('fa-IR')} تومان`
+    const prevPrice = oldPriceOf(p, price);
+    const oldPrice = prevPrice
+      ? `\n  قیمت قبل تخفیف: ${Number(prevPrice).toLocaleString('fa-IR')} تومان`
       : '';
     return `[محصول ${i + 1} | شناسه: ${p._id}]\n  نام دقیق: ${p.name}\n  دسته: ${catName}\n  برند: ${brandName}\n  قیمت فعلی: ${priceFa} تومان${oldPrice}\n  موجودی دقیق: ${stockFa}\n  لینک: ${buildProductUrl(p)}\n  گارانتی: ${p.guarantee || '—'}\n  امتیاز: ${p.rating || 0} از ۵ (${p.numReviews || 0} دیدگاه)\n  مشخصات فنی:\n${specsText}\n  توضیح کوتاه: ${desc}`;
   }).join('\n------------------\n');
@@ -234,7 +272,7 @@ function formatProductContext(products) {
 /** پیلود کارت برای فرانت‌اند */
 function toCardPayload(p) {
   const stock = effectiveStock(p);
-  const price = effectivePrice(p);
+  const price = finalPriceOf(p);
   const catName = (p.category && p.category.name) || 'عمومی';
   const catSlug = (p.category && (p.category.slug || p.category._id)) || '';
   return {
@@ -243,7 +281,7 @@ function toCardPayload(p) {
     slug: p.slug,
     productCode: p.productCode,
     price,
-    oldPrice: Number(p.compareAtPrice) > Number(price) ? Number(p.compareAtPrice) : undefined,
+    oldPrice: oldPriceOf(p, price),
     discount: Number(p.discount) || 0,
     image: firstImageUrl(p),
     category: catName,
@@ -256,6 +294,8 @@ function toCardPayload(p) {
     url: buildProductUrl(p),
     specs: specList(p, 6),
     guarantee: p.guarantee || '',
+    productType: p.productType || 'simple',
+    defaultVariantOptions: defaultVariantOptions(p),
   };
 }
 
@@ -270,6 +310,119 @@ function isAdvisoryRequest(message) {
   return (hasNeed && isShort) || (hasBroad && isShort) || /کدام.*(بهتر|خوب|مناسب)/.test(norm);
 }
 
+/* ============================================================
+ * موتور پک‌ساز: ترکیب چند کالای مکمل (مثلاً پک کامل دوربین)
+ * قانون: هیچ بخشی بدون کالای واقعیِ موجود ساخته نمی‌شود.
+ * ============================================================ */
+
+const MAX_PACK_OPTIONS = 3;
+
+const PACK_DOMAINS = [
+  {
+    id: 'camera',
+    title: 'پک دوربین مداربسته',
+    match: ['دوربین', 'مداربسته', 'cctv', 'camera', 'نظارتی', 'تحت شبکه'],
+    components: [
+      { key: 'camera', title: 'دوربین مداربسته', keywords: ['دوربین مداربسته', 'دوربین'], hint: 'چشم سیستم؛ تعداد و محل نصب را پوشش می‌دهد' },
+      { key: 'recorder', title: 'دستگاه ضبط (DVR / NVR)', keywords: ['دستگاه ضبط', 'DVR', 'NVR', 'ضبط کننده'], hint: 'قلب سیستم؛ تصاویر را ذخیره و مدیریت می‌کند' },
+      { key: 'hdd', title: 'هارددیسک', keywords: ['هارددیسک', 'هارد'], hint: 'حافظه ضبط؛ ظرفیت بیشتر یعنی آرشیو طولانی‌تر' },
+      { key: 'power', title: 'آداپتور / منبع تغذیه', keywords: ['آداپتور', 'منبع تغذیه'], hint: 'برق‌رسانی پایدار به دوربین‌ها' },
+      { key: 'cable', title: 'کابل و اتصالات', keywords: ['کابل', 'فیش', 'BNC'], hint: 'اتصال تصویر و برق بین اجزا' },
+      { key: 'switch', title: 'سوئیچ شبکه', keywords: ['سوئیچ شبکه', 'سوئیچ'], hint: 'برای دوربین‌های تحت شبکه (IP)', optional: true },
+      { key: 'monitor', title: 'مانیتور', keywords: ['مانیتور', 'نمایشگر'], hint: 'مشاهده زنده تصاویر', optional: true },
+    ],
+  },
+];
+
+const PACK_WORDS = [
+  'پک', 'پکیج', 'کیت', 'ست کامل', 'سیستم کامل', 'بسته کامل', 'پکیج کامل',
+  'پک کامل', 'ست بخرم', 'پک بخرم', 'کامل بخرم', 'همه لوازم', 'لوازم کامل',
+];
+
+/** تشخیص درخواست پک + دامنه آن (با در نظر گرفتن تاریخچه) */
+function detectPackRequest(message, history = []) {
+  const full = [
+    ...(Array.isArray(history) ? history : [])
+      .filter((h) => h && h.role === 'user' && h.content)
+      .slice(-4)
+      .map((h) => String(h.content)),
+    String(message || ''),
+  ].join(' ');
+  const norm = normalizeFa(full);
+  const hasPack = PACK_WORDS.some((w) => norm.includes(normalizeFa(w)));
+  if (!hasPack) return { isPack: false, domain: null };
+  const domain = PACK_DOMAINS.find((d) => d.match.some((m) => norm.includes(normalizeFa(m)))) || null;
+  return { isPack: true, domain };
+}
+
+/**
+ * ساخت بسته از کالاهای واقعی دیتابیس.
+ * @returns {Promise<null|{domainId,title,sections,missing}>}
+ * هر section: {key,title,hint,optional,options:[card],defaultId}
+ */
+async function buildPackage(message, history = []) {
+  const { isPack, domain } = detectPackRequest(message, history);
+  if (!isPack || !domain) return null;
+
+  const results = await Promise.all(domain.components.map(async (component) => {
+    try {
+      const { products } = await searchProducts(component.keywords.join(' '), history);
+      // فیلتر ارتباط معنایی: حداقل یکی از عبارت‌های جزء باید در نام/توضیح/دسته/مشخصات باشد
+      // (جلوگیری از قاطی‌شدن، مثلاً دوربینِ «تحت شبکه» نباید در بخش «سوئیچ شبکه» بیاید)
+      const phrases = component.keywords.map((k) => normalizeFa(k)).filter((k) => k.length >= 2);
+      const hayOf = (p) => normalizeFa(JSON.stringify([
+        p.name, p.description,
+        p.category && p.category.name, p.brand && p.brand.name,
+        p.properties, p.specifications,
+      ]));
+      const relevant = products.filter((p) => phrases.some((ph) => ph && hayOf(p).includes(ph)));
+      const available = relevant
+        .filter((p) => effectiveStock(p) > 0)
+        // کالای ساده اول (بدون ابهام وariant)، بعد پرفروش‌ترها — searchProducts همین ترتیب را داده
+        .sort((a, b) => ((a.productType === 'variable') ? 1 : 0) - ((b.productType === 'variable') ? 1 : 0));
+      return { component, options: available.slice(0, MAX_PACK_OPTIONS) };
+    } catch {
+      return { component, options: [] };
+    }
+  }));
+
+  const sections = results
+    .filter((r) => r.options.length > 0)
+    .map((r) => ({
+      key: r.component.key,
+      title: r.component.title,
+      hint: r.component.hint,
+      optional: Boolean(r.component.optional),
+      options: r.options.map(toCardPayload),
+      defaultId: String(r.options[0]._id),
+    }));
+  const missing = results.filter((r) => r.options.length === 0).map((r) => r.component.title);
+
+  // پک ناقص نساز: جزء اصلی + حداقل ۲ بخش لازم است
+  const hasPrimary = sections.some((s) => s.key === domain.components[0].key);
+  if (!hasPrimary || sections.length < 2) return null;
+
+  return { domainId: domain.id, title: domain.title, sections, missing };
+}
+
+/** متن grounding بسته برای LLM — تنها مرجع مجاز برای توصیف پک */
+function formatPackageContext(pkg) {
+  if (!pkg || !Array.isArray(pkg.sections) || pkg.sections.length === 0) return '';
+  const lines = [`** بسته پیشنهادی «${pkg.title}» — فقط همین اقلام واقعی را معرفی کن؛ بخش یا کالا اختراع نکن: **`];
+  pkg.sections.forEach((s) => {
+    lines.push(`[بخش: ${s.title}]${s.optional ? ' (اختیاری)' : ''}`);
+    s.options.forEach((o, i) => {
+      const priceFa = Number(o.price || 0).toLocaleString('fa-IR');
+      const stockFa = Number(o.countInStock || 0).toLocaleString('fa-IR');
+      lines.push(`  - ${i === 0 ? '(پیشنهاد پیش‌فرض) ' : ''}«${o.name}» | قیمت: ${priceFa} تومان | موجودی: ${stockFa} عدد | شناسه: ${o.id}`);
+    });
+  });
+  if (Array.isArray(pkg.missing) && pkg.missing.length > 0) {
+    lines.push(`اجزای بدون موجودی فعلاً (صادقانه اعلام کن، جایگزین اختراع نکن): ${pkg.missing.join('، ')}`);
+  }
+  return lines.join('\n');
+}
+
 module.exports = {
   normalizeFa,
   extractKeywords,
@@ -278,7 +431,14 @@ module.exports = {
   toCardPayload,
   effectiveStock,
   effectivePrice,
+  finalPriceOf,
+  oldPriceOf,
+  defaultVariantOptions,
   isAdvisoryRequest,
+  detectPackRequest,
+  buildPackage,
+  formatPackageContext,
+  PACK_DOMAINS,
   escapeRegex,
   FA_STOPWORDS,
 };

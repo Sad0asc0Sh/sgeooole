@@ -12,6 +12,9 @@ const {
   formatProductContext,
   toCardPayload,
   isAdvisoryRequest,
+  detectPackRequest,
+  buildPackage,
+  formatPackageContext,
 } = require('../utils/chatRetrieval');
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -21,10 +24,6 @@ const activeConversations = new Map();
 
 function getLocalDayStart(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-}
-
-function escapeRegex(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function escapeRegex(value) {
@@ -144,22 +143,46 @@ async function loadConversation(req) {
 }
 
 async function buildChatContext(message, settings, userId = null, history = []) {
-  // موتور بازیابی دقیق فارسی: نام + دسته + برند + مشخصات فنی + موجودی واقعی
-  let products = [];
-  try {
-    const result = await searchProducts(message, history);
-    products = result.products || [];
-  } catch (err) {
-    console.warn('[chat] product retrieval failed:', err?.message);
-    products = [];
-  }
+  const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
+  const packInfo = detectPackRequest(message, history);
+  // نوبت اول درخواست پک = فقط نیازسنجی؛ بسته بعد از جواب کاربر ساخته می‌شود
+  const packAwaiting = packInfo.isPack && priorUserCount < 1;
+  const shouldBuildPack = packInfo.isPack && packInfo.domain && !packAwaiting;
 
-  const productContext = formatProductContext(products);
+  // موتور بازیابی دقیق فارسی + ساخت بسته — موازی برای سرعت
+  const [productResult, packResult] = await Promise.all([
+    (async () => {
+      try {
+        return await searchProducts(message, history);
+      } catch (err) {
+        console.warn('[chat] product retrieval failed:', err?.message);
+        return { products: [] };
+      }
+    })(),
+    (async () => {
+      if (!shouldBuildPack) return null;
+      try {
+        return await buildPackage(message, history);
+      } catch (err) {
+        console.warn('[chat] package build failed:', err?.message);
+        return null;
+      }
+    })(),
+  ]);
+
+  const products = productResult.products || [];
+  const pack = packResult || null;
+
+  let productContext = formatProductContext(products);
+  if (pack) {
+    const packText = formatPackageContext(pack);
+    if (packText) productContext = `${productContext}\n\n${packText}`;
+  }
   const advisoryHint = isAdvisoryRequest(message);
   // در نوبت اول نیازسنجی (هنوز کاربر به سوال‌ها جواب نداده) کارت نشان نده —
-  // اول سوال دوگزینه‌ای، بعداً در نوبت‌های بعدی معرفی نهایی با کارت.
-  const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
-  const productCards = (advisoryHint && priorUserCount < 1) ? [] : products.map(toCardPayload);
+  // اول سوال دوگزینه‌ای، بعداً در نوبت‌های بعدی معرفی نهایی با کارت/بسته.
+  const firstNeedTurn = priorUserCount < 1 && (advisoryHint || packInfo.isPack);
+  const productCards = firstNeedTurn ? [] : products.map(toCardPayload);
 
   const orderStatusMap = {
     Pending: 'در انتظار بررسی یا پرداخت',
@@ -228,7 +251,15 @@ async function buildChatContext(message, settings, userId = null, history = []) 
 
   const storeInfo = storeInfoParts.filter((p) => p !== undefined && p !== null).join('\n');
 
-  return { productContext, storeInfoContext: storeInfo, products: productCards, advisoryHint };
+  return {
+    productContext,
+    storeInfoContext: storeInfo,
+    products: productCards,
+    advisoryHint,
+    package: pack,
+    packReady: Boolean(pack),
+    packAwaiting,
+  };
 }
 
 async function saveCompletedTurn(chatSession, userMessage, reply) {
@@ -280,7 +311,7 @@ exports.handleMessage = async (req, res) => {
       context.productContext,
       conversation.history,
       context.storeInfoContext,
-      { advisoryHint: context.advisoryHint },
+      { advisoryHint: context.advisoryHint, packReady: context.packReady, packAwaiting: context.packAwaiting },
     );
     await saveCompletedTurn(conversation.chatSession, message, result.message);
 
@@ -289,6 +320,7 @@ exports.handleMessage = async (req, res) => {
       data: {
         message: result.message,
         products: context.products || [],
+        package: context.package || null,
         timestamp: new Date(),
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: result.provider,
@@ -351,6 +383,10 @@ exports.handleStreamMessage = async (req, res) => {
     if (context.products && context.products.length > 0) {
       res.write(`data: ${JSON.stringify({ products: context.products })}\n\n`);
     }
+    // بسته پیشنهادی هم ساخت‌یافته ارسال می‌شود (فرانت بعد از اتمام متن نمایشش می‌دهد)
+    if (context.package) {
+      res.write(`data: ${JSON.stringify({ package: context.package })}\n\n`);
+    }
 
     const abortController = new AbortController();
     const onClose = () => {
@@ -371,7 +407,7 @@ exports.handleStreamMessage = async (req, res) => {
       context.productContext,
       conversation.history,
       context.storeInfoContext,
-      { signal: abortController.signal, advisoryHint: context.advisoryHint },
+      { signal: abortController.signal, advisoryHint: context.advisoryHint, packReady: context.packReady, packAwaiting: context.packAwaiting },
     );
 
     if (streamResult.message) {
@@ -384,6 +420,7 @@ exports.handleStreamMessage = async (req, res) => {
         provider: streamResult.provider,
         partial: streamResult.partial || false,
         products: context.products || [],
+        package: context.package || null,
       })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
