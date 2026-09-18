@@ -40,23 +40,59 @@ const ADMIN_ONLY_FILTERS = [
  * Whitelist of allowed sort fields for public users
  */
 const PUBLIC_ALLOWED_SORT_FIELDS = [
-    'name', '-name',
-    'price', '-price',
-    'createdAt', '-createdAt',
-    'updatedAt', '-updatedAt',
-    'rating', '-rating',
-    'reviewCount', '-reviewCount',
+    // Storefront sort modes
+    'newest',
+    'oldest',
+    'priceAsc',
+    'priceDesc',
+    'bestSelling',
+    'bestseller',
+    'bestSellers',
+    'popularity',
+    'mostVisited',
+    'discount',
+    'flash',
+    'special',
+    'rating',
+    '-rating',
+    'relevance',
+    'nameAsc',
+    'nameDesc',
+    // Database field names
+    'name',
+    '-name',
+    'price',
+    '-price',
+    'createdAt',
+    '-createdAt',
+    'updatedAt',
+    '-updatedAt',
+    'salesCount',
+    '-salesCount',
+    'views',
+    '-views',
+    'viewCount',
+    '-viewCount',
+    'reviewCount',
+    '-reviewCount',
+    'numReviews',
+    '-numReviews',
+    'discount',
+    '-discount',
 ]
 
 /**
- * Admin-only sort fields
+ * Admin-only sort fields (internal sensitive business data)
  */
 const ADMIN_ONLY_SORT_FIELDS = [
-    'salesCount', '-salesCount',
-    'viewCount', '-viewCount',
-    'costPrice', '-costPrice',
-    'profitMargin', '-profitMargin',
-    'stock', '-stock',
+    'costPrice',
+    '-costPrice',
+    'profitMargin',
+    '-profitMargin',
+    'stock',
+    '-stock',
+    'internalNotes',
+    'supplierInfo',
 ]
 
 /**
