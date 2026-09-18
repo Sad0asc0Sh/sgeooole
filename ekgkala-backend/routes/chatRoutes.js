@@ -33,6 +33,13 @@ router.post('/stream', aiChatLimiter, optional, chatController.handleStreamMessa
 router.post('/pack/action', aiChatLimiter, optional, chatController.handlePackAction);
 
 /**
+ * @route   GET /api/chat/pack/state
+ * @desc    Read-only wizard state for the product page (no daily-limit consumption)
+ * @access  Public
+ */
+router.get('/pack/state', optional, chatController.getPackState);
+
+/**
  * @route   GET /api/chat/suggestions
  * @desc    Get suggested questions
  * @access  Public

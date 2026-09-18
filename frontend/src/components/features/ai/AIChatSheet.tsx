@@ -3,6 +3,7 @@
 import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, User, AlertCircle } from "lucide-react";
 import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { authService } from "@/services/authService";
 import ChatPackageBuilder from "./ChatPackageBuilder";
 import ChatWizardStep, { type ChatWizard } from "./ChatWizardStep";
@@ -114,6 +115,8 @@ export function formatFaPrice(n: number | undefined): string {
 }
 
 export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
+    const router = useRouter();
+    const pathname = usePathname();
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
@@ -540,8 +543,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
-    // --- اکشن‌های ویزارد پک (انتخاب/رد/برگشت/شروع‌دوباره) — بدون استریم، کوتاه و قطعی ---
-    const handlePackAction = async (action: "select" | "skip" | "back" | "restart", productId?: string) => {
+    // --- اکشن‌های ویزارد پک (رد/برگشت/شروع‌دوباره/رد سوالات) — بدون استریم، کوتاه و قطعی ---
+    // نکته: تأیید نهایی کالا در «صفحه محصول» انجام می‌شود، نه اینجا.
+    const handlePackAction = async (action: "skip-needs" | "skip" | "back" | "restart", productId?: string) => {
         if (actionLoading || isTyping) return;
         setActionLoading(true);
         try {
@@ -581,6 +585,40 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             setActionLoading(false);
         }
     };
+
+    // --- رفتن به صفحه محصول برای بررسی و تأیید نهایی قدم (شیت بسته می‌شود، وضعیت در سرور می‌ماند) ---
+    const handleWizardNavigate = (url: string) => {
+        if (isTyping || actionLoading) return;
+        try {
+            onOpenChange(false);
+        } catch { /* ignore */ }
+        router.push(url);
+    };
+
+    // --- بازگشت از صفحه محصول بعد از تأیید قدم: الصاق پیام‌های آماده + باز کردن چت ---
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem("ekg_pack_pending");
+            if (!raw) return;
+            sessionStorage.removeItem("ekg_pack_pending");
+            const d = JSON.parse(raw);
+            if (!d || typeof d !== "object") return;
+            if (d.userMessage) {
+                setMessages((prev: Message[]) => [...prev, { role: 'user', content: String(d.userMessage) }]);
+            }
+            setMessages((prev: Message[]) => [...prev, {
+                role: 'ai',
+                content: typeof d.message === "string" ? d.message : '',
+                products: [],
+                package: d.package || null,
+                wizard: d.wizard || null,
+            }]);
+            if (d.usage) setUsage(d.usage);
+            setSticky(true);
+            onOpenChange(true);
+        } catch { /* ignore */ }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname]);
 
     const handleClearChat = async () => {
         if (abortRef.current) {
@@ -742,12 +780,13 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                 </div>
                                             )}
                                             {/* پنل ویزارد پک — فقط روی تازه‌ترین پیام (وضعیت زنده)، بعد از اتمام استریم */}
-                                            {msg.role === 'ai' && !streamActive && isLastAi && msg.wizard?.active && !msg.wizard.complete && msg.wizard.current ? (
+                                            {msg.role === 'ai' && !streamActive && isLastAi && msg.wizard?.active && !msg.wizard.complete && (msg.wizard.current || msg.wizard.phase === 'needs') ? (
                                                 <ChatWizardStep
                                                     wizard={msg.wizard}
                                                     disabled={isTyping}
                                                     loading={actionLoading}
                                                     onAction={handlePackAction}
+                                                    onNavigate={handleWizardNavigate}
                                                 />
                                             ) : null}
                                             {/* بسته پیشنهادی (پک) جایگزین کارت‌های تکی می‌شود تا قاطی نشود */}

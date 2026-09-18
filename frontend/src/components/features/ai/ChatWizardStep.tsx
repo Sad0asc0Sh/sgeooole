@@ -27,6 +27,7 @@ export interface ChatWizardSelection {
 export interface ChatWizard {
     active: boolean;
     complete: boolean;
+    phase?: "needs" | "steps";
     domainId: string;
     title: string;
     steps: Array<{ key: string; title: string; optional?: boolean; status: string }>;
@@ -34,10 +35,12 @@ export interface ChatWizard {
     current: ChatWizardStepView | null;
     selections: ChatWizardSelection[];
     missing?: string[];
+    needsQuestions?: string[];
+    needsRemaining?: number;
     progress: { done: number; total: number };
 }
 
-type PackAction = "select" | "skip" | "back" | "restart";
+type PackAction = "skip-needs" | "skip" | "back" | "restart";
 
 function img(src: string | undefined): string {
     if (!src || !src.trim()) return "/placeholder.svg";
@@ -73,10 +76,11 @@ interface Props {
     wizard: ChatWizard;
     disabled?: boolean;
     loading?: boolean;
-    onAction: (action: PackAction, productId?: string) => void;
+    onAction: (action: PackAction) => void;
+    onNavigate: (url: string) => void;
 }
 
-export default function ChatWizardStep({ wizard, disabled, loading, onAction }: Props) {
+export default function ChatWizardStep({ wizard, disabled, loading, onAction, onNavigate }: Props) {
     const stepNo = Math.min(wizard.currentIndex + 1, wizard.progress.total);
     const pct = wizard.progress.total > 0 ? Math.round((wizard.progress.done / wizard.progress.total) * 100) : 0;
     const busy = Boolean(disabled || loading);
@@ -90,7 +94,7 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                     <Package size={16} className="shrink-0" />
                     <span className="text-[13px] font-black truncate">{wizard.title}</span>
                     <span className="mr-auto text-[10px] font-bold bg-white/20 rounded-full px-2 py-0.5 whitespace-nowrap">
-                        مرحله {fa(stepNo)} از {fa(wizard.progress.total)}
+                        {wizard.phase === "needs" ? "نیازسنجی" : `مرحله ${fa(stepNo)} از ${fa(wizard.progress.total)}`}
                     </span>
                     <button
                         onClick={() => onAction("restart")}
@@ -119,6 +123,28 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                         ))}
                     </div>
                 )}
+
+                {/* فاز نیازسنجی: هنوز گزینه‌ای نیست — اول سوال‌ها در چت */}
+                {wizard.phase === "needs" || (!cur && !wizard.complete) ? (
+                    <div className="rounded-xl border border-dashed border-kala-300 bg-kala-50/50 p-3 flex flex-col gap-2">
+                        <span className="text-[12px] font-black text-gray-800">اول چند سوال کوتاه تا دقیق‌ترین گزینه‌ها را بیاورم</span>
+                        {(wizard.needsQuestions || []).length > 0 && (
+                            <ul className="flex flex-col gap-1">
+                                {(wizard.needsQuestions || []).map((q, i) => (
+                                    <li key={i} className="text-[10px] text-gray-500 leading-4">• {q}</li>
+                                ))}
+                            </ul>
+                        )}
+                        <span className="text-[10px] text-gray-400">پاسخ‌ها را در همین چت بنویس (دکمه‌های آماده هم هست).</span>
+                        <button
+                            onClick={() => onAction("skip-needs")}
+                            disabled={busy}
+                            className="self-start text-[10px] font-bold text-kala-600 border border-kala-200 rounded-lg px-2.5 py-1.5 hover:bg-kala-50 transition-all disabled:opacity-40 cursor-pointer"
+                        >
+                            رد شدن از سوالات و نمایش گزینه‌ها
+                        </button>
+                    </div>
+                ) : null}
 
                 {/* مرحله فعلی */}
                 {cur ? (
@@ -167,21 +193,13 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                                             <span className={`text-[9px] font-bold px-1.5 py-px rounded-full whitespace-nowrap text-center ${o.inStock ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                                                 {o.inStock ? `موجود (${fa(o.countInStock)})` : "ناموجود"}
                                             </span>
-                                            <a
-                                                href={o.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-[10px] font-bold text-center text-kala-600 border border-kala-200 rounded-lg px-2 py-1 hover:bg-kala-50 transition-all"
-                                            >
-                                                جزئیات
-                                            </a>
                                             <button
-                                                onClick={() => onAction("select", o.id)}
+                                                onClick={() => onNavigate(`${o.url}?pack=1`)}
                                                 disabled={busy || out}
                                                 className="text-[10px] font-black text-center text-white bg-kala-500 rounded-lg px-2 py-1 hover:bg-kala-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1"
                                             >
                                                 {loading ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} strokeWidth={3} />}
-                                                انتخاب و ادامه
+                                                مشاهده و انتخاب
                                             </button>
                                         </span>
                                     </div>

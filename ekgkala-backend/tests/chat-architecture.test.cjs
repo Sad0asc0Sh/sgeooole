@@ -431,15 +431,30 @@ function mockWizardCatalog() {
 async function runWizardFlowTest() {
   const restore = mockWizardCatalog();
   try {
-    // ۱) شروع: بخش‌ها از روی اسم دسته‌بندی‌ها
-    const started = await packWizard.startWizard('camera', []);
+    // ۰) شروع با پیام خالی از جزئیات → فاز نیازسنجی، بدون هیچ گزینه‌ای
+    const started = await packWizard.startWizard('camera', 'میخوام پک دوربین ببندم', []);
     assert.equal(started.started, true, 'ویزارد باید شروع شود');
+    assert.equal(started.state.phase, 'needs', 'اول فاز نیازسنجی است');
     const state = started.state;
+    const viewNeeds = await packWizard.getWizardView(state, []);
+    assert.equal(viewNeeds.phase, 'needs');
+    assert.equal(viewNeeds.current, null, 'در فاز نیازسنجی گزینه‌ای نشان داده نمی‌شود');
+    assert.ok(viewNeeds.needsQuestions.length >= 2, 'سوالات نیازسنجی باید باشد');
+
+    // پیام شروعِ پرجزئیات → کردیت کافی و ورود مستقیم به مرحله‌ها
+    const rich = await packWizard.startWizard('camera', '۴ تا دوربین اقتصادی برای باغ میخوام', []);
+    assert.equal(rich.stepsBegun, true, 'با نیازهای گفته‌شده باید مستقیم وارد مرحله‌ها شود');
+
+    // ۱) بخش‌ها از روی اسم دسته‌بندی‌ها
     const keys = state.steps.map((s) => s.key);
     assert.ok(keys.includes('camera'), 'بخش دوربین از دسته‌بندی‌ها آمده');
     assert.ok(keys.includes('recorder'), 'بخش ضبط از دسته‌بندی‌ها آمده');
     const camStep = state.steps.find((s) => s.key === 'camera');
     assert.ok(camStep.categoryIds.map(String).includes('c1'), 'دسته «دوربین مداربسته» به بخش دوربین رسیده');
+
+    // ورود به فاز مرحله‌ها (مثل جواب به ۲ سوال)
+    const entered = await packWizard.enterStepsPhase(state, []);
+    assert.equal(entered.ok, true);
     // مانیتور دسته ندارد و کالایی هم ندارد → unavailable
     const monStep = state.steps.find((s) => s.key === 'monitor');
     assert.equal(monStep.status, 'unavailable');
@@ -495,6 +510,41 @@ async function runWizardFlowTest() {
   }
 }
 
+async function runWizardNeedsTest() {
+  const restore = mockWizardCatalog();
+  try {
+    // شمارش جواب‌ها از روی timestamp پیام‌ها
+    const base = Date.now();
+    const msgs = [
+      { role: 'user', content: 'میخوام پک دوربین ببندم', timestamp: new Date(base - 10000) },
+      { role: 'user', content: 'دو تا', timestamp: new Date(base + 1000) },
+    ];
+    const since = new Date(base);
+    assert.equal(packWizard.countUserAnswersSince(msgs, since), 1, 'فقط پیام بعد از شروع شمرده می‌شود');
+
+    // کردیت پیام شروع
+    assert.ok(packWizard.initialNeedsCredit('۴ تا برای باغ اقتصادی', []) >= 2, 'جزئیات کامل کردیت کامل می‌دهد');
+    assert.equal(packWizard.initialNeedsCredit('میخوام پک ببندم', []), 0, 'پیام خالی کردیت ندارد');
+
+    // رد سوالات → ورود مستقیم به مرحله‌ها
+    const started = await packWizard.startWizard('camera', 'پک میخوام', []);
+    assert.equal(started.state.phase, 'needs');
+    const skipped = await packWizard.skipNeedsPhase(started.state, []);
+    assert.equal(skipped.ok, true, 'رد سوالات باید وارد مرحله‌ها شود');
+    assert.equal(started.state.phase, 'steps');
+    assert.equal(started.state.steps[started.state.currentIndex].key, 'camera');
+
+    // سخت‌گیری fallback: بخش بدون دسته (power) فقط تطابق اسمی می‌پذیرد
+    const powerStep = started.state.steps.find((s) => s.key === 'power');
+    assert.deepEqual(powerStep.categoryIds, [], 'بخش آداپتور دسته ندارد');
+    const powerOpts = await packWizard.getStepOptions(powerStep, [], 4);
+    assert.ok(powerOpts.length > 0, 'گزینه آداپتور باید باشد');
+    assert.ok(powerOpts.every((o) => o.name.includes('آداپتور')), 'فقط تطابق اسمی، بدون محصول خارج از حیطه');
+  } finally {
+    restore();
+  }
+}
+
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
@@ -502,6 +552,7 @@ async function runWizardFlowTest() {
   await asyncTest('پاک‌سازی گفتگو برای مهمان و کاربر با هویت درست انجام می‌شود', runClearMyHistoryTest);
   await asyncTest('بسته پک فقط از کالاهای واقعی موجود و مرتبط ساخته می‌شود', runBuildPackageTest);
   await asyncTest('ویزارد پک: شروع از دسته‌بندی‌ها، ترتیب تازگی قیمت، انتخاب/برگشت/بسته نهایی', runWizardFlowTest);
+  await asyncTest('ویزارد پک: فاز نیازسنجی، کردیت، رد سوالات و تطابق اسمی سخت‌گیرانه', runWizardNeedsTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

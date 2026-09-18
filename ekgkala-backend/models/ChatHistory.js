@@ -12,6 +12,8 @@ const stepSchema = new mongoose.Schema({
     hint: { type: String, default: '' },
     optional: { type: Boolean, default: false },
     categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    phrases: [{ type: String }],
+    sharedPool: { type: Boolean, default: false },
     status: {
         type: String,
         enum: ['pending', 'current', 'done', 'skipped', 'unavailable'],
@@ -40,6 +42,10 @@ const chatHistorySchema = new mongoose.Schema({
         active: { type: Boolean, default: false },
         domainId: { type: String, default: '' },
         title: { type: String, default: '' },
+        // needs = اول نیازسنجی (بدون نمایش گزینه)، steps = نمایش و انتخاب مرحله‌به‌مرحله
+        phase: { type: String, enum: ['needs', 'steps'], default: 'steps' },
+        createdAt: { type: Date, default: Date.now },
+        needsCredit: { type: Number, default: 0 },
         steps: { type: [stepSchema], default: [] },
         currentIndex: { type: Number, default: 0 },
         selections: { type: [selectionSchema], default: [] },

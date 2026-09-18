@@ -20,6 +20,7 @@ const {
 
 const STEP_OPTION_LIMIT = 4;
 const STEP_FETCH_LIMIT = 60;
+const NEEDS_REQUIRED_DEFAULT = 2;
 
 const STEP_SELECT_FIELDS = 'name slug productCode description productType price compareAtPrice discount '
   + 'priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand '
@@ -111,7 +112,13 @@ async function getStepOptions(step, history = [], limit = STEP_OPTION_LIMIT) {
   let list = raw;
   if (!usePool) {
     const phrases = Array.isArray(step.phrases) ? step.phrases : [];
-    list = raw.filter((p) => phrases.some((ph) => ph && phraseHaystack(p).includes(ph)));
+    const poolEmpty = !Array.isArray(step.categoryIds) || step.categoryIds.length === 0;
+    if (poolEmpty) {
+      // بدون دسته‌بندی، فقط تطابق سخت‌گیرانه با «اسم» کالا — تا محصول خارج از حیطه نشان ندهد
+      list = raw.filter((p) => phrases.some((ph) => ph && normalizeFa(p.name || '').includes(ph)));
+    } else {
+      list = raw.filter((p) => phrases.some((ph) => ph && phraseHaystack(p).includes(ph)));
+    }
   }
 
   const keywords = extractKeywords('', history);
@@ -133,6 +140,10 @@ function productInStep(product, step) {
     return (step.categoryIds || []).some((id) => String(id) === String(cid));
   }
   const phrases = Array.isArray(step.phrases) ? step.phrases : [];
+  const poolEmpty = !Array.isArray(step.categoryIds) || step.categoryIds.length === 0;
+  if (poolEmpty) {
+    return phrases.some((ph) => ph && normalizeFa(product.name || '').includes(ph));
+  }
   return phrases.some((ph) => ph && phraseHaystack(product).includes(ph));
 }
 
@@ -154,11 +165,65 @@ function newWizardState(domain, steps) {
     active: true,
     domainId: domain.id,
     title: domain.title,
+    phase: 'needs',
+    createdAt: new Date(),
+    needsCredit: 0,
     steps: steps.map((s) => ({ ...s, status: 'pending' })),
     currentIndex: 0,
     selections: [],
     updatedAt: new Date(),
   };
+}
+
+/** اگر پیام شروع خودش بخشی از نیازها را گفته (تعداد/محل/بودجه)، کمتر سوال می‌پرسیم */
+function initialNeedsCredit(message, history = []) {
+  const full = [
+    ...(Array.isArray(history) ? history : [])
+      .filter((h) => h && h.role === 'user' && h.content)
+      .slice(-3)
+      .map((h) => String(h.content)),
+    String(message || ''),
+  ].join(' ');
+  const norm = normalizeFa(full);
+  let credit = 0;
+  if (/\d/.test(norm) || /(عدد|تعداد|چندتا)/.test(norm)) credit += 1;
+  if (/(منزل|خانه|باغ|ویلا|ویلا|مغازه|دفتر|محل کار|داخل|بیرون|راه پله|پارکینگ)/.test(norm)) credit += 1;
+  if (/(اقتصادی|ارزان|حرفه‌ای|حرفه ای|بودجه|میلیون|تومان|گران)/.test(norm)) credit += 1;
+  return Math.min(credit, NEEDS_REQUIRED_DEFAULT);
+}
+
+/** تعداد پیام‌های کاربر بعد از شروع ویزارد (جواب‌های نیازسنجی) */
+function countUserAnswersSince(messages, since) {
+  const t = since ? new Date(since).getTime() : 0;
+  return (Array.isArray(messages) ? messages : []).filter((m) => (
+    m && m.role === 'user' && m.timestamp && new Date(m.timestamp).getTime() > t
+  )).length;
+}
+
+function needsRequired(domain) {
+  return Number(domain?.needsRequired) || NEEDS_REQUIRED_DEFAULT;
+}
+
+/** ورود به فاز مرحله‌ها: بررسی موجودی، علامت unavailable، رفتن به اولین مرحله قابل ارائه */
+async function enterStepsPhase(state, history = []) {
+  state.phase = 'steps';
+  const checks = await Promise.all(state.steps.map(async (step) => {
+    const options = await getStepOptions(step, history, 1);
+    return options.some((o) => o.inStock);
+  }));
+  state.steps.forEach((step, i) => {
+    if (!checks[i]) step.status = 'unavailable';
+  });
+
+  const primaryOk = state.steps.length > 0 && state.steps[0].status !== 'unavailable';
+  const viableCount = state.steps.filter((s) => s.status !== 'unavailable').length;
+  if (!primaryOk || viableCount < 2) {
+    return { ok: false, missing: state.steps.filter((s) => s.status === 'unavailable').map((s) => s.title) };
+  }
+  state.currentIndex = state.steps.findIndex((s) => s.status === 'pending');
+  markCurrent(state);
+  state.updatedAt = new Date();
+  return { ok: true };
 }
 
 function markCurrent(state) {
@@ -180,34 +245,37 @@ function advance(state) {
 }
 
 /**
- * شروع ویزارد: فقط اگر جزء اصلی + حداقل ۲ مرحله قابل ارائه (موجودی>۰) داشته باشیم.
- * مرحله‌های بدون موجودی از اول unavailable می‌شوند تا کاربر معطل نشود.
+ * شروع ویزارد: اول فاز نیازسنجی (بدون نمایش هیچ گزینه‌ای).
+ * اگر پیام شروع خودش نیازها را گفته باشد (کردیت کافی)، مستقیم وارد مرحله‌ها می‌شود.
  */
-async function startWizard(domainId, history = []) {
+async function startWizard(domainId, message = '', history = []) {
   const resolved = await resolvePackSteps(domainId);
   if (!resolved) return { started: false, reason: 'unknown_domain' };
   const { domain, steps } = resolved;
   if (!steps.length) return { started: false, reason: 'no_steps' };
 
   const state = newWizardState(domain, steps);
-  const checks = await Promise.all(state.steps.map(async (step) => {
-    const options = await getStepOptions(step, history, 1);
-    return options.some((o) => o.inStock);
-  }));
-  state.steps.forEach((step, i) => {
-    if (!checks[i]) step.status = 'unavailable';
-  });
+  state.needsCredit = initialNeedsCredit(message, history);
 
-  const primaryOk = state.steps.length > 0 && state.steps[0].status !== 'unavailable';
-  const viableCount = state.steps.filter((s) => s.status !== 'unavailable').length;
-  if (!primaryOk || viableCount < 2) {
-    return { started: false, reason: 'not_viable', missing: state.steps.filter((s) => s.status === 'unavailable').map((s) => s.title) };
+  if (state.needsCredit >= needsRequired(domain)) {
+    const entered = await enterStepsPhase(state, history);
+    if (!entered.ok) {
+      return { started: false, reason: 'not_viable', missing: entered.missing || [] };
+    }
+    return { started: true, state, stepsBegun: true };
   }
+  return { started: true, state, needsPhase: true };
+}
 
-  state.currentIndex = state.steps.findIndex((s) => s.status === 'pending');
-  markCurrent(state);
-  state.updatedAt = new Date();
-  return { started: true, state };
+/** رد شدن از سوالات و رفتن مستقیم به مرحله‌ها */
+async function skipNeedsPhase(state, history = []) {
+  if (!state || !state.active) return { ok: false, error: 'ویزاردی فعال نیست.' };
+  if (state.phase !== 'needs') return { ok: false, error: 'نیازسنجی قبلاً انجام شده است.' };
+  const entered = await enterStepsPhase(state, history);
+  if (!entered.ok) {
+    return { ok: false, error: `فعلاً برای این پک موجودی کافی نیست (${(entered.missing || []).join('، ') || 'نامشخص'}).` };
+  }
+  return { ok: true };
 }
 
 /** اگر مرحله فعلی موجودی‌اش تمام شده، ردش کن و برو بعدی (صداقت + عدم بن‌بست) */
@@ -240,6 +308,9 @@ function findSelection(state, stepKey) {
  */
 async function selectOption(state, productId, qty = 1) {
   if (!state || !state.active) return { ok: false, error: 'ویزاردی فعال نیست.' };
+  if (state.phase !== 'steps') {
+    return { ok: false, error: 'اول به سوالات نیازسنجی جواب بده (یا ردشان کن) تا گزینه‌ها نمایش داده شوند.' };
+  }
   const step = state.steps[state.currentIndex];
   if (!step || step.status === 'unavailable') return { ok: false, error: 'مرحله فعالی برای انتخاب وجود ندارد.' };
 
@@ -263,6 +334,7 @@ async function selectOption(state, productId, qty = 1) {
 
 async function skipCurrent(state) {
   if (!state || !state.active) return { ok: false, error: 'ویزاردی فعال نیست.' };
+  if (state.phase !== 'steps') return { ok: false, error: 'هنوز وارد مرحله‌ها نشده‌ایم.' };
   const step = state.steps[state.currentIndex];
   if (!step) return { ok: false, error: 'مرحله فعالی وجود ندارد.' };
   if (!step.optional) return { ok: false, error: `مرحله «${step.title}» الزامی است و نمی‌شود ردش کرد.` };
@@ -293,12 +365,11 @@ function restartWizard(state) {
   if (!state) return null;
   state.selections = [];
   state.currentIndex = 0;
-  state.steps.forEach((s) => {
-    if (s.status !== 'unavailable') s.status = 'pending';
-  });
-  const first = state.steps.findIndex((s) => s.status === 'pending');
-  state.currentIndex = first === -1 ? state.steps.length : first;
-  markCurrent(state);
+  // شروع دوباره یعنی نیازسنجی از نو
+  state.phase = 'needs';
+  state.createdAt = new Date();
+  state.needsCredit = 0;
+  state.steps.forEach((s) => { s.status = 'pending'; });
   state.updatedAt = new Date();
   return state;
 }
@@ -313,6 +384,28 @@ function deactivateWizard(state) {
 /** نمای کامل برای فرانت + grounding — گزینه‌های مرحله فعلی همیشه تازه از دیتابیس */
 async function getWizardView(state, history = []) {
   if (!state || !state.active) return null;
+  const domain = WIZARD_DOMAINS.find((d) => d.id === state.domainId) || null;
+
+  if (state.phase === 'needs' && domain) {
+    const required = needsRequired(domain);
+    const answered = (Number(state.needsCredit) || 0);
+    return {
+      active: true,
+      complete: false,
+      phase: 'needs',
+      domainId: state.domainId,
+      title: state.title,
+      steps: state.steps.map((s) => ({ key: s.key, title: s.title, optional: Boolean(s.optional), status: s.status })),
+      currentIndex: 0,
+      current: null,
+      selections: [],
+      missing: [],
+      needsQuestions: (domain.needs || []).map((n) => n.q),
+      needsRemaining: Math.max(0, required - answered),
+      progress: { done: 0, total: state.steps.length },
+    };
+  }
+
   const viable = await ensureCurrentViable(state, history);
   const steps = state.steps.map((s) => ({ key: s.key, title: s.title, optional: Boolean(s.optional), status: s.status }));
 
@@ -350,6 +443,7 @@ async function getWizardView(state, history = []) {
   return {
     active: true,
     complete: isComplete(state),
+    phase: 'steps',
     domainId: state.domainId,
     title: state.title,
     steps,
@@ -357,6 +451,8 @@ async function getWizardView(state, history = []) {
     current,
     selections,
     missing,
+    needsQuestions: [],
+    needsRemaining: 0,
     progress: { done: doneCount, total: state.steps.length },
   };
 }
@@ -401,6 +497,12 @@ async function buildFinalPackage(state, history = []) {
 /** متن grounding ویزارد برای LLM */
 function formatWizardContext(view) {
   if (!view || !view.active) return '';
+  if (view.phase === 'needs') {
+    const qs = (view.needsQuestions || []).join(' / ');
+    return `** ویزارد پک «${view.title}» در فاز نیازسنجی است — هنوز هیچ گزینه‌ای نشان داده نشده و نباید هیچ محصولی معرفی کنی. `
+      + `فقط سوالات نیازسنجی را بپرس (در متن): ${qs || 'نیاز کاربر'}. `
+      + `برای هر سوال از قالب [[CHOICE:گزینه اول|گزینه دوم]] استفاده کن.**`;
+  }
   const lines = [`** وضعیت پک «${view.title}» (پیشرفت ${view.progress.done} از ${view.progress.total}) — پنل مرحله جداگانه نمایش داده می‌شود؛ انتخاب فقط با دکمه‌های پنل انجام می‌شود: **`];
   if (view.selections.length) {
     lines.push('تأییدشده توسط کاربر (قطعی، دوباره پیشنهاد نده):');
@@ -429,11 +531,16 @@ function formatWizardContext(view) {
 
 module.exports = {
   STEP_OPTION_LIMIT,
+  NEEDS_REQUIRED_DEFAULT,
   resolvePackSteps,
   getStepOptions,
   productInStep,
   newWizardState,
   startWizard,
+  enterStepsPhase,
+  skipNeedsPhase,
+  initialNeedsCredit,
+  countUserAnswersSince,
   ensureCurrentViable,
   selectOption,
   skipCurrent,

@@ -18,6 +18,9 @@ const {
 } = require('../utils/chatRetrieval');
 const {
   startWizard,
+  enterStepsPhase,
+  skipNeedsPhase,
+  countUserAnswersSince,
   getWizardView,
   selectOption,
   skipCurrent,
@@ -26,6 +29,7 @@ const {
   deactivateWizard,
   buildFinalPackage,
   formatWizardContext,
+  productInStep,
 } = require('../utils/packWizard');
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -163,13 +167,16 @@ function detectPackTextCommand(message) {
 }
 
 /**
- * آماده‌سازی ویزارد پک برای این نوبت:
- * - اگر ویزارد فعال است: دستور انصراف/شروع‌دوباره را اجرا کن، وگرنه نمای تازه بده
- * - اگر فعال نیست و کاربر پک خواسته: ویزارد را از روی دسته‌بندی‌ها شروع کن
- * تغییرات وضعیت همین‌جا روی chatSession ذخیره می‌شود (saveCompletedTurn هم بعداً ذخیره می‌کند).
+ * آماده‌سازی ویزارد پک برای این نوبت — ترتیب قطعی: اول نیازسنجی، بعد مرحله‌ها:
+ * - ویزارد فعال در فاز needs: با رسیدن جواب‌های کافی، وارد فاز مرحله‌ها می‌شود
+ * - بدون ویزارد + درخواست پک: ساخت ویزارد (نیازسنجی، مگر کردیت کافی برای شروع مستقیم)
+ * - تغییرات وضعیت همین‌جا روی chatSession ذخیره می‌شود (saveCompletedTurn هم بعداً ذخیره می‌کند).
  */
 async function preparePackWizard(message, chatSession, history = []) {
-  const out = { view: null, wizardStarted: false, wizardRestarted: false, wizardCancelled: false, packNotViable: null };
+  const out = {
+    view: null, wizardCreated: false, wizardStepsBegun: false,
+    wizardRestarted: false, wizardCancelled: false, packNotViable: null,
+  };
   if (!chatSession) return out;
 
   let wiz = chatSession.packWizard && chatSession.packWizard.active ? chatSession.packWizard : null;
@@ -187,6 +194,24 @@ async function preparePackWizard(message, chatSession, history = []) {
       await chatSession.save().catch(() => {});
       out.wizardRestarted = true;
     }
+
+    // فاز نیازسنجی: پیام فعلی هم یک جواب حساب می‌شود
+    if (wiz.active && wiz.phase === 'needs' && !out.wizardRestarted) {
+      const required = 2;
+      const given = countUserAnswersSince(chatSession.messages, wiz.createdAt)
+        + (Number(wiz.needsCredit) || 0) + 1;
+      if (given >= required) {
+        const entered = await enterStepsPhase(wiz, history);
+        if (entered.ok) {
+          out.wizardStepsBegun = true;
+        } else {
+          deactivateWizard(wiz);
+          out.packNotViable = { reason: 'not_viable', missing: entered.missing || [] };
+          await chatSession.save().catch(() => {});
+          return out;
+        }
+      }
+    }
   }
 
   if (!wiz) {
@@ -198,11 +223,12 @@ async function preparePackWizard(message, chatSession, history = []) {
 
     if (domain) {
       try {
-        const res = await startWizard(domain.id, history);
+        const res = await startWizard(domain.id, message, history);
         if (res.started) {
           chatSession.packWizard = res.state;
           wiz = chatSession.packWizard;
-          out.wizardStarted = true;
+          out.wizardCreated = true;
+          out.wizardStepsBegun = Boolean(res.stepsBegun);
         } else {
           // دسته‌بندی/موجودی کافی نیست → LLM صادقانه راهنمایی می‌کند، نه بسته توهمی
           out.packNotViable = { reason: res.reason, missing: res.missing || [] };
@@ -376,7 +402,8 @@ exports.handleMessage = async (req, res) => {
       context.storeInfoContext,
       {
         advisoryHint: context.advisoryHint,
-        wizardStarted: pack.wizardStarted,
+        wizardCreated: pack.wizardCreated,
+        wizardStepsBegun: pack.wizardStepsBegun,
         wizardRestarted: pack.wizardRestarted,
         wizardCancelled: pack.wizardCancelled,
         packNotViable: pack.packNotViable,
@@ -482,7 +509,8 @@ exports.handleStreamMessage = async (req, res) => {
       {
         signal: abortController.signal,
         advisoryHint: context.advisoryHint,
-        wizardStarted: pack.wizardStarted,
+        wizardCreated: pack.wizardCreated,
+        wizardStepsBegun: pack.wizardStepsBegun,
         wizardRestarted: pack.wizardRestarted,
         wizardCancelled: pack.wizardCancelled,
         packNotViable: pack.packNotViable,
@@ -589,7 +617,7 @@ exports.clearMyHistory = async (req, res) => {
  */
 exports.handlePackAction = async (req, res) => {
   const action = String(req.body?.action || '').trim();
-  if (!['select', 'skip', 'back', 'restart'].includes(action)) {
+  if (!['select', 'skip', 'back', 'restart', 'skip-needs'].includes(action)) {
     return res.status(400).json({ success: false, message: 'اکشن نامعتبر است.' });
   }
 
@@ -643,6 +671,12 @@ exports.handlePackAction = async (req, res) => {
     } else if (action === 'restart') {
       restartWizard(wiz);
       userMessage = 'شروع دوباره پک از مرحله اول';
+    } else if (action === 'skip-needs') {
+      const result = await skipNeedsPhase(wiz, conversation.history);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+      userMessage = 'رد شدن از سوالات و نمایش گزینه‌ها';
     }
 
     const view = completed ? null : await getWizardView(wiz, conversation.history);
@@ -661,7 +695,9 @@ exports.handlePackAction = async (req, res) => {
           ? 'کاربر یک مرحله اختیاری را رد کرد. فقط در ۱ جمله تأیید کن و مرحله بعد را معرفی کن.'
           : action === 'back'
             ? 'کاربر به مرحله قبل برگشت تا انتخابش را عوض کند. فقط در ۱ جمله همراهی کن.'
-            : 'کاربر پک را از اول شروع کرد. فقط در ۱ جمله تأیید کن و مرحله اول را معرفی کن.';
+            : action === 'skip-needs'
+              ? 'کاربر سوالات نیازسنجی را رد کرد و وارد مرحله‌ها شد. فقط در ۱ جمله تأیید کن و مرحله اول را با نام دقیق بخش معرفی کن.'
+              : 'کاربر پک را از اول شروع کرد. فقط در ۱ جمله تأیید کن و مرحله اول را معرفی کن.';
 
     let reply = '';
     try {
@@ -730,10 +766,72 @@ function fallbackPackMessage(action, view, finalPackage) {
     return `برگشتیم به «${view.current.title}»؛ انتخاب جدیدت را بزن.`;
   }
   if (action === 'restart') {
-    return 'پک از اول شروع شد. از مرحله اول انتخاب کن.';
+    return 'پک از اول شروع شد. اول به سوالات نیازسنجی جواب بده.';
+  }
+  if (action === 'skip-needs' && view && view.current) {
+    return `باشه، میریم سراغ «${view.current.title}» — از گزینه‌های همین مرحله یکی را انتخاب کن.`;
   }
   return 'انجام شد.';
 }
+
+/**
+ * GET /api/chat/pack/state?productId=
+ * وضعیت فقط‌خواندنی ویزارد برای صفحه محصول (بدون مصرف سهمیه روزانه).
+ * اگر productId داده شود، اعتبار آن برای قدم فعلی هم بررسی می‌شود.
+ */
+exports.getPackState = async (req, res) => {
+  try {
+    const identity = getIdentity(req);
+    if (!identity) {
+      return res.status(400).json({ success: false, message: 'شناسه گفت‌وگو معتبر نیست.' });
+    }
+    const chatSession = await ChatHistory.findOne(identity.query).lean();
+    const wiz = chatSession && chatSession.packWizard && chatSession.packWizard.active
+      ? chatSession.packWizard
+      : null;
+    if (!wiz) {
+      return res.json({ success: true, data: { wizard: null } });
+    }
+
+    const history = (chatSession.messages || []).slice(-MAX_HISTORY_MESSAGES).map((item) => ({
+      role: item.role,
+      content: stripThinkingTags(item.content),
+    }));
+    const view = await getWizardView(wiz, history);
+    if (!view) {
+      return res.json({ success: true, data: { wizard: null } });
+    }
+
+    const productId = String(req.query?.productId || '').trim();
+    let validForStep = null;
+    let stepTitle = view.current ? view.current.title : '';
+    if (productId && view.current) {
+      const Product = require('../models/Product');
+      let product = null;
+      try {
+        product = await Product.findById(productId)
+          .populate('category', 'name slug')
+          .select('name isActive productType price stock variants category')
+          .lean();
+      } catch { product = null; }
+      const { effectiveStock } = require('../utils/chatRetrieval');
+      if (!product) {
+        validForStep = { ok: false, reason: 'این کالا در فروشگاه یافت نشد.' };
+      } else if (product.isActive === false || effectiveStock(product) <= 0) {
+        validForStep = { ok: false, reason: `«${product.name}» فعلاً ناموجود یا غیرفعال است.` };
+      } else if (!productInStep(product, view.current)) {
+        validForStep = { ok: false, reason: `«${product.name}» مربوط به قدم «${view.current.title}» نیست.` };
+      } else {
+        validForStep = { ok: true, name: product.name };
+      }
+    }
+
+    return res.json({ success: true, data: { wizard: view, validForStep, stepTitle } });
+  } catch (error) {
+    console.error('[chat] getPackState failed:', error?.message);
+    return res.status(500).json({ success: false, message: 'خطا در دریافت وضعیت پک.' });
+  }
+};
 
 exports.__private__ = {
   normalizeMessage,
