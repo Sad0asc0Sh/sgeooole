@@ -95,7 +95,37 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [isTyping, setIsTyping] = useState<boolean>(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
+    const scrollRef = useRef<HTMLDivElement | null>(null);
     const abortRef = useRef<AbortController | null>(null);
+
+    // --- Sticky-bottom scroll: فقط وقتی کاربر نزدیک انتهاست دنبالش می‌کنیم،
+    // تا حین تایپ زنده بتواند آزادانه بالا برود و کارت‌ها را ببیند ---
+    const [isSticky, setIsSticky] = useState<boolean>(true);
+    const isStickyRef = useRef<boolean>(true);
+    const prevTypingRef = useRef<boolean>(false);
+
+    const setSticky = (value: boolean) => {
+        isStickyRef.current = value;
+        setIsSticky(value);
+    };
+
+    const scrollToBottom = (smooth: boolean = true) => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setSticky(true);
+        if (smooth) {
+            el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        } else {
+            el.scrollTop = el.scrollHeight;
+        }
+    };
+
+    const handleScroll = () => {
+        const el = scrollRef.current;
+        if (!el) return;
+        const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+        setSticky(distance < 120);
+    };
 
     const [usage, setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
 
@@ -103,6 +133,11 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     useEffect(() => {
         if (open) {
             document.body.style.overflow = 'hidden';
+            setSticky(true);
+            requestAnimationFrame(() => {
+                const el = scrollRef.current;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
         } else {
             document.body.style.overflow = '';
         }
@@ -118,15 +153,25 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         { icon: Phone, label: "پشتیبانی", prompt: "شماره تماس پشتیبانی چند است؟" },
     ];
 
-    // --- Smart Auto-Scroll: scroll to bottom when messages update or when typing ---
+    // --- Sticky Auto-Scroll: حین استریم فقط اگر کاربر ته است دنبال می‌کنیم (بدون قفل) ---
     useEffect(() => {
-        if (open) {
-            const el = bottomRef.current;
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "end" });
-            }
+        if (!open) return;
+        const el = scrollRef.current;
+        if (!el) return;
+        if (isStickyRef.current) {
+            // حین تایپ زنده: پرش آنی تا انیمیشن ۶۰فریمی لگ نزند و قفل حس نشود
+            el.scrollTop = el.scrollHeight;
         }
-    }, [messages, open, isTyping]);
+    }, [messages, open]);
+
+    // --- پایان استریم: اگر کاربر ته است، نرم به انتها (نمایش دکمه‌ها و کارت‌ها) ---
+    useEffect(() => {
+        if (prevTypingRef.current && !isTyping && isStickyRef.current) {
+            const el = scrollRef.current;
+            if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+        }
+        prevTypingRef.current = isTyping;
+    }, [isTyping]);
 
     const handleInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
         setInput(e.target.value);
@@ -158,6 +203,8 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             return;
         }
         pendingRequestRef.current = true;
+        // با ارسال پیام، دنبال‌کردن پاسخ زنده را از سر می‌گیریم
+        setSticky(true);
 
         const currentInput = rawText.trim();
         const userMsg: Message = { role: 'user', content: currentInput };
@@ -502,7 +549,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
                     {/* 2. Main Content (Scrollable) */}
                     <div
-                        className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden p-4 pt-4 scroll-smooth touch-pan-y overscroll-contain"
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="relative flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden p-4 pt-4 touch-pan-y overscroll-contain"
                         style={{ WebkitOverflowScrolling: "touch" }}
                     >
                         {/* Welcome Block */}
@@ -546,6 +595,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                         ? parseChoices(rawDisplay)
                                         : { clean: rawDisplay, groups: [] as string[][] };
                                     const isLastAi = msg.role === 'ai' && index === messages.length - 1;
+                                    // حین استریم پیام آخر: فقط متن زنده دیده می‌شود تا توضیحات از دید خارج نشود؛
+                                    // دکمه‌ها و کارت‌ها بعد از اتمام پاسخ ظاهر می‌شوند.
+                                    const streamActive = isTyping && isLastAi;
                                     return (
                                     <div key={index} className={`flex gap-2 items-end ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mb-1 ${msg.role === 'user' ? 'bg-gray-200' : msg.isError ? 'bg-red-100' : 'bg-kala-100'}`}>
@@ -571,9 +623,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                     '\u00A0'
                                                 )}
                                             </div>
-                                            {/* دکمه‌های دوگزینه‌ای مشاور */}
-                                            {msg.role === 'ai' && choiceGroups.length > 0 && (
-                                                <div className="flex flex-col gap-2 w-full">
+                                            {/* دکمه‌های دوگزینه‌ای مشاور (بعد از اتمام استریم) */}
+                                            {msg.role === 'ai' && !streamActive && choiceGroups.length > 0 && (
+                                                <div className="flex flex-col gap-2 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
                                                     {choiceGroups.map((opts, gi) => (
                                                         <div key={gi} className="grid grid-cols-2 gap-2 w-full">
                                                             {opts.map((opt, oi) => (
@@ -590,9 +642,9 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                     ))}
                                                 </div>
                                             )}
-                                            {/* کارت محصولات مرتبط از دیتابیس */}
-                                            {msg.role === 'ai' && msg.products && msg.products.length > 0 && (
-                                                <div className="grid grid-cols-1 gap-2 w-full">
+                                            {/* کارت محصولات مرتبط از دیتابیس (بعد از اتمام استریم + انیمیشن ورود) */}
+                                            {msg.role === 'ai' && !streamActive && msg.products && msg.products.length > 0 && (
+                                                <div className="grid grid-cols-1 gap-2 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
                                                     {msg.products.map((p) => (
                                                         <a
                                                             key={p.id}
@@ -655,6 +707,20 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         {/* Anchor for Auto-Scroll */}
                         <div ref={bottomRef} className="h-4 w-full shrink-0" />
                     </div>
+
+                    {/* دکمه شناور بازگشت به پاسخ زنده — وقتی کاربر بالا رفته است */}
+                    {!isSticky && messages.length > 0 && (
+                        <button
+                            onClick={() => scrollToBottom(true)}
+                            className="absolute bottom-[calc(var(--bottom-nav-total-height)_+_6.5rem)] left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gray-900/90 backdrop-blur text-white text-xs font-bold shadow-lg hover:bg-gray-900 transition-all active:scale-95 cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-300"
+                        >
+                            <span>{isTyping ? "مشاهده پاسخ زنده" : "برو به آخر"}</span>
+                            <span className="text-sm leading-none">↓</span>
+                            {isTyping && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                            )}
+                        </button>
+                    )}
 
                     {/* 3. Footer Input (Static Flex Item) */}
                     <div className="shrink-0 w-full p-4 pb-[calc(var(--bottom-nav-total-height)_+_0.75rem)] bg-white border-t border-gray-100 z-40">
