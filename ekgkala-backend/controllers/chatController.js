@@ -296,6 +296,10 @@ exports.handleMessage = async (req, res) => {
     });
   } catch (error) {
     const clientError = toClientError(error);
+    console.error(
+      `[chat] handleMessage failed | requestId=${requestId || '-'} status=${clientError.statusCode} `
+      + `upstream=${clientError.originalError?.response?.status || clientError.originalError?.code || clientError.originalError?.message || error?.message}`,
+    );
     return res.status(clientError.statusCode).json({
       success: false,
       message: clientError.message,
@@ -387,6 +391,10 @@ exports.handleStreamMessage = async (req, res) => {
     res.off?.('close', onClose);
   } catch (error) {
     const clientError = toClientError(error);
+    console.error(
+      `[chat] handleStreamMessage failed | requestId=${requestId || '-'} status=${clientError.statusCode} `
+      + `upstream=${clientError.originalError?.response?.status || clientError.originalError?.code || clientError.originalError?.message || error?.message}`,
+    );
     if (!res.headersSent) {
       return res.status(clientError.statusCode).json({ success: false, message: clientError.message, requestId });
     }

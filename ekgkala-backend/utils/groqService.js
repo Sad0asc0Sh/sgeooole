@@ -100,6 +100,28 @@ class ThinkingFilter {
   }
 }
 
+function normalizeBaseUrl(raw) {
+  // ادمین گاهی آدرس کامل (…/chat/completions) را وارد می‌کند؛
+  // بدون این نرمال‌سازی، درخواست به …/chat/completions/chat/completions می‌رود و 404 می‌دهد.
+  return String(raw || '').replace(/\/$/, '').replace(/\/chat\/completions\/?$/, '');
+}
+
+/** لاگ تشخیصی خطای ارائه‌دهنده — بدون افشای کلید (فقط نام/مدل/وضعیت/بدنه خلاصه) */
+function logProviderError(stage, provider, error) {
+  try {
+    const status = error?.response?.status ?? 'no-status';
+    let body = error?.response?.data;
+    if (body && typeof body === 'object') {
+      try { body = JSON.stringify(body); } catch { body = '[unserializable]'; }
+    }
+    const snippet = body ? String(body).slice(0, 400) : (error?.message || 'unknown');
+    console.error(
+      `[AI] ${stage} failed | provider="${provider?.name || '?'}" model="${provider?.model || '?'}" `
+      + `status=${status} code=${error?.code || '-'} | ${snippet}`,
+    );
+  } catch { /* logging must never throw */ }
+}
+
 function isCircuitOpen(providerId) {
   const health = providerHealth.get(providerId);
   return Boolean(health?.openUntil && health.openUntil > Date.now());
@@ -143,6 +165,28 @@ function toAIServiceError(error) {
   if (status === 401 || status === 403) {
     return new AIServiceError('پیکربندی سرویس هوش مصنوعی معتبر نیست. لطفاً با پشتیبانی تماس بگیرید.', 502, error);
   }
+  // مدل منسوخ/ناشناخته (مثل llama-3.3-70b-versatile که گروک در آگوست ۲۰۲۶ بازنشست کرد):
+  // گروک/OpenRouter در این حالت 400 یا 404 با کد model_decommissioned برمی‌گردانند.
+  const upstreamCode = error?.response?.data?.error?.code || error?.response?.data?.code || '';
+  const upstreamMsg = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || '';
+  if (
+    upstreamCode === 'model_decommissioned'
+    || upstreamCode === 'model_not_found'
+    || /decommission|model_not_found|model .* does not exist|unknown model/i.test(`${upstreamCode} ${upstreamMsg}`)
+  ) {
+    return new AIServiceError(
+      'مدل هوش مصنوعی انتخاب‌شده منسوخ شده است. لطفاً در پنل مدیریت (ارائه‌دهندگان هوش مصنوعی) مدل را به openai/gpt-oss-120b تغییر دهید.',
+      502,
+      error,
+    );
+  }
+  if (status === 400 || status === 404 || status === 422) {
+    return new AIServiceError(
+      'درخواست به سرویس هوش مصنوعی نامعتبر بود (احتمالاً شناسه مدل یا آدرس API نادرست است). لطفاً تنظیمات ارائه‌دهنده را در پنل مدیریت بررسی کنید.',
+      502,
+      error,
+    );
+  }
   if (status === 429) {
     return new AIServiceError('سرویس هوش مصنوعی موقتاً پرمشغله است. لطفاً کمی بعد دوباره تلاش کنید.', 503, error);
   }
@@ -165,17 +209,22 @@ async function getProviderCandidates() {
     .lean();
 
   if (providers.length > 0) {
-    return providers.map((provider) => ({
+    const mapped = providers.map((provider) => ({
       id: provider._id.toString(),
       name: provider.name,
-      baseUrl: String(provider.baseUrl || '').replace(/\/$/, ''),
+      baseUrl: normalizeBaseUrl(provider.baseUrl),
       apiKey: provider.apiKey,
       model: provider.model,
       maxTokens: provider.maxTokens || 1500,
       temperature: provider.temperature ?? 0.5,
       headers: normalizeHeaders(provider.headers),
       source: 'provider',
-    })).filter((provider) => provider.baseUrl && provider.apiKey && provider.model);
+    }));
+    const valid = mapped.filter((provider) => provider.baseUrl && provider.apiKey && provider.model);
+    if (valid.length !== mapped.length) {
+      console.warn(`[AI] ${mapped.length - valid.length} ارائه‌دهنده به‌دلیل نقص baseUrl/apiKey/model نادیده گرفته شد.`);
+    }
+    return valid;
   }
 
   const settings = await Settings.findOne({ singletonKey: 'main_settings' }).select('+aiConfig.apiKey').lean();
@@ -186,9 +235,10 @@ async function getProviderCandidates() {
   return [{
     id: 'legacy-settings',
     name: 'تنظیمات قدیمی',
-    baseUrl: String(config.baseUrl || 'https://api.groq.com/openai/v1').replace(/\/$/, ''),
+    baseUrl: normalizeBaseUrl(config.baseUrl || 'https://api.groq.com/openai/v1'),
     apiKey,
-    model: config.groqModel || config.model || 'llama-3.3-70b-versatile',
+    // پیش‌فرض به‌روز (سپتامبر ۲۰۲۶): llama-3.3-70b-versatile توسط گروک بازنشست شد.
+    model: config.groqModel || config.model || 'openai/gpt-oss-120b',
     maxTokens: config.maxTokens || 500,
     temperature: config.temperature ?? 0.5,
     headers: {},
@@ -312,6 +362,7 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
       return { message, provider: { name: provider.name, source: provider.source } };
     } catch (error) {
       lastError = error;
+      logProviderError('request', provider, error);
       if (!isRetryableProviderError(error) || error?.code === 'ERR_CANCELED') throw toAIServiceError(error);
       markProviderFailure(provider.id);
       console.warn(`[AI] provider request failed; trying fallback: ${provider.name}`);
@@ -440,6 +491,7 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
     } catch (error) {
       lastError = error;
       if (error?.code === 'ERR_CANCELED') throw toAIServiceError(error);
+      logProviderError('stream', provider, error);
       markProviderFailure(provider.id);
       if (error?.tokenSent) {
         res.write(`data: ${JSON.stringify({
@@ -466,6 +518,7 @@ exports.stripThinkingTags = stripThinkingTags;
 exports.ThinkingFilter = ThinkingFilter;
 exports.__private__ = {
   isRetryableProviderError,
+  normalizeBaseUrl,
   parseSseBlock,
   providerHealth,
   stripThinkingTags,

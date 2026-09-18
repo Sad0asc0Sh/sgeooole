@@ -73,7 +73,7 @@ function SettingsPage() {
         aiConfig: {
           enabled: data.aiConfig?.enabled || false,
           apiKey: data.aiConfig?.apiKey || '',
-          groqModel: data.aiConfig?.groqModel || 'llama-3.3-70b-versatile',
+          groqModel: data.aiConfig?.groqModel || 'openai/gpt-oss-120b',
           userDailyLimit: data.aiConfig?.userDailyLimit || 20,
           customSystemPrompt: data.aiConfig?.customSystemPrompt || '',
         },

@@ -97,6 +97,84 @@ test('تنها خطاهای موقت برای failover مناسب‌اند', () 
   assert.equal(ai.isRetryableProviderError({ code: 'ERR_CANCELED' }), false);
 });
 
+test('آدرس پایه با پسوند chat/completions نرمال می‌شود', () => {
+  assert.equal(ai.normalizeBaseUrl('https://api.groq.com/openai/v1/chat/completions'), 'https://api.groq.com/openai/v1');
+  assert.equal(ai.normalizeBaseUrl('https://api.groq.com/openai/v1/'), 'https://api.groq.com/openai/v1');
+  assert.equal(ai.normalizeBaseUrl('https://api.groq.com/openai/v1'), 'https://api.groq.com/openai/v1');
+});
+
+function mockAiStack(providers, axiosPostImpl) {
+  const originals = {
+    providerFind: AiProvider.find,
+    settingsFindOne: Settings.findOne,
+    axiosPost: axios.post,
+  };
+  const settingsDocument = { aiConfig: { enabled: true, maxTokens: 500, temperature: 0.5 } };
+  ai.providerHealth.clear();
+  AiProvider.find = () => ({
+    select() { return this; },
+    sort() { return this; },
+    lean: async () => providers,
+  });
+  Settings.findOne = () => ({
+    select() { return { lean: async () => settingsDocument }; },
+    lean: async () => settingsDocument,
+  });
+  axios.post = axiosPostImpl;
+  return () => {
+    AiProvider.find = originals.providerFind;
+    Settings.findOne = originals.settingsFindOne;
+    axios.post = originals.axiosPost;
+    ai.providerHealth.clear();
+  };
+}
+
+const singleOldProvider = [
+  {
+    _id: 'old-provider', name: 'قدیمی', baseUrl: 'https://api.groq.com/openai/v1', apiKey: 'test-key',
+    model: 'llama-3.3-70b-versatile', maxTokens: 500, temperature: 0.5, isActive: true, isDefault: true, priority: 1,
+  },
+];
+
+async function runDecommissionedModelTest() {
+  const restore = mockAiStack(singleOldProvider, async () => {
+    const error = new Error('model decommissioned');
+    error.response = {
+      status: 400,
+      data: { error: { code: 'model_decommissioned', message: 'llama-3.3-70b-versatile has been decommissioned' } },
+    };
+    throw error;
+  });
+  try {
+    let thrown = null;
+    try {
+      await aiService.generateExpertResponse('سلام', '', [], '');
+    } catch (e) { thrown = e; }
+    assert.ok(thrown, 'باید خطا پرتاب شود');
+    assert.match(thrown.message, /منسوخ/);
+  } finally {
+    restore();
+  }
+}
+
+async function runUnknownModel404Test() {
+  const restore = mockAiStack(singleOldProvider, async () => {
+    const error = new Error('not found');
+    error.response = { status: 404, data: '<html>Not Found</html>' };
+    throw error;
+  });
+  try {
+    let thrown = null;
+    try {
+      await aiService.generateExpertResponse('سلام', '', [], '');
+    } catch (e) { thrown = e; }
+    assert.ok(thrown, 'باید خطا پرتاب شود');
+    assert.match(thrown.message, /نامعتبر/);
+  } finally {
+    restore();
+  }
+}
+
 async function runFailoverTest() {
   const originals = {
     providerFind: AiProvider.find,
@@ -153,6 +231,8 @@ async function runFailoverTest() {
 
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
+  await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
+  await asyncTest('مدل ناشناخته (404) پیام راهنمای تنظیمات می‌دهد', runUnknownModel404Test);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

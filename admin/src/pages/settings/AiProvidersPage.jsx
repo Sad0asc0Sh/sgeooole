@@ -285,7 +285,7 @@ export default function AiProvidersPage() {
           </Form.Item>
 
           <Form.Item name="model" label="شناسه مدل" rules={[{ required: true, message: 'شناسه مدل الزامی است' }]}>
-            <Input placeholder="llama-3.3-70b-versatile" dir="ltr" />
+            <Input placeholder="openai/gpt-oss-120b" dir="ltr" />
           </Form.Item>
 
           <Form.Item name="description" label="توضیحات">
