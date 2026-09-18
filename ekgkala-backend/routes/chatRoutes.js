@@ -33,8 +33,15 @@ router.post('/stream', aiChatLimiter, optional, chatController.handleStreamMessa
 router.get('/suggestions', chatController.getSuggestions);
 
 /**
+ * @route   DELETE /api/chat/history
+ * @desc    Start fresh: clear conversation for current identity (logged-in user OR guest session)
+ * @access  Public (identity via auth token or x-session-id)
+ */
+router.delete('/history', optional, chatController.clearMyHistory);
+
+/**
  * @route   DELETE /api/chat/history/:userId
- * @desc    Clear chat history for a user
+ * @desc    Clear chat history for a user (legacy)
  * @access  Protected
  */
 router.delete('/history/:userId', protect, chatController.clearHistory);

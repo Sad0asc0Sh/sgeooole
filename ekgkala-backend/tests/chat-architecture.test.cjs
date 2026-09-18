@@ -2,7 +2,9 @@ const assert = require('node:assert/strict');
 const axios = require('axios');
 const AiProvider = require('../models/AiProvider');
 const Settings = require('../models/Settings');
-const { __private__: chat } = require('../controllers/chatController');
+const ChatHistory = require('../models/ChatHistory');
+const chatController = require('../controllers/chatController');
+const { __private__: chat } = chatController;
 const aiService = require('../utils/groqService');
 const { __private__: ai } = aiService;
 
@@ -136,6 +138,47 @@ const singleOldProvider = [
   },
 ];
 
+async function runClearMyHistoryTest() {
+  const original = ChatHistory.findOneAndUpdate;
+  let captured = null;
+  ChatHistory.findOneAndUpdate = async (query, update) => {
+    captured = { query, update };
+    return {};
+  };
+  const makeRes = () => {
+    const res = { statusCode: 200, payload: null };
+    res.status = (c) => { res.statusCode = c; return res; };
+    res.json = (p) => { res.payload = p; return res; };
+    return res;
+  };
+  try {
+    // مهمان با sessionId معتبر → باید با همان sessionId پاک شود
+    let res = makeRes();
+    await chatController.clearMyHistory({ headers: { 'x-session-id': 'sess_test123' }, body: {}, user: null }, res);
+    assert.equal(res.payload?.success, true);
+    assert.equal(captured.query.sessionId, 'sess_test123');
+    assert.deepEqual(captured.update.$set.messages, []);
+
+    // کاربر لاگین‌کرده → اولویت با userId است
+    captured = null;
+    res = makeRes();
+    const fakeUserId = '507f1f77bcf86cd799439011';
+    await chatController.clearMyHistory({
+      headers: {}, body: {}, user: { _id: { toString: () => fakeUserId } },
+    }, res);
+    assert.equal(res.payload?.success, true);
+    assert.equal(String(captured.query.userId), fakeUserId);
+
+    // بدون هیچ شناسه‌ای → 400
+    res = makeRes();
+    await chatController.clearMyHistory({ headers: {}, body: {}, user: null }, res);
+    assert.equal(res.statusCode, 400);
+    assert.equal(res.payload?.success, false);
+  } finally {
+    ChatHistory.findOneAndUpdate = original;
+  }
+}
+
 async function runDecommissionedModelTest() {
   const restore = mockAiStack(singleOldProvider, async () => {
     const error = new Error('model decommissioned');
@@ -233,6 +276,7 @@ async function runFailoverTest() {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
   await asyncTest('مدل ناشناخته (404) پیام راهنمای تنظیمات می‌دهد', runUnknownModel404Test);
+  await asyncTest('پاک‌سازی گفتگو برای مهمان و کاربر با هویت درست انجام می‌شود', runClearMyHistoryTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

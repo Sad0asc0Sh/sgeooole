@@ -441,6 +441,29 @@ exports.clearHistory = async (req, res) => {
   }
 };
 
+/**
+ * DELETE /api/chat/history
+ * شروع گفتگوی تازه برای هویت فعلی (کاربر لاگین‌کرده یا مهمان با x-session-id).
+ * برخلاف clearHistory قدیمی که فقط userId می‌گرفت، این مسیر کش مکالمه مهمان را هم واقعاً پاک می‌کند.
+ */
+exports.clearMyHistory = async (req, res) => {
+  try {
+    const identity = getIdentity(req);
+    if (!identity) {
+      return res.status(400).json({ success: false, message: 'شناسه گفت‌وگو معتبر نیست.' });
+    }
+
+    await ChatHistory.findOneAndUpdate(
+      identity.query,
+      { $set: { messages: [], lastUpdated: new Date() } },
+    );
+    return res.json({ success: true, message: 'گفتگوی جدید شروع شد. تاریخچه قبلی پاک شد.' });
+  } catch (error) {
+    console.error('[chat] clearMyHistory failed:', error?.message);
+    return res.status(500).json({ success: false, message: 'خطا در پاک کردن تاریخچه گفتگو.' });
+  }
+};
+
 exports.__private__ = {
   normalizeMessage,
   escapeRegex,

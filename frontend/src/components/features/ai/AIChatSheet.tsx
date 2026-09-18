@@ -496,26 +496,34 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             abortRef.current.abort();
             abortRef.current = null;
         }
+        // ریست کامل حالت محلی: پیام‌ها، ورودی، سهمیه نمایشی، بافر پاسخ و موقعیت اسکرول
         setMessages([]);
+        setInput("");
+        setUsage(null);
         setIsTyping(false);
+        fullReplyRef.current = '';
+        setSticky(true);
+        if (textareaRef.current) textareaRef.current.style.height = "40px";
+        requestAnimationFrame(() => {
+            const el = scrollRef.current;
+            if (el) el.scrollTop = 0;
+        });
 
-        const currentUser = authService.getUser();
-        if (currentUser?.id) {
-            try {
-                const token = localStorage.getItem("token");
-                const headers: Record<string, string> = {};
-                if (token) headers['Authorization'] = `Bearer ${token}`;
-                headers['x-session-id'] = getSessionId();
+        // پاک‌سازی واقعی تاریخچه در سرور — برای مهمان (x-session-id) و کاربر لاگین‌کرده (توکن)
+        try {
+            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+            const headers: Record<string, string> = {};
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            headers['x-session-id'] = getSessionId();
 
-                const baseUrl = getBaseUrl();
+            const baseUrl = getBaseUrl();
 
-                await fetch(`${baseUrl}/api/chat/history/${currentUser.id}`, {
-                    method: 'DELETE',
-                    headers,
-                });
-            } catch (error) {
-                console.error('[AI Chat] Error clearing history:', error);
-            }
+            await fetch(`${baseUrl}/api/chat/history`, {
+                method: 'DELETE',
+                headers,
+            });
+        } catch (error) {
+            console.error('[AI Chat] Error clearing history:', error);
         }
     };
 
