@@ -19,9 +19,6 @@ const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || pr
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
-const SITE_DESCRIPTION =
-  process.env.NEXT_PUBLIC_SITE_DESCRIPTION || "خرید آنلاین کالاهای متنوع با بهترین قیمت و ارسال سریع.";
-const OG_IMAGE = process.env.NEXT_PUBLIC_OG_IMAGE || (SITE_URL ? `${SITE_URL}/og.png` : "/og.png");
 
 type ApiResponse<T> = { data?: T };
 
@@ -104,14 +101,40 @@ const SkeletonHero = () => (
 );
 
 export async function generateMetadata(): Promise<Metadata> {
+  const title = "ای کا جی کالا | ekgkala | فروشگاه اینترنتی";
+  const description =
+    "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب، تحویل سریع و تجربه خرید روان.";
+  const canonicalUrl = SITE_URL ? `${SITE_URL}/` : "/";
+  // Only use the explicit OG image when configured; otherwise Next.js
+  // automatically serves the opengraph-image.tsx route.
+  const explicitOgImage = process.env.NEXT_PUBLIC_OG_IMAGE;
   return {
-    title: SITE_NAME,
-    description: SITE_DESCRIPTION,
+    title: { absolute: title },
+    description,
+    keywords: [
+      "ای کا جی کالا",
+      "ekgkala",
+      "ای‌کا‌جی‌کالا",
+      "EKG KALA",
+      "فروشگاه اینترنتی ای کا جی کالا",
+    ],
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: SITE_NAME,
-      description: SITE_DESCRIPTION,
-      url: SITE_URL || "/",
-      images: OG_IMAGE ? [{ url: OG_IMAGE }] : undefined,
+      title,
+      description,
+      url: canonicalUrl,
+      siteName: "ای کا جی کالا",
+      locale: "fa_IR",
+      type: "website",
+      images: explicitOgImage ? [{ url: explicitOgImage }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: explicitOgImage ? [explicitOgImage] : undefined,
     },
   };
 }
@@ -128,9 +151,12 @@ export default async function Home() {
     "@graph": [
       {
         "@type": "Organization",
-        name: SITE_NAME,
+        name: "ای کا جی کالا",
+        alternateName: ["ekgkala", "ای‌کا‌جی‌کالا", "EKG KALA", SITE_NAME],
         url: SITE_URL || "/",
         logo: SITE_URL ? `${SITE_URL}/logo.png` : "/logo.png",
+        description:
+          "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب و تحویل سریع.",
         contactPoint: {
           "@type": "ContactPoint",
           contactType: "customer service",
@@ -145,8 +171,10 @@ export default async function Home() {
       },
       {
         "@type": "WebSite",
-        name: SITE_NAME,
+        name: "ای کا جی کالا",
+        alternateName: ["ekgkala", "ای‌کا‌جی‌کالا"],
         url: SITE_URL || "/",
+        inLanguage: "fa",
         potentialAction: {
           "@type": "SearchAction",
           target: `${SITE_URL || ""}/products?search={search_term_string}`,
@@ -163,6 +191,10 @@ export default async function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      {/* Brand H1 for SEO: visually hidden, keeps the visual design untouched */}
+      <h1 className="sr-only">
+        ای کا جی کالا (ekgkala) | فروشگاه اینترنتی
+      </h1>
       <HomeSection variant="hero">
         <Suspense fallback={<SkeletonHero />}>
           <HeroSection initialBanners={banners} />
