@@ -6,6 +6,7 @@ import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } fro
 import { authService } from "@/services/authService";
 import ChatPackageBuilder from "./ChatPackageBuilder";
 import ChatWizardStep, { type ChatWizard } from "./ChatWizardStep";
+import { buildChatCacheKey, loadChatCache, saveChatCache, clearChatCache } from "./chatCache";
 
 interface AIChatSheetProps {
     open: boolean;
@@ -57,7 +58,7 @@ export interface ChatPackage {
     missing?: string[];
 }
 
-interface Message {
+export interface Message {
     role: 'user' | 'ai';
     content: string;
     isLoading?: boolean;
@@ -113,6 +114,21 @@ export function formatFaPrice(n: number | undefined): string {
     return Number(n || 0).toLocaleString("fa-IR");
 }
 
+/** کلید کش به هویت وابسته است تا تاریخچه کاربر لاگین‌کرده با مهمان قاطی نشود */
+function resolveChatCacheKey(): string {
+    try {
+        const uid = authService.getUser()?.id;
+        if (uid) return buildChatCacheKey(`u_${uid}`);
+    } catch {
+        // ignore
+    }
+    try {
+        return buildChatCacheKey(`g_${getSessionId()}`);
+    } catch {
+        return buildChatCacheKey("anon");
+    }
+}
+
 export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
@@ -153,6 +169,32 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     };
 
     const [usage, setUsage] = useState<{ current: number; limit: number; remaining: number } | null>(null);
+    const [cacheReady, setCacheReady] = useState<boolean>(false);
+
+    // --- بازیابی تاریخچه از کش محلی (فقط سمت کلاینت، بعد از hydration) ---
+    // وقتی کاربر جزئیات محصول را در تب جدید می‌بیند و مرورگر تب چت را از حافظه
+    // می‌اندازد، با برگشت پیام‌های قبلی از همین‌جا برمی‌گردند.
+    useEffect(() => {
+        try {
+            const cached = loadChatCache(resolveChatCacheKey());
+            if (cached) {
+                if (cached.messages.length > 0) setMessages(cached.messages);
+                if (cached.usage) setUsage(cached.usage);
+            }
+        } finally {
+            setCacheReady(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // --- ذخیره debounced تاریخچه در کش محلی ---
+    useEffect(() => {
+        if (!cacheReady || typeof window === "undefined") return;
+        const id = window.setTimeout(() => {
+            saveChatCache(resolveChatCacheKey(), messages, usage);
+        }, 400);
+        return () => window.clearTimeout(id);
+    }, [messages, usage, cacheReady]);
 
     // --- Body Scroll Lock ---
     useEffect(() => {
@@ -595,6 +637,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         setIsTyping(false);
         fullReplyRef.current = '';
         setSticky(true);
+        clearChatCache(resolveChatCacheKey());
         if (textareaRef.current) textareaRef.current.style.height = "40px";
         requestAnimationFrame(() => {
             const el = scrollRef.current;
