@@ -12,6 +12,10 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
+const { WIZARD_DOMAINS } = require('./packDomains');
+
+// نام مستعار سازگاری (تعریف اصلی دامنه‌ها در packDomains.js است)
+const PACK_DOMAINS = WIZARD_DOMAINS;
 
 const MAX_PRODUCTS = 6;
 
@@ -205,7 +209,7 @@ async function searchProducts(message, history = []) {
   const raw = await Product.find({ isActive: true, $or: orConditions })
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
-    .select('name slug productCode description productType price compareAtPrice discount stock variants specifications properties images category brand rating numReviews guarantee salesCount updatedAt')
+    .select('name slug productCode description productType price compareAtPrice discount priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand rating numReviews guarantee salesCount updatedAt')
     .limit(30)
     .lean();
 
@@ -296,6 +300,8 @@ function toCardPayload(p) {
     guarantee: p.guarantee || '',
     productType: p.productType || 'simple',
     defaultVariantOptions: defaultVariantOptions(p),
+    priceUpdatedAt: p.priceUpdatedAt || null,
+    priceUpdateCount: Number(p.priceUpdateCount) || 0,
   };
 }
 
@@ -311,28 +317,12 @@ function isAdvisoryRequest(message) {
 }
 
 /* ============================================================
- * موتور پک‌ساز: ترکیب چند کالای مکمل (مثلاً پک کامل دوربین)
- * قانون: هیچ بخشی بدون کالای واقعیِ موجود ساخته نمی‌شود.
+ * موتور پک‌ساز یکجای قدیمی (buildPackage) نگه داشته شده، ولی مسیر اصلی
+ * حالا ویزارد مرحله‌به‌مرحله packWizard.js است که بخش‌ها را از روی
+ * «اسم دسته‌بندی‌ها» می‌سازد. تعریف دامنه‌ها در packDomains.js است.
  * ============================================================ */
 
 const MAX_PACK_OPTIONS = 3;
-
-const PACK_DOMAINS = [
-  {
-    id: 'camera',
-    title: 'پک دوربین مداربسته',
-    match: ['دوربین', 'مداربسته', 'cctv', 'camera', 'نظارتی', 'تحت شبکه'],
-    components: [
-      { key: 'camera', title: 'دوربین مداربسته', keywords: ['دوربین مداربسته', 'دوربین'], hint: 'چشم سیستم؛ تعداد و محل نصب را پوشش می‌دهد' },
-      { key: 'recorder', title: 'دستگاه ضبط (DVR / NVR)', keywords: ['دستگاه ضبط', 'DVR', 'NVR', 'ضبط کننده'], hint: 'قلب سیستم؛ تصاویر را ذخیره و مدیریت می‌کند' },
-      { key: 'hdd', title: 'هارددیسک', keywords: ['هارددیسک', 'هارد'], hint: 'حافظه ضبط؛ ظرفیت بیشتر یعنی آرشیو طولانی‌تر' },
-      { key: 'power', title: 'آداپتور / منبع تغذیه', keywords: ['آداپتور', 'منبع تغذیه'], hint: 'برق‌رسانی پایدار به دوربین‌ها' },
-      { key: 'cable', title: 'کابل و اتصالات', keywords: ['کابل', 'فیش', 'BNC'], hint: 'اتصال تصویر و برق بین اجزا' },
-      { key: 'switch', title: 'سوئیچ شبکه', keywords: ['سوئیچ شبکه', 'سوئیچ'], hint: 'برای دوربین‌های تحت شبکه (IP)', optional: true },
-      { key: 'monitor', title: 'مانیتور', keywords: ['مانیتور', 'نمایشگر'], hint: 'مشاهده زنده تصاویر', optional: true },
-    ],
-  },
-];
 
 const PACK_WORDS = [
   'پک', 'پکیج', 'کیت', 'ست کامل', 'سیستم کامل', 'بسته کامل', 'پکیج کامل',

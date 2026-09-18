@@ -13,9 +13,20 @@ const {
   toCardPayload,
   isAdvisoryRequest,
   detectPackRequest,
-  buildPackage,
+  normalizeFa,
   formatPackageContext,
 } = require('../utils/chatRetrieval');
+const {
+  startWizard,
+  getWizardView,
+  selectOption,
+  skipCurrent,
+  goBack,
+  restartWizard,
+  deactivateWizard,
+  buildFinalPackage,
+  formatWizardContext,
+} = require('../utils/packWizard');
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 20;
@@ -142,47 +153,99 @@ async function loadConversation(req) {
   };
 }
 
-async function buildChatContext(message, settings, userId = null, history = []) {
+/** دستورهای متنی پک وقتی ویزارد فعال است: انصراف کامل یا شروع دوباره */
+function detectPackTextCommand(message) {
+  const norm = normalizeFa(message || '');
+  if (!norm) return null;
+  if (/(انصراف|لغو|کنسل|بیخیال)/.test(norm)) return 'cancel';
+  if (/(از اول|از نو|شروع دوباره|ریست)/.test(norm)) return 'restart';
+  return null;
+}
+
+/**
+ * آماده‌سازی ویزارد پک برای این نوبت:
+ * - اگر ویزارد فعال است: دستور انصراف/شروع‌دوباره را اجرا کن، وگرنه نمای تازه بده
+ * - اگر فعال نیست و کاربر پک خواسته: ویزارد را از روی دسته‌بندی‌ها شروع کن
+ * تغییرات وضعیت همین‌جا روی chatSession ذخیره می‌شود (saveCompletedTurn هم بعداً ذخیره می‌کند).
+ */
+async function preparePackWizard(message, chatSession, history = []) {
+  const out = { view: null, wizardStarted: false, wizardRestarted: false, wizardCancelled: false, packNotViable: null };
+  if (!chatSession) return out;
+
+  let wiz = chatSession.packWizard && chatSession.packWizard.active ? chatSession.packWizard : null;
+
+  if (wiz) {
+    const cmd = detectPackTextCommand(message);
+    if (cmd === 'cancel') {
+      deactivateWizard(wiz);
+      await chatSession.save().catch(() => {});
+      out.wizardCancelled = true;
+      return out;
+    }
+    if (cmd === 'restart') {
+      restartWizard(wiz);
+      await chatSession.save().catch(() => {});
+      out.wizardRestarted = true;
+    }
+  }
+
+  if (!wiz) {
+    let domain = null;
+    try {
+      const detected = detectPackRequest(message, history);
+      if (detected && detected.isPack) domain = detected.domain || null;
+    } catch { domain = null; }
+
+    if (domain) {
+      try {
+        const res = await startWizard(domain.id, history);
+        if (res.started) {
+          chatSession.packWizard = res.state;
+          wiz = chatSession.packWizard;
+          out.wizardStarted = true;
+        } else {
+          // دسته‌بندی/موجودی کافی نیست → LLM صادقانه راهنمایی می‌کند، نه بسته توهمی
+          out.packNotViable = { reason: res.reason, missing: res.missing || [] };
+        }
+      } catch (err) {
+        console.warn('[chat] wizard start failed:', err?.message);
+      }
+    }
+  }
+
+  if (wiz && wiz.active) {
+    try {
+      out.view = await getWizardView(wiz, history);
+      // ذخیره وضعیت به‌روزشده (مثلاً unavailable شدن مرحله‌ای که موجودی‌اش تمام شد)
+      await chatSession.save().catch(() => {});
+    } catch (err) {
+      console.warn('[chat] wizard view failed:', err?.message);
+    }
+  }
+  return out;
+}
+
+async function buildChatContext(message, settings, userId = null, history = [], wizardView = null) {
   const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
-  const packInfo = detectPackRequest(message, history);
-  // نوبت اول درخواست پک = فقط نیازسنجی؛ بسته بعد از جواب کاربر ساخته می‌شود
-  const packAwaiting = packInfo.isPack && priorUserCount < 1;
-  const shouldBuildPack = packInfo.isPack && packInfo.domain && !packAwaiting;
 
-  // موتور بازیابی دقیق فارسی + ساخت بسته — موازی برای سرعت
-  const [productResult, packResult] = await Promise.all([
-    (async () => {
-      try {
-        return await searchProducts(message, history);
-      } catch (err) {
-        console.warn('[chat] product retrieval failed:', err?.message);
-        return { products: [] };
-      }
-    })(),
-    (async () => {
-      if (!shouldBuildPack) return null;
-      try {
-        return await buildPackage(message, history);
-      } catch (err) {
-        console.warn('[chat] package build failed:', err?.message);
-        return null;
-      }
-    })(),
-  ]);
-
-  const products = productResult.products || [];
-  const pack = packResult || null;
+  let products = [];
+  try {
+    const result = await searchProducts(message, history);
+    products = result.products || [];
+  } catch (err) {
+    console.warn('[chat] product retrieval failed:', err?.message);
+    products = [];
+  }
 
   let productContext = formatProductContext(products);
-  if (pack) {
-    const packText = formatPackageContext(pack);
-    if (packText) productContext = `${productContext}\n\n${packText}`;
+  if (wizardView) {
+    const wizText = formatWizardContext(wizardView);
+    if (wizText) productContext = `${productContext}\n\n${wizText}`;
   }
   const advisoryHint = isAdvisoryRequest(message);
-  // در نوبت اول نیازسنجی (هنوز کاربر به سوال‌ها جواب نداده) کارت نشان نده —
-  // اول سوال دوگزینه‌ای، بعداً در نوبت‌های بعدی معرفی نهایی با کارت/بسته.
-  const firstNeedTurn = priorUserCount < 1 && (advisoryHint || packInfo.isPack);
-  const productCards = firstNeedTurn ? [] : products.map(toCardPayload);
+  // در نوبت اول نیازسنجی کارت نشان نده؛ وقتی ویزارد فعال است هم پنل مرحله کافی است (عدم تکرار).
+  const firstNeedTurn = priorUserCount < 1 && advisoryHint;
+  const productCards = (firstNeedTurn || wizardView) ? [] : products.map(toCardPayload);
 
   const orderStatusMap = {
     Pending: 'در انتظار بررسی یا پرداخت',
@@ -256,9 +319,7 @@ async function buildChatContext(message, settings, userId = null, history = []) 
     storeInfoContext: storeInfo,
     products: productCards,
     advisoryHint,
-    package: pack,
-    packReady: Boolean(pack),
-    packAwaiting,
+    wizard: wizardView,
   };
 }
 
@@ -300,18 +361,26 @@ exports.handleMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
+    const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
     const context = await buildChatContext(
       message,
       conversation.settings,
       conversation.identity.query?.userId,
       conversation.history,
+      pack.view,
     );
     const result = await generateExpertResponse(
       message,
       context.productContext,
       conversation.history,
       context.storeInfoContext,
-      { advisoryHint: context.advisoryHint, packReady: context.packReady, packAwaiting: context.packAwaiting },
+      {
+        advisoryHint: context.advisoryHint,
+        wizardStarted: pack.wizardStarted,
+        wizardRestarted: pack.wizardRestarted,
+        wizardCancelled: pack.wizardCancelled,
+        packNotViable: pack.packNotViable,
+      },
     );
     await saveCompletedTurn(conversation.chatSession, message, result.message);
 
@@ -320,7 +389,8 @@ exports.handleMessage = async (req, res) => {
       data: {
         message: result.message,
         products: context.products || [],
-        package: context.package || null,
+        package: null,
+        wizard: context.wizard || null,
         timestamp: new Date(),
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: result.provider,
@@ -364,11 +434,13 @@ exports.handleStreamMessage = async (req, res) => {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
     }
 
+    const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
     const context = await buildChatContext(
       message,
       conversation.settings,
       conversation.identity.query?.userId,
       conversation.history,
+      pack.view,
     );
 
     res.status(200);
@@ -383,9 +455,9 @@ exports.handleStreamMessage = async (req, res) => {
     if (context.products && context.products.length > 0) {
       res.write(`data: ${JSON.stringify({ products: context.products })}\n\n`);
     }
-    // بسته پیشنهادی هم ساخت‌یافته ارسال می‌شود (فرانت بعد از اتمام متن نمایشش می‌دهد)
-    if (context.package) {
-      res.write(`data: ${JSON.stringify({ package: context.package })}\n\n`);
+    // نمای ویزارد هم ساخت‌یافته ارسال می‌شود (فرانت بعد از اتمام متن نمایشش می‌دهد)
+    if (context.wizard) {
+      res.write(`data: ${JSON.stringify({ wizard: context.wizard })}\n\n`);
     }
 
     const abortController = new AbortController();
@@ -407,7 +479,14 @@ exports.handleStreamMessage = async (req, res) => {
       context.productContext,
       conversation.history,
       context.storeInfoContext,
-      { signal: abortController.signal, advisoryHint: context.advisoryHint, packReady: context.packReady, packAwaiting: context.packAwaiting },
+      {
+        signal: abortController.signal,
+        advisoryHint: context.advisoryHint,
+        wizardStarted: pack.wizardStarted,
+        wizardRestarted: pack.wizardRestarted,
+        wizardCancelled: pack.wizardCancelled,
+        packNotViable: pack.packNotViable,
+      },
     );
 
     if (streamResult.message) {
@@ -420,7 +499,8 @@ exports.handleStreamMessage = async (req, res) => {
         provider: streamResult.provider,
         partial: streamResult.partial || false,
         products: context.products || [],
-        package: context.package || null,
+        package: null,
+        wizard: context.wizard || null,
       })}\n\n`);
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
       res.end();
@@ -501,10 +581,166 @@ exports.clearMyHistory = async (req, res) => {
   }
 };
 
+/**
+ * POST /api/chat/pack/action
+ * اکشن‌های ویزارد پک: select (با productId) | skip | back | restart
+ * - اعتبارسنجی سخت‌گیرانه سمت سرور (کالا واقعی/فعال/موجود/متعلق به همین مرحله)
+ * - وضعیت اول ذخیره می‌شود، بعد پیام کوتاه LLM ساخته می‌شود (با fallback متنی اگر LLM خطا داد)
+ */
+exports.handlePackAction = async (req, res) => {
+  const action = String(req.body?.action || '').trim();
+  if (!['select', 'skip', 'back', 'restart'].includes(action)) {
+    return res.status(400).json({ success: false, message: 'اکشن نامعتبر است.' });
+  }
+
+  let conversation;
+  let requestId;
+  try {
+    conversation = await loadConversation(req);
+    requestId = getRequestId(req);
+    if (!acquireConversation(conversation.identity.key, requestId)) {
+      return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
+    }
+
+    const wiz = conversation.chatSession.packWizard;
+    if (!wiz || !wiz.active) {
+      return res.status(400).json({ success: false, message: 'ویزارد پک فعالی وجود ندارد. اول در چت بگویید چه پکی می‌خواهید.' });
+    }
+
+    let userMessage = '';
+    let completed = false;
+    let finalPackage = null;
+
+    if (action === 'select') {
+      const productId = String(req.body?.productId || '').trim();
+      if (!productId) {
+        return res.status(400).json({ success: false, message: 'شناسه کالا مشخص نشده است.' });
+      }
+      const result = await selectOption(wiz, productId, Number(req.body?.qty) || 1);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+      userMessage = `انتخاب ${result.step.title}: ${result.product.name}`;
+      completed = result.completed;
+      if (completed) {
+        finalPackage = await buildFinalPackage(wiz, conversation.history);
+        deactivateWizard(wiz);
+      }
+    } else if (action === 'skip') {
+      const step = wiz.steps[wiz.currentIndex];
+      const result = await skipCurrent(wiz);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+      userMessage = `رد شدن از مرحله «${step ? step.title : ''}»`;
+      completed = isCompleteWizard(wiz);
+    } else if (action === 'back') {
+      const result = goBack(wiz);
+      if (!result.ok) {
+        return res.status(400).json({ success: false, message: result.error });
+      }
+      userMessage = 'بازگشت به مرحله قبل';
+    } else if (action === 'restart') {
+      restartWizard(wiz);
+      userMessage = 'شروع دوباره پک از مرحله اول';
+    }
+
+    const view = completed ? null : await getWizardView(wiz, conversation.history);
+
+    // پیام کوتاه تأیید/گذار — grounding کامل از وضعیت واقعی
+    let grounding = view ? formatWizardContext(view) : '';
+    if (completed && finalPackage) {
+      const packText = formatPackageContext(finalPackage);
+      if (packText) grounding = `${grounding}\n\n${packText}`;
+    }
+    const transitionNote = action === 'select' && completed
+      ? 'کاربر آخرین قلم پک را تأیید کرد و بسته نهایی آماده و جداگانه نمایش داده می‌شود. فقط در ۲ جمله تبریک بگو، اقلام نهایی را با نام دقیق خلاصه کن و بگو با دکمه «افزودن همه به سبد خرید» می‌تواند یکجا بخرد.'
+      : action === 'select'
+        ? 'کاربر یک قلم را از پنل تأیید کرد. فقط در ۱ تا ۲ جمله تأیید کن و مرحله بعد را با نام دقیق بخش معرفی کن. هیچ کالایی خارج از متن مرجع نام نبر.'
+        : action === 'skip'
+          ? 'کاربر یک مرحله اختیاری را رد کرد. فقط در ۱ جمله تأیید کن و مرحله بعد را معرفی کن.'
+          : action === 'back'
+            ? 'کاربر به مرحله قبل برگشت تا انتخابش را عوض کند. فقط در ۱ جمله همراهی کن.'
+            : 'کاربر پک را از اول شروع کرد. فقط در ۱ جمله تأیید کن و مرحله اول را معرفی کن.';
+
+    let reply = '';
+    try {
+      const llm = await generateExpertResponse(
+        `${userMessage}. ${transitionNote}`,
+        grounding,
+        conversation.history,
+        contextStoreInfoFallback(conversation.settings),
+        { brief: true },
+      );
+      reply = llm.message;
+    } catch (err) {
+      console.warn('[chat] pack transition LLM failed, using template:', err?.message);
+      reply = fallbackPackMessage(action, view, finalPackage);
+    }
+    if (!reply) reply = fallbackPackMessage(action, view, finalPackage);
+
+    await saveCompletedTurn(conversation.chatSession, userMessage, reply);
+
+    return res.json({
+      success: true,
+      data: {
+        userMessage,
+        message: reply,
+        wizard: view,
+        package: finalPackage,
+        products: [],
+        timestamp: new Date(),
+        usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
+      },
+    });
+  } catch (error) {
+    const clientError = toClientError(error);
+    console.error(
+      `[chat] handlePackAction failed | requestId=${requestId || '-'} action=${action} status=${clientError.statusCode}`,
+    );
+    return res.status(clientError.statusCode).json({
+      success: false,
+      message: clientError.message,
+      requestId,
+    });
+  } finally {
+    if (conversation && requestId) releaseConversation(conversation.identity.key, requestId);
+  }
+};
+
+function isCompleteWizard(wiz) {
+  return Boolean(wiz) && (Number(wiz.currentIndex) || 0) >= ((wiz.steps || []).length);
+}
+
+function contextStoreInfoFallback(settings) {
+  return settings?.storeName ? `نام فروشگاه: ${settings.storeName}` : 'نام فروشگاه: ای‌کا‌جی کالا';
+}
+
+function fallbackPackMessage(action, view, finalPackage) {
+  if (action === 'select' && finalPackage) {
+    return `تبریک! پک «${finalPackage.title}» کامل شد. همه اقلام تأییدشده‌ات را در پنل زیر می‌بینی؛ جمع کل مشخص است و با دکمه «افزودن همه به سبد خرید» می‌توانی یکجا بخری.`;
+  }
+  if (action === 'select' && view && view.current) {
+    return `عالیه، ثبت شد! حالا بریم سراغ «${view.current.title}» — از گزینه‌های همین مرحله یکی را انتخاب کن.`;
+  }
+  if (action === 'skip' && view && view.current) {
+    return `باشه، رد شد. مرحله بعد «${view.current.title}» است.`;
+  }
+  if (action === 'back' && view && view.current) {
+    return `برگشتیم به «${view.current.title}»؛ انتخاب جدیدت را بزن.`;
+  }
+  if (action === 'restart') {
+    return 'پک از اول شروع شد. از مرحله اول انتخاب کن.';
+  }
+  return 'انجام شد.';
+}
+
 exports.__private__ = {
   normalizeMessage,
   escapeRegex,
   getLocalDayStart,
   activeConversations,
   buildChatContext,
+  preparePackWizard,
+  detectPackTextCommand,
 };

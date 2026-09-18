@@ -5,6 +5,7 @@ const Settings = require('../models/Settings');
 const ChatHistory = require('../models/ChatHistory');
 const chatController = require('../controllers/chatController');
 const chatRetrieval = require('../utils/chatRetrieval');
+const packWizard = require('../utils/packWizard');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
@@ -363,12 +364,144 @@ async function runBuildPackageTest() {
   }
 }
 
+/* ---------- ویزارد پک مرحله‌به‌مرحله ---------- */
+
+const wizCats = [
+  { _id: 'c1', name: 'دوربین مداربسته', parent: null, slug: 'c1' },
+  { _id: 'c2', name: 'دوربین تحت شبکه', parent: 'c1', slug: 'c2' },
+  { _id: 'c3', name: 'دستگاه ضبط', parent: 'c1', slug: 'c3' },
+  { _id: 'c4', name: 'هارددیسک', parent: null, slug: 'c4' },
+  { _id: 'c5', name: 'سوئیچ شبکه', parent: null, slug: 'c5' },
+];
+
+const wizCanned = [
+  { _id: 'p1', name: 'دوربین تحت شبکه ۴ مگاپیکسل', productType: 'simple', price: 2000000, stock: 5, images: [], specifications: {}, properties: [], category: 'c2', brand: null, rating: 4.5, numReviews: 10, guarantee: '', salesCount: 10, priceUpdatedAt: new Date('2026-09-10'), priceUpdateCount: 2, updatedAt: new Date('2026-09-10') },
+  { _id: 'p2', name: 'دوربین آنالوگ ۲ مگاپیکسل', productType: 'simple', price: 1000000, stock: 3, images: [], specifications: {}, properties: [], category: 'c2', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4, numReviews: 5, guarantee: '', salesCount: 50, updatedAt: new Date('2026-01-05') },
+  { _id: 'p3', name: 'DS-2CD1023', productType: 'simple', price: 1500000, stock: 4, images: [], specifications: {}, properties: [], category: 'c2', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4, numReviews: 2, guarantee: '', salesCount: 5, updatedAt: new Date('2026-02-01') },
+  { _id: 'p4', name: 'دستگاه ضبط NVR چهار کانال', productType: 'simple', price: 3000000, stock: 2, images: [], specifications: {}, properties: [], category: 'c3', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4.2, numReviews: 7, guarantee: '', salesCount: 8, updatedAt: new Date('2026-03-01') },
+  { _id: 'p5', name: 'هارددیسک یک ترابایت', productType: 'simple', price: 2900000, stock: 4, images: [], specifications: {}, properties: [], category: 'c4', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4.8, numReviews: 20, guarantee: '', salesCount: 30, updatedAt: new Date('2026-04-01') },
+  { _id: 'p6', name: 'آداپتور ۱۲ ولت ۲ آمپر', productType: 'simple', price: 180000, stock: 10, images: [], specifications: {}, properties: [], category: null, priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4, numReviews: 3, guarantee: '', salesCount: 12, updatedAt: new Date('2026-05-01') },
+  { _id: 'p7', name: 'کابل شبکه CAT6', productType: 'simple', price: 90000, stock: 20, images: [], specifications: {}, properties: [], category: null, priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4.1, numReviews: 8, guarantee: '', salesCount: 40, updatedAt: new Date('2026-06-01') },
+  { _id: 'p8', name: 'سوئیچ ۸ پورت گیگ', productType: 'simple', price: 1200000, stock: 1, images: [], specifications: {}, properties: [], category: 'c5', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 4.3, numReviews: 4, guarantee: '', salesCount: 6, updatedAt: new Date('2026-07-01') },
+  { _id: 'p9', name: 'دوربین قدیمی بدون موجودی', productType: 'simple', price: 500000, stock: 0, images: [], specifications: {}, properties: [], category: 'c2', priceUpdatedAt: null, priceUpdateCount: 0, brand: null, rating: 3, numReviews: 1, guarantee: '', salesCount: 1, updatedAt: new Date('2026-08-01') },
+];
+
+function mockWizardCatalog() {
+  const originals = { productFind: Product.find, productFindById: Product.findById, categoryFind: Category.find, brandFind: Brand.find };
+  const withPop = (p) => ({
+    ...p,
+    category: wizCats.find((c) => String(c._id) === String(p.category)) || null,
+    brand: null,
+  });
+  Category.find = () => ({ select: () => ({ lean: async () => wizCats }) });
+  Brand.find = () => ({ select: () => ({ lean: async () => [] }) });
+  Product.find = (filter) => {
+    let hits = wizCanned;
+    const inIds = filter && filter.category && filter.category.$in;
+    if (inIds) {
+      const set = new Set(inIds.map(String));
+      hits = wizCanned.filter((p) => set.has(String(p.category)));
+    }
+    const chain = {
+      populate: () => chain,
+      select: () => chain,
+      limit: () => chain,
+      lean: async () => hits.map(withPop),
+    };
+    return chain;
+  };
+  Product.findById = (id) => {
+    const chain = {
+      populate: () => chain,
+      select: () => ({ lean: async () => {
+        const p = wizCanned.find((x) => String(x._id) === String(id));
+        return p ? withPop(p) : null;
+      } }),
+    };
+    return chain;
+  };
+  return () => {
+    Product.find = originals.productFind;
+    Product.findById = originals.productFindById;
+    Category.find = originals.categoryFind;
+    Brand.find = originals.brandFind;
+  };
+}
+
+async function runWizardFlowTest() {
+  const restore = mockWizardCatalog();
+  try {
+    // ۱) شروع: بخش‌ها از روی اسم دسته‌بندی‌ها
+    const started = await packWizard.startWizard('camera', []);
+    assert.equal(started.started, true, 'ویزارد باید شروع شود');
+    const state = started.state;
+    const keys = state.steps.map((s) => s.key);
+    assert.ok(keys.includes('camera'), 'بخش دوربین از دسته‌بندی‌ها آمده');
+    assert.ok(keys.includes('recorder'), 'بخش ضبط از دسته‌بندی‌ها آمده');
+    const camStep = state.steps.find((s) => s.key === 'camera');
+    assert.ok(camStep.categoryIds.map(String).includes('c1'), 'دسته «دوربین مداربسته» به بخش دوربین رسیده');
+    // مانیتور دسته ندارد و کالایی هم ندارد → unavailable
+    const monStep = state.steps.find((s) => s.key === 'monitor');
+    assert.equal(monStep.status, 'unavailable');
+    assert.equal(state.steps[state.currentIndex].key, 'camera', 'شروع از دوربین');
+
+    // ۲) گزینه‌های دوربین: تازه‌ترین قیمت اول (p1 با priceUpdatedAt جدید، با وجود فروش کمتر از p2)
+    const view0 = await packWizard.getWizardView(state, []);
+    assert.ok(view0.current && view0.current.key === 'camera');
+    const ids0 = view0.current.options.filter((o) => o.inStock).map((o) => o.id);
+    assert.equal(ids0[0], 'p1', 'تازه‌ترین قیمت باید اول باشد');
+    assert.ok(!ids0.includes('p9'), 'ناموجود نباید قابل انتخاب باشد');
+    // کالای با اسم غیرمعمول (DS-2CD1023) چون دسته‌اش انحصاری دوربین است، نگه داشته می‌شود
+    assert.ok(ids0.includes('p3'), 'کالای دسته انحصاری نباید حذف شود');
+
+    // ۳) انتخاب اشتباه (هارد در مرحله دوربین) رد می‌شود
+    const bad = await packWizard.selectOption(state, 'p5', 1);
+    assert.equal(bad.ok, false, 'انتخاب کالای مرحله دیگر باید رد شود');
+
+    // ۴) انتخاب درست → رفتن به مرحله بعد
+    const good = await packWizard.selectOption(state, 'p1', 1);
+    assert.equal(good.ok, true);
+    assert.equal(state.steps[state.currentIndex].key, 'recorder', 'بعد از دوربین، دستگاه ضبط می‌آید');
+
+    // ۵) برگشت: انتخاب پاک و مرحله برمی‌گردد
+    const back = packWizard.goBack(state);
+    assert.equal(back.ok, true);
+    assert.equal(state.steps[state.currentIndex].key, 'camera');
+    assert.equal(state.selections.length, 0, 'انتخاب برگشتی باید پاک شود');
+
+    // ۶) تکمیل کل مسیر تا بسته نهایی
+    await packWizard.selectOption(state, 'p2', 2);
+    await packWizard.selectOption(state, 'p4', 1);
+    await packWizard.selectOption(state, 'p5', 1);
+    await packWizard.selectOption(state, 'p6', 1);
+    await packWizard.selectOption(state, 'p7', 1);
+    const skipSw = await packWizard.skipCurrent(state); // سوئیچ اختیاری
+    assert.equal(skipSw.ok, true);
+    assert.equal(packWizard.isComplete(state), true, 'ویزارد باید کامل شده باشد');
+
+    const finalPkg = await packWizard.buildFinalPackage(state, []);
+    assert.ok(finalPkg, 'بسته نهایی باید ساخته شود');
+    assert.equal(finalPkg.sections.length, 5, 'پنج بخش تأییدشده');
+    const camSec = finalPkg.sections.find((s) => s.key === 'camera');
+    assert.equal(camSec.defaultId, 'p2', 'پیش‌فرض بخش دوربین همان انتخاب کاربر است');
+    assert.ok(finalPkg.missing.includes('مانیتور'), 'مانیتور در missing اعلام می‌شود');
+
+    // ۷) متن grounding شامل تأییدشده‌ها و مرحله‌هاست
+    const viewDone = await packWizard.getWizardView(state, []);
+    const ctx = packWizard.formatWizardContext(viewDone);
+    assert.ok(ctx.includes('دوربین آنالوگ'), 'متن باید انتخاب کاربر را داشته باشد');
+  } finally {
+    restore();
+  }
+}
+
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
   await asyncTest('مدل ناشناخته (404) پیام راهنمای تنظیمات می‌دهد', runUnknownModel404Test);
   await asyncTest('پاک‌سازی گفتگو برای مهمان و کاربر با هویت درست انجام می‌شود', runClearMyHistoryTest);
   await asyncTest('بسته پک فقط از کالاهای واقعی موجود و مرتبط ساخته می‌شود', runBuildPackageTest);
+  await asyncTest('ویزارد پک: شروع از دسته‌بندی‌ها، ترتیب تازگی قیمت، انتخاب/برگشت/بسته نهایی', runWizardFlowTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

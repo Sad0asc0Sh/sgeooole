@@ -26,6 +26,13 @@ router.post('/', aiChatLimiter, optional, chatController.handleMessage);
 router.post('/stream', aiChatLimiter, optional, chatController.handleStreamMessage);
 
 /**
+ * @route   POST /api/chat/pack/action
+ * @desc    Pack wizard actions: select | skip | back | restart (validated server-side)
+ * @access  Public
+ */
+router.post('/pack/action', aiChatLimiter, optional, chatController.handlePackAction);
+
+/**
  * @route   GET /api/chat/suggestions
  * @desc    Get suggested questions
  * @access  Public

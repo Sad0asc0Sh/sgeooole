@@ -5,6 +5,7 @@ import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, 
 import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { authService } from "@/services/authService";
 import ChatPackageBuilder from "./ChatPackageBuilder";
+import ChatWizardStep, { type ChatWizard } from "./ChatWizardStep";
 
 interface AIChatSheetProps {
     open: boolean;
@@ -36,6 +37,8 @@ export interface ChatProduct {
     guarantee?: string;
     productType?: string;
     defaultVariantOptions?: Array<{ name: string; value: string }>;
+    priceUpdatedAt?: string | null;
+    priceUpdateCount?: number;
 }
 
 export interface ChatPackageSection {
@@ -61,6 +64,7 @@ interface Message {
     isError?: boolean;
     products?: ChatProduct[];
     package?: ChatPackage | null;
+    wizard?: ChatWizard | null;
 }
 
 interface SuggestionItem {
@@ -113,6 +117,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
+    const [actionLoading, setActionLoading] = useState<boolean>(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -216,7 +221,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
     const handleSend = async (overrideText?: string) => {
         const rawText = typeof overrideText === "string" ? overrideText : input;
-        if (!rawText.trim() || isTyping) return;
+        if (!rawText.trim() || isTyping || actionLoading) return;
         // Guard against duplicate requests
         if (pendingRequestRef.current) {
             console.warn('[AI Chat] Duplicate request blocked');
@@ -322,6 +327,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     partial?: boolean;
                     products?: ChatProduct[];
                     package?: ChatPackage | null;
+                    wizard?: ChatWizard | null;
                     meta?: { requestId?: string };
                 };
                 try {
@@ -352,6 +358,17 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         const updated = [...prev];
                         // هر پیام فقط یک بسته دارد — جایگزین می‌شود نه الحاق (جلوگیری از قاطی‌شدن)
                         updated[updated.length - 1] = { ...last, package: incomingPkg };
+                        return updated;
+                    });
+                }
+                if (payload.wizard && payload.wizard.active) {
+                    const incomingWiz = payload.wizard;
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role !== 'ai') return prev;
+                        const updated = [...prev];
+                        // نمای ویزارد همیشه تازه‌ترین وضعیت است — جایگزین می‌شود
+                        updated[updated.length - 1] = { ...last, wizard: incomingWiz };
                         return updated;
                     });
                 }
@@ -523,6 +540,48 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
+    // --- اکشن‌های ویزارد پک (انتخاب/رد/برگشت/شروع‌دوباره) — بدون استریم، کوتاه و قطعی ---
+    const handlePackAction = async (action: "select" | "skip" | "back" | "restart", productId?: string) => {
+        if (actionLoading || isTyping) return;
+        setActionLoading(true);
+        try {
+            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            headers['x-session-id'] = getSessionId();
+
+            const baseUrl = getBaseUrl();
+            const response = await fetch(`${baseUrl}/api/chat/pack/action`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ action, productId, requestId: createRequestId() }),
+            });
+            const payload = await response.json().catch(() => null);
+            if (!response.ok || !payload?.success) {
+                throw new Error(payload?.message || `خطا در ثبت انتخاب (${response.status})`);
+            }
+            const d = payload.data;
+            if (d.userMessage) {
+                setMessages((prev: Message[]) => [...prev, { role: 'user', content: d.userMessage }]);
+            }
+            setMessages((prev: Message[]) => [...prev, {
+                role: 'ai',
+                content: d.message || '',
+                products: [],
+                package: d.package || null,
+                wizard: d.wizard || null,
+            }]);
+            if (d.usage) setUsage(d.usage);
+            setSticky(true);
+        } catch (error: unknown) {
+            console.error('[AI Chat] Pack action error:', error);
+            const errorMessage = (error instanceof Error ? error.message : null) || 'خطا در ثبت انتخاب. لطفاً دوباره تلاش کنید.';
+            setMessages((prev: Message[]) => [...prev, { role: 'ai', content: errorMessage, isError: true }]);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleClearChat = async () => {
         if (abortRef.current) {
             abortRef.current.abort();
@@ -671,7 +730,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                             {opts.map((opt, oi) => (
                                                                 <button
                                                                     key={oi}
-                                                                    disabled={isTyping || !isLastAi}
+                                                                    disabled={isTyping || actionLoading || !isLastAi}
                                                                     onClick={() => handleSend(opt)}
                                                                     className="px-3 py-2.5 rounded-xl border border-kala-300 bg-white text-kala-700 text-xs font-bold shadow-sm hover:bg-kala-500 hover:text-white hover:border-kala-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                                                 >
@@ -682,6 +741,15 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                     ))}
                                                 </div>
                                             )}
+                                            {/* پنل ویزارد پک — فقط روی تازه‌ترین پیام (وضعیت زنده)، بعد از اتمام استریم */}
+                                            {msg.role === 'ai' && !streamActive && isLastAi && msg.wizard?.active && !msg.wizard.complete && msg.wizard.current ? (
+                                                <ChatWizardStep
+                                                    wizard={msg.wizard}
+                                                    disabled={isTyping}
+                                                    loading={actionLoading}
+                                                    onAction={handlePackAction}
+                                                />
+                                            ) : null}
                                             {/* بسته پیشنهادی (پک) جایگزین کارت‌های تکی می‌شود تا قاطی نشود */}
                                             {msg.role === 'ai' && !streamActive && msg.package && Array.isArray(msg.package.sections) && msg.package.sections.length > 0 ? (
                                                 <ChatPackageBuilder pkg={msg.package} />

@@ -172,10 +172,13 @@ export default function ChatPackageBuilder({ pkg }: { pkg: ChatPackage }) {
                                                     <span className="text-[10px] text-gray-400 truncate">
                                                         {(o.brand ? o.brand + " • " : "") + (o.specs?.[0] ? `${o.specs[0].label}: ${o.specs[0].value}` : o.category || "")}
                                                     </span>
-                                                    <span className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                         <span className="text-[11px] font-black text-gray-900">{fa(o.price)} <span className="text-[9px] font-medium text-gray-500">تومان</span></span>
                                                         {o.oldPrice && o.oldPrice > o.price && (
                                                             <span className="text-[9px] text-gray-400 line-through">{fa(o.oldPrice)}</span>
+                                                        )}
+                                                        {(o.priceUpdateCount || 0) > 0 && (
+                                                            <span className="text-[8px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-1.5 py-px whitespace-nowrap">قیمت به‌روز</span>
                                                         )}
                                                     </span>
                                                 </span>

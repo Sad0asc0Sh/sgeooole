@@ -143,6 +143,21 @@ const ProductSchema = new mongoose.Schema(
       default: 0,
     },
 
+    // ============================================
+    // Price freshness tracking (برای «قیمت به‌روز اول» در پک‌ساز چت)
+    // با هر اصلاح قیمت/تخفیف، priceUpdatedAt به‌روز و priceUpdateCount زیاد می‌شود
+    // ============================================
+    priceUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    priceUpdateCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
     sku: {
       type: String,
       trim: true,
@@ -324,6 +339,18 @@ ProductSchema.index({ 'properties.label': 1, 'properties.value': 1 })
 // Pre-save Hook: Generate slug and productCode
 // ============================================
 ProductSchema.pre('save', async function (next) {
+  // 0. رهگیری تازگی قیمت: هر اصلاح واقعی قیمت/تخفیف ثبت می‌شود
+  // (ساخت اولیه حساب نیست؛ فقط ویرایش‌های بعدی)
+  if (!this.isNew && (
+    this.isModified('price')
+    || this.isModified('compareAtPrice')
+    || this.isModified('discount')
+    || this.isModified('variants')
+  )) {
+    this.priceUpdatedAt = new Date();
+    this.priceUpdateCount = (Number(this.priceUpdateCount) || 0) + 1;
+  }
+
   // 1. Generate slug from name if not provided
   if (this.isModified('name') && !this.slug) {
     const base = (this.name || '').toString().trim().toLowerCase()
