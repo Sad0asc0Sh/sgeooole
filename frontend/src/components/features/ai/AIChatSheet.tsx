@@ -584,7 +584,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
     // --- اکشن‌های ویزارد پک (انتخاب/رد/برگشت/شروع‌دوباره/رد سوالات) — بدون استریم، کوتاه و قطعی ---
     // تمام عملیات داخل همین چت انجام می‌شود؛ صفحه محصول فقط برای دیدن جزئیات است.
-    const handlePackAction = async (action: "select" | "skip-needs" | "skip" | "back" | "restart", productId?: string) => {
+    const handlePackAction = async (action: "select" | "skip-needs" | "skip" | "back" | "restart", productId?: string, qty?: number) => {
         if (actionLoading || isTyping) return;
         setActionLoading(true);
         try {
@@ -597,7 +597,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
             const response = await fetch(`${baseUrl}/api/chat/pack/action`, {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ action, productId, requestId: createRequestId() }),
+                body: JSON.stringify({ action, productId, qty, requestId: createRequestId() }),
             });
             const payload = await response.json().catch(() => null);
             if (!response.ok || !payload?.success) {

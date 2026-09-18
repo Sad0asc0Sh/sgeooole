@@ -401,6 +401,15 @@ function mockWizardCatalog() {
     if (inIds) {
       const set = new Set(inIds.map(String));
       hits = wizCanned.filter((p) => set.has(String(p.category)));
+    } else if (filter && filter.$or) {
+      const norm = chatRetrieval.normalizeFa;
+      const terms = [];
+      for (const cond of filter.$or) {
+        for (const v of Object.values(cond)) {
+          if (v && typeof v === 'object' && v.$regex) terms.push(norm(String(v.$regex)));
+        }
+      }
+      hits = wizCanned.filter((p) => terms.some((t) => t.length >= 2 && norm(p.name).includes(t)));
     }
     const chain = {
       populate: () => chain,
@@ -575,6 +584,76 @@ async function runWizardNeedsTest() {
   }
 }
 
+async function runCctvEngineeringRulesTest() {
+  const cctvEngine = require('../utils/cctvEngine');
+
+  // ۱. تست استخراج هوشمند نیازها
+  const needsOutdoor = cctvEngine.parseCctvNeeds('۴ عدد دوربین برای فضای بیرونی باغ میخوام با قیمت اقتصادی');
+  assert.equal(needsOutdoor.cameraCount, 4, 'تعداد ۴ دوربین باید استخراج شود');
+  assert.equal(needsOutdoor.environment, 'outdoor', 'محیط باید outdoor باشد');
+  assert.equal(needsOutdoor.techType, 'ahd', 'تکنولوژی اقتصادی باید ahd باشد');
+
+  const needsIndoorIp = cctvEngine.parseCctvNeeds('داخل مغازه ۲ تا دوربین تحت شبکه میخوام');
+  assert.equal(needsIndoorIp.cameraCount, 2, 'تعداد ۲ دوربین باید استخراج شود');
+  assert.equal(needsIndoorIp.environment, 'indoor', 'محیط باید indoor باشد');
+  assert.equal(needsIndoorIp.techType, 'ip', 'تکنولوژی تحت شبکه باید ip باشد');
+
+  // ۲. تست سازگاری مهندسی در ویزارد
+  const restore = mockWizardCatalog();
+  try {
+    const started = await packWizard.startWizard('camera', '۴ تا دوربین بولت برای باغ میخوام به صورت اقتصادی', []);
+    assert.equal(started.started, true);
+    assert.equal(started.stepsBegun, true, 'با جزئیات کامل مستقیم وارد مرحله‌ها می‌شود');
+    assert.equal(started.state.requirements.cameraCount, 4);
+    assert.equal(started.state.requirements.environment, 'outdoor');
+
+    // مرحله دوربین: گزینه‌ها باید دارای تعداد پیشنهادی ۴ و تایید فنی باشند
+    const viewCam = await packWizard.getWizardView(started.state, []);
+    assert.ok(viewCam.current);
+    assert.equal(viewCam.current.key, 'camera');
+    const camOption = viewCam.current.options[0];
+    assert.equal(camOption.recommendedQty, 4, 'تعداد پیشنهادی دوربین باید ۴ باشد');
+    assert.ok(camOption.compatibilityHint, 'باید دارای توضیح سازگاری مهندسی باشد');
+
+    // انتخاب دوربین
+    const selCam = await packWizard.selectOption(started.state, camOption.id, camOption.recommendedQty);
+    assert.equal(selCam.ok, true);
+    assert.equal(started.state.selections[0].qty, 4, 'تعداد انتخابی دوربین باید ۴ عدد ثبت شود');
+
+    // مرحله دستگاه ضبط
+    const viewRec = await packWizard.getWizardView(started.state, []);
+    assert.ok(viewRec.current);
+    assert.equal(viewRec.current.key, 'recorder');
+
+    // انتخاب دستگاه ضبط و رفتن تا آخر
+    const recOpt = viewRec.current.options[0];
+    await packWizard.selectOption(started.state, recOpt.id, 1);
+
+    // هارد
+    const viewHdd = await packWizard.getWizardView(started.state, []);
+    assert.equal(viewHdd.current.key, 'hdd');
+    await packWizard.selectOption(started.state, viewHdd.current.options[0].id, 1);
+
+    // پاور
+    const viewPwr = await packWizard.getWizardView(started.state, []);
+    assert.equal(viewPwr.current.key, 'power');
+    await packWizard.selectOption(started.state, viewPwr.current.options[0].id, 1);
+
+    // کابل
+    const viewCable = await packWizard.getWizardView(started.state, []);
+    assert.equal(viewCable.current.key, 'cable');
+    await packWizard.selectOption(started.state, viewCable.current.options[0].id, 1);
+
+    // بسته نهایی
+    const finalPkg = await packWizard.buildFinalPackage(started.state, []);
+    assert.ok(finalPkg, 'بسته نهایی باید ساخته شود');
+    const camSec = finalPkg.sections.find((s) => s.key === 'camera');
+    assert.equal(camSec.recommendedQty, 4, 'تعداد دوربین در بسته نهایی باید ۴ باشد نه ۱');
+  } finally {
+    restore();
+  }
+}
+
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
@@ -584,6 +663,7 @@ async function runWizardNeedsTest() {
   await asyncTest('ویزارد پک: شروع از دسته‌بندی‌ها، ترتیب تازگی قیمت، انتخاب/برگشت/بسته نهایی', runWizardFlowTest);
   await asyncTest('ویزارد پک: فاز نیازسنجی، کردیت، رد سوالات و تطابق اسمی سخت‌گیرانه', runWizardNeedsTest);
   await asyncTest('ویزارد پک: گیتینگ نوبت‌ها — حین نیازسنجی محصولی نیست، بعدش قدم اول', runWizardNeedsGatingTest);
+  await asyncTest('قوانین مهندسی مداربسته: محاسبه مقادیر، سازگاری قطعی اقلام و پکیج نهایی', runCctvEngineeringRulesTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

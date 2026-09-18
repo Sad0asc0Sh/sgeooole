@@ -57,7 +57,8 @@ export default function ChatPackageBuilder({ pkg }: { pkg: ChatPackage }) {
         const s: SectionState = {};
         for (const sec of pkg.sections) {
             const def = sec.options.find((o) => o.id === sec.defaultId && o.inStock) || sec.options.find((o) => o.inStock) || sec.options[0];
-            s[sec.key] = { selectedId: def?.id || "", qty: 1, enabled: true };
+            const initQty = (sec as unknown as { recommendedQty?: number })?.recommendedQty || (def as unknown as { recommendedQty?: number })?.recommendedQty || 1;
+            s[sec.key] = { selectedId: def?.id || "", qty: Math.max(1, initQty), enabled: true };
         }
         return s;
     }, [pkg]);
@@ -68,7 +69,12 @@ export default function ChatPackageBuilder({ pkg }: { pkg: ChatPackage }) {
     const [succeeded, setSucceeded] = useState(false);
 
     const setSel = (key: string, selectedId: string) =>
-        setState((p) => ({ ...p, [key]: { ...p[key], selectedId, qty: 1 } }));
+        setState((p) => {
+            const sec = pkg.sections.find((s) => s.key === key);
+            const opt = sec?.options.find((o) => o.id === selectedId);
+            const recQty = (sec as unknown as { recommendedQty?: number })?.recommendedQty || (opt as unknown as { recommendedQty?: number })?.recommendedQty || p[key]?.qty || 1;
+            return { ...p, [key]: { ...p[key], selectedId, qty: Math.max(1, recQty) } };
+        });
     const setQty = (key: string, qty: number, max: number) =>
         setState((p) => ({ ...p, [key]: { ...p[key], qty: Math.min(Math.max(1, qty), Math.max(1, max)) } }));
     const setEnabled = (key: string, enabled: boolean) =>

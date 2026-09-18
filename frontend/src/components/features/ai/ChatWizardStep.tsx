@@ -6,6 +6,8 @@ import type { ChatProduct } from "./AIChatSheet";
 export interface ChatWizardOption extends ChatProduct {
     priceUpdatedAt?: string | null;
     priceUpdateCount?: number;
+    compatibilityHint?: string;
+    recommendedQty?: number;
 }
 
 export interface ChatWizardStepView {
@@ -76,7 +78,7 @@ interface Props {
     wizard: ChatWizard;
     disabled?: boolean;
     loading?: boolean;
-    onAction: (action: PackAction, productId?: string) => void;
+    onAction: (action: PackAction, productId?: string, qty?: number) => void;
 }
 
 export default function ChatWizardStep({ wizard, disabled, loading, onAction }: Props) {
@@ -184,6 +186,16 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                                                 )}
                                                 <FreshBadge count={o.priceUpdateCount} />
                                             </span>
+                                            {o.recommendedQty && o.recommendedQty > 1 && (
+                                                <span className="text-[9px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5 mt-0.5 w-fit">
+                                                    تعداد محاسباتی: {fa(o.recommendedQty)} عدد
+                                                </span>
+                                            )}
+                                            {o.compatibilityHint && (
+                                                <span className="text-[9px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md px-1.5 py-0.5 mt-0.5 line-clamp-1" title={o.compatibilityHint}>
+                                                    ✓ {o.compatibilityHint}
+                                                </span>
+                                            )}
                                             {i === 0 && !out && (
                                                 <span className="text-[9px] font-black text-kala-700 bg-kala-100 rounded-full px-1.5 py-px w-fit">پیشنهاد هوش مصنوعی</span>
                                             )}
@@ -201,7 +213,7 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                                                 جزئیات
                                             </a>
                                             <button
-                                                onClick={() => onAction("select", o.id)}
+                                                onClick={() => onAction("select", o.id, o.recommendedQty || 1)}
                                                 disabled={busy || out}
                                                 className="text-[10px] font-black text-center text-white bg-kala-500 rounded-lg px-2 py-1 hover:bg-kala-600 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1"
                                             >

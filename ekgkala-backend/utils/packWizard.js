@@ -16,7 +16,12 @@ const {
   extractKeywords,
   effectiveStock,
   toCardPayload,
+  escapeRegex,
 } = require('./chatRetrieval');
+const {
+  parseCctvNeeds,
+  rankAndAnnotateOptions,
+} = require('./cctvEngine');
 
 const STEP_OPTION_LIMIT = 4;
 const STEP_FETCH_LIMIT = 60;
@@ -95,19 +100,49 @@ function historyScore(p, keywords) {
 
 /**
  * گزینه‌های یک مرحله: فقط موجودها قابل انتخاب‌اند.
- * ترتیب: موجود اول، بعد تازه‌ترین قیمت، بعد امتیاز تاریخچه، بعد پرفروش‌ها.
+ * ترتیب: موجود اول، بعد امتیاز تطابق مهندسی، بعد تازه‌ترین قیمت، بعد امتیاز تاریخچه، بعد پرفروش‌ها.
  */
-async function getStepOptions(step, history = [], limit = STEP_OPTION_LIMIT) {
+async function getStepOptions(step, history = [], limit = STEP_OPTION_LIMIT, state = null) {
   const query = { isActive: true };
   const usePool = Array.isArray(step.categoryIds) && step.categoryIds.length > 0 && !step.sharedPool;
   if (usePool) query.category = { $in: step.categoryIds };
 
-  const raw = await Product.find(query)
+  let raw = await Product.find(query)
     .populate('category', 'name slug')
     .populate('brand', 'name slug')
     .select(STEP_SELECT_FIELDS)
     .limit(STEP_FETCH_LIMIT)
     .lean();
+
+  // اگر با دسته‌بندی کالایی پیدا نشد یا دسته‌بندی خالی بود، از کلیدواژه‌ها مستقیماً در دیتابیس جستجو کن تا کالای موجود ناموجود قلمداد نشود
+  if (raw.length === 0 || !usePool) {
+    const phrases = Array.isArray(step.phrases) ? step.phrases : [];
+    if (phrases.length > 0) {
+      const phraseRegexes = phrases
+        .filter((ph) => ph && ph.length >= 2)
+        .map((ph) => ({ name: { $regex: escapeRegex(ph), $options: 'i' } }));
+      if (phraseRegexes.length > 0) {
+        const hits = await Product.find({ isActive: true, $or: phraseRegexes })
+          .populate('category', 'name slug')
+          .populate('brand', 'name slug')
+          .select(STEP_SELECT_FIELDS)
+          .limit(STEP_FETCH_LIMIT)
+          .lean();
+
+        if (raw.length === 0) {
+          raw = hits;
+        } else {
+          const seen = new Set(raw.map((p) => String(p._id)));
+          for (const h of hits) {
+            if (!seen.has(String(h._id))) {
+              seen.add(String(h._id));
+              raw.push(h);
+            }
+          }
+        }
+      }
+    }
+  }
 
   let list = raw;
   if (!usePool) {
@@ -121,14 +156,45 @@ async function getStepOptions(step, history = [], limit = STEP_OPTION_LIMIT) {
     }
   }
 
-  const keywords = extractKeywords('', history);
-  const scored = list.map((p) => ({ p, stock: effectiveStock(p), kw: historyScore(p, keywords) }));
-  const inStock = scored.filter((s) => s.stock > 0)
-    .sort((a, b) => (freshnessOf(b.p) - freshnessOf(a.p)) || (b.kw - a.kw) || ((b.p.salesCount || 0) - (a.p.salesCount || 0)));
-  const outStock = scored.filter((s) => s.stock <= 0)
-    .sort((a, b) => (freshnessOf(b.p) - freshnessOf(a.p)) || (b.kw - a.kw) || ((b.p.salesCount || 0) - (a.p.salesCount || 0)));
+  // ارزیابی مهندسی دوربین مداربسته در صورت مرتبط بودن
+  let annotated = [];
+  if (state && state.domainId === 'camera') {
+    const camSelection = (state.selections || []).find((s) => s.stepKey === 'camera');
+    const selectedCamProduct = camSelection ? await fetchProductById(camSelection.productId) : null;
+    annotated = rankAndAnnotateOptions(step.key, list, {
+      requirements: state.requirements || {},
+      selectedCamera: selectedCamProduct,
+    });
+  } else {
+    annotated = list.map((p) => ({ opt: p, score: 0, hint: '', recQty: 1 }));
+  }
 
-  return [...inStock, ...outStock].slice(0, limit).map((s) => toCardPayload(s.p));
+  const keywords = extractKeywords('', history);
+  const scored = annotated.map((item) => ({
+    p: item.opt,
+    stock: effectiveStock(item.opt),
+    engScore: item.score || 0,
+    kw: historyScore(item.opt, keywords),
+    hint: item.hint,
+    recQty: item.recQty,
+  }));
+
+  const inStock = scored.filter((s) => s.stock > 0)
+    .sort((a, b) => (b.engScore - a.engScore)
+      || (freshnessOf(b.p) - freshnessOf(a.p))
+      || (b.kw - a.kw)
+      || ((b.p.salesCount || 0) - (a.p.salesCount || 0)));
+
+  const outStock = scored.filter((s) => s.stock <= 0)
+    .sort((a, b) => (b.engScore - a.engScore)
+      || (freshnessOf(b.p) - freshnessOf(a.p))
+      || (b.kw - a.kw)
+      || ((b.p.salesCount || 0) - (a.p.salesCount || 0)));
+
+  return [...inStock, ...outStock].slice(0, limit).map((s) => toCardPayload(s.p, {
+    compatibilityHint: s.hint,
+    recommendedQty: s.recQty,
+  }));
 }
 
 /** آیا این محصول متعلق به همین مرحله است؟ (اعتبارسنجی ضد خطا هنگام انتخاب) */
@@ -169,6 +235,7 @@ function newWizardState(domain, steps) {
     createdAt: new Date(),
     needsCredit: 0,
     needsAnswers: 0,
+    requirements: {},
     steps: steps.map((s) => ({ ...s, status: 'pending' })),
     currentIndex: 0,
     selections: [],
@@ -187,9 +254,9 @@ function initialNeedsCredit(message, history = []) {
   ].join(' ');
   const norm = normalizeFa(full);
   let credit = 0;
-  if (/\d/.test(norm) || /(عدد|تعداد|چندتا)/.test(norm)) credit += 1;
-  if (/(منزل|خانه|باغ|ویلا|ویلا|مغازه|دفتر|محل کار|داخل|بیرون|راه پله|پارکینگ)/.test(norm)) credit += 1;
-  if (/(اقتصادی|ارزان|حرفه‌ای|حرفه ای|بودجه|میلیون|تومان|گران)/.test(norm)) credit += 1;
+  if (/[0-9۰-۹]|(?:^|\s)(یک|دو|سه|چهار|پنج|شش|هفت|هشت)(?:\s|$|تا|عدد)|(تعداد|چندتا)/.test(norm)) credit += 1;
+  if (/(منزل|خانه|باغ|ویلا|مغازه|دفتر|محل کار|داخل|بیرون|راه پله|پارکینگ|حیاط|سقف|دیوار)/.test(norm)) credit += 1;
+  if (/(اقتصادی|ارزان|حرفه‌ای|حرفه ای|بودجه|میلیون|تومان|گران|تحت شبکه|شبکه|آنالوگ|انالوگ|ip|ahd)/.test(norm)) credit += 1;
   return Math.min(credit, NEEDS_REQUIRED_DEFAULT);
 }
 
@@ -214,7 +281,7 @@ function needsRequiredFor(domainId) {
 async function enterStepsPhase(state, history = []) {
   state.phase = 'steps';
   const checks = await Promise.all(state.steps.map(async (step) => {
-    const options = await getStepOptions(step, history, 1);
+    const options = await getStepOptions(step, history, 1, state);
     return options.some((o) => o.inStock);
   }));
   state.steps.forEach((step, i) => {
@@ -261,6 +328,9 @@ async function startWizard(domainId, message = '', history = []) {
   if (!steps.length) return { started: false, reason: 'no_steps' };
 
   const state = newWizardState(domain, steps);
+  if (domainId === 'camera') {
+    state.requirements = parseCctvNeeds(message, history);
+  }
   state.needsCredit = initialNeedsCredit(message, history);
 
   if (state.needsCredit >= needsRequired(domain)) {
@@ -293,7 +363,7 @@ async function ensureCurrentViable(state, history = []) {
       state.currentIndex += 1;
       continue;
     }
-    const options = await getStepOptions(step, history, 1);
+    const options = await getStepOptions(step, history, 1, state);
     if (options.some((o) => o.inStock)) {
       if (step.status === 'pending') step.status = 'current';
       return true;
@@ -329,13 +399,26 @@ async function selectOption(state, productId, qty = 1) {
     return { ok: false, error: `«${product.name}» مربوط به مرحله «${step.title}» نیست. لطفاً از گزینه‌های همین مرحله انتخاب کنید.` };
   }
 
-  const safeQty = Math.min(Math.max(1, Number(qty) || 1), stock);
+  let targetQty = Number(qty);
+  if (!targetQty || targetQty <= 0) {
+    if (step.key === 'camera') {
+      targetQty = (state.requirements && state.requirements.cameraCount) || 1;
+    } else {
+      targetQty = 1;
+    }
+  }
+  const safeQty = Math.min(Math.max(1, targetQty), stock);
   state.selections = (state.selections || []).filter((s) => s.stepKey !== step.key);
   state.selections.push({ stepKey: step.key, productId: product._id, qty: safeQty, decidedAt: new Date() });
   step.status = 'done';
   advance(state);
   state.updatedAt = new Date();
-  return { ok: true, product: toCardPayload(product), step, completed: isComplete(state) };
+  return {
+    ok: true,
+    product: toCardPayload(product, { recommendedQty: safeQty }),
+    step,
+    completed: isComplete(state),
+  };
 }
 
 async function skipCurrent(state) {
@@ -441,7 +524,7 @@ async function getWizardView(state, history = []) {
       hint: step.hint || '',
       optional: Boolean(step.optional),
       status: step.status,
-      options: await getStepOptions(step, history, STEP_OPTION_LIMIT),
+      options: await getStepOptions(step, history, STEP_OPTION_LIMIT, state),
     };
   }
 
@@ -453,6 +536,7 @@ async function getWizardView(state, history = []) {
     phase: 'steps',
     domainId: state.domainId,
     title: state.title,
+    requirements: state.requirements || {},
     steps,
     currentIndex: state.currentIndex,
     current,
@@ -484,8 +568,8 @@ async function buildFinalPackage(state, history = []) {
       missing.push(step.title);
       continue;
     }
-    const selectedCard = toCardPayload(product);
-    const fresh = (await getStepOptions(step, history, STEP_OPTION_LIMIT + 1))
+    const selectedCard = toCardPayload(product, { recommendedQty: sel.qty });
+    const fresh = (await getStepOptions(step, history, STEP_OPTION_LIMIT + 1, state))
       .filter((o) => o.id !== selectedCard.id && o.inStock)
       .slice(0, STEP_OPTION_LIMIT - 1);
     sections.push({
@@ -495,20 +579,28 @@ async function buildFinalPackage(state, history = []) {
       optional: Boolean(step.optional),
       options: [selectedCard, ...fresh].slice(0, STEP_OPTION_LIMIT),
       defaultId: selectedCard.id,
+      recommendedQty: sel.qty || 1,
     });
   }
   if (!sections.length) return null;
-  return { domainId: state.domainId, title: state.title, sections, missing };
+  return { domainId: state.domainId, title: state.title, sections, missing, requirements: state.requirements || {} };
 }
 
 /** متن grounding ویزارد برای LLM */
 function formatWizardContext(view) {
   if (!view || !view.active) return '';
   if (view.phase === 'needs') {
-    const qs = (view.needsQuestions || []).join(' / ');
-    return `** ویزارد پک «${view.title}» در فاز نیازسنجی است — هنوز هیچ گزینه‌ای نشان داده نشده و نباید هیچ محصولی معرفی کنی. `
-      + `فقط سوالات نیازسنجی را بپرس (در متن): ${qs || 'نیاز کاربر'}. `
-      + `برای هر سوال از قالب [[CHOICE:گزینه اول|گزینه دوم]] استفاده کن.**`;
+    const domain = WIZARD_DOMAINS.find((d) => d.id === view.domainId);
+    const qBlocks = (domain?.needs || []).map((n) => {
+      const choiceStr = Array.isArray(n.choices) && n.choices.length === 2
+        ? `\n[[CHOICE:${n.choices[0]}|${n.choices[1]}]]`
+        : '';
+      return `${n.q}${choiceStr}`;
+    });
+    return `** ویزارد پک «${view.title}» در فاز نیازسنجی است — هنوز هیچ گزینه‌ای نشان داده نشده و نباید هیچ محصولی (نه نام، نه قیمت) معرفی کنی. `
+      + `فقط سوالات نیازسنجی زیر را در متن بپرس تا کاربر با دکمه‌های آماده انتخاب کند:\n\n`
+      + qBlocks.join('\n\n')
+      + `\n\nبرای هر سوال دقیقاً از قالب دوگزینه‌ای [[CHOICE:گزینه اول|گزینه دوم]] در خط جداگانه استفاده کن و به هیچ وجه کالا یا قیمتی معرفی نکن.**`;
   }
   const lines = [`** وضعیت پک «${view.title}» (پیشرفت ${view.progress.done} از ${view.progress.total}) — پنل مرحله جداگانه نمایش داده می‌شود؛ انتخاب فقط با دکمه‌های پنل انجام می‌شود: **`];
   if (view.selections.length) {
@@ -516,7 +608,8 @@ function formatWizardContext(view) {
     view.selections.forEach((s) => {
       const priceFa = Number(s.product.price || 0).toLocaleString('fa-IR');
       const stockFa = s.product.inStock ? `موجود (${Number(s.product.countInStock || 0).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
-      lines.push(`  - [${s.stepTitle}] «${s.product.name}» | قیمت: ${priceFa} تومان | ${stockFa} | شناسه: ${s.product.id}`);
+      const qtyFa = Number(s.qty || 1).toLocaleString('fa-IR');
+      lines.push(`  - [${s.stepTitle}] «${s.product.name}» (تعداد: ${qtyFa} عدد) | قیمت واحد: ${priceFa} تومان | ${stockFa} | شناسه: ${s.product.id}`);
     });
   } else {
     lines.push('هنوز چیزی تأیید نشده است.');
@@ -525,7 +618,9 @@ function formatWizardContext(view) {
     lines.push(`مرحله فعلی: «${view.current.title}» — گزینه‌های همین مرحله (فقط همین‌ها را معرفی کن):`);
     view.current.options.filter((o) => o.inStock).slice(0, 4).forEach((o, i) => {
       const priceFa = Number(o.price || 0).toLocaleString('fa-IR');
-      lines.push(`  - ${i === 0 ? '(مرتب اول: تازه‌ترین قیمت) ' : ''}«${o.name}» | قیمت: ${priceFa} تومان | موجودی: ${Number(o.countInStock || 0).toLocaleString('fa-IR')} عدد`);
+      const hintStr = o.compatibilityHint ? ` [علت انتخاب مهندسی: ${o.compatibilityHint}]` : '';
+      const qtyStr = o.recommendedQty && o.recommendedQty > 1 ? ` (تعداد پیشنهادی: ${Number(o.recommendedQty).toLocaleString('fa-IR')} عدد)` : '';
+      lines.push(`  - ${i === 0 ? '(پیشنهاد اصلی مهندسی هوش مصنوعی) ' : ''}«${o.name}»${qtyStr} | قیمت واحد: ${priceFa} تومان | موجودی: ${Number(o.countInStock || 0).toLocaleString('fa-IR')} عدد${hintStr}`);
     });
   } else {
     lines.push('همه مرحله‌ها تمام شده‌اند؛ بسته نهایی جداگانه نمایش داده می‌شود. تبریک بگو و خلاصه کن.');

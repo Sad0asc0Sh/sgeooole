@@ -48,6 +48,8 @@ const chatHistorySchema = new mongoose.Schema({
         needsCredit: { type: Number, default: 0 },
         // شمارنده قطعی جواب‌های نیازسنجی (هر نوبت چت = یک جواب) — جایگزین مقایسه زمانی
         needsAnswers: { type: Number, default: 0 },
+        // نیازهای استخراج‌شده مهندسی (مثلاً تعداد دوربین، محیط، تکنولوژی)
+        requirements: { type: mongoose.Schema.Types.Mixed, default: {} },
         steps: { type: [stepSchema], default: [] },
         currentIndex: { type: Number, default: 0 },
         selections: { type: [selectionSchema], default: [] },

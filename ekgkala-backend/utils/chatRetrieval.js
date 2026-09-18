@@ -60,12 +60,19 @@ function extractKeywords(message, history = []) {
     .join(' ');
   const full = `${recentUser} ${message || ''}`;
   const norm = normalizeFa(full);
+  // واژه‌های عادی (حذف اعداد تک‌رقمی، اما نگه‌داشتن کدهای مدل مثل 1200، 5104، 1080)
   const tokens = norm
     .split(' ')
     .map((t) => t.trim())
-    .filter((t) => t.length >= 2 && t.length <= 40 && !FA_STOPWORDS.has(t) && !/^\d+$/.test(t));
-  const unique = [...new Set(tokens)];
-  return unique.slice(0, 8);
+    .filter((t) => t.length >= 2 && t.length <= 40 && !FA_STOPWORDS.has(t) && !/^\d{1,2}$/.test(t));
+
+  // استخراج کدهای مدل انگلیسی/اعداد مثل DH-HAC-HFW1200DP یا XVR5104
+  const codeTokens = (String(message || '').match(/[a-zA-Z0-9_-]{3,30}/g) || [])
+    .map((c) => c.trim().toLowerCase())
+    .filter((c) => !FA_STOPWORDS.has(c));
+
+  const unique = [...new Set([...codeTokens, ...tokens])];
+  return unique.slice(0, 10);
 }
 
 /** موجودی واقعی: simple → stock ، variable → جمع وрианت‌ها */
@@ -192,54 +199,89 @@ async function searchProducts(message, history = []) {
     matchedBrandIds = brands.map((b) => b._id);
   } catch { /* ignore */ }
 
-  // 3) کوئری اصلی روی چند فیلد
+  // 3) کوئری مستقیم روی چند فیلد (اولویت قطعی با تطابق دقیق واژه‌ها و کد محصول)
   const fieldOr = [];
   for (const kw of keywords) {
     const rx = { $regex: escapeRegex(kw), $options: 'i' };
     fieldOr.push({ name: rx });
+    fieldOr.push({ productCode: rx });
+    fieldOr.push({ sku: rx });
     fieldOr.push({ description: rx });
     fieldOr.push({ 'properties.value': rx });
     fieldOr.push({ 'properties.label': rx });
   }
 
-  const orConditions = [...fieldOr];
-  if (matchedCategoryIds.length) orConditions.push({ category: { $in: matchedCategoryIds } });
-  if (matchedBrandIds.length) orConditions.push({ brand: { $in: matchedBrandIds } });
+  const selectFields = 'name slug productCode sku description productType price compareAtPrice discount '
+    + 'priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand '
+    + 'rating numReviews guarantee salesCount updatedAt';
 
-  const raw = await Product.find({ isActive: true, $or: orConditions })
-    .populate('category', 'name slug')
-    .populate('brand', 'name slug')
-    .select('name slug productCode description productType price compareAtPrice discount priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand rating numReviews guarantee salesCount updatedAt')
-    .limit(30)
-    .lean();
+  // مرحله الف: جستجوی هدفمند با تطابق مستقیم کلمات کلیدی
+  let specificHits = [];
+  if (fieldOr.length > 0) {
+    specificHits = await Product.find({ isActive: true, $or: fieldOr })
+      .populate('category', 'name slug')
+      .populate('brand', 'name slug')
+      .select(selectFields)
+      .limit(50)
+      .lean();
+  }
 
-  // 4) امتیازدهی فارسی: تطبیق در نام ۳ امتیاز، دسته ۲، برند ۲، مشخصات ۱، توضیح ۱
+  // مرحله ب: اگر نتایج مستقیم کم بود، دسته‌بندی و برند را به صورت ثانویه اضافه کن (جلوگیری از خفه‌کردن نتایج دقیق توسط یک دسته بزرگ)
+  let broadHits = [];
+  if (specificHits.length < 15 && (matchedCategoryIds.length > 0 || matchedBrandIds.length > 0)) {
+    const secondaryOr = [];
+    if (matchedCategoryIds.length) secondaryOr.push({ category: { $in: matchedCategoryIds } });
+    if (matchedBrandIds.length) secondaryOr.push({ brand: { $in: matchedBrandIds } });
+    broadHits = await Product.find({ isActive: true, $or: secondaryOr })
+      .populate('category', 'name slug')
+      .populate('brand', 'name slug')
+      .select(selectFields)
+      .limit(30)
+      .lean();
+  }
+
+  // ادغام و یکتا کردن بدون تکرار
+  const seenIds = new Set();
+  const raw = [];
+  for (const p of [...specificHits, ...broadHits]) {
+    const idStr = String(p._id);
+    if (!seenIds.has(idStr)) {
+      seenIds.add(idStr);
+      raw.push(p);
+    }
+  }
+
+  // 4) امتیازدهی فارسی: تطبیق کد کالا ۵، نام ۴، دسته ۲، برند ۲، مشخصات ۱، توضیح ۱
   const normMsg = normalizeFa(message);
   const scored = raw.map((p) => {
     const normName = normalizeFa(p.name || '');
+    const normCode = normalizeFa(String(p.productCode || p.sku || ''));
     const normDesc = normalizeFa(p.description || '');
     const catName = normalizeFa((p.category && p.category.name) || '');
     const brandName = normalizeFa((p.brand && p.brand.name) || '');
     const specsText = normalizeFa(specList(p, 20).map((s) => `${s.label} ${s.value}`).join(' '));
     let score = 0;
     for (const kw of keywords) {
-      if (normName.includes(kw)) score += 3;
+      if (normCode.includes(kw)) score += 5; // تطابق کد کالا
+      if (normName.includes(kw)) score += 4;
       if (catName.includes(kw)) score += 2;
       if (brandName.includes(kw)) score += 2;
       if (specsText.includes(kw)) score += 1;
       if (normDesc.includes(kw)) score += 1;
     }
     // عبارت کامل هم بیاید → امتیاز ویژه
-    if (keywords.length >= 2 && normName.includes(normMsg.slice(0, 40))) score += 2;
+    if (keywords.length >= 2 && normName.includes(normMsg.slice(0, 40))) score += 4;
     return { p, score };
   })
     .filter((s) => s.score > 0)
     .sort((a, b) => {
-      // اول امتیاز، بعد موجودی، بعد پرفروش‌ها
-      if (b.score !== a.score) return b.score - a.score;
+      // اول کالاهای موجود
       const sb = effectiveStock(b.p);
       const sa = effectiveStock(a.p);
       if ((sb > 0) !== (sa > 0)) return sb > 0 ? 1 : -1;
+      // سپس امتیاز تطابق
+      if (b.score !== a.score) return b.score - a.score;
+      // سپس پرفروش‌ها
       return (b.p.salesCount || 0) - (a.p.salesCount || 0);
     })
     .slice(0, MAX_PRODUCTS)
@@ -274,7 +316,7 @@ function formatProductContext(products) {
 }
 
 /** پیلود کارت برای فرانت‌اند */
-function toCardPayload(p) {
+function toCardPayload(p, extra = {}) {
   const stock = effectiveStock(p);
   const price = finalPriceOf(p);
   const catName = (p.category && p.category.name) || 'عمومی';
@@ -302,6 +344,8 @@ function toCardPayload(p) {
     defaultVariantOptions: defaultVariantOptions(p),
     priceUpdatedAt: p.priceUpdatedAt || null,
     priceUpdateCount: Number(p.priceUpdateCount) || 0,
+    compatibilityHint: extra.compatibilityHint || '',
+    recommendedQty: extra.recommendedQty || 1,
   };
 }
 

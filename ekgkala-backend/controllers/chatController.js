@@ -30,6 +30,7 @@ const {
   buildFinalPackage,
   formatWizardContext,
 } = require('../utils/packWizard');
+const { parseCctvNeeds } = require('../utils/cctvEngine');
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 20;
@@ -194,8 +195,11 @@ async function preparePackWizard(message, chatSession, history = []) {
       out.wizardRestarted = true;
     }
 
-    // فاز نیازسنجی: هر نوبت چت دقیقاً یک جواب حساب می‌شود (شمارنده قطعی، بدون وابستگی به ساعت)
+    // فاز نیازسنجی: ثبت هوشمند پاسخ‌های کاربر و افزایش شمارنده
     if (wiz.active && wiz.phase === 'needs' && !out.wizardRestarted) {
+      if (wiz.domainId === 'camera') {
+        wiz.requirements = parseCctvNeeds(message, history, wiz.requirements || {});
+      }
       wiz.needsAnswers = (Number(wiz.needsAnswers) || 0) + 1;
       const given = wiz.needsAnswers + (Number(wiz.needsCredit) || 0);
       if (given >= needsRequiredFor(wiz.domainId)) {
@@ -253,6 +257,7 @@ async function buildChatContext(message, settings, userId = null, history = [], 
   const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
   // فاز نیازسنجی: هیچ محصولی — نه جست‌وجو، نه کانتکست، نه کارت — تا سوالات تمام شود
   const needsPhase = Boolean(wizardView && wizardView.phase === 'needs');
+  const stepsPhase = Boolean(wizardView && wizardView.phase === 'steps');
 
   let products = [];
   if (!needsPhase) {
@@ -265,10 +270,19 @@ async function buildChatContext(message, settings, userId = null, history = [], 
     }
   }
 
-  let productContext = needsPhase ? '' : formatProductContext(products);
+  // اگر ویزارد در فاز مرحله‌هاست و جست‌وجوی عمومی خالی بوده، متن متناقض «کالا در دیتابیس یافت نشد» را تزریق نکن
+  let productContext = '';
+  if (!needsPhase) {
+    if (products.length > 0) {
+      productContext = formatProductContext(products);
+    } else if (!stepsPhase) {
+      productContext = formatProductContext([]);
+    }
+  }
+
   if (wizardView) {
     const wizText = formatWizardContext(wizardView);
-    if (wizText) productContext = `${productContext}\n\n${wizText}`;
+    if (wizText) productContext = productContext ? `${productContext}\n\n${wizText}` : wizText;
   }
   const advisoryHint = isAdvisoryRequest(message);
   // در نوبت اول نیازسنجی کارت نشان نده؛ وقتی ویزارد فعال است هم پنل مرحله کافی است (عدم تکرار).
