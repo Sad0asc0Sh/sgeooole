@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { iransans } from "@/lib/fonts";
 import "./globals.css";
 import ClientLayout from "@/components/layout/ClientLayout";
@@ -14,6 +14,12 @@ import { Suspense } from "react";
 const PARSPACK_ENDPOINT =
   process.env.NEXT_PUBLIC_PARSPACK_ENDPOINT ||
   "https://c258565.parspack.net";
+
+export const viewport: Viewport = {
+  themeColor: "#f59e0b",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
   metadataBase: (() => {
@@ -36,9 +42,47 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "./",
   },
-  title: "ای‌کا‌جی کالا",
+  title: {
+    default: "ای کا جی کالا | ekgkala | فروشگاه اینترنتی",
+    template: "%s | ای کا جی کالا",
+  },
   description:
-    "خرید آنلاین با پیشنهادهای ویژه، تحویل سریع و تجربه کاربری روان",
+    "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب، تحویل سریع و تجربه خرید روان.",
+  keywords: [
+    "ای کا جی کالا",
+    "ekgkala",
+    "ای‌کا‌جی‌کالا",
+    "EKG KALA",
+    "ای کا جی کالا فروشگاه",
+    "فروشگاه اینترنتی ای کا جی کالا",
+    "خرید آنلاین",
+    "فروشگاه اینترنتی",
+  ],
+  openGraph: {
+    title: "ای کا جی کالا | ekgkala | فروشگاه اینترنتی",
+    description:
+      "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب و تحویل سریع.",
+    url: "./",
+    siteName: "ای کا جی کالا",
+    locale: "fa_IR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ای کا جی کالا | ekgkala | فروشگاه اینترنتی",
+    description:
+      "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب و تحویل سریع.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   other: {
     enamad: "46480007",
   },
@@ -53,6 +97,14 @@ export const metadata: Metadata = {
     apple: [
       { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "ای کا جی کالا",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
   },
 };
 
