@@ -12,7 +12,7 @@ export const contentType = "image/png";
 
 export default async function Image() {
   const fontData = await readFile(
-    join(process.cwd(), "public", "fonts", "iransan.woff2")
+    join(process.cwd(), "public", "fonts", "iransan.ttf")
   );
 
   return new ImageResponse(
