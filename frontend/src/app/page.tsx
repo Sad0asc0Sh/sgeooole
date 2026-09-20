@@ -105,9 +105,12 @@ export async function generateMetadata(): Promise<Metadata> {
   const description =
     "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب، تحویل سریع و تجربه خرید روان.";
   const canonicalUrl = SITE_URL ? `${SITE_URL}/` : "/";
-  // Only use the explicit OG image when configured; otherwise Next.js
-  // automatically serves the opengraph-image.tsx route.
-  const explicitOgImage = process.env.NEXT_PUBLIC_OG_IMAGE;
+  // Brand OG image: prefer the explicit env override; otherwise point at the
+  // /opengraph-image route (opengraph-image.tsx). Emitted explicitly because
+  // the live homepage was observed without any og:image / twitter:image meta.
+  const ogImageUrl =
+    process.env.NEXT_PUBLIC_OG_IMAGE ||
+    (SITE_URL ? `${SITE_URL}/opengraph-image` : "/opengraph-image");
   return {
     title: { absolute: title },
     description,
@@ -128,13 +131,15 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: "ای کا جی کالا",
       locale: "fa_IR",
       type: "website",
-      images: explicitOgImage ? [{ url: explicitOgImage }] : undefined,
+      images: [
+        { url: ogImageUrl, width: 1200, height: 630, alt: title },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: explicitOgImage ? [explicitOgImage] : undefined,
+      images: [ogImageUrl],
     },
   };
 }
