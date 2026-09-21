@@ -108,6 +108,7 @@ export const PERMISSIONS = {
   REPORT_READ_SALES: 'report:read_sales',
   REPORT_READ_PRODUCTS: 'report:read_products',
   REPORT_READ_CUSTOMERS: 'report:read_customers',
+  REPORT_READ_DELIVERED: 'report:read_delivered',
 
   // Dashboard
   DASHBOARD_VIEW: 'dashboard:view',

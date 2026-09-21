@@ -5,6 +5,7 @@ const {
   getSalesReports,
   getProductReports,
   getCustomerReports,
+  getDeliveredItemsReport,
 } = require('../controllers/reportController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
@@ -35,6 +36,14 @@ router.get(
   protect,
   checkPermission(PERMISSIONS.REPORT_READ_CUSTOMERS),
   getCustomerReports,
+)
+
+// GET /api/reports/delivered-items - تاریخچه اقلام تحویل‌شده به مشتریان
+router.get(
+  '/delivered-items',
+  protect,
+  checkPermission(PERMISSIONS.REPORT_READ_DELIVERED),
+  getDeliveredItemsReport,
 )
 
 module.exports = router

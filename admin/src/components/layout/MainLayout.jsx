@@ -85,6 +85,7 @@ function MainLayout({ children }) {
     '/reports/sales': PERMISSIONS.REPORT_READ_SALES,
     '/reports/products': PERMISSIONS.REPORT_READ_PRODUCTS,
     '/reports/customers': PERMISSIONS.REPORT_READ_CUSTOMERS,
+    '/reports/delivered-items': PERMISSIONS.REPORT_READ_DELIVERED,
     '/reports/audit-logs': PERMISSIONS.ADMIN_READ,
 
     '/settings': PERMISSIONS.SETTINGS_READ,
@@ -241,6 +242,10 @@ function MainLayout({ children }) {
           label: <Link to="/reports/customers">گزارش مشتریان</Link>,
         },
         {
+          key: '/reports/delivered-items',
+          label: <Link to="/reports/delivered-items">تاریخچه تحویل محصولات</Link>,
+        },
+        {
           key: '/reports/audit-logs',
           label: <Link to="/reports/audit-logs">گزارش عملکرد سیستم</Link>,
         },
@@ -323,6 +328,7 @@ function MainLayout({ children }) {
       '/reports/sales': '/reports',
       '/reports/products': '/reports',
       '/reports/customers': '/reports',
+      '/reports/delivered-items': '/reports',
       '/reports/audit-logs': '/reports',
     }
     // Check for exact match first, then prefix match

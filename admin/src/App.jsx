@@ -57,6 +57,7 @@ const AiProvidersPage = lazy(() => import('./pages/settings/AiProvidersPage'))
 const SalesReports = lazy(() => import('./pages/reports/SalesReports'))
 const ProductsReports = lazy(() => import('./pages/reports/ProductsReports'))
 const CustomersReports = lazy(() => import('./pages/reports/CustomersReports'))
+const DeliveredItemsReport = lazy(() => import('./pages/reports/DeliveredItemsReport'))
 const AuditLogs = lazy(() => import('./pages/reports/AuditLogs'))
 
 // Admins
@@ -387,6 +388,14 @@ function App() {
                       element={
                         <RequirePermission permission={PERMISSIONS.REPORT_READ_CUSTOMERS}>
                           <CustomersReports />
+                        </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/reports/delivered-items"
+                      element={
+                        <RequirePermission permission={PERMISSIONS.REPORT_READ_DELIVERED}>
+                          <DeliveredItemsReport />
                         </RequirePermission>
                       }
                     />

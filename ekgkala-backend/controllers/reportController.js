@@ -216,3 +216,175 @@ exports.getCustomerReports = async (req, res) => {
   }
 }
 
+
+// ============================================
+// GET /api/reports/delivered-items
+// تاریخچه اقلام تحویل‌شده به مشتریان
+// Query params:
+//   page, limit     → صفحه‌بندی (limit حداکثر 2000 برای خروجی گرفتن)
+//   startDate       → شروع بازه تحویل (ISO)
+//   endDate         → پایان بازه تحویل (ISO، تا انتهای روز)
+//   search          → جست‌وجو در کد سفارش، نام محصول، نام/تلفن/شهر مشتری
+// ============================================
+exports.getDeliveredItemsReport = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page, 10) || 1
+    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 2000)
+    const skip = (page - 1) * limit
+
+    const basePipeline = [{ $match: { orderStatus: 'Delivered' } }]
+
+    // تاریخ تحویل: deliveredAt در سفارش‌های قدیمی ممکن است خالی باشد → fallback به updatedAt
+    basePipeline.push({
+      $addFields: { deliveryDate: { $ifNull: ['$deliveredAt', '$updatedAt'] } },
+    })
+
+    // فیلتر بازه تاریخ تحویل
+    const startDate = parseDate(req.query.startDate, null)
+    let endDate = parseDate(req.query.endDate, null)
+    if (endDate) {
+      endDate = new Date(endDate)
+      endDate.setHours(23, 59, 59, 999)
+    }
+    const dateMatch = {}
+    if (startDate) dateMatch.$gte = startDate
+    if (endDate) dateMatch.$lte = endDate
+    if (Object.keys(dateMatch).length > 0) {
+      basePipeline.push({ $match: { deliveryDate: dateMatch } })
+    }
+
+    // جست‌وجو
+    const search = (req.query.search || '').trim()
+    if (search) {
+      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const rx = { $regex: escaped, $options: 'i' }
+      basePipeline.push({
+        $match: {
+          $or: [
+            { orderCode: rx },
+            { 'orderItems.name': rx },
+            { 'shippingAddress.fullName': rx },
+            { 'shippingAddress.phone': rx },
+            { 'shippingAddress.city': rx },
+          ],
+        },
+      })
+    }
+
+    const [result] = await Order.aggregate([
+      ...basePipeline,
+      {
+        $facet: {
+          // آمار کلی روی همان فیلترها (بدون صفحه‌بندی)
+          summary: [
+            { $unwind: '$orderItems' },
+            {
+              $group: {
+                _id: null,
+                totalRows: { $sum: 1 },
+                totalUnits: { $sum: '$orderItems.quantity' },
+                totalRevenue: {
+                  $sum: { $multiply: ['$orderItems.quantity', '$orderItems.price'] },
+                },
+                orders: { $addToSet: '$_id' },
+                customers: { $addToSet: '$user' },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                totalRows: 1,
+                totalUnits: 1,
+                totalRevenue: 1,
+                ordersCount: { $size: '$orders' },
+                customersCount: { $size: '$customers' },
+              },
+            },
+          ],
+          // ردیف‌های صفحه جاری (به‌تفکیک هر قلم سفارش)
+          items: [
+            { $sort: { deliveryDate: -1, createdAt: -1 } },
+            { $unwind: '$orderItems' },
+            { $skip: skip },
+            { $limit: limit },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'customer',
+              },
+            },
+            { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+            {
+              $project: {
+                _id: 0,
+                orderId: '$_id',
+                orderCode: 1,
+                deliveryDate: 1,
+                orderTotal: '$totalPrice',
+                productName: '$orderItems.name',
+                variantLabel: {
+                  $reduce: {
+                    input: { $ifNull: ['$orderItems.variantOptions', []] },
+                    initialValue: '',
+                    in: {
+                      $concat: [
+                        '$$value',
+                        { $cond: [{ $eq: ['$$value', ''] }, '', '، '] },
+                        '$$this.name',
+                        ': ',
+                        '$$this.value',
+                      ],
+                    },
+                  },
+                },
+                quantity: '$orderItems.quantity',
+                unitPrice: '$orderItems.price',
+                lineTotal: { $multiply: ['$orderItems.quantity', '$orderItems.price'] },
+                customerName: {
+                  $ifNull: ['$shippingAddress.fullName', '$customer.name'],
+                },
+                customerPhone: {
+                  $ifNull: ['$shippingAddress.phone', '$customer.mobile'],
+                },
+                customerCity: '$shippingAddress.city',
+              },
+            },
+          ],
+        },
+      },
+    ])
+
+    const summary = result?.summary?.[0] || {
+      totalRows: 0,
+      totalUnits: 0,
+      totalRevenue: 0,
+      ordersCount: 0,
+      customersCount: 0,
+    }
+    const items = result?.items || []
+    const totalItems = summary.totalRows || 0
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        summary,
+        pagination: {
+          currentPage: page,
+          itemsPerPage: limit,
+          totalItems,
+          totalPages: totalItems > 0 ? Math.ceil(totalItems / limit) : 0,
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error generating delivered items report:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در تهیه تاریخچه تحویل محصولات',
+      error: error.message,
+    })
+  }
+}

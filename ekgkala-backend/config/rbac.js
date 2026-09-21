@@ -119,6 +119,7 @@ const PERMISSIONS = {
     REPORT_READ_SALES: 'report:read_sales',
     REPORT_READ_PRODUCTS: 'report:read_products',
     REPORT_READ_CUSTOMERS: 'report:read_customers',
+    REPORT_READ_DELIVERED: 'report:read_delivered',
 
     // --- Dashboard Permissions ---
     DASHBOARD_VIEW: 'dashboard:view',
@@ -240,6 +241,7 @@ const ROLES = {
         PERMISSIONS.REPORT_READ_SALES,
         PERMISSIONS.REPORT_READ_PRODUCTS,
         PERMISSIONS.REPORT_READ_CUSTOMERS,
+        PERMISSIONS.REPORT_READ_DELIVERED,
         PERMISSIONS.DASHBOARD_VIEW,
 
         // Cache & Cart
@@ -342,6 +344,7 @@ const ROLES = {
         PERMISSIONS.REPORT_READ_SALES,
         PERMISSIONS.REPORT_READ_PRODUCTS,
         PERMISSIONS.REPORT_READ_CUSTOMERS,
+        PERMISSIONS.REPORT_READ_DELIVERED,
 
         // Dashboard & Cart
         PERMISSIONS.DASHBOARD_VIEW,
