@@ -81,12 +81,14 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
                     // Add price validity for rich results
                     priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
                 },
+                // Only emit aggregateRating with real review data — never fabricate
+                // a reviewCount (Google penalizes fake rich-result markup).
                 aggregateRating:
-                    product.rating > 0
+                    product.rating > 0 && (product.reviewCount || 0) > 0
                         ? {
                             "@type": "AggregateRating",
                             ratingValue: product.rating,
-                            reviewCount: product.reviewCount || 1,
+                            reviewCount: product.reviewCount,
                             bestRating: 5,
                             worstRating: 1,
                         }

@@ -70,7 +70,9 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     },
     robots: {
       index: indexable,
-      follow: indexable,
+      // noindex,follow (not nofollow): keep thin filtered/paginated pages out of
+      // the index but let link equity flow through to product pages.
+      follow: true,
     },
   };
 }

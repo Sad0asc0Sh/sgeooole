@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export const revalidate = 600;
 export const dynamicParams = true;
@@ -9,5 +9,6 @@ const encodeQueryValue = (value: string) => {
 };
 
 export default function BrandPage({ params }: { params: { slug: string } }) {
-    redirect(`/products?brand=${encodeQueryValue(params.slug)}`);
+    // Permanent consolidation: /brands/[slug] → canonical listing URL (308).
+    permanentRedirect(`/products?brand=${encodeQueryValue(params.slug)}`);
 }

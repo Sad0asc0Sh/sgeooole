@@ -12,7 +12,7 @@ export const Logo = ({ className }: LogoProps) => {
                 <source srcSet="/logo-text-dark.png" media="(prefers-color-scheme: dark)" />
                 <img
                     src="/logo-text.png"
-                    alt="EKGKala Logo"
+                    alt="ای کا جی کالا | ekgkala"
                     width={280}
                     height={100}
                     className="block h-full w-auto object-contain object-right"

@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import ProductDetailClient from "./ProductDetailClient";
@@ -124,10 +124,11 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         notFound();
     }
 
-    // If user accessed via old URL format and product has productCode, redirect to new SEO-friendly URL
+    // If user accessed via old URL format and product has productCode, permanently
+    // redirect (308) to the new SEO-friendly URL so ranking signals consolidate.
     if (!isNewFormat && (product as any).productCode) {
         const newUrl = buildProductUrl(product);
-        redirect(newUrl);
+        permanentRedirect(newUrl);
     }
 
     // Get product code - use stored productCode or generate from SKU/ID

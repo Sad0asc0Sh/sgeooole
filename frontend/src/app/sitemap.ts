@@ -1,8 +1,11 @@
 import type { MetadataRoute } from "next";
+import { buildProductUrl } from "@/lib/paths";
 
 type ProductItem = {
   _id: string;
+  id?: string;
   slug?: string;
+  productCode?: string;
   updatedAt?: string;
 };
 
@@ -83,6 +86,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.9,
     },
+    // Static trust/content pages (each has unique metadata)
+    ...["about", "contact", "faq", "terms"].map((page) => ({
+      url: `${SITE_URL}/${page}`,
+      lastModified: now,
+      changeFrequency: "monthly" as const,
+      priority: 0.5,
+    })),
   ];
 
   const categoryPages: MetadataRoute.Sitemap = categories.map((category) => {
@@ -95,22 +105,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  const productPages: MetadataRoute.Sitemap = products.map((product: any) => {
-    // Build product URL with categoryPath if available
-    const buildProductUrl = (p: any): string => {
-      const path = Array.isArray(p?.categoryPath)
-        ? p.categoryPath.map((c: any) => c.slug).filter(Boolean).join("/")
-        : "product";
-      return `${SITE_URL}/${path}/${p.slug || p._id || p.id}`;
-    };
-
-    return {
-      url: buildProductUrl(product),
-      lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    };
-  });
+  // NOTE: product URLs MUST use the shared buildProductUrl() so the sitemap
+  // lists the exact canonical URLs (lib/paths scheme: /product/{code}/{slug}).
+  // A previous local builder emitted /{categoryPath}/{slug} URLs which the
+  // [...slug] catch-all 307-redirects to the canonical form — Google does not
+  // index redirecting sitemap URLs ("Page with redirect" in Search Console).
+  const productPages: MetadataRoute.Sitemap = products
+    .filter((product) => product._id || product.id)
+    .map((product: ProductItem) => {
+      const urlPath = buildProductUrl({
+        id: product._id || product.id || "",
+        slug: product.slug,
+        productCode: product.productCode,
+      } as any);
+      return {
+        url: `${SITE_URL}${urlPath}`,
+        lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      };
+    });
 
   return [...staticPages, ...categoryPages, ...productPages];
 }

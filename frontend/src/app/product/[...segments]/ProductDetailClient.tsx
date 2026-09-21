@@ -336,7 +336,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                     {/* Title & Rating */}
                     <div className="flex justify-between items-start mb-1">
                         <div className="flex flex-col">
-                            <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
+                            <div className="text-base font-bold text-gray-900 leading-snug" role="heading" aria-level={1}>{product.title}</div>
                             {product.enTitle && (
                                 <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>
                             )}

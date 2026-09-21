@@ -17,7 +17,7 @@ export const revalidate = 60;
 const API_BASE = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
 
 type ApiResponse<T> = { data?: T };
@@ -151,6 +151,10 @@ export default async function Home() {
     fetchBanners(),
   ]);
 
+  // Never publish a fabricated phone number as factual data: contactPoint is
+  // emitted only when a real phone is configured via NEXT_PUBLIC_CONTACT_PHONE.
+  const contactPhone = (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim();
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -158,17 +162,21 @@ export default async function Home() {
         "@type": "Organization",
         name: "ای کا جی کالا",
         alternateName: ["ekgkala", "ای‌کا‌جی‌کالا", "EKG KALA", SITE_NAME],
-        url: SITE_URL || "/",
-        logo: SITE_URL ? `${SITE_URL}/logo.png` : "/logo.png",
+        url: SITE_URL,
+        logo: `${SITE_URL}/logo.png`,
         description:
           "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی با پیشنهادهای ویژه، قیمت مناسب و تحویل سریع.",
-        contactPoint: {
-          "@type": "ContactPoint",
-          contactType: "customer service",
-          telephone: process.env.NEXT_PUBLIC_CONTACT_PHONE || "+98-21-00000000",
-          areaServed: "IR",
-          availableLanguage: ["fa", "en"],
-        },
+        ...(contactPhone
+          ? {
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "customer service",
+                telephone: contactPhone,
+                areaServed: "IR",
+                availableLanguage: ["fa", "en"],
+              },
+            }
+          : {}),
         sameAs: (process.env.NEXT_PUBLIC_SOCIAL_LINKS || "")
           .split(",")
           .map((s) => s.trim())
@@ -178,11 +186,11 @@ export default async function Home() {
         "@type": "WebSite",
         name: "ای کا جی کالا",
         alternateName: ["ekgkala", "ای‌کا‌جی‌کالا"],
-        url: SITE_URL || "/",
+        url: SITE_URL,
         inLanguage: "fa",
         potentialAction: {
           "@type": "SearchAction",
-          target: `${SITE_URL || ""}/products?search={search_term_string}`,
+          target: `${SITE_URL}/products?search={search_term_string}`,
           "query-input": "required name=search_term_string",
         },
       },
