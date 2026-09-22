@@ -64,7 +64,7 @@ interface AddressFormState {
 }
 
 export default function CheckoutPage() {
-    const { cartItems, totalPrice, totalProfit, isEmpty } = useCart();
+    const { cartItems, totalPrice, totalProfit, isEmpty, revalidateCartPrices } = useCart();
 
     // Coupon State
     const [discount, setDiscount] = useState(0);
@@ -331,6 +331,13 @@ export default function CheckoutPage() {
         loadShippingMethods();
         loadAppliedCoupon();
     }, [loadUserData, loadShippingMethods, loadAppliedCoupon]);
+
+    // Live-price guard (mount only): refresh stored cart lines against current
+    // backend prices so the reviewed total can never be a stale cached snapshot.
+    useEffect(() => {
+        revalidateCartPrices().catch(() => { /* keep current cart offline */ });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Helper to split full name
     const splitName = (fullName: string) => {
@@ -614,9 +621,28 @@ export default function CheckoutPage() {
             };
 
             // Step 1: Create the order
+            // NOTE: the backend reprices every line from live DB data
+            // (current discounts/campaigns) and ignores client-sent prices,
+            // so a stale browser cache can never determine the charged amount.
             const response = await orderService.create(orderData);
 
             if (response.success && response.data) {
+                const serverTotal = Number(response.data.totalPrice);
+                // If the live total is HIGHER than the reviewed total (e.g. a
+                // discount expired mid-checkout), stop before the payment
+                // gateway and let the user review the updated prices instead
+                // of overcharging silently. A lower total proceeds normally
+                // (the user simply pays less than reviewed).
+                if (Number.isFinite(serverTotal) && serverTotal > finalTotalPrice) {
+                    localStorage.removeItem("appliedCoupon");
+                    setError("قیمت برخی کالاها به‌روز شده است؛ مبالغ جدید را بررسی و دوباره تلاش کنید.");
+                    try {
+                        await revalidateCartPrices();
+                    } catch { /* keep current cart */ }
+                    setIsSubmitting(false);
+                    return;
+                }
+
                 // Clear coupon from localStorage upon successful order creation
                 localStorage.removeItem("appliedCoupon");
                 const orderId = response.data._id;
@@ -645,6 +671,15 @@ export default function CheckoutPage() {
         } catch (err: any) {
             console.error("[CHECKOUT] Error placing order:", err);
             setError(err.message || "خطا در ثبت سفارش");
+            // If the server rejected the coupon (expired/overused between
+            // validation and order creation), drop it locally and refresh
+            // prices so the user can retry with one click.
+            if (typeof err?.message === "string" && err.message.includes("کد تخفیف")) {
+                handleRemoveCoupon();
+                try {
+                    await revalidateCartPrices();
+                } catch { /* keep current cart */ }
+            }
         } finally {
             // Keep the loading state only while the browser is leaving for the gateway.
             if (!redirectingToGateway) {

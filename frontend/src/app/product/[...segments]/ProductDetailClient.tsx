@@ -18,6 +18,25 @@ type ProductDetailClientProps = {
     product: Product;
 };
 
+// Fingerprint of every field that affects the displayed price / promotion.
+// Used to detect that a *new snapshot of the same product* arrived
+// (e.g. Next.js served a fresh RSC payload after an admin discount edit)
+// even though the product id did not change.
+const pricingFingerprint = (p: Product) =>
+    JSON.stringify([
+        p.price,
+        p.oldPrice ?? null,
+        p.compareAtPrice ?? null,
+        p.discount ?? 0,
+        p.campaignLabel ?? null,
+        p.campaignTheme ?? null,
+        Boolean(p.isFlashDeal),
+        p.flashDealEndTime ?? null,
+        Boolean(p.isSpecialOffer),
+        p.specialOfferEndTime ?? null,
+        p.countInStock ?? null,
+    ]);
+
 export default function ProductDetailClient({ product: initialProduct }: ProductDetailClientProps) {
     // Disable scroll restoration for product detail pages - always start at top
     useDisableScrollRestoration();
@@ -34,7 +53,10 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         product.colors && product.colors.length > 0 ? product.colors[0] : null
     );
 
-    // Sync state only when product ID changes (route transitions)
+    // Sync state when navigating between products AND when a newer snapshot
+    // of the SAME product arrives (price/discount changed on the server).
+    // Previously only the id was compared, so a cached (pre-discount) price
+    // stayed on screen until a hard refresh.
     useEffect(() => {
         if (initialProduct.id !== product.id) {
             setProduct(initialProduct);
@@ -44,8 +66,46 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             } else {
                 setSelectedColor(null);
             }
+        } else if (pricingFingerprint(initialProduct) !== pricingFingerprint(product)) {
+            // Same product, fresher pricing snapshot: keep the selected color.
+            setProduct(initialProduct);
         }
-    }, [initialProduct, product.id]);
+    }, [initialProduct, product]);
+
+    // Live-price guard: the SSR/ISR snapshot above can be up to `revalidate`
+    // seconds old (plus Next.js router cache on client-side navigation).
+    // Fetch the current snapshot in the background right after mount and
+    // whenever the tab becomes visible again, so a discount applied from the
+    // admin panel appears without requiring a manual refresh. Failures are
+    // ignored on purpose: the SSR snapshot stays visible.
+    useEffect(() => {
+        let cancelled = false;
+
+        const refreshLivePrice = async () => {
+            try {
+                const { productService } = await import("@/services/productService");
+                const fresh = await productService.getById(initialProduct.id);
+                if (cancelled || !fresh || fresh.id !== initialProduct.id) return;
+                setProduct((prev) => {
+                    if (prev.id !== fresh.id) return prev;
+                    return pricingFingerprint(prev) === pricingFingerprint(fresh) ? prev : fresh;
+                });
+            } catch {
+                // Keep the SSR snapshot when offline or when the backend is unreachable.
+            }
+        };
+
+        refreshLivePrice();
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "visible") refreshLivePrice();
+        };
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        return () => {
+            cancelled = true;
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+        };
+    }, [initialProduct.id]);
 
     // Memoize flash deal status
     const isFlashDealActive = useMemo(() => 

@@ -4,7 +4,7 @@ import { authService } from "@/services/authService";
 import { resolvePricing } from "@/lib/pricing";
 
 export const useCart = () => {
-  const { initialized, refreshCart, cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartConfig } = useCartStore();
+  const { initialized, refreshCart, revalidateCartPrices, cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartConfig } = useCartStore();
   const isAuthenticated = authService.isAuthenticated();
   const [now, setNow] = useState(() => Date.now());
 
@@ -105,6 +105,7 @@ export const useCart = () => {
     removeFromCart,
     clearCart,
     refreshCart,
+    revalidateCartPrices,
     refreshCartConfig: () => {},
     isInCart,
     getItemQuantity,

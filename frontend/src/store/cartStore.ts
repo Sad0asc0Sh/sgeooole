@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { cartService, CartItem } from "@/services/cartService";
 import { authService } from "@/services/authService";
-import { Product } from "@/services/productService";
+import { Product, productService } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
 import { settingsService } from "@/services/settingsService";
 import {
@@ -85,6 +85,14 @@ interface CartState {
 
     refreshCart: () => Promise<void>;
     refreshCartConfig: () => Promise<CartConfig>;
+    /**
+     * Revalidate stored cart prices against live backend data.
+     * - Authenticated: pulls the server-priced cart (source of truth).
+     * - Guest: re-fetches every product and rewrites stale snapshot prices
+     *   (e.g. a discount applied after the item was added).
+     * Safe to call on cart/checkout mount; failures keep the current cart.
+     */
+    revalidateCartPrices: () => Promise<void>;
     addToCart: (product: Product, quantity?: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     updateQuantity: (productId: string, quantity: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     removeFromCart: (productId: string, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
@@ -417,10 +425,87 @@ export const useCartStore = create<CartState>((set, get) => ({
         }
     },
 
+    revalidateCartPrices: async () => {
+        const isAuthenticated = authService.isAuthenticated();
+
+        // Authenticated carts are priced by the server on every read.
+        if (isAuthenticated) {
+            try {
+                const response = await cartService.getCart();
+                if (response.success && response.data) {
+                    applyServerCartIfNewer(set, get, response.data);
+                }
+            } catch {
+                // Offline/backend unreachable: keep the current cart.
+            }
+            return;
+        }
+
+        // Guest carts live only in localStorage and would otherwise keep a
+        // stale (pre-discount) snapshot forever. Refresh each line from the
+        // live product record; keep the old line if its product is gone.
+        const { cartItems } = get();
+        if (cartItems.length === 0) return;
+
+        const refreshed = await Promise.all(
+            cartItems.map(async (item) => {
+                try {
+                    const fresh = await productService.getById(item.id);
+                    if (!fresh || String(fresh.id) !== String(item.id)) return item;
+
+                    const pricing = resolvePricing({
+                        price: fresh.price,
+                        discount: fresh.discount,
+                        compareAtPrice: fresh.compareAtPrice || (fresh as any).oldPrice,
+                        isFlashDeal: fresh.isFlashDeal,
+                        flashDealEndTime: (fresh as any).flashDealEndTime,
+                        isSpecialOffer: fresh.isSpecialOffer,
+                        specialOfferEndTime: (fresh as any).specialOfferEndTime,
+                        campaignLabel: fresh.campaignLabel,
+                        now: Date.now(),
+                    });
+
+                    return {
+                        ...item,
+                        name: fresh.title || item.name,
+                        price: pricing.finalPrice,
+                        originalPrice: pricing.basePrice,
+                        image: fresh.images?.[0] || item.image,
+                        discount: pricing.discount,
+                        compareAtPrice: fresh.compareAtPrice,
+                        isFlashDeal: fresh.isFlashDeal,
+                        flashDealEndTime: (fresh as any).flashDealEndTime,
+                        isSpecialOffer: fresh.isSpecialOffer,
+                        specialOfferEndTime: (fresh as any).specialOfferEndTime,
+                        campaignLabel: fresh.campaignLabel,
+                    };
+                } catch {
+                    return item;
+                }
+            })
+        );
+
+        saveLocalCart(refreshed, get().cartConfig);
+        set({ cartItems: refreshed });
+    },
+
     addToCart: async (product, quantity = 1, variantOptions) => {
         const isAuthenticated = authService.isAuthenticated();
         const { cartItems } = get();
         const safeQty = Math.max(1, Number(quantity) || 1);
+
+        // Live-price guard: the rendered `product` snapshot may be stale
+        // (ISR / router cache from before a discount was applied). Fetch the
+        // current record so the cart always stores the live price. On failure
+        // (offline/backend down) fall back to the rendered snapshot.
+        try {
+            const fresh = await productService.getById(String(product.id));
+            if (fresh && String(fresh.id) === String(product.id)) {
+                product = fresh;
+            }
+        } catch {
+            // keep rendered snapshot
+        }
 
         try {
             if (isAuthenticated) {

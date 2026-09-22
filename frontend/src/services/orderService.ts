@@ -91,6 +91,12 @@ export interface Order {
 interface OrderResponse {
   success: boolean;
   message?: string;
+  /**
+   * True when the backend repriced the order from live DB data because the
+   * client-sent prices differed (stale browser cache / fresh discount).
+   * The charged amount (`data.totalPrice`) is always the live price.
+   */
+  priceAdjusted?: boolean;
   data?: Order;
 }
 

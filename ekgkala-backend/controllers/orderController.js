@@ -3,6 +3,71 @@ const Cart = require('../models/Cart')
 const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
+const {
+  computeItemPricing,
+  getActiveSalesCampaignContext,
+  normalizeVariantOptions,
+} = require('../services/pricingService')
+
+// ============================================
+// Helper: Reprice order items from DB (live prices)
+// NEVER trust item prices sent by the client: the browser may hold a stale
+// (cached, pre-discount) price. Recompute every line from the current
+// Product document + active sales campaigns so the charged amount is always
+// the live price. Returns { items, itemsPrice, priceAdjusted }.
+// ============================================
+const repriceOrderItemsFromDb = async (orderItems) => {
+  const Product = require('../models/Product')
+  const now = new Date()
+  const campaignContext = await getActiveSalesCampaignContext(now)
+
+  let priceAdjusted = false
+  const repriced = []
+
+  for (const item of orderItems) {
+    const product = await Product.findById(item.product).lean()
+    if (!product || product.isActive === false) {
+      const err = new Error(`محصول «${item.name || 'نامشخص'}» موجود نیست یا غیرفعال شده است`)
+      err.statusCode = 400
+      throw err
+    }
+
+    const variantOptions = normalizeVariantOptions(item.variantOptions)
+    const pricing = computeItemPricing(
+      { product, quantity: item.quantity, variantOptions },
+      now,
+      campaignContext,
+    )
+
+    const serverPrice = Math.round(Number(pricing.finalPrice) || 0)
+    const serverOriginal = Math.round(Number(pricing.basePrice) || serverPrice)
+    if (Number(item.price) !== serverPrice) priceAdjusted = true
+
+    let image = item.image
+    if (Array.isArray(product.images) && product.images.length > 0) {
+      const first = product.images[0]
+      image = typeof first === 'string' ? first : (first?.url || image)
+    }
+
+    repriced.push({
+      product: product._id,
+      name: product.name || item.name,
+      quantity: Math.max(1, Number(item.quantity) || 1),
+      image,
+      price: serverPrice,
+      originalPrice: serverOriginal,
+      discount: Number(pricing.discount) || 0,
+      variantOptions,
+    })
+  }
+
+  const itemsPrice = repriced.reduce((sum, it) => sum + it.price * it.quantity, 0)
+  const productSavings = repriced.reduce(
+    (sum, it) => sum + Math.max(0, (it.originalPrice - it.price)) * it.quantity,
+    0,
+  )
+  return { items: repriced, itemsPrice, productSavings, priceAdjusted }
+}
 
 // Helper for converting Persian/Arabic digits to English
 const convertPersianToEnglishDigits = (str) => {
@@ -236,19 +301,61 @@ exports.createOrder = async (req, res) => {
       })
     }
 
+    // CRITICAL: Recompute all item prices from the live DB state (current
+    // discounts/campaigns). Client-sent prices may be stale (browser cache)
+    // and must never determine the charged amount.
+    let serverItems
+    let serverItemsPrice
+    let serverProductSavings
+    let priceAdjusted = false
+    try {
+      const repriced = await repriceOrderItemsFromDb(orderItems)
+      serverItems = repriced.items
+      serverItemsPrice = repriced.itemsPrice
+      serverProductSavings = repriced.productSavings
+      priceAdjusted = repriced.priceAdjusted
+    } catch (repriceErr) {
+      return res.status(repriceErr.statusCode || 400).json({
+        success: false,
+        message: repriceErr.message || 'خطا در محاسبه قیمت سفارش',
+      })
+    }
+
+    // Server-side coupon validation against the LIVE items total.
+    // The client discount is ignored: it may be stale or tampered with.
+    let effectiveCouponDiscount = 0
+    if (couponCode) {
+      const Coupon = require('../models/Coupon')
+      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase() })
+      if (!coupon || !coupon.isValid()) {
+        return res.status(400).json({
+          success: false,
+          message: 'کد تخفیف نامعتبر یا منقضی شده است؛ لطفاً آن را حذف و دوباره تلاش کنید.',
+        })
+      }
+      effectiveCouponDiscount = Math.max(
+        0,
+        Math.min(Number(coupon.calculateDiscount(serverItemsPrice)) || 0, serverItemsPrice),
+      )
+    }
+    const serverTotalPrice = Math.max(
+      0,
+      Math.round(serverItemsPrice + (Number(finalShippingPrice) || 0) + (Number(taxPrice) || 0) - effectiveCouponDiscount),
+    )
+
     // ایجاد سفارش
     const order = new Order({
       user: userId,
-      orderItems,
+      orderItems: serverItems,
       shippingAddress,
       paymentMethod: 'online',
-      itemsPrice,
+      itemsPrice: serverItemsPrice,
       shippingPrice: finalShippingPrice,
       shippingMethod: finalShippingMethod,
       fulfillmentType: isMashhadSpecialPickup ? MASHHAD_SPECIAL_PICKUP : 'shipping',
       taxPrice: taxPrice || 0,
-      totalPrice,
-      totalDiscount: totalDiscount || 0,
+      totalPrice: serverTotalPrice,
+      totalDiscount: Math.round(serverProductSavings + effectiveCouponDiscount),
       couponCode: couponCode ? String(couponCode).toUpperCase() : undefined,
       orderStatus: 'Pending',
     })
@@ -279,7 +386,10 @@ exports.createOrder = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'سفارش با موفقیت ثبت شد',
+      message: priceAdjusted
+        ? 'قیمت برخی کالاها از زمان مشاهده شما به‌روز شده و سفارش با قیمت‌های لحظه‌ای ثبت شد'
+        : 'سفارش با موفقیت ثبت شد',
+      priceAdjusted,
       data: createdOrder,
     })
   } catch (error) {
@@ -1075,18 +1185,39 @@ exports.createOrderForUser = async (req, res) => {
       })
     }
 
+    // Admin-created orders are repriced from live DB state as well, so the
+    // charged amount can never be based on a stale admin-panel snapshot.
+    let serverAdminItems
+    let serverAdminItemsPrice
+    let serverAdminSavings = 0
+    try {
+      const repriced = await repriceOrderItemsFromDb(orderItems)
+      serverAdminItems = repriced.items
+      serverAdminItemsPrice = repriced.itemsPrice
+      serverAdminSavings = repriced.productSavings
+    } catch (repriceErr) {
+      return res.status(repriceErr.statusCode || 400).json({
+        success: false,
+        message: repriceErr.message || 'خطا در محاسبه قیمت سفارش',
+      })
+    }
+    const serverAdminTotal = Math.max(
+      0,
+      Math.round(serverAdminItemsPrice + (Number(shippingPrice) || 0) + (Number(taxPrice) || 0)),
+    )
+
     // ایجاد سفارش
     const order = new Order({
       user: userId,
-      orderItems,
+      orderItems: serverAdminItems,
       shippingAddress,
       paymentMethod: 'online',
-      itemsPrice,
+      itemsPrice: serverAdminItemsPrice,
       shippingPrice,
       shippingMethod,
       taxPrice: taxPrice || 0,
-      totalPrice,
-      totalDiscount: totalDiscount || 0,
+      totalPrice: serverAdminTotal,
+      totalDiscount: Math.round(serverAdminSavings),
       orderStatus: 'Pending',
       adminNotes: adminNotes || '',
       isPaid: false, // Default not paid

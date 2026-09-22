@@ -12,7 +12,7 @@ import { useState, useEffect } from "react";
 
 export default function CartPage() {
     const router = useRouter();
-    const { cartItems, loading, updateQuantity, removeFromCart, totalPrice, totalOriginalPrice, isEmpty } = useCart();
+    const { cartItems, loading, updateQuantity, removeFromCart, totalPrice, totalOriginalPrice, isEmpty, revalidateCartPrices } = useCart();
 
     // Coupon State
     const [discount, setDiscount] = useState(0);
@@ -20,6 +20,14 @@ export default function CartPage() {
     const [couponLoading, setCouponLoading] = useState(false);
     const [couponError, setCouponError] = useState<string | null>(null);
     const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
+
+    // Live-price guard: stored cart lines (esp. guest localStorage) may hold
+    // a pre-discount snapshot. Revalidate once on entry so the user always
+    // sees current prices without needing a manual refresh.
+    useEffect(() => {
+        revalidateCartPrices();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Load initial coupon if saved in localStorage
     useEffect(() => {
