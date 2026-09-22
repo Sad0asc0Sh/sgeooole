@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { buildProductUrl } from "@/lib/paths";
+import { getAllProgrammaticUrls, PROGRAMMATIC_SECTIONS } from "@/content/programmatic";
 
 type ProductItem = {
   _id: string;
@@ -93,7 +94,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.5,
     })),
+    // Programmatic SEO hubs (guides / glossary / compare)
+    ...Object.values(PROGRAMMATIC_SECTIONS).map((section) => ({
+      url: `${SITE_URL}${section.path}`,
+      lastModified: now,
+      changeFrequency: section.changeFrequency,
+      priority: section.priority,
+    })),
   ];
+
+  // Programmatic SEO pages: content-driven, build-time validated slugs.
+  // Separate logical section per the indexation strategy (guides first).
+  const programmaticPages: MetadataRoute.Sitemap = getAllProgrammaticUrls().map((entry) => ({
+    url: `${SITE_URL}${entry.url}`,
+    lastModified: entry.lastModified ? new Date(entry.lastModified) : now,
+    changeFrequency: entry.changeFrequency,
+    priority: entry.priority,
+  }));
 
   const categoryPages: MetadataRoute.Sitemap = categories.map((category) => {
     const slug = category.slug || category._id;
@@ -126,5 +143,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-  return [...staticPages, ...categoryPages, ...productPages];
+  return [...staticPages, ...programmaticPages, ...categoryPages, ...productPages];
 }

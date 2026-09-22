@@ -213,6 +213,9 @@ function Footer() {
                                 <ul className="space-y-3">
                                     {[
                                         { href: "/products", label: "محصولات" },
+                                        { href: "/guides", label: "راهنمای خرید" },
+                                        { href: "/compare", label: "مقایسه‌ها" },
+                                        { href: "/glossary", label: "واژه‌نامه" },
                                         { href: "/blog", label: "بلاگ" },
                                         { href: "/about", label: "درباره ما" },
                                         { href: "/contact", label: "تماس با ما" },
