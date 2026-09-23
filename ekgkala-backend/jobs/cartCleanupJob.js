@@ -4,8 +4,22 @@
  * هر 5 دقیقه اجرا می‌شود
  */
 const Cart = require('../models/Cart')
+const Settings = require('../models/Settings')
 
 let isRunning = false
+
+async function getCartCleanupSettings() {
+    try {
+        const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+        return {
+            autoExpireEnabled: settings?.cartSettings?.autoExpireEnabled !== false,
+            permanentCart: settings?.cartSettings?.permanentCart || false,
+        }
+    } catch (error) {
+        console.error('[CART_CLEANUP_JOB] Error fetching settings:', error.message)
+        return { autoExpireEnabled: true, permanentCart: false }
+    }
+}
 
 /**
  * Main cleanup function
@@ -20,6 +34,14 @@ async function cleanupExpiredCarts() {
     isRunning = true
 
     try {
+        // احترام به تنظیمات ادمین: اگر انقضای خودکار خاموش یا سبد ماندگار است، پاکسازی نکن
+        const cleanupSettings = await getCartCleanupSettings()
+        if (cleanupSettings.permanentCart || !cleanupSettings.autoExpireEnabled) {
+            console.log('[CART_CLEANUP_JOB] Skipped (permanentCart or autoExpire disabled in settings)')
+            isRunning = false
+            return
+        }
+
         const now = new Date()
 
         // پیدا کردن سبدهای منقضی شده که هنوز فعال هستند

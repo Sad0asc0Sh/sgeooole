@@ -382,7 +382,7 @@ exports.getMyCart = async (req, res) => {
   try {
     const userId = req.user._id
 
-    const cart = await Cart.findOne({ user: userId, status: 'active' }).select('_id couponCode')
+    const cart = await Cart.findOne({ user: userId, status: 'active' }).select('_id couponCode expiresAt isExpired')
 
     if (!cart) {
       return res.json({
@@ -393,6 +393,27 @@ exports.getMyCart = async (req, res) => {
           version: 0,
         },
       })
+    }
+
+    // انقضای تنبل (lazy expiry): اگر کرون اجرا نشده باشد، همین‌جا سبد منقضی را خالی کن
+    // تا رفتار کاربر با پنل ادمین (تنظیم 24 ساعت) هماهنگ شود. کم‌ریسک: فقط وقتی expiresAt گذشته باشد.
+    if (cart.expiresAt && new Date() > new Date(cart.expiresAt) && !cart.isExpired) {
+      const lazySettings = await getCartSettings()
+      if (!lazySettings.permanentCart && lazySettings.autoExpireEnabled) {
+        await Cart.updateOne(
+          { _id: cart._id },
+          { $set: { isExpired: true, status: 'expired', items: [], totalPrice: 0 } },
+        )
+        return res.json({
+          success: true,
+          data: {
+            items: [],
+            totalPrice: 0,
+            version: 0,
+            expired: true,
+          },
+        })
+      }
     }
 
     const pricedCart = await buildCartResponse(cart._id, { updateStoredTotal: true })
@@ -499,6 +520,20 @@ exports.syncCart = async (req, res) => {
 
     // محاسبه و ذخیره
     cart.calculateTotal()
+    // همگام‌سازی انقضا با تنظیمات ادمین (رفع باگ سبدهای جاودانه از مسیر sync)
+    const syncCartSettings = await getCartSettings()
+    if (syncCartSettings.permanentCart) {
+      cart.expiresAt = null
+      cart.isExpired = false
+      cart.expiryWarningSent = false
+    } else if (syncCartSettings.autoExpireEnabled) {
+      cart.setExpiry(syncCartSettings.ttlHours)
+      cart.expiryWarningSent = false
+    } else {
+      // انقضای خودکار خاموش است -> تایمر قبلی را پاک کن
+      cart.expiresAt = null
+      cart.isExpired = false
+    }
     cart.version = (Number(cart.version) || 0) + 1
     await cart.save()
 
@@ -601,6 +636,9 @@ exports.adjustItemQuantity = async (req, res) => {
       expiryUpdate.expiresAt = new Date(Date.now() + cartSettings.ttlHours * 60 * 60 * 1000)
       expiryUpdate.isExpired = false
       expiryUpdate.expiryWarningSent = false
+    } else {
+      expiryUpdate.expiresAt = null
+      expiryUpdate.isExpired = false
     }
 
     // Ensure cart exists (single doc per user)
@@ -955,6 +993,10 @@ exports.addOrUpdateItem = async (req, res) => {
       // سبد با مهلت زمانی
       cart.setExpiry(cartSettings.ttlHours)
       cart.expiryWarningSent = false // Reset warning flag on cart update
+    } else {
+      // انقضای خودکار خاموش است -> تایمر قبلی را پاک کن تا با تنظیمات هماهنگ باشد
+      cart.expiresAt = null
+      cart.isExpired = false
     }
 
     cart.version = (Number(cart.version) || 0) + 1
@@ -1178,9 +1220,10 @@ exports.cleanupExpiredCarts = async (req, res) => {
       isExpired: false,
     })
 
-    // علامت‌گذاری به عنوان منقضی شده
+    // علامت‌گذاری به عنوان منقضی شده (هماهنگ با cartCleanupJob: status هم expired می‌شود)
     const updatePromises = expiredCarts.map(cart => {
       cart.isExpired = true
+      cart.status = 'expired'
       cart.items = [] // پاک کردن آیتم‌ها
       cart.totalPrice = 0
       return cart.save()
