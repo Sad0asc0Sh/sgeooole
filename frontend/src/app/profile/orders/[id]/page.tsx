@@ -128,21 +128,33 @@ export default function OrderDetailsPage() {
     const isCancelled = order.orderStatus === 'Cancelled';
 
     return (
-        <div className="min-h-screen bg-gray-50 pb-24">
-            {/* Header */}
-            <div className="bg-white p-4 shadow-sm sticky top-0 z-10 flex items-center gap-3 md:static">
-                <Link href="/profile/orders" className="p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                    <ChevronRight size={24} />
-                </Link>
-                <h1 className="font-bold text-lg text-gray-800">جزئیات سفارش</h1>
+        <div className="min-h-screen bg-gray-50 pb-24 lg:pb-12">
+            <div className="lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-8">
+            {/* Header: sticky app-bar on mobile, page card on desktop */}
+            <div className="bg-white p-4 lg:p-6 shadow-sm sticky top-0 z-10 md:static lg:rounded-2xl lg:border lg:border-gray-100 lg:shadow-sm lg:mb-6">
+                <nav className="hidden lg:flex items-center gap-1.5 text-xs text-gray-400 mb-3">
+                    <Link href="/profile" className="hover:text-kala-600 transition-colors">حساب کاربری</Link>
+                    <ChevronRight size={14} className="rotate-180 shrink-0" />
+                    <Link href="/profile/orders" className="hover:text-kala-600 transition-colors">سفارش‌های من</Link>
+                    <ChevronRight size={14} className="rotate-180 shrink-0" />
+                    <span className="text-gray-700 font-bold">جزئیات سفارش</span>
+                </nav>
+                <div className="flex items-center gap-3">
+                    <Link href="/profile/orders" className="lg:hidden p-2 -mr-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                        <ChevronRight size={24} />
+                    </Link>
+                    <h1 className="font-bold text-lg lg:text-xl lg:font-black text-gray-800">جزئیات سفارش</h1>
+                </div>
             </div>
 
-            <div className="p-4 space-y-4">
+            <div className="p-4 lg:p-0 grid gap-4 lg:gap-6 lg:grid-cols-12 items-start">
+                {/* ── Main column: tracker + tracking + items ── */}
+                <div className="lg:col-span-8 space-y-4 lg:space-y-6 min-w-0">
                 {/* Status Tracker */}
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <div className="flex justify-between items-center mb-6">
-                        <span className="text-sm font-bold text-gray-700">کد سفارش: <span className="font-mono text-gray-900">{order.orderCode || order._id.slice(-6).toUpperCase()}</span></span>
-                        <span className="text-xs text-gray-400 font-mono">{new Date(order.createdAt).toLocaleDateString('fa-IR')}</span>
+                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
+                    <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
+                        <span className="text-sm font-bold text-gray-700">کد سفارش: <span className="font-mono text-gray-900" dir="ltr">{order.orderCode || order._id.slice(-6).toUpperCase()}</span></span>
+                        <span className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString('fa-IR')}</span>
                     </div>
 
                     {isCancelled ? (
@@ -152,10 +164,10 @@ export default function OrderDetailsPage() {
                     ) : (
                         <div className="relative pt-2 pb-1">
                             {/* Progress Bar Background */}
-                            <div className="absolute top-[18px] left-[12.5%] right-[12.5%] h-1 bg-gray-100 rounded-full z-0" />
+                            <div className="absolute top-[18px] lg:top-[22px] left-[12.5%] right-[12.5%] h-1 bg-gray-100 rounded-full z-0" />
                             {/* Active Progress Bar */}
                             <div
-                                className="absolute top-[18px] right-[12.5%] h-1 bg-gradient-to-l from-kala-500 to-amber-500 rounded-full z-0 transition-all duration-500"
+                                className="absolute top-[18px] lg:top-[22px] right-[12.5%] h-1 bg-gradient-to-l from-kala-500 to-amber-500 rounded-full z-0 transition-all duration-500"
                                 style={{ width: `${(currentStepIndex / (steps.length - 1)) * 75}%` }}
                             />
 
@@ -168,7 +180,7 @@ export default function OrderDetailsPage() {
                                     return (
                                         <div key={idx} className="flex flex-col items-center text-center w-1/4">
                                             {/* Circle Icon Wrapper */}
-                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                                            <div className={`w-9 h-9 lg:w-11 lg:h-11 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                                                 isCurrent
                                                     ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-200 ring-4 ring-amber-100'
                                                     : isActive
@@ -178,7 +190,7 @@ export default function OrderDetailsPage() {
                                                 <Icon size={16} />
                                             </div>
                                             {/* Text Label */}
-                                            <span className={`mt-2.5 text-[11px] sm:text-xs font-bold leading-snug text-center px-0.5 ${
+                                            <span className={`mt-2.5 text-[11px] sm:text-xs lg:text-[13px] font-bold leading-snug text-center px-0.5 ${
                                                 isCurrent
                                                     ? 'text-kala-700 font-black'
                                                     : isActive
@@ -196,7 +208,7 @@ export default function OrderDetailsPage() {
 
                     {/* Tracking Code Section - Enhanced & Responsive */}
                     {(order.trackingCode || order.courierName || ['Shipped', 'Delivered'].includes(order.orderStatus)) && (
-                        <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-5 shadow-sm">
+                        <div className="mt-6 relative overflow-hidden bg-gradient-to-br from-purple-50 to-blue-50 border border-purple-100 rounded-2xl p-5 lg:p-6 shadow-sm">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-100 rounded-full blur-3xl opacity-40 -mr-16 -mt-16" />
 
                             <div className="relative space-y-4">
@@ -249,24 +261,35 @@ export default function OrderDetailsPage() {
                 </div>
 
                 {/* Order Items */}
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
+                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
+                    <h2 className="font-bold text-sm lg:text-base text-gray-800 mb-4 flex items-center gap-2">
                         <Package size={16} className="text-kala-600" />
                         اقلام سفارش
+                        <span className="text-[11px] font-medium text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full tabular-nums">
+                            {order.orderItems.length.toLocaleString("fa-IR")} قلم
+                        </span>
                     </h2>
                     <div className="space-y-4">
                         {order.orderItems.map((item, idx) => (
-                            <div key={idx} className="flex gap-3 py-2 border-b border-gray-50 last:border-none">
-                                <div className="w-16 h-16 bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center shrink-0">
-                                    {/* Image placeholder */}
-                                    <Package size={24} className="text-gray-300" />
+                            <div key={idx} className="flex gap-3 lg:gap-4 py-2 border-b border-gray-50 last:border-none">
+                                <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                                    {(item.product as any)?.images?.[0] ? (
+                                        <img
+                                            src={(item.product as any).images[0]}
+                                            alt={item.name}
+                                            className="w-full h-full object-cover"
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <Package size={24} className="text-gray-300" />
+                                    )}
                                 </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xs font-bold text-gray-800 leading-relaxed mb-1">{item.name}</h3>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{item.quantity} عدد</span>
-                                        <span className="text-xs font-black text-gray-800">
-                                            {item.price.toLocaleString('fa-IR')} <span className="text-[10px] font-normal text-gray-400">تومان</span>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-xs lg:text-sm font-bold text-gray-800 leading-relaxed mb-1.5 line-clamp-2">{item.name}</h3>
+                                    <div className="flex justify-between items-center gap-2">
+                                        <span className="text-[10px] lg:text-[11px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full tabular-nums shrink-0">{item.quantity.toLocaleString("fa-IR")} عدد</span>
+                                        <span className="text-xs lg:text-sm font-black text-gray-800 tabular-nums">
+                                            {(item.price * item.quantity).toLocaleString('fa-IR')} <span className="text-[10px] font-normal text-gray-400">تومان</span>
                                         </span>
                                     </div>
                                 </div>
@@ -274,72 +297,93 @@ export default function OrderDetailsPage() {
                         ))}
                     </div>
                 </div>
+                </div>{/* end main column */}
 
-                {/* Shipping Info */}
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
-                        <MapPin size={16} className="text-kala-600" />
-                        اطلاعات ارسال
-                    </h2>
-                    <div className="space-y-3 text-sm">
-                        <div className="flex items-start gap-3">
-                            <User size={16} className="text-gray-400 mt-0.5" />
-                            <span className="text-gray-600">{order.shippingAddress.fullName}</span>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <Phone size={16} className="text-gray-400 mt-0.5" />
-                            <span className="text-gray-600">{order.shippingAddress.phone}</span>
-                        </div>
-                        <div className="flex items-start gap-3">
-                            <MapPin size={16} className="text-gray-400 mt-0.5" />
-                            <span className="text-gray-600 leading-relaxed">
-                                {order.shippingAddress.city}، {order.shippingAddress.address}
-                                <br />
-                                <span className="text-xs text-gray-400">کد پستی: {order.shippingAddress.postalCode}</span>
-                            </span>
-                        </div>
-                    </div>
-                </div>
+                {/* ── Sidebar: payment + shipping (sticky on desktop) ── */}
+                <aside className="lg:col-span-4 space-y-4 lg:space-y-6 lg:sticky lg:top-24 min-w-0">
 
                 {/* Payment Summary */}
-                <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-                    <h2 className="font-bold text-sm text-gray-800 mb-4 flex items-center gap-2">
+                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
+                    <h2 className="font-bold text-sm lg:text-base text-gray-800 mb-4 flex items-center gap-2">
                         <CreditCard size={16} className="text-kala-600" />
                         جزئیات پرداخت
                     </h2>
                     <div className="space-y-2 text-sm">
-                        <div className="flex justify-between text-gray-500">
+                        <div className="flex justify-between gap-2 text-gray-500">
                             <span>مبلغ کل کالاها</span>
-                            <span>{order.itemsPrice.toLocaleString('fa-IR')} تومان</span>
+                            <span className="tabular-nums">{order.itemsPrice.toLocaleString('fa-IR')} تومان</span>
                         </div>
-                        <div className="flex justify-between text-gray-500">
+                        <div className="flex justify-between gap-2 text-gray-500">
                             <span>هزینه ارسال</span>
-                            <span>{order.shippingPrice === 0 ? 'رایگان' : `${order.shippingPrice.toLocaleString('fa-IR')} تومان`}</span>
+                            <span className="tabular-nums">{order.shippingPrice === 0 ? 'رایگان' : `${order.shippingPrice.toLocaleString('fa-IR')} تومان`}</span>
                         </div>
                         {order.taxPrice > 0 && (
-                            <div className="flex justify-between text-gray-500">
+                            <div className="flex justify-between gap-2 text-gray-500">
                                 <span>مالیات</span>
-                                <span>{order.taxPrice.toLocaleString('fa-IR')} تومان</span>
+                                <span className="tabular-nums">{order.taxPrice.toLocaleString('fa-IR')} تومان</span>
                             </div>
                         )}
                         {order.totalDiscount && order.totalDiscount > 0 && (
-                            <div className="flex justify-between text-red-500 font-bold">
+                            <div className="flex justify-between gap-2 text-red-500 font-bold">
                                 <span>سود شما از این خرید</span>
-                                <span>{order.totalDiscount.toLocaleString('fa-IR')} تومان</span>
+                                <span className="tabular-nums">{order.totalDiscount.toLocaleString('fa-IR')} تومان</span>
                             </div>
                         )}
-                        <div className="border-t border-gray-100 my-2 pt-2 flex justify-between font-black text-gray-800 text-base">
+                        <div className="border-t border-gray-100 my-2 pt-3 flex justify-between gap-2 font-black text-gray-800 text-base">
                             <span>مبلغ قابل پرداخت</span>
-                            <span>{order.totalPrice.toLocaleString('fa-IR')} تومان</span>
+                            <span className="tabular-nums">{order.totalPrice.toLocaleString('fa-IR')} تومان</span>
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-3 mt-3 flex items-center justify-between">
+                        <div className="bg-gray-50 rounded-xl p-3 mt-3 flex items-center justify-between gap-2">
                             <span className="text-xs text-gray-500">روش پرداخت</span>
                             <span className="text-xs font-bold text-gray-700">
                                 {order.paymentMethod === 'online' ? 'پرداخت آنلاین' : 'پرداخت در محل'}
                             </span>
                         </div>
+                        <div className="bg-gray-50 rounded-xl p-3 flex items-center justify-between gap-2">
+                            <span className="text-xs text-gray-500">وضعیت پرداخت</span>
+                            <span className={`text-xs font-bold ${order.isPaid ? 'text-green-600' : 'text-amber-600'}`}>
+                                {order.isPaid ? 'پرداخت شده' : 'پرداخت نشده'}
+                            </span>
+                        </div>
                     </div>
                 </div>
+
+                {/* Shipping Info */}
+                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
+                    <h2 className="font-bold text-sm lg:text-base text-gray-800 mb-4 flex items-center gap-2">
+                        <MapPin size={16} className="text-kala-600" />
+                        اطلاعات ارسال
+                    </h2>
+                    <div className="space-y-3 text-sm">
+                        <div className="flex items-start gap-3">
+                            <User size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                            <span className="text-gray-600">{order.shippingAddress.fullName}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <Phone size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                            <span className="text-gray-600 tabular-nums">{order.shippingAddress.phone}</span>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <MapPin size={16} className="text-gray-400 mt-0.5 shrink-0" />
+                            <span className="text-gray-600 leading-relaxed">
+                                {order.shippingAddress.city}، {order.shippingAddress.address}
+                                <br />
+                                <span className="text-xs text-gray-400 tabular-nums">کد پستی: {order.shippingAddress.postalCode}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Back to orders (desktop only) */}
+                <Link
+                    href="/profile/orders"
+                    className="hidden lg:flex items-center justify-center gap-2 w-full bg-white border border-gray-200 hover:border-kala-300 hover:text-kala-700 text-gray-600 font-bold text-sm py-3.5 rounded-2xl transition-all shadow-sm"
+                >
+                    <ChevronRight size={18} />
+                    بازگشت به سفارش‌ها
+                </Link>
+                </aside>
+            </div>
             </div>
         </div>
     );
