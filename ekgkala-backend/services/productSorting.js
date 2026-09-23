@@ -109,22 +109,12 @@ function sortStages(options, searchPattern) {
       fields[field('numReviews')] = numeric('$numReviews')
     }
     if (mode === 'discount') {
-      // __listing.discount is already the effective discount percentage (0-100)
-      // computed by pricingStages from campaign/flash/direct discount.
-      // For products with only compareAtPrice (no numeric discount), fall back
-      // to the effective savings percentage derived from display prices.
-      const base = `$${PREFIX}.display.compareAtPrice`
-      const price = `$${PREFIX}.price`
-      const fromCompare = {
-        $cond: [
-          { $and: [{ $gt: [base, 0] }, { $gt: [base, price] }] },
-          { $multiply: [100, { $divide: [{ $subtract: [base, price] }, base] }] },
-          0,
-        ],
-      }
-      fields[field('discount')] = {
-        $max: [numeric(`$${PREFIX}.discount`), fromCompare],
-      }
+      // Sort strictly by the effective discount percentage (0-100) computed
+      // by pricingStages from campaign/flash/direct discount.
+      // NOTE: never derive a percentage from compareAtPrice gap here — a stale
+      // inflated compareAtPrice with discount=0 would otherwise rank as 80%+
+      // and surface at the top of "بیشترین تخفیف".
+      fields[field('discount')] = numeric(`$${PREFIX}.discount`)
     }
   }
 

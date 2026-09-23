@@ -77,11 +77,11 @@ export function resolveProductPromotion(
 
   const hasPromotionFlag = Boolean(product.isFlashDeal || product.isSpecialOffer);
   const hasActiveTimedPromotion = kind !== "none";
+  // Discount comes ONLY from the stored percentage. Never derive it from
+  // oldPrice/price gap — stale compareAtPrice would fabricate 80%+ badges.
   const rawDiscount = Number.isFinite(product.discount) && Number(product.discount) > 0
     ? Number(product.discount)
-    : (product.oldPrice && product.oldPrice > product.price
-        ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
-        : 0);
+    : 0;
 
   const effectiveDiscount = rawDiscount > 0 &&
     (hasActiveTimedPromotion || !hasPromotionFlag)

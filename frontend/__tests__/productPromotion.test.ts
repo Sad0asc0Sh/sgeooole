@@ -87,6 +87,18 @@ describe("resolveProductPromotion", () => {
     expect(promotion.effectiveDiscount).toBe(0);
     expect(promotion.displayPrice).toBe(100000);
   });
+
+  test("does NOT invent discount from oldPrice gap when stored discount is 0", () => {
+    // Regression: stale compareAtPrice/oldPrice must not fabricate 80%+ badges.
+    const promotion = resolveProductPromotion(
+      { price: 100000, oldPrice: 500000, discount: 0 },
+      now,
+    );
+
+    expect(promotion.kind).toBe("none");
+    expect(promotion.effectiveDiscount).toBe(0);
+    expect(promotion.displayPrice).toBe(100000);
+  });
 });
 
 describe("getNextPromotionExpiry", () => {

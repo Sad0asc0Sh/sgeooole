@@ -264,7 +264,9 @@ function pricingStages(campaigns, now) {
     } },
     { $addFields: {
       [`${INTERNAL}.price`]: ref('display.price'),
-      [`${INTERNAL}.onSale`]: { $or: [{ $gt: [ref('discount'), 0] }, { $gt: [ref('display.compareAtPrice'), ref('display.price')] }] },
+      // onSale must reflect a REAL discount only. A stale inflated
+      // compareAtPrice with discount=0 must not mark a product as on sale.
+      [`${INTERNAL}.onSale`]: { $gt: [ref('discount'), 0] },
     } },
   ]
 }
@@ -281,7 +283,10 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
   const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
   const data = [...priceMatch, ...sortStages(options, searchPattern), { $sort: options.sort }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
   if (!options.skipDiscount) data.push({ $addFields: {
-    price: ref('price'), stock: ref('stock'), compareAtPrice: ref('display.compareAtPrice'),
+    price: ref('price'), stock: ref('stock'),
+    // Expose compareAtPrice ONLY when a real discount exists. Otherwise a
+    // stale inflated compareAtPrice would let clients derive a phantom 80%+.
+    compareAtPrice: { $cond: [{ $gt: [ref('discount'), 0] }, ref('display.compareAtPrice'), '$$REMOVE'] },
     variants: ref('variants'), discount: ref('discount'),
     campaignLabel: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.name'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'پیشنهاد لحظه‌ای', { $ifNull: ['$campaignLabel', '$$REMOVE'] }] }] },
     campaignTheme: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.theme'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'gold-red', { $ifNull: ['$campaignTheme', '$$REMOVE'] }] }] },

@@ -33,10 +33,9 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
     const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
         resolveProductPromotion(product, Date.now());
     const hasOldPriceMarkdown = Boolean(product.oldPrice && product.oldPrice > displayPrice);
-    const calculatedDiscount = hasOldPriceMarkdown
-        ? Math.round(((product.oldPrice! - displayPrice) / product.oldPrice!) * 100)
-        : (product.discount && product.discount > 0 ? product.discount : 0);
-    const finalDiscount = effectiveDiscount > 0 ? effectiveDiscount : calculatedDiscount;
+    // Badge shows ONLY the real resolved discount. Never derive % from
+    // oldPrice gap — stale compareAtPrice would fabricate 80%+ badges.
+    const finalDiscount = effectiveDiscount;
     const showSpecialOfferPricing = finalDiscount > 0 && hasOldPriceMarkdown;
 
     // ProductTimerBadge owns its second-by-second display. The card itself only

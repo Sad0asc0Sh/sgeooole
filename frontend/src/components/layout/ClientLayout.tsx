@@ -41,6 +41,30 @@ export default function ClientLayout({
     const isProductsListingRoute = pathname === "/products";
     const showChrome = !isLoginPage && !isProductPage && (!isProductsListingRoute || isCurrentRouteReady);
 
+    // Footer is hidden on focused flows (account + purchase) where a big
+    // marketing footer distracts from the task. BottomNav / Header (and the
+    // desktop mega-menu inside it) stay untouched so site navigation and
+    // sub-menus keep working exactly as before.
+    const path = pathname ?? "";
+    const isFooterHiddenRoute =
+        path === "/profile" ||
+        path.startsWith("/profile/") ||
+        path === "/cart" ||
+        path.startsWith("/cart/") ||
+        path === "/checkout" ||
+        path.startsWith("/checkout/") ||
+        path.startsWith("/order/") ||
+        path.startsWith("/payment/") ||
+        path === "/tracking" ||
+        path.startsWith("/tracking/") ||
+        path === "/complete-profile" ||
+        path.startsWith("/complete-profile/") ||
+        path === "/forgot-password" ||
+        path.startsWith("/forgot-password/") ||
+        path.startsWith("/reset-password/") ||
+        path.startsWith("/admin");
+    const showFooter = showChrome && !isFooterHiddenRoute;
+
     // Hide the global header on mobile for pages that use their own mobile header
     const hideHeaderOnMobile = isProfileSubPage || isProductPage || hasStandaloneMobileHeader;
 
@@ -61,7 +85,7 @@ export default function ClientLayout({
                 {showChrome && (
                     <>
                         <ServicesWidget isOpen={isServicesOpen} onOpenChange={setIsServicesOpen} />
-                        <Footer />
+                        {showFooter && <Footer />}
                         <BottomNav
                             isServicesOpen={isServicesOpen}
                             onNavClick={() => {

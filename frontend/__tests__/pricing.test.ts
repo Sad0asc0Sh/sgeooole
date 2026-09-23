@@ -54,5 +54,20 @@ describe("resolvePricing", () => {
     expect(pricing.finalPrice).toBe(50000);
     expect(pricing.oldPrice).toBeUndefined();
   });
+
+  test("does NOT invent discount from stale compareAtPrice gap (discount=0)", () => {
+    // Regression: price=100k with stale compareAtPrice=500k must NOT show 80% off.
+    const pricing = resolvePricing({
+      price: 100000,
+      compareAtPrice: 500000,
+      discount: 0,
+      now: Date.parse("2025-01-01T00:00:00.000Z"),
+    });
+
+    expect(pricing.discount).toBe(0);
+    expect(pricing.finalPrice).toBe(100000);
+    expect(pricing.oldPrice).toBeUndefined();
+    expect(pricing.hasActivePromotion).toBe(false);
+  });
 });
 

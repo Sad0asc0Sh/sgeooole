@@ -52,21 +52,17 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const hasPromotionFlag = Boolean(flashFlag || specialFlag || input.campaignLabel);
   const hasActivePromotion = flashActive || specialActive || labelActive;
 
-  let effectiveRawDiscount = rawDiscount;
-  if (effectiveRawDiscount <= 0 && hasValidComparePrice && !hasPromotionFlag) {
-    effectiveRawDiscount = Math.round(((input.compareAtPrice! - rawPrice) / input.compareAtPrice!) * 100);
-  }
+  // Discount comes ONLY from the real stored percentage (DB / campaign).
+  // NEVER derive a percentage from compareAtPrice gap: a stale inflated
+  // compareAtPrice with discount=0 would otherwise fabricate an 80%+ badge.
+  // e.g. price=100, compareAtPrice=500 -> (500-100)/500 = 80% phantom off.
+  const effectiveRawDiscount = rawDiscount;
 
   const discountEligible = hasActivePromotion || (!hasPromotionFlag && effectiveRawDiscount > 0);
   const discount = discountEligible ? effectiveRawDiscount : 0;
 
   // If no discount is active, the final selling price MUST ALWAYS be the product's actual price (rawPrice)
   if (discount <= 0) {
-    const hasValidComparePrice = Boolean(
-      input.compareAtPrice &&
-      input.compareAtPrice > rawPrice
-    );
-
     // If a timed promotion was configured but is now expired, revert selling price to the base price (compareAtPrice)
     const wasTimedPromotionExpired = hasPromotionFlag && hasValidComparePrice;
     const finalPrice = wasTimedPromotionExpired ? Math.round(input.compareAtPrice!) : rawPrice;
@@ -79,7 +75,9 @@ export function resolvePricing(input: PricingInput): PricingResult {
       flashActive: false,
       specialActive: false,
       hasActivePromotion: false,
-      oldPrice: !wasTimedPromotionExpired && hasValidComparePrice ? Math.round(input.compareAtPrice!) : undefined,
+      // No markdown without a real discount: stale compareAtPrice must not
+      // leak as oldPrice, otherwise cards derive a phantom % from the gap.
+      oldPrice: undefined,
     };
   }
 
