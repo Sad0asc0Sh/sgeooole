@@ -283,7 +283,7 @@ function SupportMessenger() {
 
     // ===== RENDER =====
     return (
-        <div className="h-[100dvh] flex flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden">
+        <div className="h-screen h-[100dvh] flex flex-col bg-white bg-gradient-to-br from-slate-50 via-white to-blue-50/30 overflow-hidden">
             {/* Toast Notification - Premium Style */}
             {toast.show && (
                 <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-[420px] z-[60] animate-in slide-in-from-top-2 fade-in duration-300">

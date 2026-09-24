@@ -144,7 +144,7 @@ const MobileSearchOverlay: React.FC<MobileSearchOverlayProps> = ({ isOpen, onClo
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: '100%' }}
                     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                    className="fixed inset-0 z-[9999] bg-gray-50 flex flex-col h-[100dvh] w-full overflow-hidden"
+                    className="fixed inset-0 z-[9999] bg-gray-50 flex flex-col h-screen h-[100dvh] w-full overflow-hidden"
                     dir="rtl"
                 >
                     {/* --- Header / Input Area --- */}

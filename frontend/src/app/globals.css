@@ -276,6 +276,25 @@
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
 }
 
+/* --- LEGACY BROWSER FALLBACKS (Chrome<108, Safari<15.4, Firefox<110) ---
+   100vh fallback first, 100dvh progressive enhancement second.
+   backdrop-filter without support falls back to solid background. */
+@supports (height: 100dvh) {
+  #product-filter-dialog {
+    height: calc(100dvh - 3rem) !important;
+    max-height: calc(100dvh - 3rem) !important;
+  }
+  #product-sort-dialog {
+    max-height: calc(100dvh - 3rem) !important;
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .backdrop-blur-sm, .backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
 /* --- HERO SWIPER STYLES (moved from JSX for Edge Android compat) --- */
 .hero-swiper {
   /* Border radius and overflow handled by parent wrapper */

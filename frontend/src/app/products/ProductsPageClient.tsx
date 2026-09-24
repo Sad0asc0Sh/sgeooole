@@ -967,7 +967,7 @@ function ProductListingContent() {
                   transition={{ type: "spring", damping: 28, stiffness: 300 }}
                   ref={filterDialogRef}
                   id="product-filter-dialog" role="dialog" aria-modal="true" aria-labelledby="product-filter-title" tabIndex={-1}
-                  style={{ height: "calc(100dvh - 3rem)", maxHeight: "calc(100dvh - 3rem)" }}
+                  style={{ height: "calc(100vh - 3rem)", maxHeight: "calc(100vh - 3rem)" }}
                   className="fixed inset-x-0 bottom-0 z-bottom-drawer lg:hidden bg-white rounded-t-3xl shadow-2xl flex flex-col overflow-hidden overscroll-contain"
                 >
                   {/* Drag Handle */}
@@ -1222,7 +1222,7 @@ function ProductListingContent() {
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 28, stiffness: 300 }}
               ref={sortDialogRef} id="product-sort-dialog" role="dialog" aria-modal="true" aria-labelledby="product-sort-title" tabIndex={-1}
-              style={{ maxHeight: "calc(100dvh - 3rem)", paddingBottom: "env(safe-area-inset-bottom)" }}
+              style={{ maxHeight: "calc(100vh - 3rem)", paddingBottom: "0px" }}
               className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-bottom-drawer shadow-2xl overflow-y-auto overscroll-contain"
             >
               {/* Drag Handle */}

@@ -122,6 +122,17 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
         setPhase("loaded");
       }
 
+      // Legacy browser fallback: no IntersectionObserver (IE11, old Safari/Chrome)
+      // -> treat as visible so image never stays at opacity:0 forever.
+      if (typeof IntersectionObserver === "undefined") {
+        isInViewport.current = true;
+        if (waitingForViewport.current) {
+          waitingForViewport.current = false;
+          scheduleRetry();
+        }
+        return;
+      }
+
       const observer = new IntersectionObserver(
         ([entry]) => {
           isInViewport.current = entry.isIntersecting;
@@ -270,6 +281,15 @@ export function useResilientImage(
       setPhase("loaded");
     }
     if (!node) return;
+
+    if (typeof IntersectionObserver === "undefined") {
+      isInViewport.current = true;
+      if (waitingForViewport.current) {
+        waitingForViewport.current = false;
+        doRetry();
+      }
+      return;
+    }
 
     const observer = new IntersectionObserver(
       ([entry]) => {

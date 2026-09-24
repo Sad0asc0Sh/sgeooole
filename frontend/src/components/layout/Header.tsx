@@ -76,7 +76,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                 className={`h-16 ${spacerReady ? "transition-[height] duration-300 ease-in-out" : ""} ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
             />
 
-            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white/80 backdrop-blur-md">
+            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white bg-white/80 backdrop-blur-md supports-[backdrop-filter:blur(12px)]:bg-white/80">
             {/* MOBILE HEADER */}
             <div className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}

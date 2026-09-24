@@ -43,13 +43,18 @@
     padding: 0.4rem 0.85rem;
     border: 1px solid rgba(17, 24, 39, 0.08);
     border-radius: 999px;
+    background: #fff;
     background: rgba(255, 255, 255, 0.94);
     color: #111827;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
     font-size: 0.72rem;
     font-weight: 900;
     line-height: 1;
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
+}
+@supports not ((backdrop-filter: blur(8px)) or (-webkit-backdrop-filter: blur(8px))) {
+    .outOfStockBadge { background: #fff; }
 }
 
 .content {
@@ -94,18 +99,28 @@
 .wishlistButton {
     position: absolute;
     top: 0.5rem;
+    right: 0.5rem;
     inset-inline-end: 0.5rem;
     z-index: 25;
+    width: 2.25rem;
+    height: 2.25rem;
     inline-size: 2.25rem;
     block-size: 2.25rem;
+    min-width: 2.25rem;
+    min-height: 2.25rem;
     min-inline-size: 2.25rem;
     min-block-size: 2.25rem;
     border-radius: 999px;
     border: 1px solid rgba(229, 231, 235, 0.9);
+    background: #fff;
     background: rgba(255, 255, 255, 0.96);
     box-shadow: 0 2px 10px rgba(15, 23, 42, 0.12);
+    -webkit-backdrop-filter: blur(6px);
     backdrop-filter: blur(6px);
     aspect-ratio: 1 / 1;
+}
+@supports not ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+    .wishlistButton, .wishlistButtonActive { background: #fff; }
 }
 
 .wishlistButtonActive {
@@ -116,6 +131,8 @@
 
 .wishlistButton svg {
     flex: 0 0 auto;
+    width: 1.125rem;
+    height: 1.125rem;
     inline-size: 1.125rem;
     block-size: 1.125rem;
 }
@@ -144,13 +161,19 @@
     }
 
     .wishlistButton {
+        width: 2.125rem;
+        height: 2.125rem;
         inline-size: 2.125rem;
         block-size: 2.125rem;
+        min-width: 2.125rem;
+        min-height: 2.125rem;
         min-inline-size: 2.125rem;
         min-block-size: 2.125rem;
     }
 
     .wishlistButton svg {
+        width: 1.05rem;
+        height: 1.05rem;
         inline-size: 1.05rem;
         block-size: 1.05rem;
     }
@@ -177,8 +200,12 @@
     }
 
     .wishlistButton {
+        width: 2rem;
+        height: 2rem;
         inline-size: 2rem;
         block-size: 2rem;
+        min-width: 2rem;
+        min-height: 2rem;
         min-inline-size: 2rem;
         min-block-size: 2rem;
     }

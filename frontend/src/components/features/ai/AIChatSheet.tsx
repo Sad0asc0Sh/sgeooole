@@ -668,7 +668,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent
                 side="bottom"
-                className="fixed inset-0 z-[9999] !h-[100dvh] !w-full !p-0 bg-white border-none focus-visible:outline-none [&>div>button]:hidden"
+                className="fixed inset-0 z-[9999] !h-screen supports-[height:100dvh]:!h-[100dvh] !w-full !p-0 bg-white border-none focus-visible:outline-none [&>div>button]:hidden"
             >
                 <div className="flex flex-col h-full w-full relative">
 
