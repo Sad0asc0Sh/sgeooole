@@ -5,7 +5,7 @@ import ProgrammaticBreadcrumbs from "@/components/programmatic/ProgrammaticBread
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
-const title = "راهنمای خرید دوربین مداربسته | ای کا جی کالا";
+const title = "راهنمای خرید دوربین مداربسته";
 const description =
   "راهنمای‌های تخصصی خرید دوربین مداربسته، DVR و تجهیزات امنیتی؛ نوشته‌شده توسط تیم فنی ای کا جی کالا با پیشنهادهای به‌روز.";
 

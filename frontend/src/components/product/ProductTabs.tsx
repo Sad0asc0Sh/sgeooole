@@ -5,6 +5,7 @@ import { Star, MessageSquare, Info, CheckCircle, AlertCircle, User, Calendar, Se
 import { Product } from "@/services/productService";
 import { reviewService, Review } from "@/services/reviewService";
 import { useAuth } from "@/hooks/useAuth";
+import { demoteH1ToH2 } from "@/lib/seo";
 import Link from "next/link";
 
 interface ProductTabsProps {
@@ -31,6 +32,11 @@ export default function ProductTabs({ product }: ProductTabsProps) {
             .replace(/&quot;/g, '"')
             .replace(/&#39;/g, "'")
             .replace(/&amp;/g, '&');
+
+        // 1b. SEO: demote <h1> inside CMS product copy to <h2>. The PDP already
+        // renders exactly one <h1> (the product name); extra h1s coming from
+        // rich-text descriptions would create duplicate h1s on the page.
+        cleaned = demoteH1ToH2(cleaned);
 
         // 2. Strip inline background-color and color styles completely
         cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
@@ -186,7 +192,6 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                         {product.description ? (
                             <div
                                 className="text-gray-600 leading-8 text-justify 
-                                [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-gray-800 [&_h1]:mb-4 [&_h1]:mt-6
                                 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mb-3 [&_h2]:mt-5
                                 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-gray-800 [&_h3]:mb-2 [&_h3]:mt-4
                                 [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-gray-800 [&_h4]:mb-2

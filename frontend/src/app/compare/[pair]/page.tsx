@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getComparison, getAllComparisonSlugs } from "@/content/programmatic";
+import { NOT_FOUND_METADATA } from "@/lib/seo";
 import ArticleShell from "@/components/programmatic/ArticleShell";
 import ContentBlocks from "@/components/programmatic/ContentBlocks";
 import FaqSection from "@/components/programmatic/FaqSection";
@@ -16,7 +17,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ pair: string }> }): Promise<Metadata> {
   const { pair } = await params;
   const comparison = getComparison(pair);
-  if (!comparison) return {};
+  if (!comparison) return NOT_FOUND_METADATA;
   const canonical = `${SITE_URL}/compare/${comparison.slug}`;
   return {
     title: comparison.title,

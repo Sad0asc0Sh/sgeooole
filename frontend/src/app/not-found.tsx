@@ -1,4 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { NOT_FOUND_METADATA } from "@/lib/seo";
+
+// Phase 1 SEO (soft-404 fix): the 404 page gets its own title instead of
+// inheriting the homepage title. With the root layout's title template
+// ("%s | ای کا جی کالا") this renders as «صفحه یافت نشد | ای کا جی کالا».
+export const metadata: Metadata = {
+  ...NOT_FOUND_METADATA,
+  description: "صفحه‌ای که دنبال آن بودید پیدا نشد.",
+};
 
 export default function NotFound() {
   return (

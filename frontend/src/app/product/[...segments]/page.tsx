@@ -6,6 +6,7 @@ import ProductStructuredData from "./ProductStructuredData";
 import RelatedProducts from "./RelatedProducts";
 import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/productData";
 import { buildProductUrl } from "@/lib/paths";
+import { buildProductMetaDescription, buildProductSeoTitle } from "@/lib/seo";
 
 // Keep product pages fresh after admin edits (images/pricing)
 export const revalidate = 30;
@@ -77,16 +78,12 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
     const canonicalUrl = siteUrl ? `${siteUrl}${canonicalPath}` : canonicalPath;
     const coverImage = product.images?.[0];
 
-    const priceText = product.price
-        ? ` | قیمت ${product.price.toLocaleString("fa-IR")} تومان`
-        : "";
-    const baseDescription = product.description || product.title;
-    const truncate = (value: string, max: number) =>
-        value.length <= max ? value : `${value.slice(0, max - 1)}…`;
-    const description = truncate(baseDescription, Math.max(0, 155 - priceText.length)) + priceText;
+    // Phase 1 SEO: sanitized Persian meta description (no raw HTML/entities)
+    // and no «بدون برند» fallback in the title.
+    const description = buildProductMetaDescription(product);
 
     const keywords = [product.title, product.brand, product.category].filter(Boolean) as string[];
-    const seoTitle = `خرید ${product.title} | ${product.brand || "بدون برند"} - قیمت و مشخصات`;
+    const seoTitle = buildProductSeoTitle(product);
     const indexable = (product as any)?.isActive !== false;
 
     return {

@@ -5,7 +5,7 @@ import ProgrammaticBreadcrumbs from "@/components/programmatic/ProgrammaticBread
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
-const title = "واژه‌نامه دوربین مداربسته | ای کا جی کالا";
+const title = "واژه‌نامه دوربین مداربسته";
 const description =
   "واژه‌نامه تخصصی دوربین مداربسته و سیستم‌های امنیتی؛ معنی اصطلاحات فنی مثل DVR، NVR، PoE و دید در شب به زبان ساده.";
 

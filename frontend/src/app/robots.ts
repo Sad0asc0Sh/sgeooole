@@ -32,9 +32,24 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "Googlebot-Image",
         allow: "/",
       },
-      // Block AI crawlers
+      // AI search & assistant crawlers: explicitly allowed so AI engines
+      // (ChatGPT, Perplexity, Claude, Gemini, Copilot) can discover and cite
+      // our content. Blocking these bots = self-inflicted AI-search invisibility.
       {
-        userAgent: ["GPTBot", "ChatGPT-User"],
+        userAgent: [
+          "GPTBot",
+          "ChatGPT-User",
+          "PerplexityBot",
+          "ClaudeBot",
+          "anthropic-ai",
+          "Google-Extended",
+          "Bingbot",
+        ],
+        allow: "/",
+      },
+      // Training-only crawler (Common Crawl): no citation value, blocked.
+      {
+        userAgent: "CCBot",
         disallow: "/",
       },
     ],

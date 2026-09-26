@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getGuide, getAllGuideSlugs } from "@/content/programmatic";
+import { NOT_FOUND_METADATA } from "@/lib/seo";
 import ArticleShell from "@/components/programmatic/ArticleShell";
 import ContentBlocks from "@/components/programmatic/ContentBlocks";
 import FaqSection from "@/components/programmatic/FaqSection";
@@ -17,7 +18,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const guide = getGuide(slug);
-  if (!guide) return {};
+  if (!guide) return NOT_FOUND_METADATA;
   const canonical = `${SITE_URL}/guides/${guide.slug}`;
   return {
     title: guide.title,

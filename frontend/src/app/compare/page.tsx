@@ -5,7 +5,7 @@ import ProgrammaticBreadcrumbs from "@/components/programmatic/ProgrammaticBread
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
-const title = "مقایسه دوربین مداربسته و برندها | ای کا جی کالا";
+const title = "مقایسه دوربین مداربسته و برندها";
 const description =
   "مقایسه تخصصی برندها و انواع دوربین مداربسته؛ داهوا در برابر هایک ویژن، دام در برابر بولت و راهنمای انتخاب درست.";
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getGlossaryTerm, getAllGlossarySlugs } from "@/content/programmatic";
+import { NOT_FOUND_METADATA } from "@/lib/seo";
 import ArticleShell from "@/components/programmatic/ArticleShell";
 import ContentBlocks from "@/components/programmatic/ContentBlocks";
 
@@ -15,9 +16,9 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Promise<{ term: string }> }): Promise<Metadata> {
   const { term } = await params;
   const entry = getGlossaryTerm(term);
-  if (!entry) return {};
+  if (!entry) return NOT_FOUND_METADATA;
   const canonical = `${SITE_URL}/glossary/${entry.slug}`;
-  const title = `${entry.term} | واژه‌نامه ای کا جی کالا`;
+  const title = `${entry.term} | واژه‌نامه`;
   return {
     title,
     description: entry.metaDescription,
