@@ -19,6 +19,14 @@ const aiChatLimiter = createCustomLimiter({
 router.post('/', aiChatLimiter, optional, chatController.handleMessage);
 
 /**
+ * @route   POST /api/chat/message
+ * @desc    Conversation entry: deterministic CCTV package slot-filling first,
+ *          LLM fallback for general Q&A (minimal tokens on package path)
+ * @access  Public
+ */
+router.post('/message', aiChatLimiter, optional, chatController.handleChatMessage);
+
+/**
  * @route   POST /api/chat/stream
  * @desc    Send a message to AI assistant (SSE streaming — tokens in real-time)
  * @access  Public

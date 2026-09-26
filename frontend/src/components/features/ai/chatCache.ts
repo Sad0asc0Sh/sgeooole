@@ -56,14 +56,14 @@ function sanitizeMessages(input: unknown): Message[] {
         if (msg.role === "ai") {
             if (Array.isArray(msg.products)) clean.products = msg.products as Message["products"];
             if (msg.package && typeof msg.package === "object") clean.package = msg.package as Message["package"];
-            if (msg.wizard && typeof msg.wizard === "object") clean.wizard = msg.wizard as Message["wizard"];
+            if (Array.isArray(msg.quickReplies)) clean.quickReplies = msg.quickReplies as Message["quickReplies"];
         }
         // پیام خالیِ بدون هیچ پیوستی (مثلاً استریم ناتمام) به‌درد بازسازی نمی‌خورد
         const hasPayload =
             clean.content.trim().length > 0 ||
             (clean.products && clean.products.length > 0) ||
             Boolean(clean.package) ||
-            Boolean(clean.wizard);
+            Boolean(clean.quickReplies?.length);
         if (!hasPayload) continue;
         out.push(clean);
     }

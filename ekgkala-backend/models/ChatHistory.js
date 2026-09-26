@@ -55,6 +55,11 @@ const chatHistorySchema = new mongoose.Schema({
         selections: { type: [selectionSchema], default: [] },
         updatedAt: { type: Date, default: Date.now },
     },
+    // فلو قطعی اسمبل پک دوربین (cctvChatFlow) — اسلات‌ها بدون LLM
+    cctvFlow: {
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('ChatHistory', chatHistorySchema);

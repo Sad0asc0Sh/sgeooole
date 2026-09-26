@@ -94,9 +94,36 @@ interface CartState {
      */
     revalidateCartPrices: () => Promise<void>;
     addToCart: (product: Product, quantity?: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
+    /**
+     * افزودن دسته‌جمعی اقلام پکیج (بدون N درخواست تکراری).
+     * به‌صورت اتمیک state + localStorage را یک‌جا به‌روز می‌کند و
+     * برای کاربر لاگین‌شده فقط یک sync به بک‌اند می‌زند.
+     */
+    addBundleToCart: (items: BundleCartItem[]) => Promise<BundleAddResult>;
     updateQuantity: (productId: string, quantity: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     removeFromCart: (productId: string, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     clearCart: () => Promise<void>;
+}
+
+/** یک قلم از پکیج برای افزودن تجمیعی */
+export interface BundleCartItem {
+    productId: string;
+    quantity: number;
+    /** قیمت نهایی (اختیاری — اگر ندهید از snapshot محلی استفاده می‌شود) */
+    price?: number;
+    name?: string;
+    title?: string;
+    image?: string;
+    oldPrice?: number;
+    discount?: number;
+    variantOptions?: Array<{ name: string; value: string }>;
+}
+
+export interface BundleAddResult {
+    ok: boolean;
+    addedCount: number;
+    itemCount: number;
+    failed: string[];
 }
 
 // Helper to transform backend items to local format
@@ -633,6 +660,93 @@ export const useCartStore = create<CartState>((set, get) => ({
             set({ error: err.message || "خطا در افزودن به سبد خرید" });
             throw err;
         }
+    },
+
+    addBundleToCart: async (items) => {
+        const list = Array.isArray(items) ? items.filter((it) => it && it.productId && Number(it.quantity) > 0) : [];
+        if (list.length === 0) {
+            return { ok: false, addedCount: 0, itemCount: 0, failed: [] };
+        }
+
+        const isAuthenticated = authService.isAuthenticated();
+        const { cartItems, cartConfig } = get();
+        const failed: string[] = [];
+        let addedCount = 0;
+
+        // یک‌جا ادغام محلی — بدون حلقه setState
+        const updatedCart: LocalCartItem[] = cartItems.map((i) => ({ ...i }));
+
+        for (const it of list) {
+            const id = String(it.productId);
+            const qty = Math.max(1, Number(it.quantity) || 1);
+            const title = it.name || it.title || id;
+            const image = it.image || "/placeholder.svg";
+            const price = Number(it.price ?? 0) || 0;
+            const variants = it.variantOptions;
+
+            const existingIndex = updatedCart.findIndex((item) => {
+                if (item.id !== id) return false;
+                const itemVariants = item.variantOptions || [];
+                const newVariants = variants || [];
+                if (itemVariants.length !== newVariants.length) return false;
+                return itemVariants.every((v1) => newVariants.some((v2) => v1.name === v2.name && v1.value === v2.value));
+            });
+
+            if (existingIndex > -1) {
+                const existing = updatedCart[existingIndex];
+                updatedCart[existingIndex] = {
+                    ...existing,
+                    qty: existing.qty + qty,
+                    price: price || existing.price,
+                    originalPrice: it.oldPrice ?? existing.originalPrice,
+                };
+            } else {
+                updatedCart.push({
+                    id,
+                    name: title,
+                    price,
+                    originalPrice: it.oldPrice,
+                    image,
+                    qty,
+                    discount: it.discount || 0,
+                    compareAtPrice: it.oldPrice,
+                    variantOptions: variants,
+                });
+            }
+            addedCount += qty;
+        }
+
+        // تزریق یک‌جا به state + localStorage
+        set({ cartItems: updatedCart, cartVersion: (get().cartVersion || 0) + 1 });
+        saveLocalCart(updatedCart, cartConfig);
+
+        // هم‌گام‌سازی بک‌اند فقط برای لاگین — یک درخواست sync برای کل سبد
+        if (isAuthenticated) {
+            try {
+                const payload = updatedCart.map((i) => ({
+                    product: i.id,
+                    quantity: Number(i.qty) || 1,
+                    variantOptions: i.variantOptions,
+                }));
+                const response = await cartService.syncCart(payload);
+                if (response?.data?.items) {
+                    const synced = transformBackendItems(response.data.items);
+                    set({ cartItems: synced });
+                    saveLocalCart(synced, cartConfig);
+                }
+            } catch (err: any) {
+                console.error("[useCartStore] Bundle sync failed:", err);
+                // سبد محلی موفق است؛ خطای شبکه را soft-report می‌کنیم
+                failed.push("__sync__");
+            }
+        }
+
+        return {
+            ok: failed.length === 0,
+            addedCount,
+            itemCount: list.length,
+            failed,
+        };
     },
 
     updateQuantity: async (productId, quantity, variantOptions) => {

@@ -4,9 +4,21 @@ import { Sheet, SheetContent, SheetClose } from "@/components/ui/sheet";
 import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, User, AlertCircle } from "lucide-react";
 import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { authService } from "@/services/authService";
-import ChatPackageBuilder from "./ChatPackageBuilder";
-import ChatWizardStep, { type ChatWizard } from "./ChatWizardStep";
+import ChatPackageCard from "./ChatPackageCard";
 import { buildChatCacheKey, loadChatCache, saveChatCache, clearChatCache } from "./chatCache";
+
+export interface QuickReply {
+    label: string;
+    value?: string | number;
+}
+
+export interface CctvFlowView {
+    active?: boolean;
+    complete?: boolean;
+    step?: string | null;
+    question?: string | null;
+    quickReplies?: QuickReply[];
+}
 
 interface AIChatSheetProps {
     open: boolean;
@@ -56,6 +68,11 @@ export interface ChatPackage {
     title: string;
     sections: ChatPackageSection[];
     missing?: string[];
+    /** محاسبات قطعی موتور (اختیاری) */
+    calculations?: Record<string, unknown>;
+    requirements?: Record<string, unknown>;
+    totalPrice?: number;
+    warnings?: string[];
 }
 
 export interface Message {
@@ -65,7 +82,8 @@ export interface Message {
     isError?: boolean;
     products?: ChatProduct[];
     package?: ChatPackage | null;
-    wizard?: ChatWizard | null;
+    /** چیپ‌های پاسخ سریع (از cctvFlow یا [[CHOICE:]]) */
+    quickReplies?: QuickReply[];
 }
 
 interface SuggestionItem {
@@ -365,11 +383,12 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     token?: string;
                     done?: boolean;
                     error?: string;
+                    message?: string;
                     usage?: { current: number; limit: number; remaining: number };
                     partial?: boolean;
                     products?: ChatProduct[];
                     package?: ChatPackage | null;
-                    wizard?: ChatWizard | null;
+                    cctvFlow?: CctvFlowView | null;
                     meta?: { requestId?: string };
                 };
                 try {
@@ -398,19 +417,42 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                         const last = prev[prev.length - 1];
                         if (last?.role !== 'ai') return prev;
                         const updated = [...prev];
-                        // هر پیام فقط یک بسته دارد — جایگزین می‌شود نه الحاق (جلوگیری از قاطی‌شدن)
                         updated[updated.length - 1] = { ...last, package: incomingPkg };
                         return updated;
                     });
                 }
-                if (payload.wizard && payload.wizard.active) {
-                    const incomingWiz = payload.wizard;
+                // پاسخ کامل قطعی (بدون توکن) — متن + بسته + چیپ
+                if (typeof payload.message === 'string' && payload.message && !payload.token) {
+                    const completeMsg = payload.message;
                     setMessages((prev: Message[]) => {
                         const last = prev[prev.length - 1];
                         if (last?.role !== 'ai') return prev;
                         const updated = [...prev];
-                        // نمای ویزارد همیشه تازه‌ترین وضعیت است — جایگزین می‌شود
-                        updated[updated.length - 1] = { ...last, wizard: incomingWiz };
+                        updated[updated.length - 1] = {
+                            ...last,
+                            content: completeMsg,
+                            isLoading: false,
+                        };
+                        return updated;
+                    });
+                }
+                // پاسخ‌های سریع از فلوی قطعی پک دوربین
+                if (payload.cctvFlow && (Array.isArray(payload.cctvFlow.quickReplies) || typeof payload.message === 'string')) {
+                    const flow = payload.cctvFlow;
+                    const replies: QuickReply[] = Array.isArray(flow.quickReplies) ? flow.quickReplies : [];
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role !== 'ai') return prev;
+                        const updated = [...prev];
+                        const content = typeof payload.message === 'string' && payload.message
+                            ? payload.message
+                            : (flow.question || last.content);
+                        updated[updated.length - 1] = {
+                            ...last,
+                            content,
+                            isLoading: false,
+                            quickReplies: replies.length ? replies : last.quickReplies,
+                        };
                         return updated;
                     });
                 }
@@ -533,6 +575,17 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     }
                     return prev;
                 });
+            } else {
+                // پاسخ قطعی بدون توکن — فقط وضعیت loading را ببند
+                setMessages((prev: Message[]) => {
+                    const last = prev[prev.length - 1];
+                    if (last?.role === 'ai' && last.isLoading) {
+                        const updated = [...prev];
+                        updated[updated.length - 1] = { ...last, isLoading: false };
+                        return updated;
+                    }
+                    return prev;
+                });
             }
 
         } catch (error: unknown) {
@@ -582,49 +635,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
-    // --- اکشن‌های ویزارد پک (انتخاب/رد/برگشت/شروع‌دوباره/رد سوالات) — بدون استریم، کوتاه و قطعی ---
-    // تمام عملیات داخل همین چت انجام می‌شود؛ صفحه محصول فقط برای دیدن جزئیات است.
-    const handlePackAction = async (action: "select" | "skip-needs" | "skip" | "back" | "restart", productId?: string, qty?: number) => {
-        if (actionLoading || isTyping) return;
-        setActionLoading(true);
-        try {
-            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            headers['x-session-id'] = getSessionId();
-
-            const baseUrl = getBaseUrl();
-            const response = await fetch(`${baseUrl}/api/chat/pack/action`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({ action, productId, qty, requestId: createRequestId() }),
-            });
-            const payload = await response.json().catch(() => null);
-            if (!response.ok || !payload?.success) {
-                throw new Error(payload?.message || `خطا در ثبت انتخاب (${response.status})`);
-            }
-            const d = payload.data;
-            if (d.userMessage) {
-                setMessages((prev: Message[]) => [...prev, { role: 'user', content: d.userMessage }]);
-            }
-            setMessages((prev: Message[]) => [...prev, {
-                role: 'ai',
-                content: d.message || '',
-                products: [],
-                package: d.package || null,
-                wizard: d.wizard || null,
-            }]);
-            if (d.usage) setUsage(d.usage);
-            setSticky(true);
-        } catch (error: unknown) {
-            console.error('[AI Chat] Pack action error:', error);
-            const errorMessage = (error instanceof Error ? error.message : null) || 'خطا در ثبت انتخاب. لطفاً دوباره تلاش کنید.';
-            setMessages((prev: Message[]) => [...prev, { role: 'ai', content: errorMessage, isError: true }]);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
+    // --- پاک‌سازی گفتگو ---
     const handleClearChat = async () => {
         if (abortRef.current) {
             abortRef.current.abort();
@@ -785,18 +796,25 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                     ))}
                                                 </div>
                                             )}
-                                            {/* پنل ویزارد پک — فقط روی تازه‌ترین پیام (وضعیت زنده)، بعد از اتمام استریم */}
-                                            {msg.role === 'ai' && !streamActive && isLastAi && msg.wizard?.active && !msg.wizard.complete && (msg.wizard.current || msg.wizard.phase === 'needs') ? (
-                                                <ChatWizardStep
-                                                    wizard={msg.wizard}
-                                                    disabled={isTyping}
-                                                    loading={actionLoading}
-                                                    onAction={handlePackAction}
-                                                />
-                                            ) : null}
-                                            {/* بسته پیشنهادی (پک) جایگزین کارت‌های تکی می‌شود تا قاطی نشود */}
+                                            {/* چیپ‌های پاسخ سریع — بالای همان حباب، مینیمال */}
+                                            {msg.role === 'ai' && !streamActive && isLastAi && Array.isArray(msg.quickReplies) && msg.quickReplies.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 w-full animate-in fade-in slide-in-from-bottom-2 duration-400">
+                                                    {msg.quickReplies.map((qr, qi) => (
+                                                        <button
+                                                            key={qi}
+                                                            type="button"
+                                                            disabled={isTyping || actionLoading}
+                                                            onClick={() => handleSend(String(qr.label))}
+                                                            className="px-3 py-2 rounded-full border border-kala-300 bg-white text-kala-700 text-[11px] font-bold shadow-sm hover:bg-kala-500 hover:text-white hover:border-kala-500 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                                                        >
+                                                            {qr.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {/* کارت پیش‌فاکتور پکیج نهایی */}
                                             {msg.role === 'ai' && !streamActive && msg.package && Array.isArray(msg.package.sections) && msg.package.sections.length > 0 ? (
-                                                <ChatPackageBuilder pkg={msg.package} />
+                                                <ChatPackageCard pkg={msg.package} />
                                             ) : null}
                                             {/* کارت محصولات مرتبط از دیتابیس (بعد از اتمام استریم + انیمیشن ورود) */}
                                             {msg.role === 'ai' && !streamActive && !msg.package && msg.products && msg.products.length > 0 && (
@@ -880,6 +898,35 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
                     {/* 3. Footer Input (Static Flex Item) */}
                     <div className="shrink-0 w-full p-4 pb-[calc(var(--bottom-nav-total-height)_+_0.75rem)] bg-white border-t border-gray-100 z-40">
+                        {/* چیپ‌های پاسخ سریع — بالای باکس ورودی */}
+                        {(() => {
+                            const lastAi = [...messages].reverse().find((m) => m.role === 'ai' && !m.isLoading);
+                            const chips: QuickReply[] = [];
+                            if (lastAi?.quickReplies?.length) {
+                                chips.push(...lastAi.quickReplies);
+                            } else if (lastAi) {
+                                const { groups } = parseChoices(lastAi.content);
+                                for (const g of groups.slice(0, 1)) {
+                                    for (const opt of g) chips.push({ label: opt });
+                                }
+                            }
+                            if (!chips.length || isTyping) return null;
+                            return (
+                                <div className="flex flex-wrap gap-1.5 mb-2.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                    {chips.slice(0, 6).map((qr, qi) => (
+                                        <button
+                                            key={qi}
+                                            type="button"
+                                            disabled={actionLoading}
+                                            onClick={() => handleSend(String(qr.label))}
+                                            className="px-3.5 py-2 rounded-full border border-kala-300 bg-kala-50 text-kala-700 text-[11px] font-bold hover:bg-kala-500 hover:text-white hover:border-kala-500 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {qr.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                         <div className="flex items-end gap-2 bg-white p-2 pr-4 rounded-[1.5rem] border border-gray-200 shadow-sm focus-within:border-kala-400 focus-within:ring-1 focus-within:ring-kala-200 transition-all">
                             <textarea
                                 ref={textareaRef}

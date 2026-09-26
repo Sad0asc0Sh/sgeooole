@@ -31,6 +31,18 @@ const {
   formatWizardContext,
 } = require('../utils/packWizard');
 const { parseCctvNeeds } = require('../utils/cctvEngine');
+const {
+  detectCctvIntent,
+  createFlow,
+  applyMessage,
+  applyQuickReply,
+  buildPrompt,
+  toFlowView,
+  toAssemblyParams,
+  summarizeSlots,
+  getNextStepKey,
+} = require('../services/cctvChatFlow');
+const { assembleCCTVPackage } = require('../services/cctvAssemblyEngine');
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 20;
@@ -384,6 +396,261 @@ function toClientError(error) {
   return new AIServiceError('خطایی در پردازش پیام رخ داد. لطفاً دوباره تلاش کنید.', 500, error);
 }
 
+/* ==========================================================================
+ * مسیر قطعی پک دوربین (cctvChatFlow + cctvAssemblyEngine) — بدون LLM
+ * ========================================================================== */
+
+/** تبدیل خروجی موتور اسمبل به ChatPackage سازگار فرانت */
+async function engineToChatPackage(assembled) {
+  if (!assembled || !Array.isArray(assembled.items) || !assembled.items.length) {
+    return null;
+  }
+  const Product = require('../models/Product');
+  const sections = [];
+  for (const item of assembled.items) {
+    if (!item || !item.productId) continue;
+    const full = await Product.findById(item.productId)
+      .select('name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images guarantee')
+      .populate('category', 'name slug')
+      .populate('brand', 'name')
+      .lean();
+    if (!full) continue;
+    const card = toCardPayload(full, {
+      recommendedQty: item.qty || 1,
+      compatibilityHint: item.why || '',
+    });
+    sections.push({
+      key: item.role,
+      title: item.title,
+      hint: item.why || '',
+      optional: false,
+      options: [card],
+      defaultId: card.id,
+      recommendedQty: item.qty || 1,
+    });
+  }
+  if (!sections.length) return null;
+
+  return {
+    domainId: 'cctv_deterministic',
+    title: 'پک دوربین مداربسته',
+    sections,
+    missing: (assembled.missing || []).map((m) => m.title),
+    requirements: assembled.params || {},
+    calculations: assembled.calculations || null,
+    totalPrice: assembled.totalPrice || 0,
+    warnings: assembled.warnings || [],
+  };
+}
+
+function buildCctvCompletionMessage(assembled) {
+  const slots = assembled.params || {};
+  const summary = summarizeSlots(slots);
+  const lines = [
+    `پک دوربین مداربسته آماده شد${summary ? ` (${summary})` : ''}.`,
+  ];
+  if (assembled.calculations?.storage) {
+    lines.push(
+      `حافظه: حدود ${assembled.calculations.storage.requiredTb} ترابایت برای ${assembled.calculations.storage.retentionDays} روز ضبط.`,
+    );
+  }
+  if (assembled.calculations?.cable) {
+    lines.push(`کابل: ${assembled.calculations.cable.totalMeters} متر.`);
+  }
+  if (assembled.missing?.length) {
+    lines.push(`اقلام نیازمند بررسی: ${assembled.missing.map((m) => m.title).join('، ')}.`);
+  }
+  lines.push('اقلام و قیمت نهایی در پک زیر است.');
+  return lines.join(' ');
+}
+
+/**
+ * نوبت گفت‌وگوی قطعی پک دوربین.
+ * @returns {object|null} اگر این پیام مربوط به مسیر پک نباشد → null
+ */
+async function handleCctvTurn(message, chatSession, options = {}) {
+  let flow =
+    chatSession.cctvFlow && typeof chatSession.cctvFlow === 'object'
+      ? JSON.parse(JSON.stringify(chatSession.cctvFlow))
+      : null;
+
+  const flowActive = Boolean(flow && flow.active && !flow.cancelled && !flow.complete);
+  const isIntent = detectCctvIntent(message, flowActive || Boolean(flow && flow.complete && options.force));
+
+  // اگر فلوی کامل داریم و پیام جدید نیت تازه است → فلوی نو
+  if (!flowActive && isIntent) {
+    flow = createFlow();
+  } else if (!flowActive && !isIntent) {
+    return null;
+  }
+
+  // پشتیبانی از quickReply ساخت‌یافته (body.slot / body.value)
+  if (options.slot && options.value !== undefined && options.value !== null) {
+    const qr = applyQuickReply(flow, options.slot, options.value);
+    flow = qr.flow;
+    if (!qr.ok) {
+      const prompt = buildPrompt(flow);
+      await saveCompletedTurn(chatSession, message, prompt.message);
+      return {
+        message: prompt.message,
+        cctvFlow: toFlowView(flow),
+        package: null,
+        products: [],
+      };
+    }
+  } else {
+    const applied = applyMessage(flow, message);
+    flow = applied.flow;
+
+    if (applied.cancelled) {
+      const msg = 'گفت‌وگوی پک دوربین لغو شد. هر وقت خواستید دوباره بگویید «پک دوربین».';
+      chatSession.cctvFlow = flow;
+      await saveCompletedTurn(chatSession, message, msg);
+      return {
+        message: msg,
+        cctvFlow: toFlowView(flow),
+        package: null,
+        products: [],
+      };
+    }
+
+    if (applied.restarted) {
+      flow = applied.flow;
+    }
+  }
+
+  let reply;
+  let packagePayload = null;
+
+  if (flow.complete || (flow.slots && Object.keys(flow.slots).length && !getNextStepKey(flow))) {
+    // همه اسلات‌ها پر شد — اسمبل قطعی
+    const params = toAssemblyParams(flow);
+    const assembled = await assembleCCTVPackage(params);
+    packagePayload = await engineToChatPackage(assembled);
+    reply = buildCctvCompletionMessage(assembled);
+    flow.complete = true;
+    flow.active = false;
+  } else {
+    const prompt = buildPrompt(flow);
+    // اگر این نوبت چیزی پر شد، تأیید کوتاه + سوال بعدی
+    const ack = Object.keys(flow.slots || {}).length
+      ? `${summarizeSlots(flow.slots)}\n\n`
+      : '';
+    reply = `${ack}${prompt.message}`.trim();
+  }
+
+  chatSession.cctvFlow = flow;
+  await saveCompletedTurn(chatSession, message, reply);
+
+  return {
+    message: reply,
+    cctvFlow: toFlowView(flow),
+    package: packagePayload,
+    products: [],
+  };
+}
+
+/**
+ * POST /api/chat/message — مسیر اصلی مکالمه با کمترین توکن
+ * اول مسیر قطعی پک دوربین، در غیر این صورت LLM (مسیر موجود).
+ */
+exports.handleChatMessage = async (req, res) => {
+  const message = normalizeMessage(req.body?.message);
+  const slot = req.body?.slot;
+  const value = req.body?.value;
+
+  // اجازه quickReply بدون متن طولانی
+  if (!message && !(slot && value !== undefined && value !== null)) {
+    return res.status(400).json({
+      success: false,
+      message: `پیام باید بین ۱ تا ${MAX_MESSAGE_LENGTH} نویسه باشد.`,
+    });
+  }
+  const effectiveMessage = message || String(value);
+
+  let conversation;
+  let requestId;
+  try {
+    conversation = await loadConversation(req);
+    requestId = getRequestId(req);
+    if (!acquireConversation(conversation.identity.key, requestId)) {
+      return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
+    }
+
+    // ۱) مسیر قطعی پک دوربین — بدون LLM
+    const cctvResult = await handleCctvTurn(effectiveMessage, conversation.chatSession, {
+      slot,
+      value,
+    });
+    if (cctvResult) {
+      return res.json({
+        success: true,
+        data: {
+          message: cctvResult.message,
+          products: cctvResult.products || [],
+          package: cctvResult.package || null,
+          wizard: null,
+          cctvFlow: cctvResult.cctvFlow || null,
+          timestamp: new Date(),
+          usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
+          provider: 'deterministic-cctv',
+        },
+      });
+    }
+
+    // ۲) مسیر عمومی (LLM) — همان handleMessage
+    const pack = await preparePackWizard(effectiveMessage, conversation.chatSession, conversation.history);
+    const context = await buildChatContext(
+      effectiveMessage,
+      conversation.settings,
+      conversation.identity.query?.userId,
+      conversation.history,
+      pack.view,
+    );
+    const result = await generateExpertResponse(
+      effectiveMessage,
+      context.productContext,
+      conversation.history,
+      context.storeInfoContext,
+      {
+        advisoryHint: context.advisoryHint,
+        wizardCreated: pack.wizardCreated,
+        wizardStepsBegun: pack.wizardStepsBegun,
+        wizardRestarted: pack.wizardRestarted,
+        wizardCancelled: pack.wizardCancelled,
+        packNotViable: pack.packNotViable,
+      },
+    );
+    await saveCompletedTurn(conversation.chatSession, effectiveMessage, result.message);
+
+    return res.json({
+      success: true,
+      data: {
+        message: result.message,
+        products: context.products || [],
+        package: null,
+        wizard: context.wizard || null,
+        cctvFlow: null,
+        timestamp: new Date(),
+        usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
+        provider: result.provider,
+      },
+    });
+  } catch (error) {
+    const clientError = toClientError(error);
+    console.error(
+      `[chat] handleChatMessage failed | requestId=${requestId || '-'} status=${clientError.statusCode}`,
+    );
+    return res.status(clientError.statusCode).json({
+      success: false,
+      message: clientError.message,
+      requestId,
+    });
+  } finally {
+    if (conversation && requestId) releaseConversation(conversation.identity.key, requestId);
+  }
+};
+
 /**
  * POST /api/chat
  * مسیر fallback غیر-stream برای کلاینت‌های ناسازگار با SSE.
@@ -401,6 +668,27 @@ exports.handleMessage = async (req, res) => {
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
+    }
+
+    // مسیر قطعی پک دوربین — بدون LLM و بدون انباشت توکن
+    const cctvResult = await handleCctvTurn(message, conversation.chatSession, {
+      slot: req.body?.slot,
+      value: req.body?.value,
+    });
+    if (cctvResult) {
+      return res.json({
+        success: true,
+        data: {
+          message: cctvResult.message,
+          products: cctvResult.products || [],
+          package: cctvResult.package || null,
+          wizard: null,
+          cctvFlow: cctvResult.cctvFlow || null,
+          timestamp: new Date(),
+          usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
+          provider: 'deterministic-cctv',
+        },
+      });
     }
 
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
@@ -434,6 +722,7 @@ exports.handleMessage = async (req, res) => {
         products: context.products || [],
         package: null,
         wizard: context.wizard || null,
+        cctvFlow: null,
         timestamp: new Date(),
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: result.provider,
@@ -475,6 +764,35 @@ exports.handleStreamMessage = async (req, res) => {
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
+    }
+
+    // مسیر قطعی پک دوربین — یک رویداد SSE کامل، بدون LLM
+    const cctvResult = await handleCctvTurn(message, conversation.chatSession, {
+      slot: req.body?.slot,
+      value: req.body?.value,
+    });
+    if (cctvResult) {
+      res.status(200);
+      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.setHeader('Content-Encoding', 'identity');
+      res.flushHeaders?.();
+      res.write(`data: ${JSON.stringify({ meta: { requestId } })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        message: cctvResult.message,
+        products: cctvResult.products || [],
+        package: cctvResult.package || null,
+        wizard: null,
+        cctvFlow: cctvResult.cctvFlow || null,
+        usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
+        provider: 'deterministic-cctv',
+        partial: false,
+      })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
     }
 
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
