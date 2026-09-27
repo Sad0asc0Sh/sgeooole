@@ -402,7 +402,11 @@ function toClientError(error) {
 
 /** تبدیل خروجی موتور اسمبل به ChatPackage سازگار فرانت */
 async function engineToChatPackage(assembled) {
-  if (!assembled || !Array.isArray(assembled.items) || !assembled.items.length) {
+  // گیت یکپارچگی: پک بدون هسته (دوربین/رکوردر) هرگز کارت پیش‌فاکتور نمی‌گیرد
+  if (!assembled || assembled.success === false || assembled.error === 'MISSING_CORE_ITEMS') {
+    return null;
+  }
+  if (!Array.isArray(assembled.items) || !assembled.items.length) {
     return null;
   }
   const Product = require('../models/Product');
@@ -436,14 +440,24 @@ async function engineToChatPackage(assembled) {
     title: 'پک دوربین مداربسته',
     sections,
     missing: (assembled.missing || []).map((m) => m.title),
+    incomplete: Boolean(assembled.incomplete),
     requirements: assembled.params || {},
     calculations: assembled.calculations || null,
     totalPrice: assembled.totalPrice || 0,
     warnings: assembled.warnings || [],
+    notes: assembled.notes || [],
   };
 }
 
 function buildCctvCompletionMessage(assembled) {
+  // شکست سخت — بدون کارت پیش‌فاکتور
+  if (!assembled || assembled.success === false || assembled.error === 'MISSING_CORE_ITEMS') {
+    return (
+      assembled?.message ||
+      'متأسفانه در حال حاضر دوربین یا دستگاه متناسب با این مشخصات در انبار موجود نیست.'
+    );
+  }
+
   const slots = assembled.params || {};
   const summary = summarizeSlots(slots);
   const lines = [
@@ -457,10 +471,17 @@ function buildCctvCompletionMessage(assembled) {
   if (assembled.calculations?.cable) {
     lines.push(`کابل: ${assembled.calculations.cable.totalMeters} متر.`);
   }
-  if (assembled.missing?.length) {
-    lines.push(`اقلام نیازمند بررسی: ${assembled.missing.map((m) => m.title).join('، ')}.`);
+  if (assembled.notes?.length) {
+    lines.push(`توجه: ${assembled.notes.join(' ')}`);
   }
-  lines.push('اقلام و قیمت نهایی در پک زیر است.');
+  if (assembled.missing?.length) {
+    lines.push(
+      `⚠ اقلام ناموجود و حذف‌شده از پیش‌فاکتور: ${assembled.missing.map((m) => m.title).join('، ')}.`,
+    );
+    lines.push('این پک ناقص است؛ لطفاً پیش از پرداخت اقلام بالا را بررسی کنید.');
+  } else {
+    lines.push('اقلام و قیمت نهایی در پک زیر است.');
+  }
   return lines.join(' ');
 }
 
@@ -526,10 +547,20 @@ async function handleCctvTurn(message, chatSession, options = {}) {
     // همه اسلات‌ها پر شد — اسمبل قطعی
     const params = toAssemblyParams(flow);
     const assembled = await assembleCCTVPackage(params);
-    packagePayload = await engineToChatPackage(assembled);
-    reply = buildCctvCompletionMessage(assembled);
-    flow.complete = true;
-    flow.active = false;
+
+    // گیت سخت: بدون دوربین/رکوردر کارت پیش‌فاکتور صادر نمی‌شود
+    if (!assembled || assembled.success === false || assembled.error === 'MISSING_CORE_ITEMS') {
+      reply = buildCctvCompletionMessage(assembled);
+      packagePayload = null;
+      flow.complete = true;
+      flow.active = false;
+      flow.error = assembled?.error || 'MISSING_CORE_ITEMS';
+    } else {
+      packagePayload = await engineToChatPackage(assembled);
+      reply = buildCctvCompletionMessage(assembled);
+      flow.complete = true;
+      flow.active = false;
+    }
   } else {
     const prompt = buildPrompt(flow);
     // اگر این نوبت چیزی پر شد، تأیید کوتاه + سوال بعدی

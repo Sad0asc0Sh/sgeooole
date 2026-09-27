@@ -540,13 +540,15 @@ function analyzeRecorderProduct(p) {
 
 function analyzeHddProduct(p) {
   const hay = productHaystack(p);
-  const isSurveillance = /بنفش|purple|skyhawk|نظارتی|surveillance|surveillance/i.test(hay);
+  const isSurveillance = /بنفش|purple|skyhawk|نظارتی|surveillance/i.test(hay);
 
   let capacityGb = null;
-  const tbMatch = hay.match(/(\d+(?:\.\d+)?)\s*(?:\bTB\b|ترابایت|تیبی)/i);
-  if (tbMatch) capacityGb = Math.round(parseFloat(tbMatch[1]) * 1000);
-  else {
-    const gbMatch = hay.match(/(\d{3,5})\s*(?:\bGB\b|گیگابایت|گیگ)/i);
+  // حذف \b قبل از TB تا عباراتی مثل 4TB و 4 TB هر دو به درستی مچ شوند
+  const tbMatch = hay.match(/(\d+(?:\.\d+)?)\s*(?:TB|ترابایت|تیبی)(?:\b|[^\w]|$)/i);
+  if (tbMatch) {
+    capacityGb = Math.round(parseFloat(tbMatch[1]) * 1000);
+  } else {
+    const gbMatch = hay.match(/(\d{3,5})\s*(?:GB|گیگابایت|گیگ)(?:\b|[^\w]|$)/i);
     if (gbMatch) capacityGb = parseInt(gbMatch[1], 10);
   }
 
@@ -569,12 +571,18 @@ function analyzePowerProduct(p) {
   return { amperage, isIndustrial, isAdapter, isPoeSwitch, isNetworkSwitch, ports };
 }
 
+/** توکن‌هایی که نشان می‌دهد محصول «فیش/کانکتور» است نه کابل */
+const CONNECTOR_TOKENS = /فیش|سوزنی|کانکتور|connector|\bbnc\b|rj45|rj\s*45|سری\s*نری|سری\s*مادگی|ترمینال|سوکت/i;
+
 function analyzeCableProduct(p) {
   const hay = productHaystack(p);
   const isCat6 = /cat6|cat\s*6|شبکه/i.test(hay) && !/rg59|کواکسیال/i.test(hay);
   const isRg59 = /rg59|rg\s*59|کواکسیال|ترکیبی/i.test(hay);
   const isMeter = /متر|meter|\bm\b/i.test(hay);
   const isBox = /باکس|box|قرقره|رول|roll|100\s*m|305/i.test(hay);
+
+  // فیش/اتصالِ «کابل ترکیبی» نباید کابل تلقی شود
+  const isConnectorLike = CONNECTOR_TOKENS.test(hay);
 
   let boxMeters = null;
   const boxMatch = hay.match(/(\d{2,4})\s*(?:متر|m)/i);
@@ -583,11 +591,16 @@ function analyzeCableProduct(p) {
     if (v >= 50) boxMeters = v;
   }
 
+  const kind = isCat6 && !isRg59 ? 'cat6' : isRg59 ? 'rg59' : null;
+
   return {
-    kind: isCat6 && !isRg59 ? 'cat6' : isRg59 ? 'rg59' : null,
+    kind,
     isMeter,
     isBox,
     boxMeters,
+    isConnectorLike,
+    /** کابل واقعی: نوع شبکه/کواکس دارد و فیش/کانکتور نیست */
+    isTrueCable: Boolean(kind) && !isConnectorLike,
   };
 }
 
@@ -610,7 +623,9 @@ function priceOf(p) {
 }
 
 function stockOf(p) {
-  return effectiveStock(p);
+  const n = effectiveStock(p);
+  if (Number.isFinite(n) && n > 0) return n;
+  return Number(p?.countInStock) || Number(p?.stock) || 0;
 }
 
 /**
@@ -626,14 +641,17 @@ function scoreCamera(p, params) {
   else if (a.tech == null) score += 10; // ناشناخته: ضعیف ولی رد نمی‌کنیم
   else return -1e6; // ناسازگار — حذف قطعی
 
-  // رزولوشن — باید ≥ درخواستی باشد
+  // رزولوشن — اگر دقیق نبود، نزدیک‌ترین موجود (Fallback) انتخاب می‌شود
   if (a.resolution) {
     const reqIdx = RESOLUTION_ORDER.indexOf(params.resolution);
     const gotIdx = RESOLUTION_ORDER.indexOf(a.resolution);
     if (gotIdx < 0) score += 5;
     else if (gotIdx === reqIdx) score += 80;
     else if (gotIdx > reqIdx) score += 50; // بالاتر قابل قبول
-    else return -1e6; // پایین‌تر از نیاز
+    else {
+      // پایین‌تر از نیاز: مجاز ولی جریمه — تا اگر 5mp نبود 4mp/2mp انتخاب شود
+      score += 25 - (reqIdx - gotIdx) * 20;
+    }
   } else {
     score += 5;
   }
@@ -738,9 +756,16 @@ function scoreHdd(p, storageCalc) {
     score += 5;
     return score;
   }
+  // اول دقیق، بعد بزرگ‌ترِ نزدیک، بعد کوچک‌تر (Fallback)
   if (a.capacityGb === target) score += 100;
-  else if (a.capacityGb > target) score += 40 - Math.min(30, (a.capacityGb - target) / 500);
-  else score += 10; // کوچک‌تر — فقط اگر چاره نباشد
+  else if (a.capacityGb > target) {
+    const over = a.capacityGb - target;
+    // هرچه بزرگ‌تر از هدف بهتر (پوشش کامل) ولی نزدیک‌تر اولویت دارد
+    score += 90 - Math.min(25, over / 1000);
+  } else {
+    const under = target - a.capacityGb;
+    score += 30 - Math.min(25, under / 500);
+  }
 
   const stock = stockOf(p);
   if (stock > 0) score += 40;
@@ -787,6 +812,10 @@ function scorePower(p, params, powerCalc) {
 
 function scoreCable(p, params) {
   const a = analyzeCableProduct(p);
+
+  // گیت سخت: فیش/سوزنی/کانکتور هرگز کابل نیست
+  if (a.isConnectorLike) return -1e6;
+
   let score = 0;
 
   if (params.tech === 'ip') {
@@ -799,9 +828,12 @@ function scoreCable(p, params) {
     else score += 5;
   }
 
-  // فروش متری / باکسی — هر دو قابل قبول؛ متری دقیق‌تر است
+  // فقط کابل واقعی
+  if (!a.isTrueCable && a.kind) score -= 20;
+
+  // فروش متری / کلافی — نه تک‌فیش
   if (a.isMeter && !a.isBox) score += 30;
-  else if (a.isBox) score += 20;
+  else if (a.isBox) score += 25;
 
   const stock = stockOf(p);
   if (stock > 0) score += 30;
@@ -868,32 +900,58 @@ function pickBest(scored, needQty = 1) {
  * ۷) بارگذاری محصولات از MongoDB
  * ========================================================================== */
 
+/**
+ * الگوهای نام دسته‌بندی — Category-First
+ * نکته: «فیش» فقط برای اتصالات؛ هرگز برای کابل.
+ */
 const ROLE_CATEGORY_PATTERNS = Object.freeze({
-  camera: ['دوربین'],
-  recorder: ['ضبط', 'dvr', 'nvr', 'xvr', 'رکوردر'],
-  hdd: ['هارد', 'ذخیره'],
-  power: ['آداپتور', 'تغذیه', 'پاور', 'منبع'],
-  cable: ['کابل', 'اتصالات', 'فیش'],
-  switch: ['سوئیچ'],
-  connector: ['فیش', 'اتصالات', 'سوکت'],
+  camera: ['دوربین', 'cctv', 'دام', 'بولت', 'camera'],
+  recorder: ['ضبط', 'dvr', 'nvr', 'xvr', 'رکوردر', 'recorder'],
+  hdd: ['هارد', 'ذخیره', 'hdd', 'disk', 'حافظه'],
+  power: ['آداپتور', 'تغذیه', 'پاور', 'منبع', 'adapter'],
+  // کابل: فقط دسته کابل/پچ — نه فیش/اتصالات
+  cable: ['کابل', 'پچ', 'cable', 'rg59', 'cat6'],
+  switch: ['سوئیچ', 'switch'],
+  connector: ['فیش', 'اتصالات', 'سوکت', 'کانکتور', 'لوازم جانبی'],
 });
 
+/**
+ * تطبیق دسته‌ها + گسترش فرزندان (زیردسته‌ها)
+ */
 async function resolveCategoryIds(patterns) {
-  const all = await Category.find({ isActive: true }).select('_id name').lean();
+  const all = await Category.find({ isActive: true }).select('_id name slug parent').lean();
   const pats = patterns.map((x) => normalizeFa(x)).filter((x) => x.length >= 2);
-  return all
-    .filter((c) => {
-      const nm = normalizeFa(c.name || '');
-      return pats.some((pat) => nm.includes(pat));
-    })
-    .map((c) => c._id);
+  const matchedIds = new Set();
+
+  for (const c of all) {
+    const nm = normalizeFa(`${c.name || ''} ${c.slug || ''}`);
+    if (pats.some((pat) => nm.includes(pat))) {
+      matchedIds.add(String(c._id));
+    }
+  }
+
+  // فرزندان دسته‌های مچ‌شده
+  for (const c of all) {
+    if (c.parent && matchedIds.has(String(c.parent))) {
+      matchedIds.add(String(c._id));
+    }
+  }
+
+  return [...matchedIds];
 }
 
 const PRODUCT_SELECT =
-  'name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images isActive';
+  'name slug price compareAtPrice discount stock countInStock variants productCode sku description category brand properties specifications images isActive';
 
+/**
+ * واکشی محصولات فعال و موجود در دسته‌ها (Category-First)
+ */
 async function loadPool(categoryIds, extraQuery = {}) {
-  const query = { isActive: true, ...extraQuery };
+  const query = {
+    isActive: true,
+    $or: [{ stock: { $gt: 0 } }, { 'variants.stock': { $gt: 0 } }],
+    ...extraQuery,
+  };
   if (Array.isArray(categoryIds) && categoryIds.length > 0) {
     query.category = { $in: categoryIds };
   }
@@ -901,17 +959,24 @@ async function loadPool(categoryIds, extraQuery = {}) {
 }
 
 /**
- * اگر دسته‌بندی مچ نشد، با عبارت‌های نقش جست‌وجوی متنی قطعی می‌زنیم.
+ * فقط اگر دسته هیچ محصولی نداد، جست‌وجوی متنی محدود (fallback امن).
+ * برای کابل، الگوهای فیش/اتصال حذف می‌شوند.
  */
-async function loadPoolByPhrases(phrases) {
+async function loadPoolByPhrases(phrases, opts = {}) {
   if (!phrases.length) return [];
-  const or = phrases.map((k) => ({
+  const terms = phrases.filter((k) => !CONNECTOR_TOKENS.test(String(k)));
+  if (!terms.length) return [];
+  const or = terms.map((k) => ({
     $or: [
       { name: { $regex: escapeRegexSafe(k), $options: 'i' } },
       { description: { $regex: escapeRegexSafe(k), $options: 'i' } },
     ],
   }));
-  return Product.find({ isActive: true, $or: or })
+  return Product.find({
+    isActive: true,
+    $or: [{ stock: { $gt: 0 } }, { 'variants.stock': { $gt: 0 } }],
+    $and: [{ $or: or }],
+  })
     .select(PRODUCT_SELECT)
     .populate('category', 'name')
     .populate('brand', 'name')
@@ -971,12 +1036,21 @@ function missingItem(role, title, reason) {
  *
  * @returns {Promise<object>} پکیج قطعی + محاسبات + هشدارها
  */
+/**
+ * assembleCCTVPackage — نسخه اصلاح‌شده (Category-First + Integrity Gate)
+ * این فایل جایگزین بدنه assembleCCTVPackage در cctvAssemblyEngine.js می‌شود.
+ */
+
 async function assembleCCTVPackage(params = {}) {
   const plan = computeRequirements(params);
   if (!plan.ok) {
     return {
       ok: false,
+      success: false,
+      error: 'INVALID_PARAMS',
       errors: plan.errors,
+      missingRoles: [],
+      message: 'پارامترهای ورودی نامعتبر است.',
       items: [],
       totalPrice: 0,
       calculations: null,
@@ -987,27 +1061,50 @@ async function assembleCCTVPackage(params = {}) {
   const items = [];
   const missing = [];
   const warnings = [];
+  const notes = [];
 
-  // --- دسته‌ها ---
-  const [camCatIds, recCatIds, hddCatIds, powerCatIds, cableCatIds] = await Promise.all([
+  // --- دسته‌ها (Category-First + زیردسته‌ها) ---
+  const [camCatIds, recCatIds, hddCatIds, powerCatIds, cableCatIds, connCatIds] = await Promise.all([
     resolveCategoryIds(ROLE_CATEGORY_PATTERNS.camera),
     resolveCategoryIds(ROLE_CATEGORY_PATTERNS.recorder),
     resolveCategoryIds(ROLE_CATEGORY_PATTERNS.hdd),
     resolveCategoryIds(ROLE_CATEGORY_PATTERNS.power),
     resolveCategoryIds(ROLE_CATEGORY_PATTERNS.cable),
+    resolveCategoryIds(ROLE_CATEGORY_PATTERNS.connector),
   ]);
 
-  // --- دوربین ---
-  const camPool = camCatIds.length
-    ? await loadPool(camCatIds)
-    : await loadPoolByPhrases(['دوربین مداربسته', 'دوربین', 'دام', 'بولت', 'cctv']);
+  // --- دوربین (با Fallback رزولوشن و محیط) ---
+  let camPool = camCatIds.length ? await loadPool(camCatIds) : [];
+  if (!camPool.length) {
+    camPool = await loadPoolByPhrases(['دوربین مداربسته', 'دوربین', 'دام', 'بولت', 'cctv']);
+  }
 
-  const camScored = camPool.map((prod) => ({ product: prod, score: scoreCamera(prod, p) }));
-  const camPick = pickBest(camScored, p.camerasCount);
+  let camScored = camPool.map((prod) => ({ product: prod, score: scoreCamera(prod, p) }));
+  let camPick = pickBest(camScored, p.camerasCount);
+
+  // Fallback رزولوشن: اگر هیچ دوربینی نبود، pool را بازتر امتیاز بده
+  if (!camPick && camPool.length) {
+    const relaxed = { ...p, resolution: '2mp', environment: 'mixed' };
+    camScored = camPool.map((prod) => ({ product: prod, score: scoreCamera(prod, relaxed) }));
+    camPick = pickBest(camScored, p.camerasCount);
+    if (camPick) {
+      const got = analyzeCameraProduct(camPick.product);
+      notes.push(
+        `رزولوشن درخواستی ${p.resolution.toUpperCase()} موجود نبود؛ نزدیک‌ترین دوربین موجود (${(got.resolution || 'نامشخص').toUpperCase()}) انتخاب شد.`,
+      );
+    }
+  }
+
   if (camPick) {
+    const camInfo = analyzeCameraProduct(camPick.product);
+    if (camInfo.resolution && camInfo.resolution !== p.resolution) {
+      notes.push(
+        `رزولوشن دوربین انتخابی ${camInfo.resolution.toUpperCase()} است (درخواست: ${p.resolution.toUpperCase()}).`,
+      );
+    }
     items.push(
       lineItem('camera', 'دوربین مداربسته', camPick.product, p.camerasCount, {
-        why: `سازگار با ${p.tech === 'ip' ? 'تحت شبکه' : 'آنالوگ'} · ${p.resolution.toUpperCase()} · ${p.environment === 'indoor' ? 'داخلی' : p.environment === 'outdoor' ? 'بیرونی' : 'ترکیبی'}`,
+        why: `سازگار با ${p.tech === 'ip' ? 'تحت شبکه' : 'آنالوگ'} · ${p.environment === 'indoor' ? 'داخلی' : p.environment === 'outdoor' ? 'بیرونی' : 'ترکیبی'}${camInfo.form ? ' · ' + camInfo.form : ''}`,
         form: calc.camera.form,
       }),
     );
@@ -1016,25 +1113,31 @@ async function assembleCCTVPackage(params = {}) {
       missingItem(
         'camera',
         'دوربین مداربسته',
-        `دوربین ${p.tech === 'ip' ? 'IP' : 'AHD'} با رزولوشن ≥ ${p.resolution.toUpperCase()} و موجودی ≥ ${p.camerasCount} در دیتابیس یافت نشد.`,
+        `دوربین ${p.tech === 'ip' ? 'IP' : 'AHD'} با موجودی ≥ ${p.camerasCount} در انبار یافت نشد.`,
       ),
     );
   }
 
   // --- رکوردر ---
-  const recPool = recCatIds.length
-    ? await loadPool(recCatIds)
-    : await loadPoolByPhrases(['dvr', 'nvr', 'xvr', 'دستگاه ضبط', 'رکوردر']);
+  let recPool = recCatIds.length ? await loadPool(recCatIds) : [];
+  if (!recPool.length) {
+    recPool = await loadPoolByPhrases(['dvr', 'nvr', 'xvr', 'دستگاه ضبط', 'رکوردر']);
+  }
 
-  const recScored = recPool.map((prod) => ({
-    product: prod,
-    score: scoreRecorder(prod, p, calc.recorder),
-  }));
-  const recPick = pickBest(recScored, 1);
+  let recScored = recPool.map((prod) => ({ product: prod, score: scoreRecorder(prod, p, calc.recorder) }));
+  let recPick = pickBest(recScored, 1);
+  if (!recPick && recPool.length) {
+    // Fallback: کانال بیشتر یا رزولوشن پایین‌تر
+    const relaxedCalc = { ...calc.recorder, channelsNeeded: Math.max(1, Math.floor(calc.recorder.channelsNeeded / 2)) };
+    recScored = recPool.map((prod) => ({ product: prod, score: scoreRecorder(prod, p, relaxedCalc) }));
+    recPick = pickBest(recScored, 1);
+    if (recPick) notes.push('دستگاه ضبط با ظرفیت کانال نزدیک به نیاز انتخاب شد.');
+  }
+
   if (recPick) {
     items.push(
       lineItem('recorder', p.tech === 'ip' ? 'NVR (دستگاه ضبط شبکه)' : 'DVR/XVR (دستگاه ضبط)', recPick.product, 1, {
-        why: `کانال ≥ ${calc.recorder.channelsNeeded} · پشتیبانی ≥ ${p.resolution.toUpperCase()}`,
+        why: `کانال ≥ ${calc.recorder.channelsNeeded}`,
       }),
     );
   } else {
@@ -1042,19 +1145,33 @@ async function assembleCCTVPackage(params = {}) {
       missingItem(
         'recorder',
         p.tech === 'ip' ? 'NVR' : 'DVR/XVR',
-        `دستگاه ضبط ${p.tech === 'ip' ? 'شبکه NVR' : 'آنالوگ DVR/XVR'} با ${calc.recorder.channelsNeeded} کانال و رزولوشن ≥ ${p.resolution.toUpperCase()} یافت نشد.`,
+        `دستگاه ضبط ${p.tech === 'ip' ? 'شبکه NVR' : 'آنالوگ DVR/XVR'} با ${calc.recorder.channelsNeeded} کانال یافت نشد.`,
       ),
     );
   }
 
-  // --- هارد ---
-  const hddPool = hddCatIds.length
-    ? await loadPool(hddCatIds)
-    : await loadPoolByPhrases(['هارد', 'هارددیسک', 'purple', 'skyhawk', 'بنفش']);
+  // --- هارد (Fallback ظرفیت بزرگ‌تر) ---
+  let hddPool = hddCatIds.length ? await loadPool(hddCatIds) : [];
+  if (!hddPool.length) {
+    hddPool = await loadPoolByPhrases(['هارد', 'هارددیسک', 'purple', 'skyhawk', 'بنفش']);
+  }
 
-  const hddScored = hddPool.map((prod) => ({ product: prod, score: scoreHdd(prod, calc.storage) }));
   const hddNeed = calc.storage.hddPlan.drives[0].qty;
-  const hddPick = pickBest(hddScored, hddNeed);
+  const hddTargetGb = calc.storage.hddPlan.drives[0].capacityGb;
+  let hddScored = hddPool.map((prod) => ({ product: prod, score: scoreHdd(prod, calc.storage) }));
+  let hddPick = pickBest(hddScored, hddNeed);
+
+  if (!hddPick && hddPool.length) {
+    // اسنپ به نزدیک‌ترین ظرفیت موجود
+    hddPick = pickBest(hddScored, 1);
+    if (hddPick) {
+      const info = analyzeHddProduct(hddPick.product);
+      notes.push(
+        `هارد دقیقاً ${Math.round(hddTargetGb / 1000)} ترابایت موجود نبود؛ نزدیک‌ترین ظرفیت موجود (${info.capacityGb ? Math.round(info.capacityGb / 1000) + 'TB' : 'نامشخص'}) انتخاب شد.`,
+      );
+    }
+  }
+
   if (hddPick) {
     items.push(
       lineItem('hdd', 'هارددیسک نظارتی', hddPick.product, hddNeed, {
@@ -1066,31 +1183,27 @@ async function assembleCCTVPackage(params = {}) {
       missingItem(
         'hdd',
         'هارددیسک نظارتی',
-        `هارد نظارتی با ظرفیت ≥ ${calc.storage.hddPlan.drives[0].capacityGb}GB یافت نشد.`,
+        `هارد نظارتی با ظرفیت ≥ ${hddTargetGb}GB یافت نشد.`,
       ),
     );
   }
 
   // --- برق ---
-  let powerPool = powerCatIds.length
-    ? await loadPool(powerCatIds)
-    : await loadPoolByPhrases(['منبع تغذیه', 'آداپتور', 'پاور', 'پاور صنعتی']);
-
-  // برای IP اگر در دسته برق سوئیچ پیدا نشد، دسته سوئیچ را هم امتحان می‌کنیم
+  let powerPool = powerCatIds.length ? await loadPool(powerCatIds) : [];
+  if (!powerPool.length) {
+    powerPool = await loadPoolByPhrases(['منبع تغذیه', 'آداپتور', 'پاور', 'پاور صنعتی']);
+  }
   if (p.tech === 'ip') {
     const swCatIds = await resolveCategoryIds(ROLE_CATEGORY_PATTERNS.switch);
     if (swCatIds.length) {
-      const swPool = await loadPool(swCatIds);
-      powerPool = [...powerPool, ...swPool];
+      powerPool = [...powerPool, ...(await loadPool(swCatIds))];
     }
   }
-
-  // حذف محصولات تکراری
-  const seen = new Set();
+  const seenP = new Set();
   powerPool = powerPool.filter((x) => {
     const id = String(x._id);
-    if (seen.has(id)) return false;
-    seen.add(id);
+    if (seenP.has(id)) return false;
+    seenP.add(id);
     return true;
   });
 
@@ -1104,39 +1217,46 @@ async function assembleCCTVPackage(params = {}) {
       }),
     );
   } else {
-    missing.push(missingItem('power', 'منبع تغذیه', `تجهیز برق مناسب (${calc.power.recommendedSupply}) در دیتابیس یافت نشد.`));
+    missing.push(missingItem('power', 'منبع تغذیه', `تجهیز برق مناسب (${calc.power.recommendedSupply}) یافت نشد.`));
   }
 
-  // --- کابل ---
-  const cablePool = cableCatIds.length
-    ? await loadPool(cableCatIds)
-    : await loadPoolByPhrases(['کابل', 'RG59', 'cat6', 'شبکه']);
+  // --- کابل (فقط کابل واقعی — نه فیش/سوزنی) ---
+  let cablePool = cableCatIds.length ? await loadPool(cableCatIds) : [];
+  if (!cablePool.length) {
+    cablePool = await loadPoolByPhrases(['کابل RG59', 'کابل شبکه', 'کابل ترکیبی', 'cat6']);
+  }
+  // فیلتر سخت: هر محصولی که فیش/کانکتور است حذف می‌شود
+  cablePool = cablePool.filter((prod) => {
+    const a = analyzeCableProduct(prod);
+    return !a.isConnectorLike;
+  });
 
   const cableScored = cablePool.map((prod) => ({ product: prod, score: scoreCable(prod, p) }));
   const cablePick = pickBest(cableScored, 1);
   if (cablePick) {
     const ca = analyzeCableProduct(cablePick.product);
+    // تعداد: کلاف/باکس → تعداد کلاف؛ متری → متراژ واقعی
     let qty;
+    let unit;
     if (ca.boxMeters && ca.boxMeters >= 50) {
       qty = ceilInt(calc.cable.totalMeters / ca.boxMeters);
+      unit = 'box';
     } else {
       qty = calc.cable.totalMeters;
+      unit = 'meter';
     }
     items.push(
       lineItem('cable', p.tech === 'ip' ? 'کابل شبکه Cat6' : 'کابل ترکیبی RG59', cablePick.product, qty, {
-        why: `${calc.cable.totalMeters} متر (با ۱۰٪ هدر)`,
+        why: `${calc.cable.totalMeters} متر (با ۱۰٪ هدر) · واحد: ${unit === 'box' ? 'کلاف' : 'متر'}`,
+        unit,
       }),
     );
   } else {
-    missing.push(missingItem('cable', 'کابل', `کابل ${p.tech === 'ip' ? 'Cat6' : 'RG59'} در دیتابیس یافت نشد.`));
+    missing.push(missingItem('cable', 'کابل', `کابل ${p.tech === 'ip' ? 'Cat6' : 'RG59'} (نه فیش/اتصال) یافت نشد.`));
   }
 
-  // --- اتصالات ---
-  const connCatIds = await resolveCategoryIds(ROLE_CATEGORY_PATTERNS.connector);
-  const connPool = connCatIds.length
-    ? await loadPool(connCatIds)
-    : await loadPoolByPhrases(['BNC', 'فیش', 'RJ45', 'سوکت']);
-
+  // --- اتصالات (فیش) ---
+  const connPool = connCatIds.length ? await loadPool(connCatIds) : [];
   const connectors = calc.connectors;
 
   if (p.tech === 'ahd' && connectors.bnc > 0) {
@@ -1145,17 +1265,15 @@ async function assembleCCTVPackage(params = {}) {
     if (bncPick) {
       items.push(lineItem('connector_bnc', 'فیش BNC', bncPick.product, connectors.bnc, { why: connectors.details[0] }));
     } else {
-      missing.push(missingItem('connector_bnc', 'فیش BNC', `به ${connectors.bnc} عدد فیش BNC نیاز است و در دیتابیس موجود نیست.`));
+      missing.push(missingItem('connector_bnc', 'فیش BNC', `به ${connectors.bnc} عدد فیش BNC نیاز است و موجود نیست.`));
     }
 
     const dcScored = connPool.map((prod) => ({ product: prod, score: scoreConnector(prod, p, 'dc') }));
     const dcPick = pickBest(dcScored, 1);
     if (dcPick) {
       items.push(lineItem('connector_dc', 'جک / فیش برق DC', dcPick.product, connectors.dcJacks, { why: `تعداد: ${connectors.dcJacks}` }));
-    }
-    // اگر DC پیدا نشد، فقط هشدار می‌دهیم (اغلب روی پاور صنعتی ترمینال است)
-    else {
-      warnings.push(`جک DC (${connectors.dcJacks} عدد) جداگانه یافت نشد؛ در صورت استفاده از پاور صنعتی، ترمینال کافی است.`);
+    } else {
+      warnings.push(`جک DC (${connectors.dcJacks} عدد) جداگانه یافت نشد؛ در صورت پاور صنعتی، ترمینال کافی است.`);
     }
   }
 
@@ -1169,32 +1287,65 @@ async function assembleCCTVPackage(params = {}) {
     }
   }
 
-  // --- هشدارهای قطعی ---
+  // --- هشدارها ---
   if (calc.power.longRun) {
     warnings.push(
-      `متراژ کابل هر دوربین (${p.cableMetersPerCam}m) بیشتر از ${MAX_SHARED_POWER_RUN_M}m است؛ افت ولتاژ را در نظر بگیرید (${calc.power.recommendedSupply}).`,
+      `متراژ کابل هر دوربین (${p.cableMetersPerCam}m) بیشتر از ${MAX_SHARED_POWER_RUN_M}m است؛ ${calc.power.recommendedSupply}.`,
     );
   }
-  if (p.tech === 'ip') {
-    warnings.push('برای دوربین‌های IP، سوئیچ PoE یا NVR با PoE لازم است؛ در صورت عدم وجود PoE روی NVR، سوئیچ جداگانه الزامی است.');
-  }
   if (p.nightVision === 'warm_light') {
-    warnings.push('دوربین وارم‌لایت (دید در شب رنگی) مصرف برق بالاتری دارد؛ ظرفیت پاور با ضریب ۱٫۲۵ محاسبه شده است.');
+    warnings.push('دوربین وارم‌لایت مصرف برق بالاتری دارد؛ ظرفیت پاور با ضریب ۱٫۲۵ محاسبه شده است.');
+  }
+
+  /* ============================================================
+   * گیت اجباری یکپارچگی پکیج (Strict Integrity Gate)
+   * پک بدون دوربین یا رکوردر بی‌معنی است — نباید صادر شود.
+   * ============================================================ */
+  const CORE_ROLES = ['camera', 'recorder'];
+  const presentRoles = new Set(items.map((it) => it.role));
+  const missingRoles = CORE_ROLES.filter((r) => !presentRoles.has(r));
+
+  if (missingRoles.length > 0) {
+    return {
+      success: false,
+      ok: false,
+      error: 'MISSING_CORE_ITEMS',
+      missingRoles,
+      message: 'متأسفانه در حال حاضر دوربین یا دستگاه متناسب با این مشخصات در انبار موجود نیست.',
+      items: [],
+      totalPrice: 0,
+      params: p,
+      calculations: calc,
+      missing,
+      warnings,
+      notes,
+      meta: {
+        engine: 'cctvAssemblyEngine',
+        version: '1.1.0',
+        deterministic: true,
+        llmUsed: false,
+        generatedAt: new Date().toISOString(),
+      },
+    };
   }
 
   const totalPrice = items.reduce((s, it) => s + (it.lineTotal || 0), 0);
+  const incomplete = missing.length > 0;
 
   return {
-    ok: missing.length === 0,
+    success: true,
+    ok: !incomplete,
+    incomplete,
     params: p,
     calculations: calc,
     items,
     totalPrice,
     missing,
     warnings,
+    notes,
     meta: {
       engine: 'cctvAssemblyEngine',
-      version: '1.0.0',
+      version: '1.1.0',
       deterministic: true,
       llmUsed: false,
       generatedAt: new Date().toISOString(),
@@ -1246,4 +1397,5 @@ module.exports = {
   POWER_SUPPLY_AMPS,
   SWITCH_PORTS,
   DEFAULTS,
+  ROLE_CATEGORY_PATTERNS,
 };
