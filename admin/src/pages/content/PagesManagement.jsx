@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState, useMemo } from 'react'
 import { Card, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
@@ -193,24 +194,26 @@ function PagesManagement() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1>مدیریت صفحات</h1>
-        <Space>
-          <Input
-            placeholder="جستجو"
-            allowClear
-            style={{ width: 200, maxWidth: '100%' }}
-            onChange={(e) => setSearch(e.target.value)}
-            onPressEnter={() => fetchPages(1, pagination.pageSize)}
-            onBlur={() => fetchPages(1, pagination.pageSize)}
-          />
-          <Select placeholder="وضعیت" allowClear style={{ width: 140, maxWidth: '100%' }} onChange={setStatus}>
-            <Select.Option value="published">published</Select.Option>
-            <Select.Option value="hidden">hidden</Select.Option>
-          </Select>
-          <Button onClick={() => fetchPages(1, pagination.pageSize)}>اعمال</Button>
+      <PageHeader
+        title="مدیریت صفحات"
+        actions={
           <Button type="primary" onClick={onNew}>صفحه جدید</Button>
-        </Space>
+        }
+      />
+      <div className="filter-bar">
+        <Input
+          placeholder="جستجو"
+          allowClear
+          style={{ width: 220 }}
+          onChange={(e) => setSearch(e.target.value)}
+          onPressEnter={() => fetchPages(1, pagination.pageSize)}
+          onBlur={() => fetchPages(1, pagination.pageSize)}
+        />
+        <Select placeholder="وضعیت" allowClear style={{ width: 150 }} onChange={setStatus}>
+          <Select.Option value="published">منتشر شده</Select.Option>
+          <Select.Option value="hidden">پنهان</Select.Option>
+        </Select>
+        <Button onClick={() => fetchPages(1, pagination.pageSize)}>اعمال فیلتر</Button>
       </div>
       <Card>
         <ResponsiveTable

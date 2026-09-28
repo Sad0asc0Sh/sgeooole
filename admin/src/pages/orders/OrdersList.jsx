@@ -185,7 +185,7 @@ function OrdersList() {
         <Space direction="vertical" size={0}>
           <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
           {status === 'Shipped' && record.autoCompleteAt && (
-            <div style={{ fontSize: '0.75em', color: '#1890ff', marginTop: 4 }}>
+            <div style={{ fontSize: '0.75em', color: '#b45309', marginTop: 4 }}>
               <Countdown
                 date={new Date(record.autoCompleteAt)}
                 renderer={({ days, hours, minutes, completed }) => {

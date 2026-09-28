@@ -5,6 +5,7 @@ import { ReloadOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 dayjs.extend(jalaliday)
 dayjs.calendar('jalali')
@@ -101,19 +102,16 @@ function AuditLogs() {
 
     return (
         <div>
-            <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}>
-                <h1>گزارش عملکرد سیستم (Audit Logs)</h1>
-                <Button icon={<ReloadOutlined />} onClick={() => fetchLogs(1, pagination.pageSize)}>
-                    بروزرسانی
-                </Button>
-            </div>
+            <PageHeader
+           title="گزارش عملکرد سیستم (Audit Logs)"
+           actions={
+             <>
+<Button icon={<ReloadOutlined />} onClick={() => fetchLogs(1, pagination.pageSize)}>
+                                   بروزرسانی
+                               </Button>
+             </>
+           }
+         />
 
             <Card>
                 <ResponsiveTable

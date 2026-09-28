@@ -12,6 +12,7 @@ import {
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { RangePicker } = DatePicker
 
@@ -106,24 +107,19 @@ function SalesReports() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>گزارش فروش</h1>
-        <RangePicker
-          value={range}
-          onChange={handleRangeChange}
-          allowClear
-          style={{ maxWidth: 320 }}
-        />
-      </div>
+      <PageHeader
+         title="گزارش فروش"
+         actions={
+           <>
+<RangePicker
+                       value={range}
+                       onChange={handleRangeChange}
+                       allowClear
+                       style={{ maxWidth: 320 }}
+                     />
+           </>
+         }
+       />
 
       <Spin spinning={loading}>
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
@@ -143,7 +139,7 @@ marginBottom: 16,
               <Statistic
                 title="تعداد سفارش‌ها"
                 value={summary.ordersCount}
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#b45309' }}
               />
             </Card>
           </Col>
@@ -165,7 +161,7 @@ marginBottom: 16,
                 <Line
                   type="monotone"
                   dataKey="totalSales"
-                  stroke="#1890ff"
+                  stroke="#b45309"
                   strokeWidth={2}
                   dot={false}
                 />

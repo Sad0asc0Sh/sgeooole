@@ -1,37 +1,38 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  direction: rtl;
-  text-align: right;
-}
-
-/* Layout height is managed by MainLayout.css */
-
-/* ═══════════════════════════════════════════════════════════
-   GLOBAL RESPONSIVE & POLISH STYLESHEET
-   Applies to ALL pages of the admin panel automatically.
-   ═══════════════════════════════════════════════════════════ */
-
-/* ─── BASE ─────────────────────────────────────────────────── */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
-body {
-  font-family: 'Vazirmatn', 'IRANSans', -apple-system, BlinkMacSystemFont,
-    'Segoe UI', Tahoma, Arial, sans-serif;
-}
+/* ═══════════════════════════════════════════════════════════════════════
+   GLOBAL STYLESHEET
+   ───────────────────────────────────────────────────────────────────────
+   Everything here applies to all pages without each one opting in. It
+   exists so that 30+ pages behave consistently: one page header, one
+   filter bar, one table treatment, one focus ring, one empty state.
+   Tokens come from theme/tokens.css.
+   ═══════════════════════════════════════════════════════════════════════ */
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-align: right;
+  /* Tabular figures keep money columns and stat tiles from shifting
+     width as values change. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'ss01';
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  color: var(--text-primary);
+  background: var(--surface-canvas);
+  direction: rtl;
+  text-align: right;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 img,
@@ -48,110 +49,98 @@ code {
   max-width: 100%;
 }
 
-/* Fix RTL for Ant Design */
+/* ═══ FOCUS ═══════════════════════════════════════════════════════════
+   Keyboard focus is always visible. The ring is saffron and offset so
+   it survives on top of the dark rail as well as on white. */
+:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Right-to-left fix: antd draws a border on the wrong side. */
 .ant-menu {
   border-inline-start: none !important;
 }
 
-.dashboard-widgets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-}
-
-.widget-card {
-  cursor: move;
-}
-
-.widget-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-/* React Quill RTL */
-.quill {
-  direction: rtl;
-}
-
-.ql-editor {
-  min-height: 200px;
-  direction: rtl;
-  text-align: right;
-  font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
-}
-
-/* Tree draggable */
-.draggable-tree .ant-tree-node-content-wrapper {
-  cursor: move;
-}
-
-.variant-table .ant-table-cell {
-  padding: 8px !important;
-}
-
-/* ═══════════════════════════════════════════════════════════
-   UTILITY: Page header — wraps on mobile
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ PAGE HEADER ═════════════════════════════════════════════════════
+   Every list page opens with the same three parts: a title, an optional
+   count or description, and the actions. Keeping this identical across
+   pages is most of what makes a panel feel designed rather than
+   assembled. */
 .page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-5);
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+}
+
+.page-header .page-header-text {
+  min-width: 0;
 }
 
 .page-header h1,
 .page-header .page-title {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-display);
   font-weight: 700;
-  color: #0f172a;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+  color: var(--text-primary);
+}
+
+.page-header .page-subtitle {
+  margin: 3px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.page-header .page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* Secondary facts about the page, under the title: last sync time,
+   a threshold, a count. Never interactive — they are context. */
+.page-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.page-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+  line-height: 1.6;
 }
 
 .page-header .ant-space {
   flex-wrap: wrap;
 }
 
-@media (max-width: 576px) {
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .page-header h1,
-  .page-header .page-title {
-    font-size: 18px;
-  }
-
-  /* Action buttons become full-width stacked */
-  .page-header .ant-space {
-    width: 100%;
-  }
-
-  .page-header .ant-space-item {
-    flex: 1;
-  }
-
-  .page-header .ant-space-item .ant-btn {
-    width: 100%;
-  }
-
-  /* Tighter card padding on phones */
-  .admin-content-inner > .ant-card > .ant-card-body {
-    padding: 12px;
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════
-   UTILITY: Filter bar — wraps gracefully on mobile
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ FILTER BAR ═════════════════════════════════════════════════════
+   Sits directly on the canvas, so it gets the sunken surface and a
+   hairline to separate the controls from the results below. */
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
   align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
 }
 
 .filter-bar > * {
@@ -179,10 +168,28 @@ code {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   GLOBAL TABLE SAFETY NET — any wide table scrolls horizontally
-   while pagination stays fixed below.
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ CARDS ══════════════════════════════════════════════════════════ */
+.admin-content-inner > .ant-card {
+  border-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.admin-content-inner .ant-card-head {
+  border-bottom-color: var(--line-soft);
+  padding-inline: var(--sp-5);
+  min-height: 48px;
+}
+
+.admin-content-inner .ant-card-head-title {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+/* ═══ TABLES ═════════════════════════════════════════════════════════
+   Data is the point of this panel, so tables get a calm header, a
+   hairline row separator, and a hover that reveals without shouting. */
 .admin-content-inner .ant-table-wrapper {
   max-width: 100%;
 }
@@ -191,9 +198,22 @@ code {
   overflow-x: auto;
 }
 
-/* Prevent long words/URLs from blowing up table cells */
-.admin-content-inner .ant-table td,
-.admin-content-inner .ant-table th {
+.admin-content-inner .ant-table-thead > tr > th {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-700);
+  letter-spacing: -0.1px;
+  white-space: nowrap;
+}
+
+.admin-content-inner .ant-table-tbody > tr > td {
+  font-size: var(--fs-body);
+  color: var(--ink-800);
+}
+
+.admin-content-inner .ant-table-tbody > tr > td,
+.admin-content-inner .ant-table-thead > tr > th {
+  /* Long product names and URLs must not blow out the column. */
   word-break: break-word;
   overflow-wrap: anywhere;
 }
@@ -202,7 +222,17 @@ code {
   vertical-align: middle;
 }
 
-/* Compact tables on phones */
+.admin-content-inner .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--surface-sunken) !important;
+}
+
+/* Money and quantities line up on the decimal. */
+.admin-content-inner .ant-table-cell-money,
+.num-tabular {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .admin-content-inner .ant-table-thead > tr > th,
   .admin-content-inner .ant-table-tbody > tr > td {
@@ -217,16 +247,176 @@ code {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MODALS — never exceed the phone viewport
-   (dvh/--app-vh aware so the footer stays above browser chrome)
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ STAT TILE ══════════════════════════════════════════════════════
+   Shared by the dashboard and any other KPI row. The value is set in a
+   numeric face so a re-render never reflows the tile. */
+.stat-tile {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  height: 100%;
+  padding: 16px 18px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+a.stat-tile,
+button.stat-tile {
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+}
+
+a.stat-tile:hover,
+button.stat-tile:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-tile-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  font-size: 19px;
+}
+
+.stat-tile-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.stat-tile-label {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stat-tile-value {
+  margin-top: 2px;
+  font-size: var(--fs-metric);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile-foot {
+  margin-top: 5px;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.stat-tile-foot .up {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.stat-tile-foot .down {
+  color: var(--err);
+  font-weight: 600;
+}
+
+/* Tinted washes. Text always uses the darker sibling of the pair, so
+   contrast holds on the tint as well as on white. */
+.tone-ok    { background: var(--ok-bg);    color: var(--ok); }
+.tone-warn  { background: var(--warn-bg);  color: var(--warn); }
+.tone-err   { background: var(--err-bg);   color: var(--err); }
+.tone-info  { background: var(--info-bg);  color: var(--info); }
+.tone-brand { background: var(--brand-50); color: var(--brand-700); }
+.tone-neutral { background: var(--neutral-bg); color: var(--neutral); }
+
+/* ═══ EMPTY STATES ═══════════════════════════════════════════════════ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 44px 20px;
+  text-align: center;
+}
+
+.empty-state .ant-empty-description {
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+}
+
+.empty-state-icon {
+  font-size: 30px;
+  color: var(--ink-300);
+  line-height: 1;
+}
+
+/* ═══ DASHBOARD WIDGETS ══════════════════════════════════════════════ */
+.dashboard-widgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
+}
+
+.widget-card {
+  cursor: move;
+}
+
+.widget-card:hover {
+  border-color: var(--line-strong) !important;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ═══ RICH TEXT ══════════════════════════════════════════════════════ */
+.quill {
+  direction: rtl;
+}
+
+.ql-editor {
+  min-height: 200px;
+  direction: rtl;
+  text-align: right;
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
+  line-height: 1.8;
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--ink-400);
+  font-style: normal;
+}
+
+/* ═══ TREE / VARIANT TABLE ══════════════════════════════════════════ */
+.draggable-tree .ant-tree-node-content-wrapper {
+  cursor: move;
+}
+
+.variant-table .ant-table-cell {
+  padding: 8px !important;
+}
+
+/* ═══ MODALS ═════════════════════════════════════════════════════════
+   Height is dvh-aware so the footer never hides under mobile browser
+   chrome, and the footer sticks to the bottom of a long form. */
 .ant-modal {
   max-width: calc(100vw - 24px) !important;
 }
 
 .ant-modal .ant-modal-content {
   max-height: calc(100vh - 120px);
+  padding: 20px 22px;
 }
 
 @supports (height: 100dvh) {
@@ -239,6 +429,10 @@ code {
   overflow-y: auto;
 }
 
+.ant-modal .ant-modal-header {
+  margin-bottom: 18px;
+}
+
 @media (max-width: 576px) {
   .ant-modal {
     top: 12px !important;
@@ -248,6 +442,7 @@ code {
 
   .ant-modal .ant-modal-content {
     max-height: calc(calc(var(--app-vh, 1vh) * 100) - 48px);
+    padding: 16px;
   }
 
   @supports (height: 100dvh) {
@@ -260,20 +455,17 @@ code {
     position: sticky;
     bottom: 0;
     background: #fff;
-    box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.06);
+    margin-inline: -16px;
+    padding-inline: 16px;
+    border-top: 1px solid var(--line-soft);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   DRAWERS — safe widths on phones
-   ═══════════════════════════════════════════════════════════ */
+/* ═══ DRAWERS & DROPDOWNS ═════════════════════════════════════════════ */
 .ant-drawer-content-wrapper {
   max-width: 92vw !important;
 }
 
-/* ═══════════════════════════════════════════════════════════
-   DROPDOWNS — stay within viewport on phones
-   ═══════════════════════════════════════════════════════════ */
 .ant-dropdown-menu {
   max-width: calc(100vw - 24px);
 }
@@ -286,5 +478,157 @@ code {
 @media (max-width: 576px) {
   .ant-message {
     max-width: calc(100vw - 32px) !important;
+  }
+}
+
+/* ═══ CRASH & LOADING ═════════════════════════════════════════════════
+   The two screens a person sees when the app is not working. Same
+   canvas, same type, same one primary action — so the failure state
+   still looks like the product. */
+.crash-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  background: var(--surface-canvas);
+}
+
+.crash-card {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 36px 30px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+}
+
+.crash-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 22px;
+  color: var(--err);
+  background: var(--err-bg);
+}
+
+.crash-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.crash-body {
+  margin: 0;
+  max-width: 42ch;
+  font-size: var(--fs-sm);
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.crash-actions {
+  margin-top: 8px;
+}
+
+.crash-details {
+  width: 100%;
+  margin-top: 14px;
+  text-align: start;
+  font-size: var(--fs-xs);
+  color: var(--ink-500);
+}
+
+.crash-details summary {
+  cursor: pointer;
+  padding: 6px 0;
+  border-radius: 6px;
+}
+
+.crash-details summary:hover {
+  color: var(--ink-900);
+}
+
+.crash-details pre {
+  margin: 8px 0 0;
+  padding: 12px;
+  max-height: 220px;
+  overflow: auto;
+  direction: ltr;
+  text-align: left;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--err);
+  background: var(--err-bg);
+  border-radius: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Route-level suspense: a quiet centred spinner, not a full-page flash. */
+.route-loading {
+  min-height: 55vh;
+  display: grid;
+  place-items: center;
+  gap: 12px;
+}
+
+.route-loading-label {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+/* ═══ SMALL SCREENS ══════════════════════════════════════════════════ */
+@media (max-width: 576px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header h1,
+  .page-header .page-title {
+    font-size: 21px;
+  }
+
+  /* Actions go full width and stack so a thumb can reach them. */
+  .page-header .page-header-actions,
+  .page-header .ant-space {
+    width: 100%;
+  }
+
+  .page-header .page-header-actions .ant-btn,
+  .page-header .ant-space .ant-space-item {
+    flex: 1;
+  }
+
+  .page-header .ant-space .ant-space-item .ant-btn {
+    width: 100%;
+  }
+
+  .admin-content-inner > .ant-card > .ant-card-body {
+    padding: 12px;
+  }
+
+  .admin-content-inner .ant-card-head {
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

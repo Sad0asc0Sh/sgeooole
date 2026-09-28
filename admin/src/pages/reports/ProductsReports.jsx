@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import { Card, Row, Col, message } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
@@ -68,7 +69,7 @@ function ProductsReports() {
 
   return (
     <div>
-      <h1>گزارش محصولات</h1>
+            <PageHeader title={"گزارش محصولات"} />
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
           <Card title="پرفروش‌ترین محصولات" loading={loading}>

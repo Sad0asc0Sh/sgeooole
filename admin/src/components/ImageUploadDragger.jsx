@@ -257,7 +257,7 @@ const ImageUploadDragger = ({
           style={{ marginBottom: 16 }}
         >
           <p className="ant-upload-drag-icon">
-            <InboxOutlined style={{ fontSize: 48, color: '#1890ff' }} />
+            <InboxOutlined style={{ fontSize: 48, color: '#b45309' }} />
           </p>
           <p className="ant-upload-text" style={{ fontSize: 16 }}>
             برای آپلود تصاویر کلیک کنید یا فایل‌ها را بکشید و اینجا رها کنید
@@ -310,7 +310,7 @@ const ImageUploadDragger = ({
                           type="circle"
                           percent={file.percent}
                           width={60}
-                          strokeColor="#1890ff"
+                          strokeColor="#b45309"
                         />
                       </div>
                     )}

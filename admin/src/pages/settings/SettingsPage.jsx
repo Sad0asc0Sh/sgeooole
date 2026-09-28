@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Card, Form, Input, Tabs, Button, Space, message, InputNumber, Switch, Alert, Modal, Divider, Select, Slider, Statistic, Row, Col, Tag, Radio } from 'antd'
 import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined, ThunderboltOutlined, SwapOutlined, ApiOutlined } from '@ant-design/icons'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 function SettingsPage() {
   const navigate = useNavigate()
@@ -434,7 +435,7 @@ function SettingsPage() {
             description="پشتیبانی از ZarinPal و Sadad با امکان تعویض آسان بین درگاه‌ها"
             type="success"
             showIcon
-            style={{ marginBottom: 24, backgroundColor: '#f6ffed', borderColor: '#52c41a' }}
+            style={{ marginBottom: 24, backgroundColor: '#f6ffed', borderColor: '#0f6b33' }}
           />
 
           {/* Active Gateway Selector */}
@@ -752,7 +753,7 @@ function SettingsPage() {
                       <div>🕐 <strong>همین الان ({expiryTime}):</strong> کاربر محصولی به سبد اضافه می‌کند</div>
 
                       {warningEnabled && (
-                        <div style={{ color: '#fa8c16', marginTop: 4 }}>
+                        <div style={{ color: '#8a6200', marginTop: 4 }}>
                           🔔 <strong>{warningFullTime} ({warningTimeText} دیگر):</strong> هشدار انقضا به ایمیل/پیامک کاربر ارسال می‌شود
                         </div>
                       )}
@@ -1056,7 +1057,7 @@ function SettingsPage() {
           >
             <Space direction="vertical" style={{ width: '100%' }}>
               <Space>
-                <ApiOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+                <ApiOutlined style={{ fontSize: 24, color: '#b45309' }} />
                 <div>
                   <div style={{ fontWeight: 'bold', fontSize: 16 }}>مدیریت ارائه\u200cدهندگان API</div>
                   <div style={{ color: '#666', fontSize: 13 }}>
@@ -1379,7 +1380,7 @@ function SettingsPage() {
                           <li>حداقل 50+ کاربر فعال داشته باشید</li>
                           <li>2-4 هفته داده جمع‌آوری کرده باشید</li>
                         </ul>
-                        <div style={{ marginTop: 8, color: '#52c41a' }}>
+                        <div style={{ marginTop: 8, color: '#0f6b33' }}>
                           💡 تا آن زمان، از دسته‌بندی‌های «محبوب» که به صورت دستی تعیین کرده‌اید استفاده می‌شود.
                         </div>
                       </div>
@@ -1533,7 +1534,7 @@ function SettingsPage() {
 
                       return (
                         <div style={{ border: '1px solid #f0f0f0', padding: 16, borderRadius: 8, marginBottom: 24 }}>
-                          <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#1890ff' }}>
+                          <div style={{ marginBottom: 16, fontWeight: 'bold', color: '#b45309' }}>
                             تنظیمات اتصال به {provider === 'finnotech' ? 'فینوتک' : 'سرویس'}
                           </div>
 
@@ -1570,31 +1571,26 @@ function SettingsPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>تنظیمات فروشگاه</h1>
-        <Space>
-          <Button onClick={fetchSettings} disabled={loading || saving}>
-            بارگذاری مجدد تنظیمات
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleSubmit}
-            loading={saving}
-            disabled={loading}
-          >
-            ذخیره تغییرات
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+         title="تنظیمات فروشگاه"
+         actions={
+           <>
+<Space>
+                       <Button onClick={fetchSettings} disabled={loading || saving}>
+                         بارگذاری مجدد تنظیمات
+                       </Button>
+                       <Button
+                         type="primary"
+                         onClick={handleSubmit}
+                         loading={saving}
+                         disabled={loading}
+                       >
+                         ذخیره تغییرات
+                       </Button>
+                     </Space>
+           </>
+         }
+       />
 
       <Card loading={loading}>
         <Form form={form} layout="vertical">

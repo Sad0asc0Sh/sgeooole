@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Form, Input, Button, Card, Alert } from 'antd'
+import { Form, Input, Button, Alert } from 'antd'
 import { UserOutlined, LockOutlined } from '@ant-design/icons'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '../stores'
+import AuthShell from '../components/auth/AuthShell'
 import api from '../api'
 
 function LoginPage() {
@@ -48,77 +49,52 @@ function LoginPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      background:
-          'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #312e81 100%)'
-    }}>
-      <Card
-        style={{
-          width: '100%',
-          maxWidth: 420,
-          boxShadow: '0 20px 50px rgba(2, 6, 23, 0.35)',
-          borderRadius: 18,
-        }}
-        bordered={false}
-      >
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 'bold', color: '#4f46e5', margin: 0 }}>
-            ورود به پنل ادمین
-          </h1>
-          <p style={{ color: '#999', marginTop: 8 }}>لطفاً وارد حساب ادمین شوید</p>
-        </div>
+    <AuthShell
+      title="ورود به پنل ادمین"
+      subtitle="برای مدیریت فروشگاه، حساب ادمین خود را وارد کنید"
+      footer={
+        <Link to="/forgot-password">رمز عبور خود را فراموش کرده‌اید؟</Link>
+      }
+    >
+      {error && (
+        <Alert
+          message={error}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+          onClose={() => setError('')}
+        />
+      )}
 
-        {error && (
-          <Alert
-            message={error}
-            type="error"
-            showIcon
-            closable
-            style={{ marginBottom: 16 }}
-            onClose={() => setError('')}
+      <Form name="login" onFinish={onFinish} layout="vertical" size="large">
+        <Form.Item
+          name="email"
+          label="ایمیل"
+          rules={[{ required: true, message: 'ایمیل خود را وارد کنید!' }]}
+        >
+          <Input prefix={<UserOutlined />} placeholder="you@example.com" type="email" autoComplete="username" />
+        </Form.Item>
+
+        <Form.Item
+          name="password"
+          label="رمز عبور"
+          rules={[{ required: true, message: 'رمز عبور را وارد کنید!' }]}
+        >
+          <Input.Password
+            prefix={<LockOutlined />}
+            placeholder="••••••••"
+            autoComplete="current-password"
           />
-        )}
+        </Form.Item>
 
-        <Form name="login" onFinish={onFinish} layout="vertical" size="large">
-          <Form.Item
-            name="email"
-            rules={[{ required: true, message: 'ایمیل خود را وارد کنید!' }]}
-          >
-            <Input prefix={<UserOutlined />} placeholder="ایمیل" type="email" />
-          </Form.Item>
-
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'رمز عبور را وارد کنید!' }]}
-          >
-            <Input.Password prefix={<LockOutlined />} placeholder="رمز عبور" />
-          </Form.Item>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} block>
-              ورود
-            </Button>
-          </Form.Item>
-
-          <div style={{ textAlign: 'center', marginTop: 16 }}>
-            <Link
-              to="/forgot-password"
-              style={{
-                color: '#4f46e5',
-                textDecoration: 'none',
-                fontSize: 14,
-              }}
-            >
-              رمز عبور خود را فراموش کرده‌اید؟
-            </Link>
-          </div>
-        </Form>
-      </Card>
-    </div>
+        <Form.Item style={{ marginBottom: 0, marginTop: 20 }}>
+          <Button type="primary" htmlType="submit" loading={loading} block size="large">
+            ورود
+          </Button>
+        </Form.Item>
+      </Form>
+    </AuthShell>
   )
 }
 

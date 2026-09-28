@@ -15,8 +15,8 @@ export default function JalaliDateTimePicker({
   onChange,
   placeholder,
   style = {},
-  borderColor = '#d9d9d9',
-  focusColor = '#1890ff',
+  borderColor = '#d6cfc6',
+  focusColor = '#b45309',
 }) {
   const [dateValue, setDateValue] = useState(null)
   const effectivePlaceholder = placeholder ?? 'تاریخ و ساعت را انتخاب کنید'

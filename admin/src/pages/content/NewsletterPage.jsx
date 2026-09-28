@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useState, useEffect, useCallback } from 'react'
 import {
     Card,
@@ -138,7 +139,7 @@ function NewsletterPage() {
             key: 'email',
             render: (email) => (
                 <Space>
-                    <MailOutlined style={{ color: '#1890ff' }} />
+                    <MailOutlined style={{ color: '#b45309' }} />
                     <Text copyable={{ text: email }} style={{ direction: 'ltr' }}>
                         {email}
                     </Text>
@@ -217,17 +218,11 @@ function NewsletterPage() {
     ]
 
     return (
-        <div style={{ padding: 24 }}>
-            {/* Header */}
-            <div style={{ marginBottom: 24 }}>
-                <Title level={2} style={{ margin: 0, marginBottom: 8 }}>
-                    <MailOutlined style={{ marginLeft: 12 }} />
-                    مدیریت خبرنامه
-                </Title>
-                <Text type="secondary">
-                    مشاهده و مدیریت مشترکین خبرنامه
-                </Text>
-            </div>
+        <div>
+            <PageHeader
+                title="مدیریت خبرنامه"
+                subtitle="مشاهده و مدیریت مشترکین خبرنامه"
+            />
 
             {/* Stats Cards */}
             <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -237,7 +232,7 @@ function NewsletterPage() {
                             title="کل مشترکین"
                             value={stats.total}
                             prefix={<MailOutlined />}
-                            valueStyle={{ color: '#1890ff' }}
+                            valueStyle={{ color: '#b45309' }}
                         />
                     </Card>
                 </Col>
@@ -247,7 +242,7 @@ function NewsletterPage() {
                             title="فعال"
                             value={stats.active}
                             prefix={<UserAddOutlined />}
-                            valueStyle={{ color: '#52c41a' }}
+                            valueStyle={{ color: '#0f6b33' }}
                         />
                     </Card>
                 </Col>
@@ -257,7 +252,7 @@ function NewsletterPage() {
                             title="لغو شده"
                             value={stats.inactive}
                             prefix={<UserDeleteOutlined />}
-                            valueStyle={{ color: '#8c8c8c' }}
+                            valueStyle={{ color: '#57534e' }}
                         />
                     </Card>
                 </Col>
@@ -296,7 +291,7 @@ function NewsletterPage() {
                         icon={<DownloadOutlined />}
                         onClick={handleExport}
                         loading={exporting}
-                        style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                        style={{ background: '#0f6b33', borderColor: '#0f6b33' }}
                     >
                         خروجی Excel
                     </Button>

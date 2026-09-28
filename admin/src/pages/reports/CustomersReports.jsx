@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import { Card, message } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
@@ -55,7 +56,7 @@ function CustomersReports() {
 
   return (
     <div>
-      <h1>گزارش مشتریان</h1>
+            <PageHeader title={"گزارش مشتریان"} />
       <Card>
         <ResponsiveTable
           columns={columns}

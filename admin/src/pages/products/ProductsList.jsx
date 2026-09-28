@@ -35,6 +35,7 @@ import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
 import S3AdminImage from '../../components/S3AdminImage'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { Dragger } = Upload
 const CSV_DIRECT_UPLOAD_LIMIT_BYTES = 900 * 1024
@@ -930,105 +931,100 @@ function ProductsList({ mode }) {
 
   return (
     <div ref={scrollContainerRef}>
-     <div
-       style={{
-         marginBottom: 20,
-         display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-        }}
-      >
-        <h1 style={{ margin: 0 }}>لیست محصولات</h1>
-        <Space wrap size={8}>
-          {canImport && (
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'import-csv',
-                    icon: <ImportOutlined />,
-                    label: 'درون‌ریزی CSV',
-                    onClick: () => { setImportUpdateMode(false); setImportModalVisible(true) },
-                  },
-                  {
-                    key: 'update-csv',
-                    icon: <ImportOutlined />,
-                    label: 'به‌روزرسانی از CSV',
-                    onClick: () => { setImportUpdateMode(true); setImportModalVisible(true) },
-                  },
-                ],
-              }}
-            >
-              <Button icon={<ImportOutlined />}>
-                درون‌ریزی <DownOutlined />
-              </Button>
-            </Dropdown>
-          )}
-          {canExport && (
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'export-excel',
-                    icon: <ExportOutlined />,
-                    label: 'برون‌ریزی Excel',
-                    onClick: handleExport,
-                  },
-                  {
-                    key: 'export-csv',
-                    icon: <ExportOutlined />,
-                    label: 'برون‌ریزی CSV',
-                    onClick: handleExportCsv,
-                  },
-                  {
-                    key: 'export-csv-prices-only',
-                    icon: <ExportOutlined />,
-                    label: 'Export Prices Only (CSV)',
-                    onClick: handleExportPricesOnlyCsv,
-                  },
-                ],
-              }}
-            >
-              <Button icon={<ExportOutlined />}>
-                برون‌ریزی <DownOutlined />
-              </Button>
-            </Dropdown>
-          )}
-          {canUpdate && (
-            <Dropdown
-              menu={{
-                items: [
-                  {
-                    key: 'special-offer-timer',
-                    icon: <FieldTimeOutlined />,
-                    label: 'تنظیم تایمر شگفت‌انگیز',
-                    onClick: () => setTimerModalVisible(true),
-                  },
-                  {
-                    key: 'flash-deal-timer',
-                    icon: <FieldTimeOutlined />,
-                    label: 'Flash Deal Timer',
-                    onClick: () => setFlashTimerModalVisible(true),
-                  },
-                ],
-              }}
-            >
-              <Button icon={<MoreOutlined />}>
-                عملیات بیشتر <DownOutlined />
-              </Button>
-            </Dropdown>
-          )}
-          {canCreate && (
-            <Link to="/products/new">
-              <Button type="primary" icon={<PlusOutlined />}>
-                محصول جدید
-              </Button>
-            </Link>
-          )}
-        </Space>
-      </div>
+     <PageHeader
+        title="لیست محصولات"
+        actions={
+          <>
+<Space wrap size={8}>
+                      {canImport && (
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'import-csv',
+                                icon: <ImportOutlined />,
+                                label: 'درون‌ریزی CSV',
+                                onClick: () => { setImportUpdateMode(false); setImportModalVisible(true) },
+                              },
+                              {
+                                key: 'update-csv',
+                                icon: <ImportOutlined />,
+                                label: 'به‌روزرسانی از CSV',
+                                onClick: () => { setImportUpdateMode(true); setImportModalVisible(true) },
+                              },
+                            ],
+                          }}
+                        >
+                          <Button icon={<ImportOutlined />}>
+                            درون‌ریزی <DownOutlined />
+                          </Button>
+                        </Dropdown>
+                      )}
+                      {canExport && (
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'export-excel',
+                                icon: <ExportOutlined />,
+                                label: 'برون‌ریزی Excel',
+                                onClick: handleExport,
+                              },
+                              {
+                                key: 'export-csv',
+                                icon: <ExportOutlined />,
+                                label: 'برون‌ریزی CSV',
+                                onClick: handleExportCsv,
+                              },
+                              {
+                                key: 'export-csv-prices-only',
+                                icon: <ExportOutlined />,
+                                label: 'Export Prices Only (CSV)',
+                                onClick: handleExportPricesOnlyCsv,
+                              },
+                            ],
+                          }}
+                        >
+                          <Button icon={<ExportOutlined />}>
+                            برون‌ریزی <DownOutlined />
+                          </Button>
+                        </Dropdown>
+                      )}
+                      {canUpdate && (
+                        <Dropdown
+                          menu={{
+                            items: [
+                              {
+                                key: 'special-offer-timer',
+                                icon: <FieldTimeOutlined />,
+                                label: 'تنظیم تایمر شگفت‌انگیز',
+                                onClick: () => setTimerModalVisible(true),
+                              },
+                              {
+                                key: 'flash-deal-timer',
+                                icon: <FieldTimeOutlined />,
+                                label: 'Flash Deal Timer',
+                                onClick: () => setFlashTimerModalVisible(true),
+                              },
+                            ],
+                          }}
+                        >
+                          <Button icon={<MoreOutlined />}>
+                            عملیات بیشتر <DownOutlined />
+                          </Button>
+                        </Dropdown>
+                      )}
+                      {canCreate && (
+                        <Link to="/products/new">
+                          <Button type="primary" icon={<PlusOutlined />}>
+                            محصول جدید
+                          </Button>
+                        </Link>
+                      )}
+                    </Space>
+          </>
+        }
+      />
 
       <div
         style={{
@@ -1206,7 +1202,7 @@ function ProductsList({ mode }) {
           )}
           {selectedRowKeys.length > 0 && (
             <>
-              <span style={{ fontWeight: 'bold', color: '#1890ff' }}>
+              <span style={{ fontWeight: 'bold', color: '#b45309' }}>
                 {selectedRowKeys.length} محصول انتخاب شده
               </span>
               <Button size="small" onClick={() => setSelectedRowKeys([])}>
@@ -1217,7 +1213,7 @@ function ProductsList({ mode }) {
                   <Button
                     size="small"
                     type="primary"
-                    style={{ background: '#52c41a', borderColor: '#52c41a' }}
+                    style={{ background: '#0f6b33', borderColor: '#0f6b33' }}
                     icon={<CheckCircleOutlined />}
                     onClick={() => {
                       Modal.confirm({
@@ -1245,7 +1241,7 @@ function ProductsList({ mode }) {
                   </Button>
                   <Button
                     size="small"
-                    style={{ background: '#fa8c16', borderColor: '#fa8c16', color: '#fff' }}
+                    style={{ background: '#8a6200', borderColor: '#8a6200', color: '#fff' }}
                     icon={<StopOutlined />}
                     onClick={() => {
                       Modal.confirm({
@@ -1324,7 +1320,7 @@ function ProductsList({ mode }) {
             <Radio.Button value="toman">تومان (پیش‌فرض فروشگاه)</Radio.Button>
             <Radio.Button value="rial">ریال (تبدیل خودکار به تومان با حذف صفر)</Radio.Button>
           </Radio.Group>
-          <div style={{ marginTop: 8, fontSize: '0.85em', color: importCurrency === 'rial' ? '#d46b08' : '#389e0d' }}>
+          <div style={{ marginTop: 8, fontSize: '0.85em', color: importCurrency === 'rial' ? '#d46b08' : '#0f6b33' }}>
             {importCurrency === 'rial'
               ? '⚠️ توجه: قیمت‌ها از فایل بر حسب ریال خوانده شده و با تقسیم بر ۱۰، به تومان در سیستم ثبت می‌شوند (مناسب فایل‌های خروجی سپیدار، هلو و فاکتورهای رسمی پخش‌کنندگان).'
               : 'قیمت‌های فایل مستقیماً به عنوان تومان در سیستم ذخیره می‌شوند.'}
@@ -1343,7 +1339,7 @@ function ProductsList({ mode }) {
               <p style={{ fontSize: '0.9em', color: '#666' }}>
                 ✅ اگر محصولی با SKU/کد محصول یافت نشود، به عنوان محصول جدید ایجاد می‌شود.
               </p>
-              <p style={{ fontSize: '0.9em', color: '#1890ff' }}>
+              <p style={{ fontSize: '0.9em', color: '#b45309' }}>
                 💡 از هر دو هدر فارسی (نام محصول، قیمت، موجودی، ...) یا انگلیسی (name, price, stock, ...) می‌توانید استفاده کنید.
               </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>
@@ -1355,7 +1351,7 @@ function ProductsList({ mode }) {
               <p>
                 فایل <strong>CSV</strong> یا <strong>Excel (.xlsx)</strong> خود را با فرمت ستون‌های زیر آماده کنید:
               </p>
-              <p style={{ fontSize: '0.9em', color: '#1890ff' }}>
+              <p style={{ fontSize: '0.9em', color: '#b45309' }}>
                 💡 هم هدرهای فارسی (نام محصول، قیمت، موجودی، دسته‌بندی، برند، ...) و هم هدرهای انگلیسی پشتیبانی می‌شوند.
               </p>
               <code style={{ display: 'block', padding: 8, background: '#f5f5f5', marginBottom: 8 }}>

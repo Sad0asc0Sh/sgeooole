@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import {
   Card,
@@ -291,14 +292,14 @@ function ReviewsPage() {
   ]
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Title level={2} style={{ margin: 0 }}>مدیریت نظرات</Title>
-          <Text type="secondary">بررسی و پاسخ‌دهی به نظرات کاربران</Text>
-        </div>
-        <Button icon={<ReloadOutlined />} onClick={() => fetchReviews()}>بروزرسانی</Button>
-      </div>
+    <div>
+      <PageHeader
+        title="مدیریت نظرات"
+        subtitle="بررسی و پاسخ‌دهی به نظرات کاربران"
+        actions={
+          <Button icon={<ReloadOutlined />} onClick={() => fetchReviews()}>بروزرسانی</Button>
+        }
+      />
 
       {/* Stats Cards */}
       <Row gutter={16} style={{ marginBottom: 24 }}>
@@ -318,7 +319,7 @@ function ReviewsPage() {
               title="در انتظار بررسی"
               value={filters.isApproved === false ? pagination.total : '-'} // Approximate
               prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              valueStyle={{ color: '#8a6200' }}
             />
           </Card>
         </Col>
@@ -389,7 +390,7 @@ function ReviewsPage() {
               <Button
                 key="approve"
                 type="primary"
-                style={{ backgroundColor: '#52c41a' }}
+                style={{ backgroundColor: '#0f6b33' }}
                 icon={<CheckOutlined />}
                 loading={actionLoading}
                 onClick={() => handleStatusUpdate(selectedReview._id, true)}

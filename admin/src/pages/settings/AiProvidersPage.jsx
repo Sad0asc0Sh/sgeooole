@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useState, useEffect, useCallback } from 'react'
 import {
   Card, Button, Modal, Form, Input, InputNumber, Switch, Space,
@@ -118,7 +119,7 @@ export default function AiProvidersPage() {
       key: 'name',
       render: (text, record) => (
         <Space>
-          {record.isDefault && <StarFilled style={{ color: '#faad14' }} />}
+          {record.isDefault && <StarFilled style={{ color: '#8a6200' }} />}
           <Text strong>{text}</Text>
         </Space>
       ),
@@ -220,16 +221,12 @@ export default function AiProvidersPage() {
   ]
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title={
-          <Space>
-            <ApiOutlined />
-            <span>مدیریت ارائه‌دهندگان هوش مصنوعی</span>
-          </Space>
-        }
-        extra={
-          <Space>
+    <div>
+      <PageHeader
+        title="مدیریت ارائه‌دهندگان هوش مصنوعی"
+        subtitle="سرویس‌هایی که پاسخ‌گوی چت فروشگاه را تولید می‌کنند"
+        actions={
+          <>
             <Button icon={<ArrowRightOutlined />} onClick={() => navigate('/settings')}>
               بازگشت به تنظیمات
             </Button>
@@ -239,9 +236,10 @@ export default function AiProvidersPage() {
             <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
               افزودن ارائه‌دهنده
             </Button>
-          </Space>
+          </>
         }
-      >
+      />
+      <Card>
         <Alert
           message="مدیریت ارائه‌دهندگان API هوش مصنوعی"
           description="ارائه‌دهنده پیش‌فرض ابتدا استفاده می‌شود و ارائه‌دهندگان فعال دیگر، بر اساس اولویت، فقط در خطاهای موقت پیش از شروع پاسخ جایگزین می‌شوند. وضعیت «موقتاً در انتظار» پس از چند خطای متوالی خودکار و گذرا است."

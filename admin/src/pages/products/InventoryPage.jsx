@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import {
   Card,
@@ -252,25 +253,21 @@ function InventoryPage() {
 
   return (
     <div>
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <h1>مدیریت موجودی</h1>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => {
-            setEditedStocks({})
-            fetchProducts()
-          }}
-        >
-          بارگذاری مجدد
-        </Button>
-      </div>
+      <PageHeader
+        title="مدیریت موجودی"
+        subtitle="تنظیم تعداد موجودی محصولات ساده"
+        actions={
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={() => {
+              setEditedStocks({})
+              fetchProducts()
+            }}
+          >
+            بارگذاری مجدد
+          </Button>
+        }
+      />
 
       <Alert
         message="توجه"

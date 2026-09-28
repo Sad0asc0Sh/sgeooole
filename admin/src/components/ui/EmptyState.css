@@ -1,0 +1,40 @@
+/* EmptyState — layout base is in index.css; these are the parts that
+   belong to the component itself. */
+
+.empty-state-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.empty-state-body {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.empty-state-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.empty-state-compact {
+  padding: 26px 16px;
+  gap: 6px;
+}
+
+.empty-state-compact .empty-state-title {
+  font-size: 13.5px;
+}
+
+.empty-state-compact .empty-state-icon {
+  font-size: 24px;
+}

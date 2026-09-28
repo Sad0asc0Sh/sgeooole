@@ -19,6 +19,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 // فعال‌سازی تقویم جلالی برای dayjs
 dayjs.extend(jalaliday)
@@ -356,26 +357,21 @@ function CouponsPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت کدهای تخفیف</h1>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchCoupons()}>
-            بارگذاری مجدد
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-            ایجاد کوپن جدید
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+         title="مدیریت کدهای تخفیف"
+         actions={
+           <>
+<Space>
+                       <Button icon={<ReloadOutlined />} onClick={() => fetchCoupons()}>
+                         بارگذاری مجدد
+                       </Button>
+                       <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                         ایجاد کوپن جدید
+                       </Button>
+                     </Space>
+           </>
+         }
+       />
 
       <Card>
         <ResponsiveTable

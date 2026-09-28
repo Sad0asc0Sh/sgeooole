@@ -1,0 +1,231 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   GLOBAL SEARCH — command palette
+   A field, a result list, and a hint row. The one animation in the
+   panel: the sheet rises 6px as it appears, which reads as "it opened"
+   without a full-screen transition.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.gsearch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: clamp(56px, 12vh, 140px) 16px 16px;
+  background: rgba(28, 25, 23, 0.42);
+  backdrop-filter: blur(2px);
+  animation: gsearch-fade var(--dur) var(--ease);
+}
+
+.gsearch {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 560px);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+  animation: gsearch-rise var(--dur-slow) var(--ease);
+}
+
+@keyframes gsearch-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes gsearch-rise {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* ── Field ── */
+.gsearch-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 52px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.gsearch-glyph {
+  display: inline-flex;
+  color: var(--ink-400);
+  flex-shrink: 0;
+}
+
+.gsearch-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--ink-900);
+  padding: 0;
+}
+
+.gsearch-input::placeholder {
+  color: var(--ink-400);
+}
+
+.gsearch-esc {
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-400);
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+/* ── Results ── */
+.gsearch-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 6px;
+  scrollbar-width: thin;
+}
+
+.gsearch-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink-900);
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.gsearch-row.is-active {
+  background: var(--brand-50);
+}
+
+.gsearch-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--surface-inset);
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.gsearch-row.is-active .gsearch-row-icon {
+  background: var(--brand-600);
+  color: #ffffff;
+}
+
+.gsearch-row-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gsearch-row-parent {
+  margin-inline-start: auto;
+  font-size: 11.5px;
+  color: var(--ink-400);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.gsearch-row.is-active .gsearch-row-parent {
+  color: var(--brand-700);
+}
+
+.gsearch-empty {
+  padding: 34px 20px;
+  text-align: center;
+}
+
+.gsearch-empty-title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.gsearch-empty-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-500);
+  line-height: 1.6;
+}
+
+/* ── Hint row ── */
+.gsearch-foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 14px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--line-soft);
+  background: var(--surface-sunken);
+  font-size: 11.5px;
+  color: var(--ink-500);
+}
+
+.gsearch-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gsearch-foot kbd {
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-600);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 1px 5px;
+  line-height: 1.5;
+}
+
+@media (max-width: 576px) {
+  .gsearch-backdrop {
+    padding: 12px;
+    align-items: flex-start;
+  }
+
+  .gsearch {
+    max-height: calc(var(--app-vh, 1vh) * 100 - 24px);
+  }
+
+  .gsearch-foot span:first-child {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gsearch-backdrop,
+  .gsearch {
+    animation: none;
+  }
+}

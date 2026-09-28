@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   DASHBOARD
+   Three bands: what the numbers are, what needs a decision, what just
+   happened. The KPI row is a grid of equal tiles so a tile never
+   changes height as its value grows.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+/* ── KPI row ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+/* ── Trend + attention ── */
+.dash-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.dash-chart-card,
+.dash-stock-card,
+.dash-orders-card {
+  border-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-empty {
+  display: grid;
+  place-items: center;
+  min-height: 264px;
+}
+
+/* ── Low-stock list ──
+   A dot-free list: the count is the signal, so it gets the colour and
+   the name stays plain. */
+.stock-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.stock-row:last-child {
+  border-bottom: none;
+  padding-bottom: 2px;
+}
+
+.stock-name {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-800);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stock-count {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--err);
+  background: var(--err-bg);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ── Table cells ── */
+.mono-cell {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-sm);
+  color: var(--ink-700);
+  white-space: nowrap;
+}
+
+.money-cell {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--ink-900);
+  white-space: nowrap;
+}
+
+/* ── Footnote link inside a stat tile ── */
+.tile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--err);
+  cursor: pointer;
+}
+
+.tile-link:hover {
+  text-decoration: underline;
+}
+
+.tile-link:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1200px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .dash-split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-3);
+  }
+
+  .chart-empty {
+    min-height: 190px;
+  }
+}

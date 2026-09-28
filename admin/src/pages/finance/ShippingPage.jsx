@@ -16,6 +16,7 @@ import ResponsiveTable from '../../components/ResponsiveTable'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons'
 import api from '../../api'
 import { cityOptionsForProvince, provinceOptions } from '../../data/iranLocations'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { Option } = Select
 
@@ -283,30 +284,25 @@ function ShippingPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت روش‌های ارسال</h1>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchMethods()}>
-            بارگذاری مجدد
-          </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openCreateModal}
-          >
-            ایجاد روش جدید
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+         title="مدیریت روش‌های ارسال"
+         actions={
+           <>
+<Space>
+                       <Button icon={<ReloadOutlined />} onClick={() => fetchMethods()}>
+                         بارگذاری مجدد
+                       </Button>
+                       <Button
+                         type="primary"
+                         icon={<PlusOutlined />}
+                         onClick={openCreateModal}
+                       >
+                         ایجاد روش جدید
+                       </Button>
+                     </Space>
+           </>
+         }
+       />
 
       <Card>
         <ResponsiveTable

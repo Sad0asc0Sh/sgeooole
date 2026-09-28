@@ -1,30 +1,19 @@
-/* =============================================
-   PROFESSIONAL ADMIN PANEL LAYOUT v3
-   - Dark slate sidebar w/ gradient accents
-   - Enterprise-contrast menu system (desktop +
-     drawer + collapsed flyouts share one language:
-     bright text, clear hover, branded selected pill)
-   - Sticky glass header (responsive)
-   - Mobile drawer with branded header
-   - Fully responsive down to 320px phones
-   ============================================= */
+/* ═══════════════════════════════════════════════════════════════════════
+   ADMIN LAYOUT
+   ───────────────────────────────────────────────────────────────────────
+   Structure: a deep warm-ink rail on the right, a white working
+   surface on the left. The saffron brand appears exactly once at the
+   top of the rail as the mark, and again as the selected-row colour —
+   so "where am I" is answered by a single hue cue, not by gradients on
+   every surface. Chrome is separated by hairlines rather than shadow,
+   which keeps dense tables readable.
+   ═══════════════════════════════════════════════════════════════════════ */
 
-:root {
-  --sider-w: 240px;
-  --sider-collapsed-w: 76px;
-  --header-h: 60px;
-  --brand-900: #0b1220;
-  --brand-800: #0f172a;
-}
-
-/* ─── ROOT LAYOUT ─────────────────────────────── */
-/* Real mobile viewport height:
-   1. JS sets --app-vh = 1% of window.innerHeight (see utils/viewportHeight.js)
-   2. Modern browsers get exact 100dvh via @supports below.
-   This prevents the page bottom from hiding under the
-   mobile browser navigation bar. */
+/* ─── ROOT ──────────────────────────────────────────────────────────
+   Real mobile viewport height: JS publishes --app-vh (1% of
+   window.innerHeight); modern browsers get exact 100dvh via
+   @supports. Stops the page bottom hiding under browser chrome. */
 .admin-root-layout {
-  height: 100vh !important;
   height: calc(var(--app-vh, 1vh) * 100) !important;
   overflow: hidden !important;
 }
@@ -35,17 +24,17 @@
   }
 }
 
-/* ─── SIDEBAR ─────────────────────────────────── */
+/* ─── RAIL ──────────────────────────────────────────────────────────── */
 .admin-sider {
   position: fixed !important;
   top: 0;
   right: 0;
   bottom: 0;
-  height: calc(var(--app-vh, 1vh) * 100) !important;
   z-index: 101;
-  background: linear-gradient(180deg, var(--brand-800) 0%, var(--brand-900) 100%) !important;
-  box-shadow: -4px 0 24px rgba(2, 6, 23, 0.35);
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #1c1917 !important;
+  box-shadow: none;
+  border-inline-start: 1px solid #0d0b0a;
+  transition: width var(--dur-slow) var(--ease);
 }
 
 .admin-sider .admin-sider-inner {
@@ -55,46 +44,84 @@
   background: transparent;
 }
 
-/* Logo area — sticky at top of sidebar */
-.admin-sider .logo {
+/* ── Identity bar ──
+   The one place the brand mark appears. A saffron disc with an ink
+   notch reads as a shop badge at a glance and holds the row's height
+   steady when the rail collapses. */
+.admin-brand {
   height: var(--header-h);
   min-height: var(--header-h);
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
-  font-size: 16px;
-  font-weight: 800;
+  padding: 0 14px;
   color: #fff;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  letter-spacing: 0.3px;
+  text-decoration: none;
   flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(79, 70, 229, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  transition: background var(--dur) var(--ease);
 }
 
-.admin-sider .logo .logo-icon {
-  font-size: 20px;
-  display: inline-flex;
+.admin-brand:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
-.admin-sider .logo .logo-text {
-  line-height: 1.2;
+.admin-brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(150deg, #e79d13 0%, #b45309 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.24) inset,
+    0 2px 8px rgba(180, 83, 9, 0.4);
 }
 
-/* Menu scrollable area */
+.admin-brand-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: #1c1917;
+  opacity: 0.86;
+}
+
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+
+.admin-brand-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  color: #ffffff;
+}
+
+.admin-brand-role {
+  font-size: 11px;
+  font-weight: 500;
+  color: #8a817a;
+  letter-spacing: 0.2px;
+}
+
+/* ── Nav scroll region ── */
 .admin-sider .admin-sider-menu-wrap {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-block: 12px;
+  padding-block: 10px 6px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.13) transparent;
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-track {
@@ -102,165 +129,243 @@
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
 }
 
-/* ═══════════════════════════════════════════════
-   SIDEBAR MENU — ENTERPRISE CONTRAST SYSTEM
-   Bright readable text · clear hover feedback ·
-   unmistakable selected state (branded pill)
-   ═══════════════════════════════════════════════ */
+.admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
 
-/* Remove default ant border on menu */
+/* ── Menu ── */
 .admin-sider .ant-menu {
   border-inline-end: none !important;
   background: transparent !important;
+  font-family: inherit;
 }
 
 .admin-sider .admin-sider-menu.ant-menu {
   padding-inline: 10px !important;
-  font-family: inherit;
 }
 
-/* ── Item & submenu-title base: bright, tactile ── */
 .admin-sider .ant-menu-item,
 .admin-sider .ant-menu-submenu > .ant-menu-submenu-title {
-  height: 42px !important;
-  line-height: 42px !important;
-  margin-block: 3px !important;
+  height: 38px !important;
+  line-height: 38px !important;
+  margin-block: 1px !important;
   margin-inline: 0 !important;
-  border-radius: 10px !important;
-  color: #f1f5fb !important; /* near-white — maximum readability */
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  letter-spacing: 0.1px;
-  transition: background-color 0.18s ease, color 0.18s ease,
-    box-shadow 0.18s ease !important;
+  border-radius: 8px !important;
+  color: #b5aea6 !important; /* 8.2:1 on ink — comfortably readable */
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
 }
 
-/* Icons: indigo accent that pops off the dark slate */
 .admin-sider .ant-menu-item .anticon,
 .admin-sider .ant-menu-submenu > .ant-menu-submenu-title .anticon {
   font-size: 16px !important;
-  color: #a5b4fc !important;
-  transition: color 0.18s ease;
+  color: #8a817a !important;
+  transition: color var(--dur-fast) var(--ease);
 }
 
-/* Labels rendered as <Link> must inherit item colors */
 .admin-sider .ant-menu-item a,
 .admin-sider .ant-menu-submenu-title a {
   color: inherit !important;
   text-decoration: none;
 }
 
-/* Submenu expand arrows */
 .admin-sider .ant-menu-submenu-arrow {
-  color: #94a7c9 !important;
+  color: #6b625c !important;
 }
 
-/* ── Hover / pressed / keyboard focus: unmistakable ── */
+/* Hover: brighten text AND icon, lift the surface a step. */
 .admin-sider .ant-menu-item:hover,
-.admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title,
-.admin-sider .ant-menu-submenu-title:hover {
+.admin-sider .ant-menu-submenu-title:hover,
+.admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title {
   color: #ffffff !important;
-  background: rgba(148, 163, 184, 0.18) !important;
-}
-
-/* Hover must stay pure-white on every nested node (spans/links) */
-.admin-sider .ant-menu-item:hover *,
-.admin-sider .ant-menu-submenu-title:hover * {
-  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
 }
 
 .admin-sider .ant-menu-item:hover .anticon,
 .admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title .anticon,
 .admin-sider .ant-menu-submenu-title:hover .anticon {
-  color: #e0e7ff !important;
+  color: #d6d0c8 !important;
 }
 
 .admin-sider .ant-menu-submenu-title:hover .ant-menu-submenu-arrow {
   color: #ffffff !important;
 }
 
-.admin-sider .ant-menu-item:active,
-.admin-sider .ant-menu-submenu-title:active {
-  background: rgba(99, 102, 241, 0.28) !important;
-}
-
 .admin-sider .ant-menu-item:focus-visible,
 .admin-sider .ant-menu-submenu-title:focus-visible {
-  outline: 2px solid #818cf8 !important;
+  outline: 2px solid #e79d13 !important;
   outline-offset: -2px;
 }
 
-/* ── SELECTED item: vivid branded pill, pure-white text ── */
-.admin-sider .ant-menu-item.ant-menu-item-selected,
-.admin-sider
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item.ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45);
+/* Selected: the saffron. A 2px saffron rail on the right edge marks the
+   row as well as the fill, so it stays obvious even on the collapsed
+   rail where the fill is only 52px wide. */
+.admin-sider .ant-menu-item.ant-menu-item-selected {
+  background: #b45309 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* Hard cascade: NOTHING inside the pill may dim the label */
-.admin-sider .ant-menu-item.ant-menu-item-selected,
-.admin-sider .ant-menu-item.ant-menu-item-selected *,
-.admin-sider .ant-menu-item.ant-menu-item-selected a,
-.admin-sider .ant-menu-item.ant-menu-item-selected span {
+.admin-sider .ant-menu-item.ant-menu-item-selected::after {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 999px 0 0 999px;
+  background: #e79d13;
+}
+
+.admin-sider .ant-menu-item.ant-menu-item-selected .anticon {
   color: #ffffff !important;
-  font-weight: 700 !important;
 }
 
 .admin-sider .ant-menu-item.ant-menu-item-selected:hover {
-  background: linear-gradient(135deg, #5951ef 0%, #7b32e0 100%) !important;
+  background: #c2620b !important;
 }
 
-/* ── Open submenu title stays highlighted ── */
+.admin-sider .ant-menu-item.ant-menu-item-selected,
+.admin-sider .ant-menu-item.ant-menu-item-selected * {
+  color: #ffffff !important;
+}
+
+/* Open group title: a step up, not a full highlight — the child carries
+   the weight. */
 .admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
   color: #ffffff !important;
-  background: rgba(99, 102, 241, 0.16) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
 .admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title .anticon {
-  color: #c7d2fe !important;
+  color: #e9b84e !important;
 }
 
-/* ── Inline submenu panel: clearly nested ── */
+/* ── Nested items: recessed tray, no extra card chrome ── */
 .admin-sider .ant-menu-sub.ant-menu-inline {
-  background: rgba(148, 163, 184, 0.09) !important;
-  border-radius: 12px !important;
-  margin-inline: 2px !important;
+  background: rgba(0, 0, 0, 0.24) !important;
+  border-radius: 8px !important;
+  margin-inline: 4px !important;
   padding-block: 4px !important;
 }
 
 .admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  height: 38px !important;
-  line-height: 38px !important;
-  margin-block: 2px !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  color: #e2eaf8 !important;
+  height: 34px !important;
+  line-height: 34px !important;
+  margin-block: 1px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #a29b92 !important;
 }
 
-/* ── Collapsed (icon-only) mode ── */
+.admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item .anticon {
+  font-size: 14px !important;
+  color: #6b625c !important;
+}
+
+.admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #ffffff !important;
+}
+
+.admin-sider
+  .ant-menu-sub.ant-menu-inline
+  .ant-menu-item.ant-menu-item-selected {
+  background: #b45309 !important;
+}
+
+/* ── Collapsed rail ── */
 .admin-sider.ant-layout-sider-collapsed .admin-sider-menu.ant-menu {
   padding-inline: 8px !important;
 }
 
 .admin-sider.ant-layout-sider-collapsed .ant-menu-item,
-.admin-sider.ant-layout-sider-collapsed
-  .ant-menu-submenu
-  > .ant-menu-submenu-title {
-  margin-block: 4px !important;
+.admin-sider.ant-layout-sider-collapsed .ant-menu-submenu > .ant-menu-submenu-title {
+  padding-inline: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
-/* ─── MAIN LAYOUT (beside sidebar) ────────────── */
+.admin-sider.ant-layout-sider-collapsed .ant-menu-item .anticon,
+.admin-sider.ant-layout-sider-collapsed .ant-menu-submenu > .ant-menu-submenu-title .anticon {
+  font-size: 18px !important;
+  margin: 0 !important;
+}
+
+.admin-sider.ant-layout-sider-collapsed .ant-menu-item.ant-menu-item-selected::after {
+  height: 22px;
+}
+
+/* ── Operator card ──
+   Pins identity to the bottom of the rail. Logout lives in its menu,
+   so the rail never shows a destructive control by accident. */
+.admin-sider-foot {
+  flex-shrink: 0;
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.admin-operator {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+  font-family: inherit;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.admin-operator:hover,
+.admin-operator:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+  outline: none;
+}
+
+.admin-sider.ant-layout-sider-collapsed .admin-operator {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.admin-operator-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.admin-operator-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e7e3dd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-operator-role {
+  font-size: 11px;
+  color: #8a817a;
+  white-space: nowrap;
+}
+
+/* ─── MAIN COLUMN ───────────────────────────────────────────────────── */
 .admin-main-layout {
-  /* Push content to account for the fixed sidebar */
   margin-right: var(--sider-w) !important;
-  transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  height: 100vh;
+  transition: margin-right var(--dur-slow) var(--ease);
   height: calc(var(--app-vh, 1vh) * 100);
   display: flex;
   flex-direction: column;
@@ -273,24 +378,27 @@
   }
 }
 
-/* When sidebar is collapsed, less margin */
-.admin-root-layout .ant-layout-sider-collapsed + .admin-main-layout,
-.admin-root-layout .ant-layout-sider-collapsed ~ .admin-main-layout {
+.admin-root-layout
+  .ant-layout-sider-collapsed
+  + .admin-main-layout,
+.admin-root-layout
+  .ant-layout-sider-collapsed
+  ~ .admin-main-layout {
   margin-right: var(--sider-collapsed-w) !important;
 }
 
-/* ─── HEADER ──────────────────────────────────── */
+/* ─── HEADER ────────────────────────────────────────────────────────── */
 .admin-header {
   display: flex !important;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(10px);
+  gap: 12px;
+  background: #ffffff !important;
   padding: 0 20px !important;
   height: var(--header-h) !important;
   min-height: var(--header-h);
-  box-shadow: inset 0 -1px 0 #e2e8f0;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
   z-index: 90;
   flex-shrink: 0;
 }
@@ -298,110 +406,362 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
-.header-user-info {
+/* Shared icon-button treatment. A real <button> so it takes focus and
+   responds to Enter/Space without extra wiring. */
+.header-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-600);
+  font-size: 17px;
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.header-icon-btn:hover {
+  background: var(--surface-inset);
+  color: var(--ink-900);
+  border-color: var(--line);
+}
+
+.header-icon-btn:focus-visible {
+  outline: 2px solid var(--brand-300);
+  outline-offset: 1px;
+  border-radius: 9px;
+}
+
+.header-bell-glyph {
+  display: inline-flex;
+  line-height: 0;
+}
+
+/* ── Breadcrumb trail ── */
+.header-trail {
   display: flex;
   align-items: center;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 10px;
-  transition: background 0.2s ease;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.header-user-info:hover {
-  background: #f1f5f9;
+.crumb-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.crumb-sep {
+  color: var(--ink-300);
+  font-size: 13px;
+}
+
+.crumb-group {
+  color: var(--ink-500);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.crumb-current {
+  color: var(--ink-900);
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-trail a {
+  color: var(--ink-500);
+  text-decoration: none;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.header-trail a:hover {
+  color: var(--brand);
+}
+
+.content-trail {
+  display: none;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ── Search trigger ──
+   Looks like a field, opens the palette. Labelled with a kbd hint so
+   the shortcut is discoverable without a tooltip. */
+.header-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-sunken);
+  color: var(--ink-400);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.header-search-trigger:hover {
+  border-color: var(--line-strong);
+  background: #ffffff;
+  color: var(--ink-600);
+}
+
+.header-search-trigger:focus-visible {
+  outline: 2px solid var(--brand-300);
+  outline-offset: 1px;
+}
+
+.header-search-kbd {
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--ink-400);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  line-height: 1.5;
+}
+
+.header-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 9px 0 4px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink-900);
+  transition: background var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+
+.header-user:hover {
+  background: var(--surface-inset);
+  border-color: var(--line);
+}
+
+.header-user:focus-visible {
+  outline: 2px solid var(--brand-300);
+  outline-offset: 1px;
 }
 
 .header-user-name {
-  max-width: 140px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  line-height: 1.25;
 }
 
-/* Icon buttons in header */
-.header-icon-btn.ant-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.header-user-role {
+  font-size: 11px;
+  color: var(--ink-400);
+  line-height: 1.25;
+  padding-inline-start: 8px;
+  border-inline-start: 1px solid var(--line);
 }
 
-.header-icon-btn.ant-btn:hover {
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-/* Desktop collapse button */
-.collapse-btn {
-  font-size: 18px !important;
-}
-
-/* Mobile hamburger — hidden by default */
 .mobile-menu-btn {
   display: none !important;
-  font-size: 20px !important;
 }
 
-/* ─── CONTENT AREA ────────────────────────────── */
+/* ─── CONTENT ───────────────────────────────────────────────────────── */
 .admin-content-area {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: #f1f5f9 !important;
+  background: var(--surface-canvas) !important;
   scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+  scrollbar-color: rgba(120, 113, 108, 0.35) transparent;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* Breathing room so the last row / pagination never sits flush
-     against (or under) the mobile browser navigation bar. */
   padding-bottom: max(12px, env(safe-area-inset-bottom));
 }
 
+.admin-content-area::-webkit-scrollbar {
+  width: 10px;
+}
+
 .admin-content-area::-webkit-scrollbar-thumb {
-  border-radius: 6px;
+  background: rgba(120, 113, 108, 0.28);
+  border-radius: 999px;
+  border: 3px solid var(--surface-canvas);
+}
+
+.admin-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 113, 108, 0.45);
 }
 
 .admin-content-inner {
-  margin: 20px;
-  padding: 20px;
-  background: #fff;
-  border-radius: 14px;
-  min-height: calc(
-    calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 52px
-  );
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.06);
+  max-width: var(--content-max);
+  margin-inline: auto;
+  padding: 22px 24px 28px;
+  min-height: calc(calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 52px);
 }
 
-/* ─── MOBILE DRAWER v2 (deep space + aurora glow) ── */
+/* ─── NOTIFICATIONS ─────────────────────────────────────────────────── */
+.notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 292px;
+  max-width: calc(100vw - 80px);
+  padding: 2px 0;
+}
+
+.notif-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.notif-body:hover {
+  background: var(--surface-inset);
+}
+
+.notif-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-900);
+  line-height: 1.5;
+}
+
+.notif-body.is-unread .notif-title {
+  font-weight: 700;
+}
+
+.notif-body.is-unread .notif-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--brand);
+  margin-inline-end: 6px;
+  vertical-align: middle;
+}
+
+.notif-message {
+  font-size: 12px;
+  color: var(--ink-500);
+  line-height: 1.55;
+}
+
+.notif-time {
+  font-size: 11px;
+  color: var(--ink-400);
+}
+
+.notif-dismiss {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-400);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.notif-row:hover .notif-dismiss,
+.notif-dismiss:focus-visible {
+  opacity: 1;
+}
+
+.notif-dismiss:hover {
+  background: var(--err-bg);
+  color: var(--err);
+}
+
+.notif-mark-all {
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--brand);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+}
+
+.notif-mark-all:hover {
+  background: var(--brand-50);
+}
+
+.notif-empty {
+  padding: 18px 8px;
+  text-align: center;
+  color: var(--ink-400);
+  font-size: 13px;
+}
+
+/* ─── MOBILE DRAWER ─────────────────────────────────────────────────── */
 .mobile-drawer .ant-drawer-content {
-  background:
-    radial-gradient(900px 420px at 85% -8%, rgba(99, 102, 241, 0.22), transparent 62%),
-    radial-gradient(600px 320px at -10% 108%, rgba(124, 58, 237, 0.14), transparent 60%),
-    linear-gradient(180deg, #0b1226 0%, #070c19 100%) !important;
+  background: #1c1917 !important;
 }
 
 .mobile-drawer .ant-drawer-content-wrapper {
-  box-shadow: -18px 0 60px rgba(2, 6, 23, 0.65) !important;
-}
-
-.mobile-drawer .ant-drawer-header {
-  display: none !important; /* custom branded header rendered inside body */
-  padding: 0;
-  height: 0;
+  box-shadow: -18px 0 60px rgba(12, 10, 9, 0.6) !important;
+  border-inline-start: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mobile-drawer .ant-drawer-body {
@@ -411,40 +771,52 @@
   height: 100%;
 }
 
-/* Branded gradient header */
 .mobile-drawer-header {
   display: flex;
   align-items: center;
   gap: 10px;
   height: var(--header-h);
   min-height: var(--header-h);
-  padding: 0 16px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  padding: 0 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #fff;
-  font-weight: 700;
-  font-size: 14.5px;
   flex-shrink: 0;
-  box-shadow: 0 2px 12px rgba(79, 70, 229, 0.35);
 }
 
-.mobile-drawer-header .mobile-drawer-close {
+.mobile-drawer-title {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.mobile-drawer-close {
   margin-inline-start: auto;
-  color: #fff;
-  font-size: 17px;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: #b5aea6;
+  font-size: 15px;
+  cursor: pointer;
 }
 
-.mobile-drawer-header .mobile-drawer-close:hover {
+.mobile-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  background: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* ── Drawer menu scroll area ── */
 .mobile-drawer .mobile-drawer-menu {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 4px 12px;
-  padding-inline: 6px;
+  padding-block: 8px;
+  padding-inline: 10px;
+  background: transparent !important;
+  border-inline-end: none !important;
   scrollbar-width: none;
 }
 
@@ -452,216 +824,59 @@
   display: none;
 }
 
-.mobile-drawer .mobile-drawer-menu.ant-menu {
-  background: transparent !important;
-  border-inline-end: none !important;
-}
-
-/* ── Section labels with hairline separators ── */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item-group {
-  margin-top: 8px;
-}
-
-.mobile-drawer .mobile-drawer-menu
-  .ant-menu-item-group:not(:first-child) {
-  border-top: 1px solid rgba(148, 163, 184, 0.12);
-}
-
-.mobile-drawer .mobile-drawer-menu .ant-menu-item-group-title {
-  color: #93a6cf !important;
-  font-size: 10.5px !important;
-  font-weight: 800;
-  letter-spacing: 2px;
-  padding: 14px 24px 6px !important;
-  text-transform: uppercase;
-  user-select: none;
-}
-
-/* Tighten first group's top spacing */
-.mobile-drawer .mobile-drawer-menu
-  .ant-menu-item-group:first-child
-  > .ant-menu-item-group-title {
-  padding-top: 10px !important;
-}
-
-/* Item base — roomy touch target */
 .mobile-drawer .mobile-drawer-menu .ant-menu-item,
 .mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title {
-  position: relative;
-  color: #eef3fd !important;
+  height: 44px !important;
+  line-height: 44px !important;
+  margin-block: 2px !important;
   font-size: 14.5px !important;
-  font-weight: 600;
-  height: 46px !important;
-  line-height: 46px !important;
-  margin-inline: 8px !important;
-  margin-block: 3px !important;
-  border-radius: 13px !important;
-  transition: background 0.18s ease, color 0.18s ease,
-    transform 0.12s ease;
-}
-
-/* Icon chips — the v2 signature look */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item > .anticon,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title > .anticon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 27px;
-  font-size: 15px !important;
-  color: #a5b4fc !important;
-  background: linear-gradient(
-    150deg,
-    rgba(129, 140, 248, 0.18),
-    rgba(129, 140, 248, 0.06)
-  );
-  border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 9px;
-  transition: background 0.18s ease, color 0.18s ease,
-    border-color 0.18s ease;
-}
-
-/* Hover & touch feedback */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.06) !important;
-}
-
-.mobile-drawer .mobile-drawer-menu .ant-menu-item:hover *,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:hover * {
-  color: #ffffff !important;
-}
-
-.mobile-drawer .mobile-drawer-menu .ant-menu-item:active,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-title:active {
-  background: rgba(99, 102, 241, 0.24) !important;
-  transform: scale(0.98);
-}
-
-/* SELECTED — branded gradient pill, inverse chip, marker bar */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
-  font-weight: 700;
-  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.55),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.24);
-}
-
-.mobile-drawer .mobile-drawer-menu
-  .ant-menu-item.ant-menu-item-selected
-  > .anticon {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.16) !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
-}
-
-.mobile-drawer .mobile-drawer-menu
-  .ant-menu-item.ant-menu-item-selected::after {
-  content: "";
-  position: absolute;
-  inset-inline-start: 7px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 44%;
-  border-radius: 999px;
-  background: #ffffff;
-}
-
-/* Hard cascade: selected label stays pure-white everywhere */
-.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected,
-.mobile-drawer .mobile-drawer-menu .ant-menu-item.ant-menu-item-selected * {
-  color: #ffffff !important;
-}
-
-/* Submenu panel — recessed tray */
-.mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline {
-  background: rgba(10, 16, 32, 0.45) !important;
-  border-radius: 14px;
-  margin-inline: 8px !important;
-  padding-block: 4px;
+  font-weight: 500 !important;
 }
 
 .mobile-drawer .mobile-drawer-menu .ant-menu-sub.ant-menu-inline .ant-menu-item {
-  margin-inline: 8px !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
   height: 40px !important;
   line-height: 40px !important;
-  border-radius: 10px !important;
-  color: #dbe4f6 !important;
+  font-size: 13.5px !important;
 }
 
-.mobile-drawer .mobile-drawer-menu
-  .ant-menu-sub.ant-menu-inline
-  .ant-menu-item.ant-menu-item-selected {
-  color: #ffffff !important;
-}
-
-/* Submenu arrow + open-state title */
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-arrow {
-  color: #8fa2c9 !important;
-}
-
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-active,
-.mobile-drawer .mobile-drawer-menu .ant-menu-submenu-open
-  > .ant-menu-submenu-title {
-  color: #ffffff !important;
-  background: rgba(99, 102, 241, 0.14) !important;
-}
-
-/* ── Drawer footer — floating user card ── */
 .mobile-drawer-footer {
   flex-shrink: 0;
-  margin: 8px 10px calc(10px + env(safe-area-inset-bottom));
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  border-radius: 16px;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 10px 14px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mobile-drawer-footer .user-meta {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   min-width: 0;
+  flex: 1;
+  line-height: 1.3;
 }
 
-.mobile-drawer-footer .user-meta .u-name {
-  font-weight: 700;
+.mobile-drawer-footer .u-name {
   font-size: 13px;
-  color: #f1f5f9;
+  font-weight: 600;
+  color: #e7e3dd;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.mobile-drawer-footer .user-meta .u-role {
-  display: inline-block;
-  width: fit-content;
-  margin-top: 3px;
-  padding: 1px 8px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: #b3bff5;
-  background: rgba(129, 140, 248, 0.16);
-  border-radius: 999px;
+.mobile-drawer-footer .u-role {
+  font-size: 11px;
+  color: #8a817a;
 }
 
-/* ═══════════════════════════════════════════════
-   COLLAPSED-MODE FLYOUT POPUPS
-   (rendered in a portal on <body> — scoped via
-   the Menu's popupClassName so nothing leaks)
-   ═══════════════════════════════════════════════ */
+/* ─── COLLAPSED-MODE FLYOUTS (rendered in a body portal) ────────────── */
 .admin-sider-popup.ant-menu-submenu.ant-menu-submenu-popup {
-  background: #101b31 !important;
-  border-radius: 12px !important;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.55);
+  background: #232019 !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-pop);
   padding: 6px !important;
 }
 
@@ -673,14 +888,15 @@
 
 .admin-sider-popup .ant-menu-item,
 .admin-sider-popup .ant-menu-submenu-title {
-  height: 40px !important;
-  line-height: 40px !important;
-  margin-block: 2px !important;
-  border-radius: 9px !important;
-  color: #f1f5fb !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  margin-block: 1px !important;
+  border-radius: 7px !important;
+  color: #d6d0c8 !important;
   font-size: 13.5px !important;
-  font-weight: 600 !important;
-  transition: background-color 0.18s ease, color 0.18s ease !important;
+  font-weight: 500 !important;
+  transition: background var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
 }
 
 .admin-sider-popup .ant-menu-item a {
@@ -691,20 +907,13 @@
 .admin-sider-popup .ant-menu-item:hover,
 .admin-sider-popup .ant-menu-submenu-title:hover {
   color: #ffffff !important;
-  background: rgba(148, 163, 184, 0.18) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Selected entry inside flyout — same branded pill */
-.admin-sider-popup .ant-menu-item.ant-menu-item-selected,
-.admin-sider-popup .ant-menu-item-selected {
-  background: linear-gradient(135deg, #4f46e5 0%, #6d28d9 100%) !important;
+.admin-sider-popup .ant-menu-item.ant-menu-item-selected {
+  background: #b45309 !important;
   color: #ffffff !important;
-  font-weight: 700 !important;
-  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.45);
-}
-
-.admin-sider-popup .ant-menu-item-selected a {
-  color: #ffffff !important;
+  font-weight: 600 !important;
 }
 
 .admin-sider-popup .ant-menu-item.ant-menu-item-selected,
@@ -712,20 +921,16 @@
   color: #ffffff !important;
 }
 
-/* ─── MOBILE / TABLET RESPONSIVE ──────────────── */
+/* ─── RESPONSIVE ────────────────────────────────────────────────────── */
 @media (max-width: 992px) {
-
-  /* Hide the fixed sidebar completely */
   .admin-sider {
     display: none !important;
   }
 
-  /* Remove margin from main area */
   .admin-main-layout {
     margin-right: 0 !important;
   }
 
-  /* Show hamburger, hide collapse */
   .mobile-menu-btn {
     display: inline-flex !important;
   }
@@ -734,16 +939,21 @@
     display: none !important;
   }
 
+  /* The header no longer has room for the trail — it moves into the
+     content area where it can wrap instead of truncating. */
+  .header-trail {
+    display: none;
+  }
+
+  .content-trail {
+    display: flex;
+  }
+
   .admin-content-inner {
-    margin: 14px;
-    padding: 16px;
-    min-height: calc(
-      calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 40px
-    );
+    padding: 16px 16px 22px;
   }
 }
 
-/* Extra small screens (phones) */
 @media (max-width: 576px) {
   :root {
     --header-h: 56px;
@@ -751,27 +961,27 @@
 
   .admin-header {
     padding: 0 10px !important;
+    gap: 6px;
   }
 
-  .header-user-info span {
+  .header-search-label,
+  .header-search-kbd,
+  .header-user-name,
+  .header-user-role {
     display: none;
   }
 
-  .header-user-info {
-    padding: 5px;
+  .header-search-trigger {
+    width: 36px;
+    padding: 0;
+    justify-content: center;
   }
 
-  .header-icon-btn.ant-btn {
-    width: 36px;
-    height: 36px;
+  .header-user {
+    padding: 0 4px;
   }
 
   .admin-content-inner {
-    margin: 10px;
-    /* Extra bottom gap keeps content clear of the browser nav bar */
-    margin-bottom: max(14px, env(safe-area-inset-bottom));
-    padding: 12px;
-    border-radius: 12px;
-    min-height: calc(calc(var(--app-vh, 1vh) * 100) - 76px);
+    padding: 13px 12px 20px;
   }
 }

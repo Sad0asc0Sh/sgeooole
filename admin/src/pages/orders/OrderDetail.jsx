@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -513,28 +514,19 @@ function OrderDetail() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/orders')}>
-            بازگشت
-          </Button>
-          <h1 style={{ margin: 0 }}>
-            جزئیات سفارش {order?.orderCode || `#${order?._id?.slice(-8)}` || '...'}
-          </h1>
-        </Space>
-        <Button icon={<ReloadOutlined />} onClick={fetchOrder} loading={loading}>
-          بارگذاری مجدد
-        </Button>
-      </div>
+      <PageHeader
+        title={`جزئیات سفارش ${order?.orderCode || order?._id?.slice(-8) || ''}`}
+        actions={
+          <>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/orders')}>
+              بازگشت به سفارش‌ها
+            </Button>
+            <Button icon={<ReloadOutlined />} onClick={fetchOrder} loading={loading}>
+              بارگذاری مجدد
+            </Button>
+          </>
+        }
+      />
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
@@ -682,7 +674,7 @@ marginBottom: 16,
           <Card
             title={
               <Space>
-                <CarOutlined style={{ color: '#1890ff' }} />
+                <CarOutlined style={{ color: '#b45309' }} />
                 <span>تنظیمات ارسال و رهگیری مرسوله</span>
               </Space>
             }
@@ -805,7 +797,7 @@ marginBottom: 8,
                         }
                       />
                       {preparedTrackingUrl && (
-                        <div style={{ fontSize: 12, marginTop: 4, color: '#52c41a' }}>
+                        <div style={{ fontSize: 12, marginTop: 4, color: '#0f6b33' }}>
                           <CheckCircleOutlined /> پیش‌نمایش لینک: {' '}
                           <a href={preparedTrackingUrl} target="_blank" rel="noopener noreferrer">
                             باز کردن لینک پیگیری
@@ -861,7 +853,7 @@ marginBottom: 8,
                           renderer={({ days, hours, minutes, seconds, completed }) => {
                             if (completed) return <span>در حال تکمیل...</span>
                             return (
-                              <span style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#1890ff' }}>
+                              <span style={{ fontWeight: 'bold', fontSize: '1.1em', color: '#b45309' }}>
                                 {days} روز : {hours} ساعت : {minutes} دقیقه : {seconds} ثانیه
                               </span>
                             )
@@ -911,7 +903,7 @@ marginBottom: 8,
                 </Descriptions.Item>
                 {Boolean(order.totalDiscount && order.totalDiscount > 0) && (
                   <Descriptions.Item label="مجموع تخفیف">
-                    <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                    <span style={{ color: '#b3261e', fontWeight: 'bold' }}>
                       {new Intl.NumberFormat('fa-IR').format(order.totalDiscount)} - تومان
                     </span>
                   </Descriptions.Item>
@@ -928,7 +920,7 @@ marginBottom: 8,
                   {new Intl.NumberFormat('fa-IR').format(order.taxPrice || 0)} تومان
                 </Descriptions.Item>
                 <Descriptions.Item label="مبلغ کل">
-                  <strong style={{ fontSize: '1.1em', color: '#1890ff' }}>
+                  <strong style={{ fontSize: '1.1em', color: '#b45309' }}>
                     {new Intl.NumberFormat('fa-IR').format(order.totalPrice || 0)} تومان
                   </strong>
                 </Descriptions.Item>
@@ -962,7 +954,7 @@ marginBottom: 8,
               <Button
                 type="text"
                 aria-label={`انتخاب ${courier.name || 'شرکت'} به‌عنوان پیش‌فرض`}
-                icon={courier.isDefault ? <StarFilled style={{ color: '#faad14', fontSize: 20 }} /> : <StarOutlined style={{ fontSize: 20 }} />}
+                icon={courier.isDefault ? <StarFilled style={{ color: '#8a6200', fontSize: 20 }} /> : <StarOutlined style={{ fontSize: 20 }} />}
                 onClick={() => setManagedDefaultCourier(courier.name)}
               />
               <Input

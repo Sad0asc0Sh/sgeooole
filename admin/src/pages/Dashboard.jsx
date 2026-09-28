@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Row, Col, Card, Table, Tag, Button, message, Skeleton } from 'antd'
+import { useEffect, useState, useCallback } from 'react'
+import { Card, Table, Button, Skeleton, Empty } from 'antd'
 import {
   DollarOutlined,
   ShoppingCartOutlined,
@@ -8,6 +8,10 @@ import {
   RiseOutlined,
   FallOutlined,
   CustomerServiceOutlined,
+  ReloadOutlined,
+  InboxOutlined,
+  WarningOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons'
 import {
   LineChart,
@@ -16,89 +20,45 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Line,
+  Area,
+  AreaChart,
 } from 'recharts'
 import { useNavigate } from 'react-router-dom'
 import api from '../api'
-import { getStatusColor, getStatusLabel, formatCurrency } from '../utils/formatters'
+import { getStatusLabel, formatCurrency } from '../utils/formatters'
+import PageHeader from '../components/ui/PageHeader'
+import StatTile from '../components/ui/StatTile'
+import EmptyState from '../components/ui/EmptyState'
+import StatusPill from '../components/ui/StatusPill'
+import './Dashboard.css'
 
-// ── Professional stat card ──────────────────────────────
-function StatCard({ loading, title, value, icon, tone, footer }) {
-  if (loading) {
-    return (
-      <Card styles={{ body: { padding: 18 } }}>
-        <Skeleton active paragraph={{ rows: 1 }} />
-      </Card>
-    )
-  }
-
-  const tones = {
-    indigo: { bg: '#eef2ff', fg: '#4f46e5' },
-    green: { bg: '#f0fdf4', fg: '#16a34a' },
-    amber: { bg: '#fffbeb', fg: '#d97706' },
-    sky: { bg: '#f0f9ff', fg: '#0284c7' },
-  }
-  const t = tones[tone] || tones.indigo
-
+/** A number that moves needs a direction word, not just an arrow. */
+function GrowthFoot({ value }) {
+  if (!value) return null
+  const up = value > 0
   return (
-    <Card
-      hoverable
-      styles={{ body: { padding: 18 } }}
-      style={{ height: '100%' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        <div
-          style={{
-            width: 46,
-            height: 46,
-            borderRadius: 12,
-            background: t.bg,
-            color: t.fg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div
-            style={{
-              fontSize: 13,
-              color: '#64748b',
-              marginBottom: 2,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {title}
-          </div>
-          <div
-            style={{
-              fontSize: 21,
-              fontWeight: 800,
-              color: '#0f172a',
-              lineHeight: 1.3,
-            }}
-          >
-            {value}
-          </div>
-          {footer && (
-            <div style={{ fontSize: 12, marginTop: 4, color: '#64748b' }}>
-              {footer}
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
+    <span className={up ? 'up' : 'down'}>
+      {up ? <RiseOutlined /> : <FallOutlined />} {Math.abs(Number(value)).toFixed(1)}٪
+      نسبت به هفته قبل
+    </span>
+  )
+}
+
+/** The chart's own empty state — antd's default reads as an error. */
+function ChartEmpty() {
+  return (
+    <div className="chart-empty">
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description="برای این بازه داده‌ای برای نمایش وجود ندارد"
+      />
+    </div>
   )
 }
 
 function Dashboard() {
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const navigate = useNavigate()
   const [stats, setStats] = useState({
     totalSales: 0,
@@ -118,37 +78,44 @@ function Dashboard() {
       title: 'شماره سفارش',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
-      render: (val, record) => val || record.orderCode || `#${(record._id || '').slice(-8)}`,
+      render: (val, record) => (
+        <span className="mono-cell">
+          {val || record.orderCode || `#${(record._id || '').slice(-8)}`}
+        </span>
+      ),
     },
     {
       title: 'مشتری',
       dataIndex: ['customer', 'name'],
       key: 'customer',
-      render: (name, record) => name || record.customer?.email || record.user?.name || '—',
+      render: (name, record) =>
+        name || record.customer?.email || record.user?.name || '—',
     },
     {
       title: 'مبلغ کل',
       dataIndex: 'totalAmount',
       key: 'total',
-      render: (val, record) => formatCurrency(val || record.totalPrice || 0),
+      align: 'left',
+      render: (val, record) => (
+        <span className="money-cell">{formatCurrency(val || record.totalPrice || 0)}</span>
+      ),
     },
     {
       title: 'وضعیت',
       dataIndex: 'status',
       key: 'status',
-      render: (status, record) => {
-        const resolvedStatus = status || record.orderStatus
-        return (
-          <Tag color={getStatusColor(resolvedStatus)}>
-            {getStatusLabel(resolvedStatus)}
-          </Tag>
-        )
-      },
+      render: (status, record) => (
+        <StatusPill
+          status={status || record.orderStatus}
+          label={getStatusLabel(status || record.orderStatus)}
+        />
+      ),
     },
   ]
 
-  const fetchDashboard = async () => {
-    setLoading(true)
+  const fetchDashboard = useCallback(async ({ quiet = false } = {}) => {
+    if (quiet) setRefreshing(true)
+    else setLoading(true)
     try {
       const res = await api.get('/dashboard/stats')
       const data = res?.data?.data || {}
@@ -156,7 +123,9 @@ function Dashboard() {
         totalSales: data.totalSales || 0,
         newOrders: data.newOrders || 0,
         pendingOrders: data.pendingOrders || 0,
-        lowStockProducts: Array.isArray(data.lowStockProducts) ? data.lowStockProducts : [],
+        lowStockProducts: Array.isArray(data.lowStockProducts)
+          ? data.lowStockProducts
+          : [],
         newCustomers: data.newCustomers || 0,
         recentOrders: Array.isArray(data.recentOrders) ? data.recentOrders : [],
         salesChart: Array.isArray(data.salesChart) ? data.salesChart : [],
@@ -165,195 +134,228 @@ function Dashboard() {
         averageOrderValue: data.averageOrderValue || 0,
       })
     } catch (err) {
+      // A failed refresh should not wipe the numbers already on screen.
       console.error('Dashboard fetch error:', err)
-      message.error(
-        err?.response?.data?.message ||
-        err?.message ||
-        'خطا در دریافت اطلاعات داشبورد'
-      )
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchDashboard()
-  }, [])
+  }, [fetchDashboard])
+
+  const lowStock = stats.lowStockProducts.slice(0, 7)
+  const hasChartData = stats.salesChart.length > 0
 
   return (
-    <div>
-      <div className="page-header">
-        <h1>داشبورد</h1>
-        <Button onClick={() => fetchDashboard()} loading={loading}>
-          به‌روزرسانی اطلاعات
-        </Button>
+    <div className="dashboard">
+      <PageHeader
+        title="داشبورد"
+        subtitle="وضعیت امروز فروشگاه در یک نگاه"
+        actions={
+          <Button
+            icon={<ReloadOutlined spin={refreshing} />}
+            onClick={() => fetchDashboard({ quiet: true })}
+            loading={refreshing}
+          >
+            به‌روزرسانی
+          </Button>
+        }
+      />
+
+      {/* ── KPI row ── */}
+      <div className="stat-grid">
+        <StatTile
+          loading={loading}
+          label="مجموع فروش"
+          value={formatCurrency(stats.totalSales)}
+          icon={<DollarOutlined />}
+          tone="ok"
+          foot={<GrowthFoot value={stats.salesGrowth} />}
+          onClick={() => navigate('/reports/sales')}
+        />
+        <StatTile
+          loading={loading}
+          label="میانگین ارزش سفارش"
+          value={formatCurrency(stats.averageOrderValue)}
+          icon={<ShoppingCartOutlined />}
+          tone="brand"
+          onClick={() => navigate('/reports/sales')}
+        />
+        <StatTile
+          loading={loading}
+          label="سفارش‌های در انتظار"
+          value={stats.pendingOrders.toLocaleString('fa-IR')}
+          icon={<ShoppingOutlined />}
+          tone="warn"
+          onClick={() => navigate('/orders')}
+        />
+        <StatTile
+          loading={loading}
+          label="مشتریان جدید (۲۴ ساعت)"
+          value={stats.newCustomers.toLocaleString('fa-IR')}
+          icon={<UserAddOutlined />}
+          tone="info"
+          foot={
+            stats.openTickets > 0 ? (
+              <button
+                type="button"
+                className="tile-link"
+                onClick={() => navigate('/tickets')}
+              >
+                <CustomerServiceOutlined /> {stats.openTickets.toLocaleString('fa-IR')} تیکت باز
+              </button>
+            ) : (
+              'تیکت بازی وجود ندارد'
+            )
+          }
+        />
       </div>
 
-      {/* ── Stat cards ── */}
-      <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            loading={loading}
-            title="مجموع فروش"
-            value={formatCurrency(stats.totalSales)}
-            icon={<DollarOutlined />}
-            tone="green"
-            footer={
-              stats.salesGrowth !== 0 ? (
-                <span
-                  style={{
-                    color: stats.salesGrowth > 0 ? '#16a34a' : '#dc2626',
-                    fontWeight: 600,
-                  }}
-                >
-                  {stats.salesGrowth > 0 ? <RiseOutlined /> : <FallOutlined />}{' '}
-                  {Math.abs(Number(stats.salesGrowth)).toFixed(1)}٪ نسبت به هفته
-                  قبل
-                </span>
-              ) : null
-            }
-          />
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            loading={loading}
-            title="میانگین ارزش سفارش (AOV)"
-            value={formatCurrency(stats.averageOrderValue)}
-            icon={<ShoppingCartOutlined />}
-            tone="indigo"
-          />
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            loading={loading}
-            title="سفارش‌های در انتظار / در حال پردازش"
-            value={stats.pendingOrders}
-            icon={<ShoppingOutlined />}
-            tone="amber"
-          />
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <StatCard
-            loading={loading}
-            title="مشتریان جدید (۲۴ ساعت)"
-            value={stats.newCustomers}
-            icon={<UserAddOutlined />}
-            tone="sky"
-            footer={
-              <span style={{ color: '#dc2626' }}>
-                <CustomerServiceOutlined /> تیکت باز: {stats.openTickets}
-              </span>
-            }
-          />
-        </Col>
-      </Row>
-
-      {/* ── Chart & low stock ── */}
-      <Row gutter={[14, 14]}>
-        <Col xs={24} lg={16}>
-          <Card
-            title="روند فروش (۷ روز گذشته)"
-            extra={
-              <Button type="link" onClick={() => navigate('/reports/sales')}>
-                گزارش فروش
-              </Button>
-            }
-            loading={loading}
-            styles={{ body: { padding: '8px 8px 0 16px' } }}
-          >
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart
+      {/* ── Trend + attention ── */}
+      <div className="dash-split">
+        <Card
+          className="dash-chart-card"
+          title="روند فروش — ۷ روز گذشته"
+          extra={
+            <Button
+              type="link"
+              size="small"
+              onClick={() => navigate('/reports/sales')}
+            >
+              گزارش کامل
+            </Button>
+          }
+        >
+          {loading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : hasChartData ? (
+            <ResponsiveContainer width="100%" height={264}>
+              <AreaChart
                 data={stats.salesChart}
-                margin={{ top: 16, right: 8, left: -16, bottom: 0 }}
+                margin={{ top: 12, right: 6, left: -18, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-                <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" width={56} />
-                <Tooltip formatter={(v) => formatCurrency(v)} contentStyle={{ borderRadius: 10 }} />
-                <Line
+                <defs>
+                  <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#b45309" stopOpacity={0.22} />
+                    <stop offset="100%" stopColor="#b45309" stopOpacity={0.01} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="0"
+                  stroke="#efece7"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: '#8a817a' }}
+                  axisLine={{ stroke: '#e2ddd6' }}
+                  tickLine={false}
+                  dy={6}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#8a817a' }}
+                  axisLine={false}
+                  tickLine={false}
+                  width={62}
+                />
+                <Tooltip
+                  formatter={(v) => [formatCurrency(v), 'فروش']}
+                  contentStyle={{
+                    borderRadius: 10,
+                    border: '1px solid #e2ddd6',
+                    boxShadow: '0 4px 12px rgba(28,25,23,0.08)',
+                    fontSize: 12.5,
+                  }}
+                  labelStyle={{ color: '#57534e', marginBottom: 2 }}
+                />
+                <Area
                   type="monotone"
                   dataKey="sales"
                   name="فروش"
-                  stroke="#4f46e5"
-                  strokeWidth={2.5}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
+                  stroke="#b45309"
+                  strokeWidth={2.2}
+                  fill="url(#salesFill)"
+                  dot={false}
+                  activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
-          </Card>
-        </Col>
+          ) : (
+            <ChartEmpty />
+          )}
+        </Card>
 
-        <Col xs={24} lg={8}>
-          <Card
-            title="محصولات با موجودی کم"
-            extra={
-              <Button type="link" onClick={() => navigate('/inventory')}>
-                مدیریت موجودی
-              </Button>
-            }
-            loading={loading}
-            styles={{ body: { padding: '8px 20px' } }}
-          >
-            {stats.lowStockProducts.slice(0, 7).map((product, index) => (
-              <div
-                key={product._id || product.id || index}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 0',
-                  borderBottom: '1px solid #f1f5f9',
-                }}
-              >
-                <span
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    minWidth: 0,
-                  }}
-                >
-                  {product.name}
-                </span>
-                <Tag color="red" style={{ flexShrink: 0 }}>
-                  {product.stock ?? product.countInStock ?? 0} عدد
-                </Tag>
-              </div>
-            ))}
-            {!loading && stats.lowStockProducts.length === 0 && (
-              <div style={{ color: '#94a3b8', textAlign: 'center', padding: '24px 0' }}>
-                محصولی با موجودی کم یافت نشد.
-              </div>
-            )}
-          </Card>
-        </Col>
-
-        <Col xs={24}>
-          <Card
-            title="سفارش‌های اخیر"
-            extra={
-              <Button type="link" onClick={() => navigate('/orders')}>
-                مشاهده همه سفارش‌ها
-              </Button>
-            }
-            loading={loading}
-          >
-            <Table
-              columns={orderColumns}
-              dataSource={stats.recentOrders}
-              rowKey={(r) => r._id || r.id || r.orderNumber}
-              pagination={false}
-              scroll={{ x: 'max-content' }}
-              size="middle"
+        <Card
+          className="dash-stock-card"
+          title="نیازمند رسیدگی"
+          extra={
+            <Button type="link" size="small" onClick={() => navigate('/inventory')}>
+              مدیریت موجودی
+            </Button>
+          }
+        >
+          {loading ? (
+            <Skeleton active paragraph={{ rows: 5 }} />
+          ) : lowStock.length === 0 ? (
+            <EmptyState
+              compact
+              icon={<InboxOutlined />}
+              title="موجودی همه‌چیز کافی است"
+              description="هیچ محصولی به زیر حد سفارش نرسیده."
             />
-          </Card>
-        </Col>
-      </Row>
+          ) : (
+            <ul className="stock-list">
+              {lowStock.map((product, index) => (
+                <li className="stock-row" key={product._id || product.id || index}>
+                  <span className="stock-name" title={product.name}>
+                    {product.name}
+                  </span>
+                  <span className="stock-count">
+                    {(product.stock ?? product.countInStock ?? 0).toLocaleString('fa-IR')} عدد
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      {/* ── Recent orders ── */}
+      <Card
+        className="dash-orders-card"
+        title="سفارش‌های اخیر"
+        extra={
+          <Button
+            type="link"
+            size="small"
+            onClick={() => navigate('/orders')}
+          >
+            همه سفارش‌ها <ArrowLeftOutlined />
+          </Button>
+        }
+      >
+        {loading ? (
+          <Skeleton active paragraph={{ rows: 4 }} />
+        ) : stats.recentOrders.length === 0 ? (
+          <EmptyState
+            icon={<WarningOutlined />}
+            title="هنوز سفارشی ثبت نشده"
+            description="به‌محض ثبت اولین سفارش، اینجا نمایش داده می‌شود."
+          />
+        ) : (
+          <Table
+            columns={orderColumns}
+            dataSource={stats.recentOrders}
+            rowKey={(r) => r._id || r.id || r.orderNumber}
+            pagination={false}
+            scroll={{ x: 'max-content' }}
+            size="middle"
+          />
+        )}
+      </Card>
     </div>
   )
 }

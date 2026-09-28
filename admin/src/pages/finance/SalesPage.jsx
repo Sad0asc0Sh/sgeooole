@@ -20,6 +20,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from 
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 dayjs.extend(jalaliday)
 dayjs.calendar('jalali')
@@ -254,21 +255,16 @@ function SalesPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت تخفیف‌های زمان‌دار</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-          ایجاد تخفیف جدید
-        </Button>
-      </div>
+      <PageHeader
+         title="مدیریت تخفیف‌های زمان‌دار"
+         actions={
+           <>
+<Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                       ایجاد تخفیف جدید
+                     </Button>
+           </>
+         }
+       />
 
       <Card>
         <ResponsiveTable columns={columns} dataSource={sales} loading={loading} rowKey="_id"

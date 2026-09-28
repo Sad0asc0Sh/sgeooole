@@ -29,6 +29,7 @@ import { useBrandStore } from '../../stores'
 import api from '../../api'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
+import PageHeader from '../../components/ui/PageHeader'
 
 function BrandsPage() {
   const { can } = useCan()
@@ -305,7 +306,7 @@ function BrandsPage() {
             checkedChildren={<HomeOutlined />}
             unCheckedChildren={<HomeOutlined />}
             style={{
-              backgroundColor: showOnHomepage ? '#52c41a' : undefined,
+              backgroundColor: showOnHomepage ? '#0f6b33' : undefined,
             }}
           />
         </Tooltip>
@@ -399,23 +400,18 @@ function BrandsPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت برندها</h1>
-        {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            افزودن برند جدید
-          </Button>
-        )}
-      </div>
+      <PageHeader
+         title="مدیریت برندها"
+         actions={
+           <>
+{canCreate && (
+                       <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+                         افزودن برند جدید
+                       </Button>
+                     )}
+           </>
+         }
+       />
 
       <Card>
         <ResponsiveTable

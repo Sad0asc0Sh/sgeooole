@@ -24,6 +24,7 @@ import api from '../../api'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import { formatPersianDate } from '../../utils/dateUtils'
 import { formatCurrency, formatNumber } from '../../utils/formatters'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { RangePicker } = DatePicker
 
@@ -238,7 +239,7 @@ function DeliveredItemsReport() {
         <div>
           <div style={{ fontWeight: 600 }}>{name}</div>
           {record.variantLabel ? (
-            <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+            <div style={{ fontSize: 12, color: '#57534e' }}>
               {record.variantLabel}
             </div>
           ) : null}
@@ -279,7 +280,7 @@ function DeliveredItemsReport() {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 600 }}>{record.customerName || '—'}</div>
-          <div style={{ fontSize: 12, color: '#8c8c8c' }} dir="ltr">
+          <div style={{ fontSize: 12, color: '#57534e' }} dir="ltr">
             {record.customerPhone || ''}
           </div>
           {record.customerCity ? (
@@ -312,26 +313,21 @@ function DeliveredItemsReport() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <h1>تاریخچه تحویل محصولات</h1>
-        <Button
-          type="primary"
-          icon={<DownloadOutlined />}
-          loading={exporting}
-          onClick={handleExport}
-        >
-          خروجی اکسل (CSV)
-        </Button>
-      </div>
+      <PageHeader
+         title="تاریخچه تحویل محصولات"
+         actions={
+           <>
+<Button
+                       type="primary"
+                       icon={<DownloadOutlined />}
+                       loading={exporting}
+                       onClick={handleExport}
+                     >
+                       خروجی اکسل (CSV)
+                     </Button>
+           </>
+         }
+       />
 
       {/* فیلترها */}
       <Card style={{ marginBottom: 16 }}>
@@ -364,7 +360,7 @@ function DeliveredItemsReport() {
             <Statistic
               title="اقلام تحویل‌شده"
               value={summary.totalRows}
-              valueStyle={{ color: '#1890ff' }}
+              valueStyle={{ color: '#b45309' }}
               formatter={(v) => formatNumber(v)}
             />
           </Card>
@@ -396,7 +392,7 @@ function DeliveredItemsReport() {
             <Statistic
               title="سفارش‌های تحویل‌شده"
               value={summary.ordersCount}
-              valueStyle={{ color: '#fa8c16' }}
+              valueStyle={{ color: '#8a6200' }}
               formatter={(v) => formatNumber(v)}
             />
           </Card>

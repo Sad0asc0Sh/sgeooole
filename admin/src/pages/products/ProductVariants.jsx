@@ -1,9 +1,10 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { Card, Alert } from 'antd'
 
 function ProductVariants() {
   return (
     <div>
-      <h1>ProductVariants</h1>
+            <PageHeader title={"ProductVariants"} />
       <Card>
         <Alert
           message="این صفحه در حال توسعه است"

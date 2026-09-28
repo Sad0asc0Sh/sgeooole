@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
@@ -330,23 +331,14 @@ function CreateOrderPage() {
 
     return (
         <div>
-            <div
-                style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-            >
-                <Space>
+            <PageHeader
+                title="ایجاد سفارش جدید"
+                actions={
                     <Link to="/orders">
-                        <Button icon={<ArrowLeftOutlined />}>بازگشت</Button>
+                        <Button icon={<ArrowLeftOutlined />}>بازگشت به سفارش‌ها</Button>
                     </Link>
-                    <h1 style={{ margin: 0 }}>ایجاد سفارش جدید</h1>
-                </Space>
-            </div>
+                }
+            />
 
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -552,7 +544,7 @@ marginBottom: 16,
                                         {new Intl.NumberFormat('fa-IR').format(shippingPrice)} تومان
                                     </span>
                                 </div>
-                                <div style={{ fontSize: 16, color: '#1890ff' }}>
+                                <div style={{ fontSize: 16, color: '#b45309' }}>
                                     <span>مبلغ کل: </span>
                                     <span style={{ fontWeight: 'bold' }}>
                                         {new Intl.NumberFormat('fa-IR').format(totalPrice)} تومان

@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useState, useEffect } from 'react'
 import {
   Button,
@@ -243,15 +244,11 @@ function AnnouncementsPage() {
   ]
 
   return (
-    <div style={{ padding: 24 }}>
-      <Card
-        title={
-          <Space>
-            <SoundOutlined style={{ fontSize: 20 }} />
-            <span>مدیریت اعلانات سایت</span>
-          </Space>
-        }
-        extra={
+    <div>
+      <PageHeader
+        title="مدیریت اعلانات سایت"
+        subtitle="پیام‌های کوتاهی که در بالای صفحات فروشگاه نمایش داده می‌شوند"
+        actions={
           <Button
             type="primary"
             icon={<PlusOutlined />}
@@ -261,7 +258,8 @@ function AnnouncementsPage() {
             افزودن اعلان جدید
           </Button>
         }
-      >
+      />
+      <Card>
         <ResponsiveTable
           columns={columns}
           dataSource={announcements}

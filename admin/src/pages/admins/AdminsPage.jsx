@@ -30,6 +30,7 @@ import api from '../../api'
 import { useAuthStore } from '../../stores'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { hasPermission } from '../../rbac/access'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { Option } = Select
 const { Panel } = Collapse
@@ -317,28 +318,23 @@ function AdminsPage() {
       {/* ============================================ */}
       {/* هدر صفحه */}
       {/* ============================================ */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>🔐 مدیریت ادمین‌ها</h1>
-        {/* دکمه ایجاد ادمین فقط برای سوپرادمین */}
-        {can(PERMISSIONS.ADMIN_CREATE) && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={openCreateModal}
-          >
-            ایجاد ادمین جدید
-          </Button>
-        )}
-      </div>
+      <PageHeader
+         title="🔐 مدیریت ادمین‌ها"
+         actions={
+           <>
+{/* دکمه ایجاد ادمین فقط برای سوپرادمین */}
+                     {can(PERMISSIONS.ADMIN_CREATE) && (
+                       <Button
+                         type="primary"
+                         icon={<PlusOutlined />}
+                         onClick={openCreateModal}
+                       >
+                         ایجاد ادمین جدید
+                       </Button>
+                     )}
+           </>
+         }
+       />
 
       {/* توضیح برای manager */}
       {isManager && (
@@ -362,7 +358,7 @@ marginBottom: 16,
         <Panel
           header={
             <Space>
-              <SafetyCertificateOutlined style={{ color: '#1890ff' }} />
+              <SafetyCertificateOutlined style={{ color: '#b45309' }} />
               <Text strong>🔐 راهنمای نقش‌ها و سطوح دسترسی (کلیک کنید)</Text>
             </Space>
           }
@@ -383,10 +379,10 @@ marginBottom: 16,
                   size="small"
                   style={{
                     border: `2px solid`,
-                    borderColor: role.color === 'red' ? '#ff4d4f' :
+                    borderColor: role.color === 'red' ? '#b3261e' :
                       role.color === 'purple' ? '#722ed1' :
-                        role.color === 'blue' ? '#1890ff' :
-                          role.color === 'geekblue' ? '#2f54eb' :
+                        role.color === 'blue' ? '#b45309' :
+                          role.color === 'geekblue' ? '#b45309' :
                             '#13c2c2',
                     borderRadius: 8,
                   }}

@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import {
   Card,
@@ -764,34 +765,20 @@ function BannersPage() {
   // ============================================
   return (
     <div>
-      {/* ============================================ */}
-      {/* هدر صفحه */}
-      {/* ============================================ */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 24,
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0, fontSize: 24 }}>🖼️ مدیریت بنرها</h1>
-          <p style={{ margin: '4px 0 0', color: '#666' }}>
-            بنرهای تبلیغاتی صفحه اصلی فروشگاه را از اینجا مدیریت کنید
-          </p>
-        </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={() => fetchBanners()}>
-            بروزرسانی
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={handleNew}>
-            افزودن بنر جدید
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+        title="مدیریت بنرها"
+        subtitle="بنرهای تبلیغاتی صفحه اصلی فروشگاه را از اینجا مدیریت کنید"
+        actions={
+          <>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchBanners()}>
+              بروزرسانی
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleNew}>
+              افزودن بنر جدید
+            </Button>
+          </>
+        }
+      />
 
       {/* ============================================ */}
       {/* راهنمای کامل ابعاد بنرها */}
@@ -801,14 +788,14 @@ marginBottom: 24,
         style={{ marginBottom: 16, background: 'linear-gradient(135deg, #f0f5ff 0%, #e6f4ff 100%)', border: '1px solid #91caff' }}
         title={
           <Space>
-            <PictureOutlined style={{ color: '#1677ff' }} />
+            <PictureOutlined style={{ color: '#b45309' }} />
             <span style={{ fontWeight: 'bold', fontSize: 14 }}>📐 راهنمای ابعاد بنرها — سازگار با موبایل و دسکتاپ</span>
           </Space>
         }
       >
         <Row gutter={[16, 16]}>
           {Object.entries(BANNER_POSITIONS).map(([key, config]) => {
-            const borderColor = config.color === 'blue' ? '#1677ff' : config.color === 'orange' ? '#fa8c16' : '#722ed1'
+            const borderColor = config.color === 'blue' ? '#b45309' : config.color === 'orange' ? '#8a6200' : '#722ed1'
             const bgGradient = config.color === 'blue'
               ? 'linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%)'
               : config.color === 'orange'
@@ -886,7 +873,7 @@ marginBottom: 24,
                   <div style={{ display: 'grid', gap: 6 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#888', fontSize: 11 }}>🎯 سایز ایده‌آل:</span>
-                      <strong style={{ fontSize: 13, color: '#1677ff' }}>{config.size}</strong>
+                      <strong style={{ fontSize: 13, color: '#b45309' }}>{config.size}</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ color: '#888', fontSize: 11 }}>📏 نسبت تصویر:</span>
@@ -897,7 +884,7 @@ marginBottom: 24,
                       <span style={{ fontSize: 12, color: '#fa541c', fontWeight: 500 }}>{config.minSize}</span>
                     </div>
                   </div>
-                  <div style={{ marginTop: 10, padding: '8px 10px', background: '#f6ffed', borderRadius: 6, fontSize: 11, color: '#389e0d', border: '1px solid #b7eb8f' }}>
+                  <div style={{ marginTop: 10, padding: '8px 10px', background: '#f6ffed', borderRadius: 6, fontSize: 11, color: '#0f6b33', border: '1px solid #b7eb8f' }}>
                     {config.mobileTip}
                   </div>
                 </div>
@@ -920,7 +907,7 @@ marginBottom: 24,
           <Row gutter={[16, 12]}>
             <Col xs={24} md={12}>
               <div style={{ padding: 12, background: '#f6ffed', borderRadius: 8, border: '1px solid #b7eb8f', height: '100%' }}>
-                <div style={{ fontWeight: 'bold', color: '#389e0d', marginBottom: 8, fontSize: 13 }}>✅ بایدها</div>
+                <div style={{ fontWeight: 'bold', color: '#0f6b33', marginBottom: 8, fontSize: 13 }}>✅ بایدها</div>
                 <ul style={{ margin: 0, paddingRight: 18, fontSize: 12, lineHeight: 2.2, color: '#333' }}>
                   <li>تصویر را <strong>دقیقاً با ابعاد ایده‌آل</strong> بالا طراحی کنید</li>
                   <li>فرمت <strong>WebP</strong> یا <strong>JPG</strong> با کیفیت 80% استفاده کنید</li>
@@ -1184,7 +1171,7 @@ marginBottom: 24,
                 <div style={{ display: 'grid', gap: 4, fontSize: 12 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#666' }}>🎯 سایز ایده‌آل:</span>
-                    <strong style={{ color: '#1677ff' }}>
+                    <strong style={{ color: '#b45309' }}>
                       {BANNER_POSITIONS[selectedPosition]?.size}
                     </strong>
                   </div>
@@ -1205,18 +1192,18 @@ marginBottom: 24,
                   disabled={saving}
                   style={{
                     borderRadius: 10,
-                    border: '2px dashed #1890ff',
+                    border: '2px dashed #b45309',
                     background: '#fafafa',
                   }}
                 >
                   <p className="ant-upload-drag-icon">
-                    <InboxOutlined style={{ fontSize: 36, color: '#1890ff' }} />
+                    <InboxOutlined style={{ fontSize: 36, color: '#b45309' }} />
                   </p>
                   <p className="ant-upload-text" style={{ fontWeight: 'bold', fontSize: 13 }}>
                     تصویر بنر را اینجا رها کنید یا کلیک کنید
                   </p>
                   <p className="ant-upload-hint" style={{ fontSize: 11, color: '#666' }}>
-                    ابعاد ایده‌آل: <strong style={{ color: '#1677ff' }}>{BANNER_POSITIONS[selectedPosition]?.size}</strong>
+                    ابعاد ایده‌آل: <strong style={{ color: '#b45309' }}>{BANNER_POSITIONS[selectedPosition]?.size}</strong>
                   </p>
                   <p className="ant-upload-hint" style={{ fontSize: 10, color: '#999' }}>
                     JPG, PNG, WEBP • حداکثر 10MB (پیشنهادی: زیر 2MB)

@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import {
   Card,
@@ -440,23 +441,16 @@ function CategoriesPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت دسته‌بندی‌ها</h1>
-        {canCreate && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-            افزودن دسته‌بندی جدید
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="مدیریت دسته‌بندی‌ها"
+        actions={
+          canCreate && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
+              افزودن دسته‌بندی جدید
+            </Button>
+          )
+        }
+      />
 
       <Card>
         {loading && categoriesTree.length === 0 ? (

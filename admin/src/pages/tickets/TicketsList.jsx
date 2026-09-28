@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import { Card, Tag, Input, Select, Space, message } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
@@ -118,29 +119,27 @@ function TicketsList() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1>تیکت‌ها</h1>
-        <Space>
-          <Input
-            placeholder="جستجو (موضوع/پیام)"
-            prefix={<SearchOutlined />}
-            style={{ width: 320, maxWidth: '100%' }}
-            allowClear
-            onChange={(e) => setSearch(e.target.value)}
-            onPressEnter={() => fetchTickets(1, pagination.pageSize)}
-            onBlur={() => fetchTickets(1, pagination.pageSize)}
-          />
-          <Select placeholder="وضعیت" style={{ width: 150, maxWidth: '100%' }} allowClear onChange={setStatus}>
-            {['open','pending','closed'].map(s => (
-              <Select.Option key={s} value={s}>{s}</Select.Option>
-            ))}
-          </Select>
-          <Select placeholder="اولویت" style={{ width: 150, maxWidth: '100%' }} allowClear onChange={setPriority}>
-            {['low','medium','high'].map(p => (
-              <Select.Option key={p} value={p}>{p}</Select.Option>
-            ))}
-          </Select>
-        </Space>
+      <PageHeader title="تیکت‌ها" subtitle="پیام‌ها و درخواست‌های مشتریان" />
+      <div className="filter-bar">
+        <Input
+          placeholder="جستجو (موضوع/پیام)"
+          prefix={<SearchOutlined />}
+          style={{ width: 320 }}
+          allowClear
+          onChange={(e) => setSearch(e.target.value)}
+          onPressEnter={() => fetchTickets(1, pagination.pageSize)}
+          onBlur={() => fetchTickets(1, pagination.pageSize)}
+        />
+        <Select placeholder="وضعیت" style={{ width: 150 }} allowClear onChange={setStatus}>
+          {['open', 'pending', 'closed'].map((s) => (
+            <Select.Option key={s} value={s}>{s}</Select.Option>
+          ))}
+        </Select>
+        <Select placeholder="اولویت" style={{ width: 150 }} allowClear onChange={setPriority}>
+          {['low', 'medium', 'high'].map((p) => (
+            <Select.Option key={p} value={p}>{p}</Select.Option>
+          ))}
+        </Select>
       </div>
       <Card>
         <ResponsiveTable

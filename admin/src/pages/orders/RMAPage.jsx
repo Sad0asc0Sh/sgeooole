@@ -22,6 +22,7 @@ import {
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 const { TextArea } = Input
 
@@ -279,24 +280,19 @@ function RMAPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت مرجوعی (RMA)</h1>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={() => fetchRMAs()}
-        >
-          بارگذاری مجدد
-        </Button>
-      </div>
+      <PageHeader
+         title="مدیریت مرجوعی (RMA)"
+         actions={
+           <>
+<Button
+                       icon={<ReloadOutlined />}
+                       onClick={() => fetchRMAs()}
+                     >
+                       بارگذاری مجدد
+                     </Button>
+           </>
+         }
+       />
 
       <div
         style={{

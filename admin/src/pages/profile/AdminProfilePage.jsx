@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import PageHeader from '../../components/ui/PageHeader'
+import './AdminProfilePage.css'
 import {
     Card,
     Form,
@@ -99,28 +101,18 @@ const AdminProfilePage = () => {
     const roleInfo = roleLabels[user?.role] || { label: user?.role, color: 'default' }
 
     return (
-        <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-            <Card bordered={false} className="shadow-md">
-                {/* هدر پروفایل */}
-                <div style={{
-                    textAlign: 'center',
-                    marginBottom: 32,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: 12,
-                    padding: '32px 24px',
-                    marginTop: -24,
-                    marginLeft: -24,
-                    marginRight: -24
-                }}>
-                    <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div className="profile-page">
+            <PageHeader title="پروفایل من" subtitle="اطلاعات حساب و تصویر پروفایل" />
+            <Card>
+                {/* Profile banner — the one place a gradient is allowed,
+                    because it is the page's only piece of identity. */}
+                <div className="profile-banner">
+                    <div className="profile-avatar">
                         <Avatar
-                            size={100}
+                            size={92}
                             src={user?.avatar?.url}
                             icon={!user?.avatar?.url && <UserOutlined />}
-                            style={{
-                                border: '4px solid white',
-                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                            }}
+                            className="profile-avatar-img"
                         />
                         <Upload
                             name="avatar"
@@ -130,32 +122,20 @@ const AdminProfilePage = () => {
                             accept="image/*"
                         >
                             <Button
-                                type="primary"
                                 shape="circle"
                                 size="small"
                                 icon={<CameraOutlined />}
                                 loading={avatarLoading}
-                                style={{
-                                    position: 'absolute',
-                                    bottom: 0,
-                                    right: 0,
-                                    background: '#fff',
-                                    color: '#667eea',
-                                    border: 'none'
-                                }}
+                                className="profile-avatar-edit"
+                                aria-label="تغییر تصویر پروفایل"
                             />
                         </Upload>
                     </div>
-                    <Title level={3} style={{ color: 'white', marginTop: 16, marginBottom: 8 }}>
-                        {user?.name}
-                    </Title>
-                    <Tag
-                        icon={<CrownOutlined />}
-                        color={roleInfo.color}
-                        style={{ fontSize: 14, padding: '4px 12px' }}
-                    >
+                    <h2 className="profile-name">{user?.name}</h2>
+                    <span className="profile-role">
+                        <CrownOutlined />
                         {roleInfo.label}
-                    </Tag>
+                    </span>
                 </div>
 
                 <Form
@@ -268,3 +248,4 @@ const AdminProfilePage = () => {
 }
 
 export default AdminProfilePage
+

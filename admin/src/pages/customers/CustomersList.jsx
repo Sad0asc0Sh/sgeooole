@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
 import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -112,7 +113,7 @@ function CustomersList() {
           <Space size={8} style={{ minWidth: 0 }}>
             <Avatar
               style={{
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                background: 'linear-gradient(150deg, #e79d13, #b45309)',
                 fontWeight: 700,
                 flexShrink: 0,
               }}
@@ -210,21 +211,16 @@ function CustomersList() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>مدیریت مشتریان</h1>
-        <Button icon={<ReloadOutlined />} onClick={() => fetchUsers()}>
-          بارگذاری مجدد
-        </Button>
-      </div>
+      <PageHeader
+         title="مدیریت مشتریان"
+         actions={
+           <>
+<Button icon={<ReloadOutlined />} onClick={() => fetchUsers()}>
+                       بارگذاری مجدد
+                     </Button>
+           </>
+         }
+       />
 
       <div style={{ marginBottom: 16, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <Input

@@ -70,18 +70,12 @@ const AdminProfilePage = lazy(() => import('./pages/profile/AdminProfilePage'))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 
-// Loading fallback component
+// Loading fallback — the gap between routes, not a page in its own right.
 const LoadingFallback = () => (
-  <Spin size="large" tip="در حال بارگذاری..." spinning>
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-      }}
-    />
-  </Spin>
+  <div className="route-loading">
+    <Spin size="large" />
+    <span className="route-loading-label">در حال بارگذاری…</span>
+  </div>
 )
 
 function App() {

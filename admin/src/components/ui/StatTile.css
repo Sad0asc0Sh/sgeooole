@@ -1,0 +1,27 @@
+/* StatTile — base rules live in index.css (`.stat-tile`, `.tone-*`)
+   so dashboard rows stay consistent without an import. Only the parts
+   that are specific to this component live here. */
+
+.stat-tile-action {
+  width: 100%;
+  text-decoration: none;
+}
+
+.stat-tile-action:focus-visible {
+  outline: 2px solid var(--brand-500);
+  outline-offset: 2px;
+  border-radius: var(--radius-lg);
+}
+
+/* Screen-reader-only text: announced but not painted. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

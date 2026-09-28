@@ -1,0 +1,120 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   EKG Kala — Admin design tokens
+   ───────────────────────────────────────────────────────────────────────
+   The admin panel is the operations surface for a saffron-branded
+   storefront, so it runs on the same brand hue — but a deep, darkened
+   saffron (#B45309) that passes WCAG AA against white. The storefront's
+   bright #E79D13 is kept here for decoration and for use on dark
+   surfaces, never behind body text.
+
+   Neutrals are warm rather than the default cool slate: the whole
+   product is amber-accented, and cool greys next to warm amber read
+   muddy. Every value below is contrast-checked; the ratio is noted.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Brand: saffron ─────────────────────────────────────────────── */
+  --brand-50: #fdf4e3;   /* card wash, selected row           */
+  --brand-100: #fae8c4;  /* table header on brand pages        */
+  --brand-200: #f3d28a;  /* chart fill, dividers               */
+  --brand-300: #e9b84e;  /* hover on dark surfaces             */
+  --brand-400: #e79d13;  /* STOREFRONT SAFFRON — decoration    */
+  --brand-500: #c2620b;  /* hover / active of primary          */
+  --brand-600: #b45309;  /* PRIMARY — 5.02:1 on white          */
+  --brand-700: #8f4209;  /* pressed                            */
+  --brand-800: #6b3207;  /* text on brand tint — 6.9:1         */
+
+  /* ── Ink: warm neutrals ─────────────────────────────────────────── */
+  --ink-900: #1c1917;    /* headings & body       — 17.5:1     */
+  --ink-800: #292524;    /* strong secondary                    */
+  --ink-700: #44403c;    /* table headers                       */
+  --ink-600: #57534e;    /* neutral / strong secondary          */
+  --ink-500: #6b625c;    /* secondary text       —  5.9:1      */
+  --ink-400: #8a817a;    /* tertiary, placeholder —  3.5:1     */
+  --ink-300: #b5aea6;    /* disabled, decorative               */
+
+  /* ── Surfaces ───────────────────────────────────────────────────── */
+  --surface-canvas: #f2f1ef; /* page background behind cards      */
+  --surface-sunken: #faf9f7; /* sub-toolbars, filter bars         */
+  --surface-raised: #ffffff; /* cards, tables, modals             */
+  --surface-inset: #f7f6f4;  /* table headers, code, wells         */
+
+  /* ── Hairlines — the panel's structural vocabulary ──────────────── */
+  --line: #e2ddd6;         /* 1.35:1 — visible, never louder     */
+  --line-soft: #efece7;    /* row separators inside cards         */
+  --line-strong: #d6cfc6;  /* inputs, emphasised containers       */
+
+  /* ── Status ─────────────────────────────────────────────────────── */
+  --ok: #0f6b33;      --ok-bg: #e9f5ec;
+  --warn: #8a6200;    --warn-bg: #fbf3e0;
+  --err: #b3261e;     --err-bg: #fceded;
+  --info: #0e7490;    --info-bg: #e6f2f4;
+  --neutral: #57534e; --neutral-bg: #f1efec;
+
+  /* ── Semantic aliases used across components ────────────────────── */
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-500);
+  --text-tertiary: var(--ink-400);
+  --brand: var(--brand-600);
+  --focus-ring: rgba(180, 83, 9, 0.45);
+
+  /* ── Type ───────────────────────────────────────────────────────── */
+  --font-sans: 'Vazirmatn', 'IRANSans', -apple-system, BlinkMacSystemFont,
+    'Segoe UI', Tahoma, Arial, sans-serif;
+  /* Persian digits are unambiguous; tabular figures keep money columns
+     and stat tiles from shifting as values change. */
+  --font-numeric: 'Vazirmatn', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --fs-display: 26px;  /* page title                    */
+  --fs-title: 18px;    /* card / section title          */
+  --fs-heading: 15px;  /* table header, sub-head        */
+  --fs-body: 13.5px;   /* UI default                    */
+  --fs-sm: 12.5px;     /* secondary / table cells       */
+  --fs-xs: 11.5px;     /* meta, chips, helper text      */
+  --fs-metric: 27px;   /* stat tile value               */
+
+  /* ── Space & shape ──────────────────────────────────────────────── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* ── Layout ─────────────────────────────────────────────────────── */
+  --sider-w: 236px;
+  --sider-collapsed-w: 72px;
+  --header-h: 60px;
+  --content-max: 1560px; /* beyond this, data rows get unreadable */
+
+  /* ── Elevation: warm-tinted, quiet by default ───────────────────── */
+  --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05), 0 2px 6px rgba(28, 25, 23, 0.04);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.07), 0 1px 3px rgba(28, 25, 23, 0.05);
+  --shadow-lg: 0 12px 32px rgba(28, 25, 23, 0.12), 0 2px 8px rgba(28, 25, 23, 0.06);
+  --shadow-pop: 0 16px 48px rgba(28, 25, 23, 0.18);
+}
+
+/* ── Motion ─────────────────────────────────────────────────────────
+   One easing curve for the whole panel so state changes feel like one
+   system rather than a pile of components. */
+:root {
+  --ease: cubic-bezier(0.32, 0.72, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 280ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

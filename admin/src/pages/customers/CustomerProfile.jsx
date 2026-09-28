@@ -21,6 +21,7 @@ import jalaliday from 'jalaliday'
 import api from '../../api'
 import { useAuthStore } from '../../stores'
 import { PERMISSIONS } from '../../rbac/permissions'
+import PageHeader from '../../components/ui/PageHeader'
 
 dayjs.extend(jalaliday)
 dayjs.calendar('jalali')
@@ -556,23 +557,18 @@ marginBottom: 16,
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 12,
-marginBottom: 16,
-        }}
-      >
-        <h1>پروفایل مشتری</h1>
-        <Space>
-          <Link to="/customers">
-            <Button>بازگشت به لیست مشتریان</Button>
-          </Link>
-        </Space>
-      </div>
+      <PageHeader
+         title="پروفایل مشتری"
+         actions={
+           <>
+<Space>
+                       <Link to="/customers">
+                         <Button>بازگشت به لیست مشتریان</Button>
+                       </Link>
+                     </Space>
+           </>
+         }
+       />
 
       <Card loading={loading}>
         {user && (

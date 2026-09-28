@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Card, Descriptions, Tag, Select, Button, Input, message } from 'antd'
@@ -97,7 +98,7 @@ function TicketDetail() {
 
   return (
     <div>
-      <h1>جزئیات تیکت</h1>
+            <PageHeader title={"جزئیات تیکت"} />
       <Card loading={loading}>
         {ticket && (
           <>

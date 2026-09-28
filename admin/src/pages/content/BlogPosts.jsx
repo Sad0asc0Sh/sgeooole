@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import { Card, Button, Space, Input, Select, Modal, Form, Tag, message, Popconfirm } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
@@ -250,28 +251,34 @@ function BlogPosts() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h1>پست‌های بلاگ</h1>
-        <Space>
-          <Input
-            placeholder="جستجو"
-            allowClear
-            style={{ width: 200, maxWidth: '100%' }}
-            onChange={(e) => setSearch(e.target.value)}
-            onPressEnter={() => fetchPosts(1, pagination.pageSize)}
-            onBlur={() => fetchPosts(1, pagination.pageSize)}
-          />
-          <Select placeholder="وضعیت" allowClear style={{ width: 140, maxWidth: '100%' }} onChange={setStatus}>
-            <Select.Option value="draft">draft</Select.Option>
-            <Select.Option value="published">published</Select.Option>
-          </Select>
-          <Select placeholder="دسته‌بندی" allowClear style={{ width: 200, maxWidth: '100%' }} onChange={setCategory}>
-            {categories.map(c => <Select.Option key={c._id} value={c._id}>{c.name}</Select.Option>)}
-          </Select>
-          <Button onClick={() => fetchPosts(1, pagination.pageSize)}>اعمال</Button>
-          <Button type="primary" onClick={onNewPost}>پست جدید</Button>
-          <Button onClick={onNewCategory}>مدیریت دسته‌بندی</Button>
-        </Space>
+      <PageHeader
+        title="پست‌های بلاگ"
+        actions={
+          <>
+            <Button onClick={onNewCategory}>مدیریت دسته‌بندی</Button>
+            <Button type="primary" onClick={onNewPost}>پست جدید</Button>
+          </>
+        }
+      />
+      <div className="filter-bar">
+        <Input
+          placeholder="جستجو"
+          allowClear
+          style={{ width: 220 }}
+          onChange={(e) => setSearch(e.target.value)}
+          onPressEnter={() => fetchPosts(1, pagination.pageSize)}
+          onBlur={() => fetchPosts(1, pagination.pageSize)}
+        />
+        <Select placeholder="وضعیت" allowClear style={{ width: 150 }} onChange={setStatus}>
+          <Select.Option value="draft">پیش‌نویس</Select.Option>
+          <Select.Option value="published">منتشر شده</Select.Option>
+        </Select>
+        <Select placeholder="دسته‌بندی" allowClear style={{ width: 200 }} onChange={setCategory}>
+          {categories.map((c) => (
+            <Select.Option key={c._id} value={c._id}>{c.name}</Select.Option>
+          ))}
+        </Select>
+        <Button onClick={() => fetchPosts(1, pagination.pageSize)}>اعمال فیلتر</Button>
       </div>
       <Card>
         <ResponsiveTable

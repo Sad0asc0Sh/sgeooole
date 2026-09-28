@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState, useMemo } from 'react'
 import {
   Card,
@@ -658,7 +659,7 @@ function ProductForm() {
 
   return (
     <div>
-      <h1>{isEdit ? 'ویرایش محصول' : 'ایجاد محصول جدید'}</h1>
+            <PageHeader title={isEdit ? 'ویرایش محصول' : 'ایجاد محصول جدید'} />
       <Card loading={loading}>
         <Form form={form} layout="vertical" onFinish={handleFinish}>
           <Tabs
@@ -1023,7 +1024,7 @@ function ProductForm() {
                       size="small"
                       style={{
                         marginBottom: '16px',
-                        borderLeft: isFlashDeal ? '4px solid #faad14' : 'none'
+                        borderLeft: isFlashDeal ? '4px solid #8a6200' : 'none'
                       }}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
@@ -1062,7 +1063,7 @@ function ProductForm() {
                           {isSpecialOffer && (
                             <span style={{
                               fontSize: '12px',
-                              color: '#f5222d',
+                              color: '#b3261e',
                               fontWeight: 'normal'
                             }}>
                               (غیرفعال - شگفت‌انگیز فعال است)
@@ -1085,8 +1086,8 @@ function ProductForm() {
                               style={{ marginBottom: 0 }}
                             >
                               {activeGlobalFlashDealTime ? (
-                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #faad14', borderRadius: '6px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#faad14', fontWeight: 'bold', fontSize: '13px' }}>
+                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #8a6200', borderRadius: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8a6200', fontWeight: 'bold', fontSize: '13px' }}>
                                     <span>⚡ زمان با سایر پیشنهادهای لحظه‌ای هماهنگ است</span>
                                   </div>
                                   <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
@@ -1105,7 +1106,7 @@ function ProductForm() {
                                   onChange={(date) => setFlashDealEndTime(date)}
                                   placeholder="انتخاب تاریخ و زمان پایان"
                                   borderColor="#d9d9d9"
-                                  focusColor="#faad14"
+                                  focusColor="#8a6200"
                                 />
                               )}
                               <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
@@ -1125,7 +1126,7 @@ function ProductForm() {
                       title="شگفت‌انگیز (Special Offer)"
                       size="small"
                       style={{
-                        borderLeft: isSpecialOffer ? '4px solid #f5222d' : 'none'
+                        borderLeft: isSpecialOffer ? '4px solid #b3261e' : 'none'
                       }}
                     >
                       <Space direction="vertical" style={{ width: '100%' }}>
@@ -1164,7 +1165,7 @@ function ProductForm() {
                           {isFlashDeal && (
                             <span style={{
                               fontSize: '12px',
-                              color: '#faad14',
+                              color: '#8a6200',
                               fontWeight: 'normal'
                             }}>
                               (غیرفعال - پیشنهاد لحظه‌ای فعال است)
@@ -1193,8 +1194,8 @@ function ProductForm() {
                               style={{ marginBottom: 0 }}
                             >
                               {activeGlobalOfferTime ? (
-                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #f5222d', borderRadius: '6px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f5222d', fontWeight: 'bold', fontSize: '13px' }}>
+                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #b3261e', borderRadius: '6px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b3261e', fontWeight: 'bold', fontSize: '13px' }}>
                                     <span>⏰ زمان با سایر محصولات شگفت‌انگیز هماهنگ است</span>
                                   </div>
                                   <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
@@ -1214,7 +1215,7 @@ function ProductForm() {
                                   onChange={(date) => setSpecialOfferEndTime(date)}
                                   placeholder="انتخاب تاریخ و زمان پایان"
                                   borderColor="#d9d9d9"
-                                  focusColor="#f5222d"
+                                  focusColor="#b3261e"
                                 />
                               )}
 
@@ -1241,7 +1242,7 @@ function ProductForm() {
                         <li style={{ marginBottom: '6px' }}>
                           <strong>شگفت‌انگیز:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
                         </li>
-                        <li style={{ marginBottom: '6px', color: '#f5222d', fontWeight: '500' }}>
+                        <li style={{ marginBottom: '6px', color: '#b3261e', fontWeight: '500' }}>
                           ⚠️ یک محصول <strong>فقط</strong> می‌تواند در یکی از کمپین‌ها باشد (پیشنهاد لحظه‌ای یا شگفت‌انگیز)
                         </li>
                         <li>

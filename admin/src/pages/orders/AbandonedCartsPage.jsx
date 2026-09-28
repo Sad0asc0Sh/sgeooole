@@ -1,3 +1,4 @@
+import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
 import {
   Card,
@@ -249,11 +250,11 @@ function AbandonedCartsPage() {
     const urgentThreshold = Math.floor(warningMinutes / 2) // نصف زمان هشدار
 
     if (remaining.minutes <= urgentThreshold) {
-      return { icon: <FireOutlined />, color: '#ff4d4f' } // قرمز - فوری
+      return { icon: <FireOutlined />, color: '#b3261e' } // قرمز - فوری
     } else if (remaining.minutes <= warningMinutes) {
-      return { icon: <WarningOutlined />, color: '#fa8c16' } // نارنجی - متوسط
+      return { icon: <WarningOutlined />, color: '#8a6200' } // نارنجی - متوسط
     } else {
-      return { icon: <ClockCircleOutlined />, color: '#52c41a' } // سبز - عادی
+      return { icon: <ClockCircleOutlined />, color: '#0f6b33' } // سبز - عادی
     }
   }
 
@@ -453,7 +454,7 @@ function AbandonedCartsPage() {
         return (
           <div>
             <Tooltip title={`انقضا در: ${formatPersianDate(record.expiresAt, true)}`}>
-              <Tag icon={urgency.icon} color={urgency.color === '#ff4d4f' ? 'error' : urgency.color === '#fa8c16' ? 'warning' : 'success'}>
+              <Tag icon={urgency.icon} color={urgency.color === '#b3261e' ? 'error' : urgency.color === '#8a6200' ? 'warning' : 'success'}>
                 {remaining.text}
               </Tag>
             </Tooltip>
@@ -500,7 +501,7 @@ function AbandonedCartsPage() {
               size="small"
               icon={<MessageOutlined />}
               onClick={() => handleSmsReminder(record)}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              style={{ backgroundColor: '#0f6b33', borderColor: '#0f6b33' }}
             >
               پیامک
             </Button>
@@ -523,48 +524,37 @@ function AbandonedCartsPage() {
 
   return (
     <div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 16,
-          flexWrap: 'wrap',
-          gap: 8,
-        }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 4 }}>سبدهای رها شده</h1>
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            {lastRefreshTime && (
-              <div style={{ fontSize: '12px', color: '#999' }}>
-                <ClockCircleOutlined style={{ marginLeft: 4 }} />
-                آخرین به‌روزرسانی: {lastRefreshTime.toLocaleTimeString('fa-IR')}
-                <span style={{ marginRight: 8, color: '#52c41a' }}>
-                  • به‌روزرسانی خودکار هر 1 دقیقه
-                </span>
-              </div>
+      <PageHeader
+        title="سبدهای رها شده"
+        subtitle="سبدهایی که مشتری رها کرده و هنوز تبدیل به سفارش نشده‌اند"
+        actions={
+          <>
+            {canManageCarts && (
+              <Button danger type="primary" icon={<ClearOutlined />} onClick={handleCleanupExpired}>
+                پاکسازی منقضی‌ها
+              </Button>
             )}
-            {settings?.cartSettings && (
-              <div style={{ fontSize: '12px', color: '#666' }}>
-                🔥 فوری: کمتر از {Math.floor((settings.cartSettings.expiryWarningMinutes || 30) / 2)} دقیقه
-                <span style={{ marginRight: 8 }}>|</span>
-                ⚠️  متوسط: کمتر از {settings.cartSettings.expiryWarningMinutes || 30} دقیقه
-              </div>
-            )}
-          </div>
-        </div>
-        <Space>
-          {canManageCarts && (
-            <Button danger type="primary" icon={<ClearOutlined />} onClick={handleCleanupExpired}>
-              پاکسازی منقضی‌ها
+            <Button icon={<ReloadOutlined />} onClick={fetchAbandonedCarts}>
+              بارگذاری مجدد
             </Button>
+          </>
+        }
+      >
+        <div className="page-meta-row">
+          {lastRefreshTime && (
+            <span className="page-meta">
+              <ClockCircleOutlined />
+              آخرین به‌روزرسانی: {lastRefreshTime.toLocaleTimeString('fa-IR')}
+            </span>
           )}
-          <Button icon={<ReloadOutlined />} onClick={fetchAbandonedCarts}>
-            بارگذاری مجدد
-          </Button>
-        </Space>
-      </div>
+          {settings?.cartSettings && (
+            <span className="page-meta">
+              آستانه فوری: کمتر از{' '}
+              {Math.floor((settings.cartSettings.expiryWarningMinutes || 30) / 2)} دقیقه
+            </span>
+          )}
+        </div>
+      </PageHeader>
 
       {/* آمار */}
       {stats && (
@@ -575,7 +565,7 @@ function AbandonedCartsPage() {
                 title="تعداد سبدهای رها شده"
                 value={stats.totalCarts || 0}
                 prefix={<ShoppingCartOutlined />}
-                valueStyle={{ color: '#fa8c16' }}
+                valueStyle={{ color: '#8a6200' }}
               />
             </Card>
           </Col>
@@ -585,7 +575,7 @@ function AbandonedCartsPage() {
                 title="تعداد کل آیتم‌ها"
                 value={stats.totalItems || 0}
                 prefix={<ShoppingCartOutlined />}
-                valueStyle={{ color: '#1890ff' }}
+                valueStyle={{ color: '#b45309' }}
               />
             </Card>
           </Col>
@@ -596,7 +586,7 @@ function AbandonedCartsPage() {
                 value={stats.totalValue || 0}
                 prefix={<DollarOutlined />}
                 suffix="تومان"
-                valueStyle={{ color: '#52c41a' }}
+                valueStyle={{ color: '#0f6b33' }}
                 formatter={(value) => new Intl.NumberFormat('fa-IR').format(value)}
               />
             </Card>
@@ -706,7 +696,7 @@ function AbandonedCartsPage() {
                 handleSmsReminder(selectedCart)
                 setDetailOpen(false)
               }}
-              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+              style={{ backgroundColor: '#0f6b33', borderColor: '#0f6b33' }}
             >
               یادآوری پیامک
             </Button>
@@ -796,7 +786,7 @@ function AbandonedCartsPage() {
                         </div>
                         {remaining.minutes <= (settings?.cartSettings?.expiryWarningMinutes || 30) && (
                           <div style={{ marginTop: 12, padding: '8px 12px', background: '#fff1f0', border: '1px solid #ffccc7', borderRadius: 4 }}>
-                            <WarningOutlined style={{ color: '#ff4d4f', marginLeft: 8 }} />
+                            <WarningOutlined style={{ color: '#b3261e', marginLeft: 8 }} />
                             <strong>توجه:</strong> این سبد به زودی منقضی می‌شود! برای جلوگیری از از دست رفتن فرصت فروش، یادآوری ارسال کنید.
                           </div>
                         )}
@@ -882,7 +872,7 @@ function AbandonedCartsPage() {
                             </div>
                           )}
                         </div>
-                        <div style={{ fontWeight: 'bold', color: '#1890ff' }}>
+                        <div style={{ fontWeight: 'bold', color: '#b45309' }}>
                           {new Intl.NumberFormat('fa-IR').format(
                             ((item.finalPrice ?? item.price) || 0) * (item.quantity || 0),
                           )}{' '}
@@ -909,7 +899,7 @@ function AbandonedCartsPage() {
                     ) || 0
                   }
                   suffix="تومان"
-                  valueStyle={{ color: '#1890ff', fontWeight: 'bold' }}
+                  valueStyle={{ color: '#b45309', fontWeight: 'bold' }}
                   formatter={(value) => new Intl.NumberFormat('fa-IR').format(value)}
                 />
               </Card>
