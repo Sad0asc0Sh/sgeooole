@@ -186,7 +186,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             src={img}
                                             alt={`${product.name} - Image ${index + 1}`}
                                             fill
-                                            unoptimized
                                             className="object-contain"
                                             sizes="100vw"
                                             priority={index === initialSlide}
@@ -214,7 +213,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                     src={img}
                                     alt={`Thumbnail ${index + 1}`}
                                     fill
-                                    unoptimized
                                     className="object-cover"
                                     sizes="64px"
                                     loading="lazy"
@@ -253,12 +251,15 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             src={img}
                                             alt={`${product.name} - Image ${index + 1}`}
                                             fill
-                                            unoptimized
                                             className="object-contain object-center !p-4 mix-blend-multiply"
                                             sizes="(max-width: 1023px) 100vw, 45vw"
                                             priority={index === 0}
                                             fetchPriority={index === 0 ? "high" : "auto"}
-                                            loading="eager"
+                                            /* Phase 2 SEO #12: only the first image is eager/high-priority;
+                                               the rest lazy-load. Optimizer ON (no unoptimized) so Next.js
+                                               emits a real srcset (AVIF/WebP) — product images live on
+                                               Parspack, which is in next.config remotePatterns. */
+                                            loading={index === 0 ? "eager" : "lazy"}
                                             quality={80}
                                             maxRetries={2}
                                             placeholder="blur"
@@ -300,7 +301,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 src={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
-                                unoptimized
                                 className="object-cover"
                                 sizes="(min-width: 1024px) 56px, 48px"
                                 loading="lazy"

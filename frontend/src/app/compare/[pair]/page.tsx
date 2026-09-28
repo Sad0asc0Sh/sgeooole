@@ -5,6 +5,8 @@ import { NOT_FOUND_METADATA } from "@/lib/seo";
 import ArticleShell from "@/components/programmatic/ArticleShell";
 import ContentBlocks from "@/components/programmatic/ContentBlocks";
 import FaqSection from "@/components/programmatic/FaqSection";
+import ProductPicks from "@/components/programmatic/ProductPicks";
+import RichText from "@/components/programmatic/RichText";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
@@ -40,13 +42,17 @@ function SideCard({ side, accent }: { side: { name: string; summary: string; str
   return (
     <div className={`rounded-2xl border p-6 ${accentBg}`}>
       <h2 className="text-lg font-extrabold text-gray-900 mb-2">{side.name}</h2>
-      <p className="text-sm text-gray-600 leading-7 mb-4">{side.summary}</p>
+      <p className="text-sm text-gray-600 leading-7 mb-4">
+        <RichText text={side.summary} />
+      </p>
       <h3 className="text-sm font-bold text-gray-800 mb-2">نقاط قوت</h3>
       <ul className="space-y-1.5 mb-4">
         {side.strengths.map((s, i) => (
           <li key={i} className="flex gap-2 text-sm text-gray-700 leading-6">
             <span className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
-            <span>{s}</span>
+            <span>
+              <RichText text={s} />
+            </span>
           </li>
         ))}
       </ul>
@@ -55,7 +61,9 @@ function SideCard({ side, accent }: { side: { name: string; summary: string; str
         {side.weaknesses.map((w, i) => (
           <li key={i} className="flex gap-2 text-sm text-gray-600 leading-6">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400" />
-            <span>{w}</span>
+            <span>
+              <RichText text={w} />
+            </span>
           </li>
         ))}
       </ul>
@@ -112,8 +120,14 @@ export default async function ComparePage({ params }: { params: Promise<{ pair: 
 
         <section className="mb-8 rounded-2xl border-r-4 border-blue-600 bg-blue-50/60 p-6">
           <h2 className="text-lg font-extrabold text-gray-900 mb-3">جمع‌بندی: کدام را بخرید؟</h2>
-          <p className="text-[15px] text-gray-700 leading-8 whitespace-pre-line">{comparison.verdict}</p>
+          <p className="text-[15px] text-gray-700 leading-8 whitespace-pre-line">
+            <RichText text={comparison.verdict} />
+          </p>
         </section>
+
+        {comparison.categorySlug && comparison.categoryName && (
+          <ProductPicks categorySlug={comparison.categorySlug} categoryName={comparison.categoryName} />
+        )}
 
         <FaqSection faqs={comparison.faqs} />
       </ArticleShell>

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import ProductsPageClient from "./ProductsPageClient";
 
 export const revalidate = 300;
@@ -77,6 +78,44 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   };
 }
 
-export default function ProductListingPage() {
-  return <ProductsPageClient />;
+export default async function ProductListingPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  // Phase 2 SEO: ProductsPageClient reads useSearchParams() (filter state).
+  // It must suspend inside its own boundary so the route renders a real
+  // server shell (header/nav/footer + H1 + intro + metadata) instead of
+  // bailing out to a CSR shell.
+  //
+  // The client renders its own H1 for search results and brand views, so the
+  // server header is shown only for the base and category views (no duplicate H1).
+  const params = await searchParams;
+  const category = typeof params.category === "string" ? params.category : undefined;
+  const brandValues = (Array.isArray(params.brand) ? params.brand : [params.brand || ""])
+    .flatMap((value) => value.split(","))
+    .filter(Boolean);
+  const brand = brandValues.length === 1 ? brandValues[0] : undefined;
+  const search = typeof params.search === "string" ? params.search : undefined;
+  const showServerHeader = !search && !brand;
+
+  return (
+    <>
+      {showServerHeader && (
+        <div className="mx-auto w-full max-w-7xl px-4 pt-6 md:px-6">
+          <h1 className="text-xl md:text-2xl font-extrabold text-gray-900">
+            {category ? `محصولات ${humanizeSlug(category)}` : "همه محصولات"}
+          </h1>
+          <p className="mt-2 text-sm leading-7 text-gray-500">
+            {category
+              ? `مشاهده و مقایسه محصولات دسته‌بندی ${humanizeSlug(category)} در فروشگاه ای کا جی کالا؛ با فیلترهای قیمت، برند و موجودی، انتخاب را دقیق‌تر کنید.`
+              : "مشاهده و مقایسه همه محصولات فروشگاه ای کا جی کالا؛ از دوربین مداربسته و دستگاه ضبط تا تجهیزات جانبی، با قیمت به‌روز و گارانتی معتبر."}
+          </p>
+        </div>
+      )}
+      <Suspense fallback={null}>
+        <ProductsPageClient />
+      </Suspense>
+    </>
+  );
 }

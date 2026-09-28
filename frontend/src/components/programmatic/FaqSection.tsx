@@ -1,4 +1,10 @@
 import type { FaqEntry } from "@/content/programmatic/types";
+import RichText from "./RichText";
+
+/** Strip [label](href) markdown to plain label for JSON-LD / meta text. */
+export function stripInlineLinks(text: string): string {
+  return text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, "$1");
+}
 
 /**
  * FAQ section with server-rendered FAQPage JSON-LD (crawler-visible),
@@ -12,8 +18,8 @@ export default function FaqSection({ faqs, heading = "سوالات متداول"
     "@type": "FAQPage",
     mainEntity: faqs.map((f) => ({
       "@type": "Question",
-      name: f.question,
-      acceptedAnswer: { "@type": "Answer", text: f.answer },
+      name: stripInlineLinks(f.question),
+      acceptedAnswer: { "@type": "Answer", text: stripInlineLinks(f.answer) },
     })),
   };
 
@@ -34,7 +40,9 @@ export default function FaqSection({ faqs, heading = "سوالات متداول"
               {faq.question}
               <span className="text-blue-600 text-xl leading-none transition-transform group-open:rotate-45 shrink-0">+</span>
             </summary>
-            <p className="px-5 pb-5 text-gray-600 leading-8 text-sm">{faq.answer}</p>
+            <p className="px-5 pb-5 text-gray-600 leading-8 text-sm">
+              <RichText text={faq.answer} />
+            </p>
           </details>
         ))}
       </div>

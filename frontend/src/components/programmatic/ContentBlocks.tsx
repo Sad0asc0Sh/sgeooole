@@ -1,4 +1,5 @@
 import type { ContentBlock } from "@/content/programmatic/types";
+import RichText from "./RichText";
 
 /** Renders typed content blocks with consistent article typography. */
 export default function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
@@ -9,7 +10,7 @@ export default function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
           case "paragraph":
             return (
               <p key={i} className="whitespace-pre-line">
-                {block.text}
+                <RichText text={block.text} />
               </p>
             );
           case "list":
@@ -18,7 +19,9 @@ export default function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
                 {block.items.map((item, j) => (
                   <li key={j} className="flex gap-2.5">
                     <span className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />
-                    <span>{item}</span>
+                    <span>
+                      <RichText text={item} />
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -41,7 +44,7 @@ export default function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
                       <tr key={r} className={r % 2 === 1 ? "bg-gray-50/50" : undefined}>
                         {row.map((cell, c) => (
                           <td key={c} className="px-4 py-3 border-t border-gray-100 align-top">
-                            {cell}
+                            <RichText text={cell} />
                           </td>
                         ))}
                       </tr>
@@ -53,7 +56,7 @@ export default function ContentBlocks({ blocks }: { blocks: ContentBlock[] }) {
           case "callout":
             return (
               <div key={i} className="rounded-xl border-r-4 border-amber-400 bg-amber-50 px-5 py-4 text-sm leading-7 text-amber-900">
-                {block.text}
+                <RichText text={block.text} />
               </div>
             );
           default:

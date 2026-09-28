@@ -4,6 +4,8 @@ import { getGlossaryTerm, getAllGlossarySlugs } from "@/content/programmatic";
 import { NOT_FOUND_METADATA } from "@/lib/seo";
 import ArticleShell from "@/components/programmatic/ArticleShell";
 import ContentBlocks from "@/components/programmatic/ContentBlocks";
+import FaqSection from "@/components/programmatic/FaqSection";
+import ProductPicks from "@/components/programmatic/ProductPicks";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
@@ -83,6 +85,12 @@ export default async function GlossaryTermPage({ params }: { params: Promise<{ t
             </ul>
           </section>
         )}
+
+        {entry.categorySlug && entry.categoryName && (
+          <ProductPicks categorySlug={entry.categorySlug} categoryName={entry.categoryName} />
+        )}
+
+        {entry.faqs && entry.faqs.length > 0 && <FaqSection faqs={entry.faqs} />}
       </ArticleShell>
     </>
   );

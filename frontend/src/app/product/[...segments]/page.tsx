@@ -8,9 +8,26 @@ import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/
 import { buildProductUrl } from "@/lib/paths";
 import { buildProductMetaDescription, buildProductSeoTitle } from "@/lib/seo";
 
-// Keep product pages fresh after admin edits (images/pricing)
-export const revalidate = 30;
+// Phase 2 SEO #13 (edge caching): ISR revalidate drives the Cache-Control
+// header Next.js emits for prerendered PDPs:
+//   Cache-Control: s-maxage=600, stale-while-revalidate
+// 600s sits in the required 300–900s band. nginx (in front of PM2) honors
+// s-maxage for its shared cache; browsers revalidate in the background via
+// stale-while-revalidate. Admin edits still surface within ~10 minutes,
+// and price/stock widgets that need fresher data fetch client-side.
+//
+// NOTE: a dynamic route ([...segments]) only enters ISR/full-route-cache mode
+// when it exports generateStaticParams() — without it Next.js keeps the route
+// fully dynamic (Cache-Control: private, no-cache) and the revalidate export
+// has no effect on the response header. Returning [] keeps build-time
+// prerendering off (catalog too large) while dynamicParams=true still renders
+// every product on demand; the first render is then cached for 600s.
+export const revalidate = 600;
 export const dynamicParams = true;
+
+export async function generateStaticParams() {
+    return [];
+}
 
 type PageParams = {
     segments: string[];  // Catch-all: can be ["ky-1234567", "slug"] or just ["old-id"]

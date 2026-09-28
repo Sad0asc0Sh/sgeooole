@@ -8,7 +8,6 @@ import ScrollRestorationProvider from "@/providers/ScrollRestorationProvider";
 import SWRProvider from "@/providers/SWRProvider";
 import LayoutStateProvider from "@/providers/LayoutStateProvider";
 import RouteLoadingProvider from "@/providers/RouteLoadingProvider";
-import { Suspense } from "react";
 
 // Parspack Cloud Storage — DNS preconnect
 const PARSPACK_ENDPOINT =
@@ -137,11 +136,16 @@ export default function RootLayout({
           <SWRProvider>
             <ScrollRestorationProvider>
               <LayoutStateProvider>
-                <Suspense fallback={null}>
-                  <RouteLoadingProvider>
-                    <ClientLayout>{children}</ClientLayout>
-                  </RouteLoadingProvider>
-                </Suspense>
+                {/*
+                  Phase 2 SEO: intentionally NO Suspense around the whole app here.
+                  RouteLoadingProvider isolates its own useSearchParams() inside an
+                  inner boundary. A page-level Suspense here would silently turn any
+                  future unsuspended useSearchParams() into a site-wide CSR shell
+                  (the deindex-era bug) — we want the build to fail loudly instead.
+                */}
+                <RouteLoadingProvider>
+                  <ClientLayout>{children}</ClientLayout>
+                </RouteLoadingProvider>
               </LayoutStateProvider>
             </ScrollRestorationProvider>
           </SWRProvider>

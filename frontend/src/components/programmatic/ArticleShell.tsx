@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import ProgrammaticBreadcrumbs, { type Crumb } from "./ProgrammaticBreadcrumbs";
+import RichText from "./RichText";
 import { resolveRelatedLink } from "@/content/programmatic";
 
 function toJalali(iso: string): string {
@@ -36,7 +37,9 @@ export default function ArticleShell({
       {updatedAt && (
         <p className="text-xs text-gray-400 mb-6">آخرین به‌روزرسانی: {toJalali(updatedAt)}</p>
       )}
-      <div className="text-gray-700 leading-8 text-[15px] mb-8 whitespace-pre-line">{intro}</div>
+      <div className="text-gray-700 leading-8 text-[15px] mb-8 whitespace-pre-line">
+        <RichText text={intro} />
+      </div>
 
       {children}
 

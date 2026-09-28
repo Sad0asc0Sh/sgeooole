@@ -63,8 +63,16 @@ export interface GlossaryTerm {
   /** deeper-than-dictionary content blocks */
   body: ContentBlock[];
   examples: string[];
+  /** 2–3 FAQs per term (Phase 2 #10) */
+  faqs?: FaqEntry[];
   relatedSlugs: string[];
   updatedAt: string;
+  /**
+   * Category slug for the "related products" box (ProductPicks).
+   * Omit when no category has relevant products.
+   */
+  categorySlug?: string;
+  categoryName?: string;
 }
 
 /** Head-to-head comparison page (Comparisons playbook) */
@@ -89,4 +97,10 @@ export interface Comparison {
   faqs: FaqEntry[];
   relatedSlugs: string[];
   updatedAt: string;
+  /**
+   * Category slug for the "related products" box (ProductPicks).
+   * Omit when no category has relevant products.
+   */
+  categorySlug?: string;
+  categoryName?: string;
 }

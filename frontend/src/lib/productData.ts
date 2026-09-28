@@ -101,7 +101,7 @@ const fetchWithRetry = async (
 };
 
 // Reduced from 3600 (1 hour) to 30 seconds for real-time discount updates from admin panel
-export const PRODUCT_REVALIDATE = 30;
+export const PRODUCT_REVALIDATE = 600;
 
 type BackendImage = string | { url?: string };
 
@@ -457,7 +457,9 @@ export const fetchRelatedProducts = cache(async (
       const response = await fetchWithRetry(
         `${apiBaseUrl}/products?category=${category.id}&includeChildren=true&limit=${fetchLimit}&nocache=true`,
         {
-          next: { revalidate: 60 },
+          // Phase 2 SEO #13: 600s to match the PDP route revalidate (lowest
+          // fetch revalidate wins for the route's Cache-Control header).
+          next: { revalidate: 600 },
         } as RequestInit,
         2,
         1000

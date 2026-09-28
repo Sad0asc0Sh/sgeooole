@@ -7,9 +7,10 @@ import { useRouter } from "next/navigation";
 import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
 import dynamic from "next/dynamic";
 
-// Lazy load Swiper component — no SSR, loads after hydration
+// Swiper v12 is SSR-compatible: server-render the slider so the hero (LCP,
+// above-the-fold) is present in the initial HTML for crawlers.
+// (Phase 2 SEO: previously ssr:false forced a client-only hero.)
 const SwiperSlider = dynamic(() => import("./SwiperSlider"), {
-  ssr: false,
   loading: () => (
     <div className="w-full h-full bg-gray-100 animate-pulse" />
   ),

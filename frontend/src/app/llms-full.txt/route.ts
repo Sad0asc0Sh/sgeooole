@@ -66,6 +66,11 @@ function buildBody(): string {
       for (const example of term.examples) parts.push(`- ${example}`);
       parts.push(``);
     }
+    if (term.faqs && term.faqs.length > 0) {
+      parts.push(`**سوالات متداول:**`, ``);
+      for (const faq of term.faqs) parts.push(`- ${faq.question}: ${faq.answer}`);
+      parts.push(``);
+    }
     parts.push(`---`, ``);
   }
 
