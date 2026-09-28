@@ -9,6 +9,8 @@ import api from '../../api'
 import Countdown from 'react-countdown'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
+import StatusPill from '../../components/ui/StatusPill'
+import { getStatusLabel } from '../../utils/formatters'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -104,28 +106,8 @@ function OrdersList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.orderStatus, filters.isPaid])
 
-  const getStatusColor = (status) => {
-    const colors = {
-      Pending: 'orange',
-      Processing: 'blue',
-      Shipped: 'purple',
-      Delivered: 'green',
-      Cancelled: 'red',
-    }
-    return colors[status] || 'default'
-  }
-
-  const getStatusLabel = (status) => {
-    const labels = {
-      Pending: 'ثبت سفارش',
-      Processing: 'درحال پردازش',
-      Shipped: 'تحویل به پست',
-      Delivered: 'تحویل شده',
-      Cancelled: 'لغو شده',
-    }
-    return labels[status] || status
-  }
-
+  // Status colour and label live in utils/formatters so the dashboard,
+  // order list and detail page cannot drift apart again.
   const columns = [
     {
       title: 'شماره سفارش',
@@ -170,9 +152,11 @@ function OrdersList() {
       width: 100,
       align: 'center',
       render: (isPaid) => (
-        <Tag color={isPaid ? 'green' : 'red'}>
-          {isPaid ? 'پرداخت شده' : 'پرداخت نشده'}
-        </Tag>
+        <StatusPill
+          status={isPaid ? 'paid' : 'unpaid'}
+          label={isPaid ? 'پرداخت شده' : 'پرداخت نشده'}
+          tone={isPaid ? 'ok' : 'err'}
+        />
       ),
     },
     {
@@ -183,13 +167,13 @@ function OrdersList() {
       width: 150,
       render: (status, record) => (
         <Space direction="vertical" size={0}>
-          <Tag color={getStatusColor(status)}>{getStatusLabel(status)}</Tag>
+          <StatusPill status={status} label={getStatusLabel(status)} />
           {status === 'Shipped' && record.autoCompleteAt && (
             <div style={{ fontSize: '0.75em', color: '#b45309', marginTop: 4 }}>
               <Countdown
                 date={new Date(record.autoCompleteAt)}
                 renderer={({ days, hours, minutes, completed }) => {
-                  if (completed) return <span style={{ color: 'green' }}>تکمیل شد</span>
+                  if (completed) return <span style={{ color: '#0f6b33' }}>تکمیل شد</span>
                   return <span>{days} روز {hours} ساعت</span>
                 }}
               />

@@ -231,6 +231,31 @@ export const adminTheme = {
       defaultBg: INSET,
       defaultColor: INK_700,
       borderRadiusSM: 6,
+      // Preset names are used by pages that predate StatusPill. Point
+      // them at the same status washes so a `green` Tag and an "ok"
+      // StatusPill are the same colour.
+      greenBg: '#e9f5ec',
+      greenColor: '#0f6b33',
+      redBg: '#fceded',
+      redColor: '#b3261e',
+      orangeBg: '#fbf3e0',
+      orangeColor: '#8a6200',
+      goldBg: '#fbf3e0',
+      goldColor: '#8a6200',
+      blueBg: '#e6f2f4',
+      blueColor: '#0e7490',
+      cyanBg: '#e6f2f4',
+      cyanColor: '#0e7490',
+      geekblueBg: '#e6f2f4',
+      geekblueColor: '#0e7490',
+      purpleBg: '#fdf4e3',
+      purpleColor: '#6b3207',
+      magentaBg: '#fdf4e3',
+      magentaColor: '#6b3207',
+      volcanoBg: '#fceded',
+      volcanoColor: '#b3261e',
+      limeBg: '#e9f5ec',
+      limeColor: '#0f6b33',
     },
 
     Segmented: {
