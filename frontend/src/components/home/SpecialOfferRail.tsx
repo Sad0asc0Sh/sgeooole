@@ -124,21 +124,23 @@ function SpecialOfferRail() {
                 style={{ width: "148px", height: "auto" }}
               >
                 <Link href={`/product/${product.id}`} className="block h-full">
-                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md @container">
-                    {/* بج‌ها: «منتخب» راست، بج کمپین چپ؛ فونت سیال متناسب با عرض کارت */}
-                    <div className="mb-2 flex min-h-7 items-start justify-between gap-1.5">
-                      {/* ستون راست: «منتخب» و زیر آن «موجودی محدود» */}
-                      <div className="flex min-w-0 flex-col items-start gap-1.5">
-                        <PromotionBadge fluid label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
-                        {isLowStock ? (
-                          <PromotionBadge fluid label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
-                        ) : null}
-                      </div>
-                      {/* بج کمپین سمت چپ «منتخب»، در همه‌ی محصولات کمپین‌دار یکدست */}
+                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
+                    {/* نوار چسبیده بج‌ها: «منتخب» و بج کمپین در یک کپسول یکپارچه، بدون فاصله */}
+                    <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">
                       {product.campaignLabel ? (
-                        <div className="flex min-w-0 justify-end">
-                          <PromotionBadge fluid label={product.campaignLabel} tone="campaign" />
+                        <div className="flex w-full items-stretch overflow-hidden rounded-full border border-ekg-200 text-[9px] font-bold leading-none">
+                          <span className="shrink-0 bg-ekg-50 px-2 py-1.5 whitespace-nowrap text-ekg-700">
+                            {getPromotionCopy("promotion.reason.curated.label")}
+                          </span>
+                          <span className="min-w-0 flex-1 truncate border-s border-ekg-200/70 bg-blue-50 px-2 py-1.5 text-center text-blue-700">
+                            {product.campaignLabel}
+                          </span>
                         </div>
+                      ) : (
+                        <PromotionBadge label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
+                      )}
+                      {isLowStock ? (
+                        <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
                       ) : null}
                     </div>
 

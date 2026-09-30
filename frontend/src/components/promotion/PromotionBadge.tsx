@@ -3,8 +3,6 @@ type PromotionBadgeTone = "timed" | "curated" | "limited" | "campaign" | "discou
 type PromotionBadgeProps = {
   label: string;
   tone?: PromotionBadgeTone;
-  /** فونت سیال: متناسب با عرض کانتینر کوئری والد، خودش کوچک/بزرگ می‌شود */
-  fluid?: boolean;
 };
 
 const toneClassNames: Record<PromotionBadgeTone, string> = {
@@ -16,9 +14,9 @@ const toneClassNames: Record<PromotionBadgeTone, string> = {
   neutral: "border-gray-200 bg-white text-gray-600",
 };
 
-export default function PromotionBadge({ label, tone = "neutral", fluid = false }: PromotionBadgeProps) {
+export default function PromotionBadge({ label, tone = "neutral" }: PromotionBadgeProps) {
   return (
-    <span className={`inline-flex items-center rounded-full border font-bold leading-none whitespace-nowrap ${fluid ? "max-w-full overflow-hidden text-ellipsis px-[0.8em] py-[0.45em] text-[clamp(7px,5cqi,10px)]" : "px-2 py-1 text-[10px]"} ${toneClassNames[tone]}`}>
+    <span className={`inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold leading-none whitespace-nowrap ${toneClassNames[tone]}`}>
       {label}
     </span>
   );
