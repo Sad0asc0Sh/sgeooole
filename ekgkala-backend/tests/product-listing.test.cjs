@@ -279,3 +279,23 @@ test('featured=true keeps only TIMED manual specials; indefinite ones stay out o
   const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns: [] }, now))[0]
   assert.deepEqual(ids(result), [String(id(1))])
 })
+
+test('featured=true: campaign products come before manual specials (rail limit safety)', () => {
+  const products = [
+    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future, createdAt: future }), // manual, NEWER
+    product(2, { createdAt: past }), // in featured sale, OLDER
+  ]
+  const campaigns = [
+    { _id: id(301), name: 'ویژه پاییزه', discountPercentage: 20, badgeTheme: 'gold-red', endDate: future, products: [id(2)], categories: [], showInFeatured: true },
+  ]
+  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }, { _id: { $in: [id(2)] } }] }]
+  // با limit=1 فقط محصول کمپین برمی‌گردد، با اینکه شگفت‌انگیز دستی جدیدتر است
+  const opts = parseListingQuery({ featured: 'true', sort: 'newest', limit: '1' })
+  const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns }, now))[0]
+  assert.deepEqual(ids(result), [String(id(2))])
+  assert.equal(result.data[0].campaignLabel, 'ویژه پاییزه')
+
+  // بدون limit: کمپین اول، بعد دستی (هر گروه با newest)
+  const all = aggregate(products, buildListingPipeline(parseListingQuery({ featured: 'true', sort: 'newest' }), { conditions: pre, campaigns }, now))[0]
+  assert.deepEqual(ids(all), [String(id(2)), String(id(1))])
+})
