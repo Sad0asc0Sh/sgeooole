@@ -126,8 +126,8 @@ export function useBestSellers(limit: number = 10) {
 export async function prefetchProducts() {
     // These calls will populate the SWR cache
     await Promise.all([
-        productService.getFlashDeals(10),
-        productService.getSpecialOffers(10),
+        productService.getFlashDeals(100),
+        productService.getSpecialOffers(100),
         productService.getNewest(10),
         productService.getBestSellers(10),
     ]);

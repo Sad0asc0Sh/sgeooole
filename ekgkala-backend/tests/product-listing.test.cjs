@@ -280,22 +280,27 @@ test('featured=true keeps only TIMED manual specials; indefinite ones stay out o
   assert.deepEqual(ids(result), [String(id(1))])
 })
 
-test('featured=true: campaign products come before manual specials (rail limit safety)', () => {
+test('featured=true: cards are shuffled randomly (activation time not inferable)', () => {
   const products = [
-    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future, createdAt: future }), // manual, NEWER
-    product(2, { createdAt: past }), // in featured sale, OLDER
+    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
+    product(2, {}),
+    product(3, {}),
+    product(4, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
+    product(5, {}),
+    product(6, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
   ]
   const campaigns = [
-    { _id: id(301), name: 'ویژه پاییزه', discountPercentage: 20, badgeTheme: 'gold-red', endDate: future, products: [id(2)], categories: [], showInFeatured: true },
+    { _id: id(301), name: 'ویژه پاییزه', discountPercentage: 20, badgeTheme: 'gold-red', endDate: future, products: [id(2), id(3), id(5)], categories: [], showInFeatured: true },
   ]
-  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }, { _id: { $in: [id(2)] } }] }]
-  // با limit=1 فقط محصول کمپین برمی‌گردد، با اینکه شگفت‌انگیز دستی جدیدتر است
-  const opts = parseListingQuery({ featured: 'true', sort: 'newest', limit: '1' })
-  const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns }, now))[0]
-  assert.deepEqual(ids(result), [String(id(2))])
-  assert.equal(result.data[0].campaignLabel, 'ویژه پاییزه')
-
-  // بدون limit: کمپین اول، بعد دستی (هر گروه با newest)
-  const all = aggregate(products, buildListingPipeline(parseListingQuery({ featured: 'true', sort: 'newest' }), { conditions: pre, campaigns }, now))[0]
-  assert.deepEqual(ids(all), [String(id(2)), String(id(1))])
+  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }, { _id: { $in: [id(2), id(3), id(5)] } }] }]
+  const opts = parseListingQuery({ featured: 'true', limit: '100' })
+  const seen = new Set()
+  for (let i = 0; i < 8; i++) {
+    const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns }, now))[0]
+    // همه‌ی اعضا هر بار برمی‌گردند؛ فقط ترتیب فرق می‌کند
+    assert.deepEqual(ids(result).sort(), products.map((p) => String(p._id)).sort())
+    seen.add(ids(result).join(','))
+  }
+  // احتمال یکسان‌بودن هر ۸ ترتیب برای ۶ محصول عملاً صفر است (۶! = ۷۲۰)
+  assert.ok(seen.size > 1, 'expected shuffled order to vary across runs')
 })

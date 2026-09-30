@@ -25,7 +25,7 @@ import { useVelocitySnap } from "@/hooks/useVelocitySnap";
  */
 function SpecialOfferRail() {
   // SWR-based fetching with automatic caching
-  const { specialOffers: products, isLoading, error } = useSpecialOffers(10);
+  const { specialOffers: products, isLoading, error } = useSpecialOffers(100);
   const [now, setNow] = useState(() => Date.now());
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
 

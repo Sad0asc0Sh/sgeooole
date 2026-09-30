@@ -257,9 +257,6 @@ function pricingStages(campaigns, now) {
   }
   return [
     { $addFields: { [INTERNAL]: { campaign: branches.length ? { $switch: { branches, default: null } } : null } } },
-    // «منتخب‌ها»: محصولِ دارای کمپین فروشِ فعال، در مرتب‌سازی جلوتر از شگفت‌انگیز دستی می‌آید
-    // تا با limit ریل صفحه اصلی، زیر انبوه شگفت‌انگیزها گم نشود.
-    { $addFields: { [`${INTERNAL}.campaignRank`]: { $cond: [hasCampaign, 1, 0] } } },
     { $addFields: {
       [`${INTERNAL}.eligible`]: { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now), { $and: [{ $not: ['$isFlashDeal'] }, { $not: ['$isSpecialOffer'] }] }] },
       [`${INTERNAL}.variable`]: { $and: [{ $eq: ['$productType', 'variable'] }, { $gt: [{ $size: { $ifNull: ['$variants', []] } }, 0] }] },
@@ -304,11 +301,17 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
   }
   if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
   const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
-  // در «منتخب‌ها» اول محصولات کمپین‌های فروش فعال، بعد شگفت‌انگیزهای دستی (در هر گروه با مرتب‌سازی عادی)
-  const sortSpec = options.featured && !options.skipDiscount
-    ? { [`${INTERNAL}.campaignRank`]: -1, ...options.sort }
-    : options.sort
-  const data = [...priceMatch, ...sortStages(options, searchPattern), { $sort: sortSpec }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
+  const data = [...priceMatch, ...sortStages(options, searchPattern)]
+  if (options.featured && !options.skipDiscount) {
+    // «منتخب‌ها»: ترتیب کاملاً رندم؛ زمان فعال‌سازی نباید از ترتیب کارت‌ها قابل حدس باشد.
+    data.push(
+      { $addFields: { [`${INTERNAL}.randSort`]: { $rand: {} } } },
+      { $sort: { [`${INTERNAL}.randSort`]: 1 } },
+    )
+  } else {
+    data.push({ $sort: options.sort })
+  }
+  data.push({ $skip: (options.page - 1) * options.limit }, { $limit: options.limit })
   if (!options.skipDiscount) data.push({ $addFields: {
     price: ref('price'), stock: ref('stock'),
     // Expose compareAtPrice ONLY when a real discount exists. Otherwise a
