@@ -55,7 +55,8 @@ test('timed offers expire strictly, restore base price and do not match onSale',
   assert.deepEqual(all.data.map((p) => p.price), [1000, 1000, 800, 800, 800])
   assert.deepEqual(all.data.map((p) => p.discount), [0, 0, 20, 20, 0])
   const sales = run(products, { onSale: 'true' })
-  assert.deepEqual(ids(sales), [3, 4, 5].map((n) => String(id(n))))
+  // onSale فقط تخفیف واقعی است؛ محصول ۵ فقط compare کهنه دارد و sale نیست
+  assert.deepEqual(ids(sales), [3, 4].map((n) => String(id(n))))
   assert.equal(count(run(products, { maxPrice: '900' })), 3)
 })
 

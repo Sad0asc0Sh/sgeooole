@@ -20,11 +20,35 @@ export interface PricingResult {
   oldPrice?: number;
 }
 
+// تلرانس تشخیص داده‌ی قدیمی (خطای رُند شدن، به تومان) — آینه‌ی resolveBasePrice بک‌اند
+const LEGACY_BASE_TOLERANCE = 1;
+
+/**
+ * مبنای واحد تخفیف — آینه‌ی resolveBasePrice بک‌اند (services/pricingService.js).
+ * مبنای تخفیف درصدی همیشه «price» است؛ compareAtPrice فقط قیمت خط‌خورده‌ی نمایشی است.
+ * تنها استثنا (سازگاری با داده‌ی قدیمی): اگر price از قبل تخفیف‌خورده ذخیره شده باشد،
+ * یعنی compareAtPrice > price و رابطه‌ی price ≈ compareAtPrice × (1 − storedDiscount/100)
+ * برقرار باشد، compareAtPrice مبناست. تخفیف کمپین برای این تشخیص استفاده نمی‌شود.
+ */
+export function resolveBasePrice(price: number, compareAtPrice: number, storedDiscount = 0): number {
+  const p = Number.isFinite(price) ? price : 0;
+  const c = Number.isFinite(compareAtPrice) ? compareAtPrice : 0;
+  // قیمت صفر/نامعتبر: رفتار قبلی (max) حفظ می‌شود
+  if (p <= 0) return Math.max(p, c);
+  if (c > p) {
+    const d = Number.isFinite(storedDiscount) ? storedDiscount : 0;
+    if (d > 0 && d <= 100 && Math.abs(p - c * (1 - d / 100)) <= LEGACY_BASE_TOLERANCE) {
+      return c;
+    }
+  }
+  return p;
+}
+
 /**
  * Normalize pricing for products and cart items.
  * - Applies time-based eligibility for discounts.
  * - Restores base price when countdowns expire.
- * - Avoids re-discounting prices that are already discounted.
+ * - Never inflates the final price to a stale compareAtPrice.
  */
 export function resolvePricing(input: PricingInput): PricingResult {
   const now = input.now ?? Date.now();
@@ -36,11 +60,6 @@ export function resolvePricing(input: PricingInput): PricingResult {
 
   const rawPrice = Number.isFinite(input.price) ? input.price : 0;
   const rawDiscount = Number.isFinite(input.discount ?? 0) ? (input.discount as number) : 0;
-
-  const hasValidComparePrice = Boolean(
-    input.compareAtPrice &&
-    input.compareAtPrice > rawPrice
-  );
 
   const flashFlag = Boolean(input.isFlashDeal);
   const specialFlag = Boolean(input.isSpecialOffer);
@@ -61,16 +80,15 @@ export function resolvePricing(input: PricingInput): PricingResult {
   const discountEligible = hasActivePromotion || (!hasPromotionFlag && effectiveRawDiscount > 0);
   const discount = discountEligible ? effectiveRawDiscount : 0;
 
-  // If no discount is active, the final selling price MUST ALWAYS be the product's actual price (rawPrice)
-  if (discount <= 0) {
-    // If a timed promotion was configured but is now expired, revert selling price to the base price (compareAtPrice)
-    const wasTimedPromotionExpired = hasPromotionFlag && hasValidComparePrice;
-    const finalPrice = wasTimedPromotionExpired ? Math.round(input.compareAtPrice!) : rawPrice;
-    const basePrice = wasTimedPromotionExpired ? finalPrice : rawPrice;
+  // مبنای واحد طبق قرارداد مرکزی — تشخیص داده‌ی قدیمی فقط با تخفیف ثبت‌شده‌ی خود محصول
+  const basePrice = resolveBasePrice(rawPrice, input.compareAtPrice ?? 0, rawDiscount);
 
+  // If no discount is active, the final selling price MUST ALWAYS be the product's actual price.
+  // A stale compareAtPrice never inflates it — neither on expiry nor without discount.
+  if (discount <= 0) {
     return {
-      basePrice,
-      finalPrice,
+      basePrice: rawPrice,
+      finalPrice: rawPrice,
       discount: 0,
       flashActive: false,
       specialActive: false,
@@ -81,20 +99,8 @@ export function resolvePricing(input: PricingInput): PricingResult {
     };
   }
 
-  // If a discount is active:
-  // If compareAtPrice is explicitly provided and greater than rawPrice, rawPrice was already precomputed/discounted.
-  // Otherwise, rawPrice is the base price from which discount should be calculated.
-  const hasPrecomputedDiscount = Boolean(
-    input.compareAtPrice && input.compareAtPrice > rawPrice
-  );
-
-  const basePrice = hasPrecomputedDiscount
-    ? Math.round(input.compareAtPrice!)
-    : rawPrice;
-
-  const finalPrice = hasPrecomputedDiscount
-    ? rawPrice
-    : Math.round(basePrice * (1 - discount / 100));
+  // If a discount is active: final = round(base × (1 − discount/100)), old = base.
+  const finalPrice = Math.round(basePrice * (1 - discount / 100));
 
   return {
     basePrice,

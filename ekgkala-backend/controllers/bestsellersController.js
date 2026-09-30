@@ -12,6 +12,7 @@ const Product = require('../models/Product')
 const ProductView = require('../models/ProductView')
 const SalesEvent = require('../models/SalesEvent')
 const { recalculateAllScores } = require('../services/bestsellersScoreEngine')
+const { resolveBasePrice } = require('../services/pricingService')
 const redis = require('../utils/redis')
 
 // ============================================
@@ -44,11 +45,11 @@ exports.getBestsellers = async (req, res) => {
 
     let result = []
 
-    // Product.price is the stored base price. Match the public product endpoint:
-    // expose a discounted price plus the original compareAtPrice when a discount exists.
+    // قرارداد مرکزی قیمت: مبنای تخفیف همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده
     const buildPromotionPrice = (product) => {
-      const basePrice = Number(product.price) || 0
-      const discount = Number(product.discount) || 0
+      const storedDiscount = Number(product.discount) || 0
+      const basePrice = resolveBasePrice(product.price, product.compareAtPrice, storedDiscount)
+      const discount = storedDiscount
       const hasDiscount = basePrice > 0 && discount > 0 && discount < 100
 
       return {

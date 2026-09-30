@@ -246,10 +246,28 @@ function pricingStages(campaigns, now) {
     then: literal({ name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme || 'green-orange', endDate: sale.endDate, featured: sale.showInFeatured !== false }),
   })))
   const hasCampaign = { $ne: [ref('campaign'), null] }
-  const priceObject = (source) => {
+  // آینه‌ی resolveBasePrice با عملگرهای مونگو (pipeline نمی‌تواند JS صدا بزند).
+  // هر تغییری در منطق باید در هر دو جا اعمال و با تست همسانی پوشش داده شود.
+  const priceObject = (source, storedDiscountExpr) => {
     const price = numeric(`${source}.price`)
     const compare = numeric(`${source}.compareAtPrice`)
-    const base = { $max: [price, compare] }
+    const storedDiscount = storedDiscountExpr
+    const legacyMatch = {
+      $and: [
+        { $gt: [compare, price] },
+        { $gt: [storedDiscount, 0] },
+        { $lte: [storedDiscount, 100] },
+        // |price − compare×(1 − d/100)| ≤ ۱ : تلرانس رُند شدن
+        { $lte: [{ $abs: { $subtract: [price, { $multiply: [compare, { $subtract: [1, { $divide: [storedDiscount, 100] }] }] }] } }, 1] },
+      ],
+    }
+    const base = {
+      $cond: [
+        { $lte: [price, 0] },
+        { $max: [price, compare] },
+        { $cond: [legacyMatch, compare, price] },
+      ],
+    }
     return {
       price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [ref('discount'), 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, ref('discount')] }, 100] }] }), price] }] },
       compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [ref('discount'), 0] }] }, base, compare] },
@@ -267,8 +285,9 @@ function pricingStages(campaigns, now) {
       [`${INTERNAL}.stock`]: { $cond: [{ $eq: ['$productType', 'variable'] }, { $sum: '$variants.stock' }, numeric('$stock')] },
     } },
     { $addFields: {
-      [`${INTERNAL}.root`]: priceObject('$$ROOT'),
-      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant')] } } },
+      // تخفیف ثبت‌شده‌ی خود محصول برای تشخیص داده‌ی قدیمی؛ داخل $map هم به سند ریشه اشاره می‌کند
+      [`${INTERNAL}.root`]: priceObject('$$ROOT', numeric('$discount')),
+      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'))] } } },
     } },
     { $addFields: {
       [`${INTERNAL}.display`]: { $cond: [ref('variable'), { $reduce: { input: ref('variants'), initialValue: null, in: { $cond: [{ $or: [{ $eq: ['$$value', null] }, { $lt: ['$$this.price', '$$value.price'] }] }, '$$this', '$$value'] } } }, ref('root')] },

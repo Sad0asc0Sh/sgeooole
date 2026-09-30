@@ -11,6 +11,7 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
+const { applyDiscountToObject, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
@@ -1020,28 +1021,8 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
       }
     }
 
-    const applyDiscountToProductObj = (target, discountPct) => {
-      if (discountPct > 0) {
-        if (target.price !== undefined && target.price > 0) {
-          const orig = target.compareAtPrice && target.compareAtPrice > target.price ? target.compareAtPrice : target.price
-          const dAmount = (orig * discountPct) / 100
-          target.price = Math.round(orig - dAmount)
-          target.compareAtPrice = orig
-        }
-        if (Array.isArray(target.variants) && target.variants.length > 0) {
-          target.variants = target.variants.map((v) => {
-            const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
-            if (vObj.price > 0) {
-              const origV = vObj.compareAtPrice && vObj.compareAtPrice > vObj.price ? vObj.compareAtPrice : vObj.price
-              const vDiscount = (origV * discountPct) / 100
-              vObj.price = Math.round(origV - vDiscount)
-              vObj.compareAtPrice = origV
-            }
-            return vObj
-          })
-        }
-      }
-    }
+    // تخفیف ثبت‌شده‌ی خود محصول، قبل از جایگزینی با درصد کمپین (برای تشخیص داده‌ی قدیمی در resolveBasePrice)
+    const storedDiscount = Number(productObj.discount) || 0
 
     if (activeSale) {
       productObj.campaignLabel = activeSale.name
@@ -1051,11 +1032,11 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
         productObj.isSpecialOffer = true
         productObj.isFromActiveSale = true
         productObj.specialOfferEndTime = activeSale.endDate
-        applyDiscountToProductObj(productObj, activeSale.discountPercentage)
+        applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
       }
     } else if (productObj.discount > 0) {
       // Apply direct product discount
-      applyDiscountToProductObj(productObj, productObj.discount)
+      applyDiscountToObject(productObj, productObj.discount, storedDiscount)
 
       if (productObj.isFlashDeal) {
         productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
@@ -1108,6 +1089,7 @@ router.post(
         isActive,
         properties,
         specifications,
+        compareAtPrice,
       } = req.body
 
       const productData = {
@@ -1146,12 +1128,19 @@ router.post(
       if (productType === 'simple' || !productType) {
         if (price !== undefined) productData.price = price
         if (stock !== undefined) productData.stock = stock
+        // قیمت خط‌خورده فقط نمایشی است؛ اگر از قیمت بیشتر نباشد ذخیره نمی‌شود
+        const sanitized = sanitizeCompareAtPrice(price, compareAtPrice)
+        if (sanitized.value !== null) productData.compareAtPrice = sanitized.value
+        if (sanitized.warning) console.warn(`[CREATE PRODUCT] ${sanitized.warning} (name: ${name})`)
       }
 
       // ویژگی‌ها و متغیرها برای محصول متغیر
       if (productType === 'variable') {
         productData.attributes = attributes || []
-        productData.variants = variants || []
+        // پاک‌سازی قیمت خط‌خورده‌ی واریانت‌ها با همان قاعده‌ی محصول ساده
+        const sanitizedVariants = sanitizeVariantsCompareAtPrice(variants || [])
+        productData.variants = sanitizedVariants.variants
+        sanitizedVariants.warnings.forEach((w) => console.warn(`[CREATE PRODUCT] ${w} (name: ${name})`))
       }
 
       // Validate campaign exclusivity (cannot be both Flash Deal and Special Offer)
@@ -1379,6 +1368,22 @@ router.put(
 
       const updateMongoQuery = { $set: updates }
 
+      // پاک‌سازی قیمت خط‌خورده: اگر از قیمت بیشتر نباشد نادیده گرفته و پاک می‌شود؛
+      // اگر بیش از ۱۰ برابر قیمت باشد فقط هشدار می‌دهد (خطای سخت نیست)
+      const warnings = []
+      if (updates.compareAtPrice !== undefined) {
+        const priceRef = updates.price !== undefined ? updates.price : product.price
+        const sanitized = sanitizeCompareAtPrice(priceRef, updates.compareAtPrice)
+        if (sanitized.warning) warnings.push(sanitized.warning)
+        updates.compareAtPrice = sanitized.value
+      }
+      // همان قاعده برای واریانت‌ها
+      if (Array.isArray(updates.variants)) {
+        const sanitizedVariants = sanitizeVariantsCompareAtPrice(updates.variants)
+        updates.variants = sanitizedVariants.variants
+        warnings.push(...sanitizedVariants.warnings)
+      }
+
       // If compareAtPrice is explicitly null, empty or 0, unset it from database so it doesn't inflate pricing
       if (updates.compareAtPrice === null || updates.compareAtPrice === '' || updates.compareAtPrice === 0) {
         delete updates.compareAtPrice
@@ -1403,6 +1408,7 @@ router.put(
         success: true,
         message: 'Product updated successfully',
         data: updatedProduct,
+        warnings: warnings.length > 0 ? warnings : undefined,
       })
     } catch (error) {
       console.error('Error updating product:', error)
@@ -2135,6 +2141,7 @@ const handleProductImport = async (req, res) => {
     if (importMode === 'update') {
       let totalUpdated = 0
       let totalCreated = 0
+      const importWarnings = []
 
       const skuSet = new Set()
       const codeSet = new Set()
@@ -2211,7 +2218,13 @@ const handleProductImport = async (req, res) => {
               updateFields.price = parseCsvNumber(row.rawPrice, existingProduct.price, row.priceCurrency)
             }
             if (row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== '') {
-              updateFields.compareAtPrice = parseCsvNumber(row.rawCompareAtPrice, existingProduct.compareAtPrice, row.compareCurrency)
+              const parsedCompare = parseCsvNumber(row.rawCompareAtPrice, existingProduct.compareAtPrice, row.compareCurrency)
+              const priceRef = updateFields.price !== undefined ? updateFields.price : existingProduct.price
+              const sanitized = sanitizeCompareAtPrice(priceRef, parsedCompare)
+              if (sanitized.value !== null && sanitized.value !== undefined) {
+                updateFields.compareAtPrice = sanitized.value
+              }
+              if (sanitized.warning) importWarnings.push(`سطر ${i + 1} (${rowSku}): ${sanitized.warning}`)
             }
             if (row.stock !== undefined && row.stock !== '') {
               updateFields.stock = Math.max(0, Math.floor(parseCsvNumber(row.stock, existingProduct.stock, 'toman')))
@@ -2242,9 +2255,12 @@ const handleProductImport = async (req, res) => {
           } else {
             const mongoose = require('mongoose')
             const priceVal = parseCsvNumber(row.rawPrice, 0, row.priceCurrency)
-            const compareVal = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
-              ? parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency)
-              : undefined
+            // پاک‌سازی قیمت خط‌خورده طبق قرارداد قیمت (≤ قیمت نادیده گرفته می‌شود؛ >۱۰ برابر فقط هشدار)
+            const sanitizedImportCompare = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
+              ? sanitizeCompareAtPrice(priceVal, parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency))
+              : { value: undefined, warning: null }
+            const compareVal = sanitizedImportCompare.value ?? undefined
+            if (sanitizedImportCompare.warning) importWarnings.push(`سطر ${i + 1} (${rowSku}): ${sanitizedImportCompare.warning}`)
             const stockVal = Math.max(0, Math.floor(parseCsvNumber(row.stock, 0, 'toman')))
 
             const productData = {
@@ -2327,6 +2343,7 @@ const handleProductImport = async (req, res) => {
         currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
         durationSeconds,
         errors: errors.length > 0 ? errors : undefined,
+        warnings: importWarnings.length > 0 ? importWarnings : undefined,
       })
     }
 
@@ -2334,6 +2351,7 @@ const handleProductImport = async (req, res) => {
     // CREATE MODE (default): Insert all as new products
     // ============================================
     const productsToCreate = []
+    const createWarnings = []
 
     for (let i = 0; i < products.length; i++) {
       const row = products[i]
@@ -2344,9 +2362,12 @@ const handleProductImport = async (req, res) => {
         const rowSku = row.sku ? String(row.sku).trim() : ''
 
         const priceVal = parseCsvNumber(row.rawPrice, 0, row.priceCurrency)
-        const compareVal = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
-          ? parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency)
-          : undefined
+        // پاک‌سازی قیمت خط‌خورده طبق قرارداد قیمت (≤ قیمت نادیده گرفته می‌شود؛ >۱۰ برابر فقط هشدار)
+        const sanitizedCompare = row.rawCompareAtPrice !== undefined && row.rawCompareAtPrice !== ''
+          ? sanitizeCompareAtPrice(priceVal, parseCsvNumber(row.rawCompareAtPrice, undefined, row.compareCurrency))
+          : { value: undefined, warning: null }
+        const compareVal = sanitizedCompare.value ?? undefined
+        if (sanitizedCompare.warning) createWarnings.push(`سطر ${i + 1} (${rowSku}): ${sanitizedCompare.warning}`)
         const stockVal = Math.max(0, Math.floor(parseCsvNumber(row.stock, 0, 'toman')))
 
         const mongoose = require('mongoose')
@@ -2426,6 +2447,7 @@ const handleProductImport = async (req, res) => {
       currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
       durationSeconds,
       errors: errors.length > 0 ? errors : undefined,
+      warnings: createWarnings.length > 0 ? createWarnings : undefined,
     })
   } catch (error) {
     console.error('Error importing products:', error)
@@ -2540,28 +2562,8 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
         }
       }
 
-      const applyDiscountToProductObj = (target, discountPct) => {
-        if (discountPct > 0) {
-          if (target.price !== undefined && target.price > 0) {
-            const orig = target.compareAtPrice && target.compareAtPrice > target.price ? target.compareAtPrice : target.price
-            const dAmount = (orig * discountPct) / 100
-            target.price = Math.round(orig - dAmount)
-            target.compareAtPrice = orig
-          }
-          if (Array.isArray(target.variants) && target.variants.length > 0) {
-            target.variants = target.variants.map((v) => {
-              const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
-              if (vObj.price > 0) {
-                const origV = vObj.compareAtPrice && vObj.compareAtPrice > vObj.price ? vObj.compareAtPrice : vObj.price
-                const vDiscount = (origV * discountPct) / 100
-                vObj.price = Math.round(origV - vDiscount)
-                vObj.compareAtPrice = origV
-              }
-              return vObj
-            })
-          }
-        }
-      }
+      // تخفیف ثبت‌شده‌ی خود محصول، قبل از جایگزینی با درصد کمپین (برای تشخیص داده‌ی قدیمی در resolveBasePrice)
+      const storedDiscount = Number(productObj.discount) || 0
 
       if (activeSale) {
         productObj.campaignLabel = activeSale.name
@@ -2571,11 +2573,11 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
           productObj.isSpecialOffer = true
           productObj.isFromActiveSale = true
           productObj.specialOfferEndTime = activeSale.endDate
-          applyDiscountToProductObj(productObj, activeSale.discountPercentage)
+          applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
         }
       } else if (productObj.discount > 0) {
         // Apply direct product discount
-        applyDiscountToProductObj(productObj, productObj.discount)
+        applyDiscountToObject(productObj, productObj.discount, storedDiscount)
 
         if (productObj.isFlashDeal) {
           productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
