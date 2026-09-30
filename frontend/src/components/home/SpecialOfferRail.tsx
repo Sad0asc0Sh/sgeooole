@@ -125,19 +125,14 @@ function SpecialOfferRail() {
               >
                 <Link href={`/product/${product.id}`} className="block h-full">
                   <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
-                    <div className="mb-2 flex min-h-7 items-start justify-between gap-2">
-                      {/* ستون راست: «منتخب» و زیر آن «موجودی محدود» */}
-                      <div className="flex min-w-0 flex-col items-start gap-1.5">
-                        <PromotionBadge label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
-                        {isLowStock ? (
-                          <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
-                        ) : null}
-                      </div>
-                      {/* بج کمپین همیشه سمت چپ «منتخب»، در همه‌ی محصولات کمپین‌دار یکدست */}
+                    {/* بج‌ها: ستون عمودی راست‌چین؛ روی کارت باریک هیچ‌وقت در هم فشرده نمی‌شوند */}
+                    <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">
+                      <PromotionBadge label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
                       {product.campaignLabel ? (
-                        <div className="flex shrink-0">
-                          <PromotionBadge label={product.campaignLabel} tone="campaign" />
-                        </div>
+                        <PromotionBadge label={product.campaignLabel} tone="campaign" />
+                      ) : null}
+                      {isLowStock ? (
+                        <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
                       ) : null}
                     </div>
 
