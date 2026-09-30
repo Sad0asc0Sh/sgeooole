@@ -49,10 +49,8 @@ export function useSpecialOffers(limit: number = 10) {
         () => productService.getSpecialOffers(limit),
         {
             ...swrConfig,
-            revalidateOnFocus: true,
-            revalidateOnReconnect: true,
-            dedupingInterval: 5000,
-            refreshInterval: 30000, // Refresh every 30s for time-sensitive offers
+            // ترتیب کارت‌ها رندم است؛ فقط با رفرش صفحه دوباره چیده شود،
+            // نه با رفرش دوره‌ای/فوکس/اتصال مجدد (swrConfig همین را می‌گوید).
         }
     );
 
