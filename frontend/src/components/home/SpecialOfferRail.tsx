@@ -124,15 +124,21 @@ function SpecialOfferRail() {
                 style={{ width: "148px", height: "auto" }}
               >
                 <Link href={`/product/${product.id}`} className="block h-full">
-                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
-                    {/* بج‌ها: ستون عمودی راست‌چین؛ روی کارت باریک هیچ‌وقت در هم فشرده نمی‌شوند */}
-                    <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">
-                      <PromotionBadge label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
+                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md @container">
+                    {/* بج‌ها: «منتخب» راست، بج کمپین چپ؛ فونت سیال متناسب با عرض کارت */}
+                    <div className="mb-2 flex min-h-7 items-start justify-between gap-1.5">
+                      {/* ستون راست: «منتخب» و زیر آن «موجودی محدود» */}
+                      <div className="flex min-w-0 flex-col items-start gap-1.5">
+                        <PromotionBadge fluid label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
+                        {isLowStock ? (
+                          <PromotionBadge fluid label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
+                        ) : null}
+                      </div>
+                      {/* بج کمپین سمت چپ «منتخب»، در همه‌ی محصولات کمپین‌دار یکدست */}
                       {product.campaignLabel ? (
-                        <PromotionBadge label={product.campaignLabel} tone="campaign" />
-                      ) : null}
-                      {isLowStock ? (
-                        <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
+                        <div className="flex min-w-0 justify-end">
+                          <PromotionBadge fluid label={product.campaignLabel} tone="campaign" />
+                        </div>
                       ) : null}
                     </div>
 
