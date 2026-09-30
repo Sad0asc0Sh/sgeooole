@@ -6,6 +6,7 @@ const {
   getSaleById,
   updateSale,
   deleteSale,
+  getProductConflicts,
 } = require('../controllers/saleController')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 
@@ -21,6 +22,10 @@ router.get('/admin', protect, checkPermission(PERMISSIONS.SALE_READ), getAllSale
 
 // POST /api/sales/admin - ایجاد کمپین جدید
 router.post('/admin', protect, checkPermission(PERMISSIONS.SALE_CREATE), createSale)
+
+// GET /api/sales/admin/product-conflicts - محصولات درگیر در پیشنهاد لحظه‌ای/شگفت‌انگیز
+// (باید قبل از '/admin/:id' تعریف شود)
+router.get('/admin/product-conflicts', protect, checkPermission(PERMISSIONS.SALE_READ), getProductConflicts)
 
 // GET /api/sales/admin/:id - دریافت جزئیات کمپین
 router.get('/admin/:id', protect, checkPermission(PERMISSIONS.SALE_READ), getSaleById)

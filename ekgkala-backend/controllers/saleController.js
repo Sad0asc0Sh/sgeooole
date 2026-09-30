@@ -1,4 +1,75 @@
 const Sale = require('../models/Sale')
+const { clearCacheByPrefix } = require('../middleware/cache')
+const {
+  findProductCampaignConflicts,
+  getSaleProductIds,
+  buildConflictMessage,
+} = require('../services/campaignConflictService')
+
+const clearProductCaches = () => {
+  try {
+    clearCacheByPrefix('/api/products')
+    clearCacheByPrefix('/api/v1/admin/products')
+  } catch (err) {
+    console.warn('Could not clear product cache after sale change:', err.message)
+  }
+}
+
+/**
+ * جلوگیری از قرار گرفتن محصولی که قبلاً در «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» فعال است
+ * داخل یک تخفیف زمان‌دار. اعضای فعلیِ همان تخفیف (هنگام ویرایش) مستثنی می‌شوند.
+ * در صورت تداخل، پاسخ 409 ارسال می‌شود و مقدار برگشتی true است.
+ *
+ * توجه (race): این بررسی «بررسی-سپس-ذخیره» در سطح اپلیکیشن است؛ اگر دو ادمین
+ * دقیقاً هم‌زمان ذخیره کنند، تضمین صددرصدی فقط با تراکنش/قفل دیتابیسی ممکن است.
+ * برای همین، این چک درست قبل از save/create انجام می‌شود تا پنجره‌ی خطر حداقل باشد.
+ */
+const rejectIfCampaignConflict = async (res, { productIds, startDate, endDate, isActive, saleId }) => {
+  if (isActive === false || !Array.isArray(productIds) || productIds.length === 0) return false
+  if (endDate && new Date(endDate) <= new Date()) return false // تخفیفِ تمام‌شده دیگر تداخلی ایجاد نمی‌کند
+
+  const exemptProductIds = saleId ? await getSaleProductIds(saleId) : []
+  const conflicts = await findProductCampaignConflicts(productIds, {
+    windowStart: startDate ? new Date(startDate) : undefined,
+    exemptProductIds,
+  })
+  if (conflicts.length === 0) return false
+
+  res.status(409).json({
+    success: false,
+    code: 'CAMPAIGN_CONFLICT',
+    message: buildConflictMessage(conflicts),
+    data: conflicts,
+  })
+  return true
+}
+
+/**
+ * @desc    فهرست محصولاتی که در پیشنهاد لحظه‌ای / شگفت‌انگیز فعال‌اند (برای غیرفعال‌کردن در انتخابگر محصولات)
+ * @route   GET /api/sales/admin/product-conflicts?excludeSaleId=&startDate=
+ * @access  Private/Admin
+ */
+exports.getProductConflicts = async (req, res) => {
+  try {
+    const { excludeSaleId, startDate } = req.query
+    const start = startDate ? new Date(startDate) : undefined
+    const exemptProductIds = excludeSaleId ? await getSaleProductIds(excludeSaleId) : []
+
+    const conflicts = await findProductCampaignConflicts([], {
+      windowStart: start && !Number.isNaN(start.getTime()) ? start : undefined,
+      exemptProductIds,
+    })
+
+    res.status(200).json({ success: true, data: conflicts })
+  } catch (error) {
+    console.error('Error fetching product campaign conflicts:', error)
+    res.status(500).json({
+      success: false,
+      message: 'خطا در دریافت تداخل کمپین‌ها',
+      error: error.message,
+    })
+  }
+}
 
 /**
  * @desc    دریافت لیست تمام تخفیف‌های زمان‌دار (برای ادمین)
@@ -85,7 +156,8 @@ exports.getSaleById = async (req, res) => {
  */
 exports.createSale = async (req, res) => {
   try {
-    const { name, discountPercentage, startDate, endDate, products, isActive, badgeTheme } = req.body
+    const { name, discountPercentage, startDate, endDate, products, isActive, badgeTheme, showInFeatured } =
+      req.body
 
     // Validation
     if (!name || !discountPercentage || !startDate || !endDate) {
@@ -106,6 +178,17 @@ exports.createSale = async (req, res) => {
       })
     }
 
+    if (
+      await rejectIfCampaignConflict(res, {
+        productIds: products,
+        startDate: start,
+        endDate: end,
+        isActive: isActive !== undefined ? isActive : true,
+      })
+    ) {
+      return
+    }
+
     const saleData = {
       name,
       discountPercentage,
@@ -114,9 +197,11 @@ exports.createSale = async (req, res) => {
       products: products || [],
       isActive: isActive !== undefined ? isActive : true,
       badgeTheme: badgeTheme || 'green-orange',
+      showInFeatured: showInFeatured === undefined ? true : showInFeatured === true || showInFeatured === 'true',
     }
 
     const sale = await Sale.create(saleData)
+    clearProductCaches()
 
     res.status(201).json({
       success: true,
@@ -141,7 +226,8 @@ exports.createSale = async (req, res) => {
 exports.updateSale = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, discountPercentage, startDate, endDate, products, isActive, badgeTheme } = req.body
+    const { name, discountPercentage, startDate, endDate, products, isActive, badgeTheme, showInFeatured } =
+      req.body
 
     const sale = await Sale.findById(id)
 
@@ -160,6 +246,7 @@ exports.updateSale = async (req, res) => {
     if (products !== undefined) sale.products = products
     if (isActive !== undefined) sale.isActive = isActive
     if (badgeTheme !== undefined) sale.badgeTheme = badgeTheme
+    if (showInFeatured !== undefined) sale.showInFeatured = showInFeatured === true || showInFeatured === 'true'
 
     // بررسی تاریخ‌ها
     if (sale.endDate <= sale.startDate) {
@@ -169,7 +256,21 @@ exports.updateSale = async (req, res) => {
       })
     }
 
+    // بررسی تداخل با پیشنهاد لحظه‌ای / شگفت‌انگیز (اعضای فعلی همین تخفیف مستثنی هستند)
+    if (
+      await rejectIfCampaignConflict(res, {
+        productIds: (sale.products || []).map(String),
+        startDate: sale.startDate,
+        endDate: sale.endDate,
+        isActive: sale.isActive,
+        saleId: sale._id,
+      })
+    ) {
+      return
+    }
+
     await sale.save()
+    clearProductCaches()
 
     res.status(200).json({
       success: true,
@@ -205,6 +306,7 @@ exports.deleteSale = async (req, res) => {
     }
 
     await sale.deleteOne()
+    clearProductCaches()
 
     res.status(200).json({
       success: true,

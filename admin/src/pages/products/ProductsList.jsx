@@ -857,9 +857,11 @@ function ProductsList({ mode }) {
 
       const res = await api.put('/products/special-offers/timer', { endTime })
       const count = res?.data?.data?.modifiedCount || 0
+      const skipped = res?.data?.data?.skippedCount || 0
+      const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
       if (count > 0) {
-        message.success(`زمان برای ${count} محصول با موفقیت به‌روزرسانی شد`)
+        message.success(`زمان برای ${count} محصول با موفقیت به‌روزرسانی شد${skipNote}`)
         setTimerModalVisible(false)
         fetchProducts()
       } else {
@@ -877,8 +879,10 @@ function ProductsList({ mode }) {
       setLoading(true)
       const res = await api.put('/products/special-offers/timer', { disable: true })
       const count = res?.data?.data?.modifiedCount || 0
+      const skipped = res?.data?.data?.skippedCount || 0
+      const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
-      message.success(`تایمر برای ${count} محصول غیرفعال شد`)
+      message.success(`تایمر برای ${count} محصول غیرفعال شد${skipNote}`)
       setTimerModalVisible(false)
       fetchProducts()
     } catch (err) {
@@ -897,9 +901,11 @@ function ProductsList({ mode }) {
 
       const res = await api.put('/products/flash-deals/timer', { endTime })
       const count = res?.data?.data?.modifiedCount || 0
+      const skipped = res?.data?.data?.skippedCount || 0
+      const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
       if (count > 0) {
-        message.success(`Flash Deal timer updated for ${count} products`)
+        message.success(`Flash Deal timer updated for ${count} products${skipNote}`)
         setFlashTimerModalVisible(false)
         fetchProducts()
       } else {
@@ -917,8 +923,10 @@ function ProductsList({ mode }) {
       setLoading(true)
       const res = await api.put('/products/flash-deals/timer', { disable: true })
       const count = res?.data?.data?.modifiedCount || 0
+      const skipped = res?.data?.data?.skippedCount || 0
+      const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
-      message.success(`Flash Deal timer disabled for ${count} products`)
+      message.success(`Flash Deal timer disabled for ${count} products${skipNote}`)
       setFlashTimerModalVisible(false)
       fetchProducts()
     } catch (err) {

@@ -14,7 +14,8 @@
     "migrate:product-codes": "node scripts/generate-product-codes.js",
     "migrate:product-codes:dry": "node scripts/generate-product-codes.js --dry-run --verbose",
     "migrate:all": "npm run migrate:slugs && npm run migrate:product-codes",
-    "test": "node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js && node tests/product-listing.test.cjs && node tests/product-sorting.test.cjs && node tests/access-control-sort.test.cjs && node tests/cctv-assembly-engine.test.cjs && node tests/cctv-chat-flow.test.cjs && node tests/cctv-e2e-integration.test.cjs && node tests/cctv-integrity-gate.test.cjs",
+    "report:campaign-conflicts": "node scripts/report-campaign-conflicts.js",
+    "test": "node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js && node tests/product-listing.test.cjs && node tests/product-sorting.test.cjs && node tests/sale-campaign-conflict.test.cjs && node tests/access-control-sort.test.cjs && node tests/cctv-assembly-engine.test.cjs && node tests/cctv-chat-flow.test.cjs && node tests/cctv-e2e-integration.test.cjs && node tests/cctv-integrity-gate.test.cjs",
     "test:torob-acceptance": "node tests/torob-acceptance.js"
   },
   "keywords": [

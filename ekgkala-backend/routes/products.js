@@ -11,6 +11,7 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
+const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
@@ -604,6 +605,26 @@ const validateCampaignExclusivity = (data, currentProduct = {}) => {
   return { valid: true }
 }
 
+// یک محصول که در «تخفیف زمان‌دار» (بخش مالی) فعال/آینده است نباید همزمان
+// لحظه‌ای یا شگفت‌انگیز شود. فقط وقتی فلگ *تازه روشن* می‌شود بررسی می‌کنیم تا ویرایش
+// سایر فیلدهای محصولاتِ قدیمی مسدود نشود.
+const validateNoActiveSaleConflict = async (data, currentProduct = null) => {
+  const turningOnFlash = data.isFlashDeal === true && !(currentProduct && currentProduct.isFlashDeal)
+  const turningOnSpecial = data.isSpecialOffer === true && !(currentProduct && currentProduct.isSpecialOffer)
+  if (!turningOnFlash && !turningOnSpecial) return { valid: true }
+  if (!currentProduct || !currentProduct._id) return { valid: true } // محصول جدید هنوز عضو هیچ تخفیفی نیست
+
+  const categoryId = data.category !== undefined ? data.category : currentProduct.category
+  const sales = await findActiveSalesForProduct(currentProduct._id, categoryId)
+  if (sales.length === 0) return { valid: true }
+
+  return {
+    valid: false,
+    sales: sales.map((s) => ({ name: s.name, startDate: s.startDate, endDate: s.endDate })),
+    message: `این محصول در تخفیف زمان‌دار «${sales[0].name}» قرار دارد و نمی‌توان آن را همزمان در پیشنهاد لحظه‌ای یا شگفت‌انگیز فعال کرد. ابتدا آن را از تخفیف زمان‌دار (بخش مالی) خارج کنید.`,
+  }
+}
+
 // ============================================
 // GET /api/products
 // Public products list with filters & pagination
@@ -635,11 +656,19 @@ router.put(
       const { endTime, disable } = req.body
 
       if (disable) {
+        // تایمر گروهی نباید کمپین مالی را لمس کند: محصولاتی که عضو یک تخفیف
+        // زمان‌دار فعال/آینده هستند از این عملیات مستثنی‌اند (گزارش در skippedCount).
+        const excludedIds = await getSaleMemberProductIds()
+        const timerFilter = { isSpecialOffer: true }
+        if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
         // Clear timer for all special offer products
         const result = await Product.updateMany(
-          { isSpecialOffer: true },
+          timerFilter,
           { $unset: { specialOfferEndTime: "" } }
         )
+        const skippedCount = excludedIds.length
+          ? await Product.countDocuments({ isSpecialOffer: true, _id: { $in: excludedIds } })
+          : 0
 
         clearCacheByPrefix('/api/products')
         clearCacheByPrefix('/api/v1/admin/products')
@@ -647,7 +676,7 @@ router.put(
         return res.json({
           success: true,
           message: `Timer disabled for ${result.modifiedCount} products`,
-          data: { modifiedCount: result.modifiedCount }
+          data: { modifiedCount: result.modifiedCount, skippedCount }
         })
       }
 
@@ -669,10 +698,17 @@ router.put(
       console.log('[ADMIN] Updating special offer timer to:', parsedEndTime.toISOString())
 
       // Update all products that have isSpecialOffer: true
+      // (به‌جز اعضای تخفیف‌های زمان‌دار فعال/آینده — مستثنی در skippedCount)
+      const excludedIds = await getSaleMemberProductIds()
+      const timerFilter = { isSpecialOffer: true }
+      if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
       const result = await Product.updateMany(
-        { isSpecialOffer: true },
+        timerFilter,
         { $set: { specialOfferEndTime: parsedEndTime } }
       )
+      const skippedCount = excludedIds.length
+        ? await Product.countDocuments({ isSpecialOffer: true, _id: { $in: excludedIds } })
+        : 0
 
       console.log('[ADMIN] Update result:', result)
 
@@ -682,7 +718,7 @@ router.put(
       res.json({
         success: true,
         message: `Updated timer for ${result.modifiedCount} products`,
-        data: { modifiedCount: result.modifiedCount }
+        data: { modifiedCount: result.modifiedCount, skippedCount }
       })
     } catch (error) {
       console.error('Error updating special offer timer:', error)
@@ -708,10 +744,17 @@ router.put(
       const { endTime, disable } = req.body
 
       if (disable) {
+        // مثل تایمر شگفت‌انگیز: اعضای تخفیف‌های زمان‌دار فعال/آینده مستثنی‌اند.
+        const excludedIds = await getSaleMemberProductIds()
+        const timerFilter = { isFlashDeal: true }
+        if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
         const result = await Product.updateMany(
-          { isFlashDeal: true },
+          timerFilter,
           { $unset: { flashDealEndTime: "" } }
         )
+        const skippedCount = excludedIds.length
+          ? await Product.countDocuments({ isFlashDeal: true, _id: { $in: excludedIds } })
+          : 0
 
         clearCacheByPrefix('/api/products')
         clearCacheByPrefix('/api/v1/admin/products')
@@ -719,7 +762,7 @@ router.put(
         return res.json({
           success: true,
           message: `Timer disabled for ${result.modifiedCount} products`,
-          data: { modifiedCount: result.modifiedCount }
+          data: { modifiedCount: result.modifiedCount, skippedCount }
         })
       }
 
@@ -740,10 +783,17 @@ router.put(
 
       console.log('[ADMIN] Updating flash deal timer to:', parsedEndTime.toISOString())
 
+      // اعضای تخفیف‌های زمان‌دار فعال/آینده مستثنی‌اند (گزارش در skippedCount)
+      const excludedIds = await getSaleMemberProductIds()
+      const timerFilter = { isFlashDeal: true }
+      if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
       const result = await Product.updateMany(
-        { isFlashDeal: true },
+        timerFilter,
         { $set: { flashDealEndTime: parsedEndTime } }
       )
+      const skippedCount = excludedIds.length
+        ? await Product.countDocuments({ isFlashDeal: true, _id: { $in: excludedIds } })
+        : 0
 
       clearCacheByPrefix('/api/products')
       clearCacheByPrefix('/api/v1/admin/products')
@@ -751,7 +801,7 @@ router.put(
       res.json({
         success: true,
         message: `Updated timer for ${result.modifiedCount} products`,
-        data: { modifiedCount: result.modifiedCount }
+        data: { modifiedCount: result.modifiedCount, skippedCount }
       })
     } catch (error) {
       console.error('Error updating flash deal timer:', error)
@@ -1304,6 +1354,17 @@ router.put(
         return res.status(400).json({
           success: false,
           message: exclusivityCheck.message,
+        })
+      }
+
+      // محصول عضو تخفیف زمان‌دار فعال، نمی‌تواند لحظه‌ای/شگفت‌انگیز شود
+      const saleConflictCheck = await validateNoActiveSaleConflict(updates, product)
+      if (!saleConflictCheck.valid) {
+        return res.status(409).json({
+          success: false,
+          code: 'CAMPAIGN_CONFLICT',
+          message: saleConflictCheck.message,
+          data: { sales: saleConflictCheck.sales },
         })
       }
 

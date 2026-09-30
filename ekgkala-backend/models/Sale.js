@@ -48,6 +48,12 @@ const saleSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // آیا محصولات این تخفیف در بخش «منتخب‌ها»ی صفحه اصلی (با لیبل همین تخفیف) نمایش داده شوند؟
+    // پیش‌فرض true است تا رفتار فعلی حفظ شود؛ اسناد قدیمیِ بدون این فیلد هم true حساب می‌شوند.
+    showInFeatured: {
+      type: Boolean,
+      default: true,
+    },
     badgeTheme: {
       type: String,
       enum: ['green-orange', 'gold-red', 'red-purple'],

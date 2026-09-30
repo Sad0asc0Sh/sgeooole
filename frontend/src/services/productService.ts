@@ -516,11 +516,11 @@ export const productService = {
    */
   getSpecialOffers: async (limit: number = 10): Promise<Product[]> => {
     try {
-      // Query products with isSpecialOffer=true and specialOfferEndTime greater than now
+      // «منتخب‌ها»: شگفت‌انگیزهای دستی فعال + محصولات تخفیف‌های زمان‌داری که گزینه‌ی
+      // «نمایش در منتخب‌های صفحه اصلی» دارند (با لیبل همان تخفیف). فیلتر زمانی در بک‌اند اعمال می‌شود.
       // OPTIMIZED: Only fetch fields needed for rail display
-      const now = new Date().toISOString();
       const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
-      const response = await api.get(`/products?isSpecialOffer=true&specialOfferEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`);
+      const response = await api.get(`/products?featured=true&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
     } catch (error) {
