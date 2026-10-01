@@ -13,6 +13,7 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
 const { WIZARD_DOMAINS } = require('./packDomains');
+const { resolveBasePrice } = require('../services/pricingService');
 
 // نام مستعار سازگاری (تعریف اصلی دامنه‌ها در packDomains.js است)
 const PACK_DOMAINS = WIZARD_DOMAINS;
@@ -97,22 +98,23 @@ function effectivePrice(p) {
   return Number(p.price) || 0;
 }
 
-/** قیمت نهایی فروش — آینه منطق resolvePricing فرانت (بدون промو زمانی): compare بالاتر یعنی price نهایی است */
+/** قیمت نهایی فروش — قرارداد مرکزی قیمت: مبنا همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده */
 function finalPriceOf(p) {
   const raw = effectivePrice(p);
   const cmp = Number(p.compareAtPrice) || 0;
-  if (cmp > raw) return raw;
   const d = Number(p.discount) || 0;
-  if (d > 0 && d < 100) return Math.round(raw * (1 - d / 100));
-  return raw;
+  const base = resolveBasePrice(raw, cmp, d);
+  if (d > 0 && d < 100) return Math.round(base * (1 - d / 100));
+  return base;
 }
 
 function oldPriceOf(p, fin) {
-  const cmp = Number(p.compareAtPrice) || 0;
-  if (cmp > fin) return cmp;
-  const d = Number(p.discount) || 0;
   const raw = effectivePrice(p);
-  if (d > 0 && raw > fin) return raw;
+  const cmp = Number(p.compareAtPrice) || 0;
+  const d = Number(p.discount) || 0;
+  const base = resolveBasePrice(raw, cmp, d);
+  // قیمت خط‌خورده فقط با تخفیف واقعی فعال نمایش داده می‌شود؛ compare کهنه‌ی منقضی/بدون تخفیف oldPrice نمی‌سازد
+  if (d > 0 && d < 100 && base > fin) return base;
   return undefined;
 }
 

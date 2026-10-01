@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import HeroSection from "@/components/home/HeroSection";
 import CategoryRail from "@/components/home/CategoryRail";
 import FlashOfferRail from "@/components/home/FlashOfferRail";
@@ -248,53 +247,6 @@ export default async function Home() {
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
           <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} />
         </Suspense>
-      </HomeSection>
-
-      {/*
-        Phase 2 SEO #14: visible intro copy (150–200 words) above the product
-        grid. Static server-rendered content — headline, real text and internal
-        links land in the initial HTML for crawlers.
-      */}
-      <HomeSection variant="discovery">
-        <section className="mx-4 rounded-2xl border border-gray-100 bg-white p-6 md:p-8 shadow-sm">
-          <h2 className="text-lg md:text-xl font-extrabold text-gray-900 mb-4">
-            فروشگاه تخصصی دوربین مداربسته و سیستم‌های امنیتی
-          </h2>
-          <div className="space-y-4 text-[15px] leading-8 text-gray-700">
-            <p>
-              ای کا جی کالا (ekgkala) فروشگاه تخصصی دوربین مداربسته و تجهیزات امنیتی است؛
-              از دوربین‌های تحت شبکه و آنالوگ تا دستگاه‌های ضبط DVR و NVR، هارد نظارتی،
-              سوئیچ PoE و لوازم جانبی نصب. ما باور داریم امنیت خانه و محل کار نباید
-              پیچیده یا پرهزینه باشد؛ به همین دلیل هر محصول را با مشخصات شفاف، قیمت
-              به‌روز و گارانتی معتبر عرضه می‌کنیم تا با خیال راحت انتخاب کنید.
-            </p>
-            <p>
-              اگر نمی‌دانید از کجا شروع کنید،{" "}
-              <Link href="/guides/راهنمای-خرید-دوربین-مداربسته" className="text-blue-700 underline decoration-blue-200 underline-offset-4 hover:decoration-blue-500">
-                راهنمای خرید دوربین مداربسته
-              </Link>{" "}
-              قدم‌به‌قدم شما را از انتخاب نوع دوربین تا محاسبه ظرفیت هارد همراهی می‌کند؛
-              برای آشنایی با اصطلاحات فنی هم{" "}
-              <Link href="/glossary" className="text-blue-700 underline decoration-blue-200 underline-offset-4 hover:decoration-blue-500">
-                واژه‌نامه تصویری
-              </Link>{" "}
-              ما را ببینید. پرفروش‌ترین مدل‌ها را می‌توانید مستقیم از{" "}
-              <Link href="/products?category=دوربین-مداربسته-ipانالوگبیسیم" className="text-blue-700 underline decoration-blue-200 underline-offset-4 hover:decoration-blue-500">
-                دسته‌بندی دوربین مداربسته
-              </Link>{" "}
-              یا{" "}
-              <Link href="/products?category=دستگاه-ضبط-تصویر-dvrnvr" className="text-blue-700 underline decoration-blue-200 underline-offset-4 hover:decoration-blue-500">
-                دستگاه‌های ضبط تصویر (DVR/NVR)
-              </Link>{" "}
-              مشاهده و مقایسه کنید.
-            </p>
-            <p>
-              سفارش شما با بسته‌بندی مطمئن و ارسال سریع به سراسر کشور می‌رسد و تیم
-              پشتیبانی ای کا جی کالا برای مشاوره پیش از خرید، انتخاب تعداد دوربین
-              مناسب فضای شما و راهنمایی نصب، در کنار شماست تا خریدی مطمئن را تجربه کنید.
-            </p>
-          </div>
-        </section>
       </HomeSection>
 
       <HomeSection variant="products">

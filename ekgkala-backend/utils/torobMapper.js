@@ -34,13 +34,13 @@ const getPricing = (product, variant, now = new Date()) => {
   const item = { product, variantOptions: variant?.options || [], price: variant?.price };
   const pricing = computeItemPricing(item, now);
   const currentPrice = Math.round(pricing.finalPrice);
-  const compareAtPrice = Number(product?.compareAtPrice);
 
+  // قیمت خط‌خورده فقط با تخفیف واقعی فعال از مبنای resolved می‌آید؛ compare کهنه‌ی خام هرگز oldPrice نمی‌شود
   return {
     currentPrice,
-    oldPrice: compareAtPrice > currentPrice
-      ? Math.round(compareAtPrice)
-      : (pricing.discount > 0 ? Math.round(pricing.basePrice) : null),
+    oldPrice: (pricing.discount > 0 && Math.round(pricing.basePrice) > currentPrice)
+      ? Math.round(pricing.basePrice)
+      : null,
   }
 }
 

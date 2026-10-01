@@ -1,3 +1,92 @@
+// ============================================
+// قرارداد مرکزی قیمت (price contract)
+// --------------------------------------------
+// مبنای تخفیف درصدی همیشه «price» ثبت‌شده است؛ compareAtPrice فقط قیمت
+// خط‌خورده‌ی نمایشی است و هرگز مبنای محاسبه نیست.
+// تنها استثنا (سازگاری با داده‌ی قدیمی): اگر price از قبل تخفیف‌خورده ذخیره
+// شده باشد، یعنی compareAtPrice > price و رابطه‌ی
+//   price ≈ compareAtPrice × (1 − storedDiscount/100)
+// با تلرانس رُند شدن برقرار باشد، آنگاه compareAtPrice مبناست. این تشخیص فقط
+// با تخفیف ثبت‌شده‌ی خود محصول انجام می‌شود چون کمپین Sale درصد را جایگزین می‌کند.
+// ============================================
+
+// تلرانس تشخیص داده‌ی قدیمی (خطای رُند شدن، به تومان)
+const LEGACY_BASE_TOLERANCE = 1
+
+const resolveBasePrice = (price, compareAtPrice, storedDiscount = 0) => {
+  const p = Number(price) || 0
+  const c = Number(compareAtPrice) || 0
+  // قیمت صفر/نامعتبر: رفتار قبلی (max) حفظ می‌شود تا «قیمت ۰ + تخفیف» نشکند
+  if (p <= 0) return Math.max(p, c)
+  if (c > p) {
+    const d = Number(storedDiscount) || 0
+    if (d > 0 && d <= 100 && Math.abs(p - c * (1 - d / 100)) <= LEGACY_BASE_TOLERANCE) {
+      return c
+    }
+  }
+  return p
+}
+
+// اعمال درصد تخفیف روی آبجکت محصول برای پاسخ جزئیات: price به قیمت نهایی
+// و compareAtPrice به مبنای resolved تبدیل می‌شود. قرارداد API عوض نمی‌شود.
+const applyDiscountToObject = (target, discountPct, storedDiscount = 0) => {
+  if (!target || !(discountPct > 0)) return target
+  if (target.price !== undefined && target.price > 0) {
+    const orig = resolveBasePrice(target.price, target.compareAtPrice, storedDiscount)
+    const dAmount = (orig * discountPct) / 100
+    target.price = Math.round(orig - dAmount)
+    target.compareAtPrice = orig
+  }
+  if (Array.isArray(target.variants) && target.variants.length > 0) {
+    target.variants = target.variants.map((v) => {
+      const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+      if (vObj.price > 0) {
+        const origV = resolveBasePrice(vObj.price, vObj.compareAtPrice, storedDiscount)
+        const vDiscount = (origV * discountPct) / 100
+        vObj.price = Math.round(origV - vDiscount)
+        vObj.compareAtPrice = origV
+      }
+      return vObj
+    })
+  }
+  return target
+}
+
+// پاک‌سازی ورودی compareAtPrice:
+// - اگر ≤ قیمت باشد نادیده گرفته می‌شود (null برمی‌گردد تا پاک شود)
+// - اگر بیش از ۱۰ برابر قیمت باشد فقط هشدار می‌دهد (خطای سخت نیست)
+const sanitizeCompareAtPrice = (price, compareAtPrice) => {
+  const p = Number(price) || 0
+  if (compareAtPrice === null || compareAtPrice === undefined || compareAtPrice === '') {
+    return { value: null, warning: null }
+  }
+  const c = Number(compareAtPrice)
+  if (!Number.isFinite(c)) return { value: null, warning: null }
+  if (c <= p) return { value: null, warning: null }
+  if (p > 0 && c > p * 10) {
+    return { value: c, warning: `قیمت خط‌خورده (${c.toLocaleString('fa-IR')}) بیش از ۱۰ برابر قیمت (${p.toLocaleString('fa-IR')}) است؛ احتمال اشتباه تایپی وجود دارد` }
+  }
+  return { value: c, warning: null }
+}
+
+// پاک‌سازی قیمت خط‌خورده‌ی واریانت‌ها با همان قاعده‌ی محصول ساده.
+// هشدارها را برمی‌گرداند تا caller در پاسخ/لاگ بگذارد.
+const sanitizeVariantsCompareAtPrice = (variants) => {
+  const warnings = []
+  if (!Array.isArray(variants)) return { variants, warnings }
+  const cleaned = variants.map((v, i) => {
+    if (!v || typeof v !== 'object') return v
+    const { value, warning } = sanitizeCompareAtPrice(v.price, v.compareAtPrice)
+    if (warning) warnings.push(`واریانت ${i + 1}: ${warning}`)
+    if (value === null) {
+      const { compareAtPrice: _drop, ...rest } = v
+      return rest
+    }
+    return { ...v, compareAtPrice: value }
+  })
+  return { variants: cleaned, warnings }
+}
+
 const normalizeVariantOptions = (variantOptions) => {
   if (!Array.isArray(variantOptions)) return []
 
@@ -131,14 +220,16 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
   const matchingVariant = findMatchingVariant(product, item.variantOptions)
 
   let basePrice = 0
+  // مبنای تخفیف طبق قرارداد مرکزی: همیشه price، مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده
+  const storedDiscount = Number(product.discount) || 0
   if (matchingVariant) {
     const vPrice = Number(matchingVariant.price) || 0
     const vCompareAt = Number(matchingVariant.compareAtPrice) || 0
-    basePrice = vCompareAt > vPrice ? vCompareAt : vPrice
+    basePrice = resolveBasePrice(vPrice, vCompareAt, storedDiscount)
   } else {
     const rawCompareAt = Number(product.compareAtPrice) || 0
     const rawProdPrice = Number(product.price ?? item.price ?? 0) || 0
-    basePrice = rawCompareAt > rawProdPrice ? rawCompareAt : rawProdPrice
+    basePrice = resolveBasePrice(rawProdPrice, rawCompareAt, storedDiscount)
   }
 
   let rawDiscount = Number(product.discount) || 0
@@ -182,7 +273,7 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
 
   const finalPrice =
     appliedDiscount > 0
-      ? Math.max(0, basePrice - (basePrice * appliedDiscount) / 100)
+      ? Math.max(0, Math.round(basePrice * (1 - appliedDiscount / 100)))
       : basePrice
 
   return {
@@ -203,4 +294,9 @@ module.exports = {
   findMatchingVariant,
   computeItemPricing,
   getActiveSalesCampaignContext,
+  resolveBasePrice,
+  applyDiscountToObject,
+  sanitizeCompareAtPrice,
+  sanitizeVariantsCompareAtPrice,
+  LEGACY_BASE_TOLERANCE,
 }

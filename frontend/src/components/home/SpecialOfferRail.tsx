@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, memo } from "react";
+import { useEffect, useRef, useState, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
@@ -23,9 +23,54 @@ import { useVelocitySnap } from "@/hooks/useVelocitySnap";
  * Special Offer Rail Component
  * OPTIMIZED: Uses SWR for caching, useMemo for computed values
  */
+/** اندازه‌های کاندید فونت سگمنت کمپین، از بزرگ به کوچک */
+const CAMPAIGN_FIT_SIZES = [10, 9.5, 9, 8.5, 8, 7.5];
+
+/**
+ * سگمنت بج کمپین با فونت خودکار: بزرگ‌ترین اندازه‌ای که کل متن را
+ * بدون برش در فضای موجود جا می‌دهد انتخاب می‌شود (اندازه‌گیری واقعی
+ * در مرورگر، نه حدس).
+ */
+function CampaignSegment({ label }: { label: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let cancelled = false;
+    const fit = () => {
+      el.style.fontSize = "";
+      for (const size of CAMPAIGN_FIT_SIZES) {
+        el.style.fontSize = `${size}px`;
+        if (el.scrollWidth <= el.clientWidth) return;
+      }
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => {
+        if (!cancelled) fit();
+      });
+    }
+    return () => {
+      cancelled = true;
+      window.removeEventListener("resize", fit);
+    };
+  }, [label]);
+
+  return (
+    <span
+      ref={ref}
+      className="min-w-0 flex-1 truncate border-s border-ekg-200/70 bg-blue-50 px-2 py-1.5 text-center text-[10px] font-bold leading-none text-blue-700"
+    >
+      {label}
+    </span>
+  );
+}
+
 function SpecialOfferRail() {
   // SWR-based fetching with automatic caching
-  const { specialOffers: products, isLoading, error } = useSpecialOffers(10);
+  const { specialOffers: products, isLoading, error } = useSpecialOffers(100);
   const [now, setNow] = useState(() => Date.now());
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
 
@@ -124,16 +169,22 @@ function SpecialOfferRail() {
                 style={{ width: "148px", height: "auto" }}
               >
                 <Link href={`/product/${product.id}`} className="block h-full">
-                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
-                    <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
-                      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
+                    {/* نوار چسبیده بج‌ها: «منتخب» و بج کمپین در یک کپسول یکپارچه، بدون فاصله */}
+                    <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">
+                      {product.campaignLabel ? (
+                        <div className="flex w-full items-stretch overflow-hidden rounded-full border border-ekg-200 text-[9px] font-bold leading-none">
+                          <span className="shrink-0 bg-ekg-50 px-2 py-1.5 whitespace-nowrap text-ekg-700">
+                            {getPromotionCopy("promotion.reason.curated.label")}
+                          </span>
+                          <CampaignSegment label={product.campaignLabel} />
+                        </div>
+                      ) : (
                         <PromotionBadge label={getPromotionCopy("promotion.reason.curated.label")} tone="curated" />
-                        {isLowStock ? (
-                          <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
-                        ) : product.campaignLabel ? (
-                          <PromotionBadge label={product.campaignLabel} tone="campaign" />
-                        ) : null}
-                      </div>
+                      )}
+                      {isLowStock ? (
+                        <PromotionBadge label={getPromotionCopy("promotion.reason.limitedStock.label")} tone="limited" />
+                      ) : null}
                     </div>
 
                     {/* Product Image */}

@@ -88,6 +88,8 @@ function parseListingQuery(query = {}) {
     skipDiscount: query.skipDiscount === undefined ? false : boolean(query.skipDiscount, 'skipDiscount'),
     inStock: query.inStock === undefined ? false : boolean(query.inStock, 'inStock'),
     onSale: query.onSale === undefined ? false : boolean(query.onSale, 'onSale'),
+    // بخش «منتخب‌ها»ی صفحه اصلی: شگفت‌انگیزهای دستی + محصولات تخفیف‌های زمان‌داری که showInFeatured دارند
+    featured: query.featured === undefined ? false : boolean(query.featured, 'featured'),
     includeChildren: query.includeChildren === undefined ? false : boolean(query.includeChildren, 'includeChildren'),
     projection: parseProjection(query.fields),
     conditions: [],
@@ -210,12 +212,21 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
   const campaigns = []
   if (!options.skipDiscount) {
     const sales = await Sale.find({ isActive: true, startDate: { $lte: now }, endDate: { $gt: now } })
-      .select('name products categories discountPercentage badgeTheme endDate includeSubcategories').sort({ _id: 1 }).lean()
+      .select('name products categories discountPercentage badgeTheme endDate includeSubcategories showInFeatured').sort({ _id: 1 }).lean()
     for (const sale of sales) {
       const categories = []
       for (const id of sale.categories || []) categories.push(...(sale.includeSubcategories !== false ? await categoryIds(id) : [id]))
       campaigns.push({ ...sale, categories })
     }
+  }
+  if (options.featured && !options.skipDiscount) {
+    const featuredOr = [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }]
+    for (const sale of campaigns) {
+      if (sale.showInFeatured === false) continue
+      if (sale.products?.length) featuredOr.push({ _id: { $in: sale.products } })
+      if (sale.categories?.length) featuredOr.push({ category: { $in: sale.categories } })
+    }
+    conditions.push({ $or: featuredOr })
   }
   return { conditions, campaigns }
 }
@@ -232,13 +243,31 @@ function pricingStages(campaigns, now) {
   // Within a tier use oldest ObjectId, making overlapping campaigns deterministic.
   const branches = ['products', 'categories'].flatMap((key) => campaigns.filter((c) => c[key]?.length).map((sale) => ({
     case: { $in: [key === 'products' ? '$_id' : '$category', literal(sale[key])] },
-    then: literal({ name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme || 'green-orange', endDate: sale.endDate }),
+    then: literal({ name: sale.name, discount: sale.discountPercentage, theme: sale.badgeTheme || 'green-orange', endDate: sale.endDate, featured: sale.showInFeatured !== false }),
   })))
   const hasCampaign = { $ne: [ref('campaign'), null] }
-  const priceObject = (source) => {
+  // آینه‌ی resolveBasePrice با عملگرهای مونگو (pipeline نمی‌تواند JS صدا بزند).
+  // هر تغییری در منطق باید در هر دو جا اعمال و با تست همسانی پوشش داده شود.
+  const priceObject = (source, storedDiscountExpr) => {
     const price = numeric(`${source}.price`)
     const compare = numeric(`${source}.compareAtPrice`)
-    const base = { $max: [price, compare] }
+    const storedDiscount = storedDiscountExpr
+    const legacyMatch = {
+      $and: [
+        { $gt: [compare, price] },
+        { $gt: [storedDiscount, 0] },
+        { $lte: [storedDiscount, 100] },
+        // |price − compare×(1 − d/100)| ≤ ۱ : تلرانس رُند شدن
+        { $lte: [{ $abs: { $subtract: [price, { $multiply: [compare, { $subtract: [1, { $divide: [storedDiscount, 100] }] }] }] } }, 1] },
+      ],
+    }
+    const base = {
+      $cond: [
+        { $lte: [price, 0] },
+        { $max: [price, compare] },
+        { $cond: [legacyMatch, compare, price] },
+      ],
+    }
     return {
       price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [ref('discount'), 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, ref('discount')] }, 100] }] }), price] }] },
       compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [ref('discount'), 0] }] }, base, compare] },
@@ -256,8 +285,9 @@ function pricingStages(campaigns, now) {
       [`${INTERNAL}.stock`]: { $cond: [{ $eq: ['$productType', 'variable'] }, { $sum: '$variants.stock' }, numeric('$stock')] },
     } },
     { $addFields: {
-      [`${INTERNAL}.root`]: priceObject('$$ROOT'),
-      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant')] } } },
+      // تخفیف ثبت‌شده‌ی خود محصول برای تشخیص داده‌ی قدیمی؛ داخل $map هم به سند ریشه اشاره می‌کند
+      [`${INTERNAL}.root`]: priceObject('$$ROOT', numeric('$discount')),
+      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'))] } } },
     } },
     { $addFields: {
       [`${INTERNAL}.display`]: { $cond: [ref('variable'), { $reduce: { input: ref('variants'), initialValue: null, in: { $cond: [{ $or: [{ $eq: ['$$value', null] }, { $lt: ['$$this.price', '$$value.price'] }] }, '$$this', '$$value'] } } }, ref('root')] },
@@ -279,9 +309,28 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
   const effectiveConditions = []
   if (options.inStock) effectiveConditions.push({ [`${INTERNAL}.stock`]: { $gt: 0 } })
   if (options.onSale) effectiveConditions.push({ [`${INTERNAL}.onSale`]: true })
+  if (options.featured && !options.skipDiscount) {
+    // اگر کمپینِ اعمال‌شده روی محصول تخفیف زمان‌دار است، فقط با showInFeatured وارد منتخب‌ها می‌شود؛
+    // در غیر این صورت شگفت‌انگیز دستیِ فعال (با تایمر) ملاک است.
+    effectiveConditions.push({ $expr: { $cond: [
+      { $ne: [ref('campaign'), null] },
+      { $eq: [ref('campaign.featured'), true] },
+      { $and: [{ $eq: ['$isSpecialOffer', true] }, { $gt: [{ $ifNull: ['$specialOfferEndTime', null] }, now] }] },
+    ] } })
+  }
   if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
   const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
-  const data = [...priceMatch, ...sortStages(options, searchPattern), { $sort: options.sort }, { $skip: (options.page - 1) * options.limit }, { $limit: options.limit }]
+  const data = [...priceMatch, ...sortStages(options, searchPattern)]
+  if (options.featured && !options.skipDiscount) {
+    // «منتخب‌ها»: ترتیب کاملاً رندم؛ زمان فعال‌سازی نباید از ترتیب کارت‌ها قابل حدس باشد.
+    data.push(
+      { $addFields: { [`${INTERNAL}.randSort`]: { $rand: {} } } },
+      { $sort: { [`${INTERNAL}.randSort`]: 1 } },
+    )
+  } else {
+    data.push({ $sort: options.sort })
+  }
+  data.push({ $skip: (options.page - 1) * options.limit }, { $limit: options.limit })
   if (!options.skipDiscount) data.push({ $addFields: {
     price: ref('price'), stock: ref('stock'),
     // Expose compareAtPrice ONLY when a real discount exists. Otherwise a

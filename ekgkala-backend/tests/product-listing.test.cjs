@@ -55,7 +55,8 @@ test('timed offers expire strictly, restore base price and do not match onSale',
   assert.deepEqual(all.data.map((p) => p.price), [1000, 1000, 800, 800, 800])
   assert.deepEqual(all.data.map((p) => p.discount), [0, 0, 20, 20, 0])
   const sales = run(products, { onSale: 'true' })
-  assert.deepEqual(ids(sales), [3, 4, 5].map((n) => String(id(n))))
+  // onSale فقط تخفیف واقعی است؛ محصول ۵ فقط compare کهنه دارد و sale نیست
+  assert.deepEqual(ids(sales), [3, 4].map((n) => String(id(n))))
   assert.equal(count(run(products, { maxPrice: '900' })), 3)
 })
 
@@ -224,4 +225,83 @@ test('production query sanitizers and hpp preserve repeated nested properties', 
   assert.equal(nextCalls, 3)
   assert.deepEqual(parseListingQuery(req.query).properties.get('رنگ'), ['قرمز', 'آبی'])
   assert.deepEqual(parseListingQuery(req.query).brands, ['alpha', 'beta'])
+})
+
+test('featured=true: manual special offers + only showInFeatured campaigns, with campaign label', () => {
+  const products = [
+    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }), // manual شگفت‌انگیز
+    product(2, {}), // in featured sale
+    product(3, {}), // in NON-featured sale
+    product(4, {}), // plain
+    product(5, { discount: 10, isSpecialOffer: true, specialOfferEndTime: past }), // expired manual
+  ]
+  const campaigns = [
+    { _id: id(301), name: 'ویژه پاییز', discountPercentage: 20, badgeTheme: 'gold-red', endDate: future, products: [id(2)], categories: [], showInFeatured: true },
+    { _id: id(302), name: 'بی‌سر و صدا', discountPercentage: 30, badgeTheme: 'green-orange', endDate: future, products: [id(3)], categories: [], showInFeatured: false },
+  ]
+  // The Mongo-level pre-filter is applied by resolveListingContext; emulate it with the same $or so Mingo sees the real pipeline.
+  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }, { _id: { $in: [id(2)] } }] }]
+  const opts = parseListingQuery({ featured: 'true', sort: 'newest' })
+  const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns }, now))[0]
+  assert.deepEqual(ids(result).sort(), [id(1), id(2)].map(String).sort())
+  const sale = result.data.find((p) => String(p._id) === String(id(2)))
+  assert.equal(sale.campaignLabel, 'ویژه پاییز')
+  assert.equal(sale.discount, 20)
+
+  // Non-featured campaign product is never returned even if a pre-filter lets it through.
+  const leaky = aggregate(products, buildListingPipeline(opts, { conditions: [], campaigns }, now))[0]
+  assert.ok(!ids(leaky).includes(String(id(3))))
+  assert.ok(!ids(leaky).includes(String(id(4))))
+  assert.ok(!ids(leaky).includes(String(id(5))))
+})
+
+test('showInFeatured=false only hides from the featured rail; normal pricing is untouched', () => {
+  const products = [product(3, {})]
+  const campaigns = [
+    { _id: id(302), name: 'بی‌سر و صدا', discountPercentage: 30, badgeTheme: 'green-orange', endDate: future, products: [id(3)], categories: [], showInFeatured: false },
+  ]
+  const result = run(products, {}, campaigns)
+  assert.deepEqual(ids(result), [String(id(3))])
+  assert.equal(result.data[0].discount, 30)
+  assert.equal(result.data[0].price, 700)
+  assert.equal(result.data[0].campaignLabel, 'بی‌سر و صدا')
+  assert.equal(result.data[0].isSpecialOffer, true)
+  assert.deepEqual(result.data[0].specialOfferEndTime, future)
+})
+
+test('featured=true keeps only TIMED manual specials; indefinite ones stay out of the rail', () => {
+  const products = [
+    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }), // timed manual
+    product(6, { discount: 10, isSpecialOffer: true }), // indefinite manual (no end time)
+  ]
+  const opts = parseListingQuery({ featured: 'true', sort: 'newest' })
+  // Pre-filter mirror of resolveListingContext: only timed manuals pass at the Mongo level.
+  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }] }]
+  const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns: [] }, now))[0]
+  assert.deepEqual(ids(result), [String(id(1))])
+})
+
+test('featured=true: cards are shuffled randomly (activation time not inferable)', () => {
+  const products = [
+    product(1, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
+    product(2, {}),
+    product(3, {}),
+    product(4, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
+    product(5, {}),
+    product(6, { discount: 10, isSpecialOffer: true, specialOfferEndTime: future }),
+  ]
+  const campaigns = [
+    { _id: id(301), name: 'ویژه پاییزه', discountPercentage: 20, badgeTheme: 'gold-red', endDate: future, products: [id(2), id(3), id(5)], categories: [], showInFeatured: true },
+  ]
+  const pre = [{ $or: [{ isSpecialOffer: true, specialOfferEndTime: { $gt: now } }, { _id: { $in: [id(2), id(3), id(5)] } }] }]
+  const opts = parseListingQuery({ featured: 'true', limit: '100' })
+  const seen = new Set()
+  for (let i = 0; i < 8; i++) {
+    const result = aggregate(products, buildListingPipeline(opts, { conditions: pre, campaigns }, now))[0]
+    // همه‌ی اعضا هر بار برمی‌گردند؛ فقط ترتیب فرق می‌کند
+    assert.deepEqual(ids(result).sort(), products.map((p) => String(p._id)).sort())
+    seen.add(ids(result).join(','))
+  }
+  // احتمال یکسان‌بودن هر ۸ ترتیب برای ۶ محصول عملاً صفر است (۶! = ۷۲۰)
+  assert.ok(seen.size > 1, 'expected shuffled order to vary across runs')
 })

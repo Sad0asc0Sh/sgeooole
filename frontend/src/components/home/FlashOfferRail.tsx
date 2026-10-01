@@ -26,7 +26,7 @@ import { useVelocitySnap } from "@/hooks/useVelocitySnap";
  */
 function FlashOfferRail() {
   // SWR-based fetching with automatic caching
-  const { flashDeals, isLoading } = useFlashDeals(10);
+  const { flashDeals, isLoading } = useFlashDeals(100);
   const [now, setNow] = useState(() => Date.now());
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
 

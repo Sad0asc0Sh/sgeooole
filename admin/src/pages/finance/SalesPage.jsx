@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Card,
   Tag,
@@ -14,6 +14,7 @@ import {
   DatePicker,
   Switch,
   Radio,
+  Alert,
 } from 'antd'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
@@ -49,7 +50,11 @@ function SalesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingSale, setEditingSale] = useState(null)
+  // محصولاتی که قبلاً در «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» فعال شده‌اند: { [productId]: [{type,label,endTime}] }
+  const [conflictMap, setConflictMap] = useState({})
+  const [conflictsLoading, setConflictsLoading] = useState(false)
   const [form] = Form.useForm()
+  const watchedRange = Form.useWatch('dateRange', form)
 
   const fetchSales = async () => {
     setLoading(true)
@@ -79,16 +84,65 @@ function SalesPage() {
     }
   }
 
+  const fetchConflicts = async (excludeSaleId, startDate) => {
+    setConflictsLoading(true)
+    try {
+      const res = await api.get('/sales/admin/product-conflicts', {
+        params: {
+          ...(excludeSaleId ? { excludeSaleId } : {}),
+          ...(startDate ? { startDate } : {}),
+        },
+      })
+      const rows = Array.isArray(res?.data?.data) ? res.data.data : []
+      const map = {}
+      rows.forEach((row) => {
+        map[row.productId] = row.conflicts || []
+      })
+      setConflictMap(map)
+      return map
+    } catch (err) {
+      setConflictMap({})
+      message.error('خطا در بررسی محصولاتِ درگیر در پیشنهاد لحظه‌ای/شگفت‌انگیز')
+      return {}
+    } finally {
+      setConflictsLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchSales()
     fetchProducts()
   }, [])
+
+  // با باز بودن مودال و تغییر بازه زمانی، فهرست محصولات درگیر را به‌روز نگه می‌داریم
+  useEffect(() => {
+    if (!modalOpen) return
+    const start = watchedRange?.[0]
+    fetchConflicts(editingSale?._id, start ? start.toISOString() : undefined)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, editingSale?._id, watchedRange?.[0]?.valueOf?.()])
+
+  const productOptions = useMemo(
+    () =>
+      products.map((p) => {
+        const conflicts = conflictMap[p._id] || []
+        return {
+          label: p.sku ? `${p.name} (${p.sku})` : p.name,
+          value: p._id,
+          sku: p.sku || '',
+          disabled: conflicts.length > 0,
+          conflicts,
+        }
+      }),
+    [products, conflictMap],
+  )
 
   const openCreateModal = () => {
     setEditingSale(null)
     form.resetFields()
     form.setFieldsValue({
       isActive: true,
+      showInFeatured: true,
     })
     setModalOpen(true)
   }
@@ -103,6 +157,7 @@ function SalesPage() {
       products: sale.products?.map((p) => (typeof p === 'object' ? p._id : p)),
       isActive: sale.isActive,
       badgeTheme: sale.badgeTheme || 'green-orange',
+      showInFeatured: sale.showInFeatured !== false,
     })
     setModalOpen(true)
   }
@@ -119,6 +174,7 @@ function SalesPage() {
         products: values.products || [],
         isActive: values.isActive,
         badgeTheme: values.badgeTheme,
+        showInFeatured: values.showInFeatured !== false,
       }
 
       setSaving(true)
@@ -138,6 +194,11 @@ function SalesPage() {
     } catch (err) {
       if (err?.errorFields) {
         return
+      }
+
+      if (err?.response?.status === 409) {
+        const start = form.getFieldValue('dateRange')?.[0]
+        fetchConflicts(editingSale?._id, start ? start.toISOString() : undefined)
       }
 
       const msg =
@@ -215,6 +276,13 @@ function SalesPage() {
       render: (products) => (
         <Tag color="blue">{Array.isArray(products) ? products.length : 0} محصول</Tag>
       ),
+    },
+    {
+      title: 'منتخب‌ها',
+      dataIndex: 'showInFeatured',
+      key: 'showInFeatured',
+      render: (value) =>
+        value === false ? <Tag>عدم نمایش</Tag> : <Tag color="purple">نمایش در منتخب‌ها</Tag>,
     },
     {
       title: 'وضعیت',
@@ -329,25 +397,55 @@ function SalesPage() {
             />
           </Form.Item>
 
-          <Form.Item name="products" label="محصولات شامل تخفیف">
+          <Form.Item
+            name="products"
+            label="محصولات شامل تخفیف"
+            extra="محصولاتی که قبلاً در «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» فعال شده‌اند غیرقابل انتخاب هستند. برای انتخاب آن‌ها، ابتدا کمپین قبلی را از صفحه‌ی ویرایش محصول غیرفعال کنید."
+          >
             <Select
               mode="multiple"
               placeholder="انتخاب محصولات..."
-              loading={productsLoading}
+              loading={productsLoading || conflictsLoading}
               showSearch
+              optionLabelProp="label"
               filterOption={(input, option) => {
                 const search = (input || '').toString().toLowerCase()
                 const label = (option?.label ?? '').toString().toLowerCase()
                 const sku = (option?.sku ?? '').toString().toLowerCase()
                 return label.includes(search) || sku.includes(search)
               }}
-              options={products.map((p) => ({
-                label: p.sku ? `${p.name} (${p.sku})` : p.name,
-                value: p._id,
-                sku: p.sku || '',
-              }))}
+              options={productOptions}
+              optionRender={(option) => {
+                const conflicts = option.data.conflicts || []
+                return (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <span>{option.data.label}</span>
+                    {conflicts.map((c) => (
+                      <Tag key={c.type} color={c.type === 'flash' ? 'gold' : 'red'} style={{ marginInlineEnd: 0 }}>
+                        {c.label} فعال است
+                      </Tag>
+                    ))}
+                  </div>
+                )
+              }}
             />
           </Form.Item>
+
+          {Object.keys(conflictMap).length > 0 && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message={`${Object.keys(conflictMap).length.toLocaleString('fa-IR')} محصول در پیشنهاد لحظه‌ای یا شگفت‌انگیز فعال هستند و در این فهرست غیرفعال شده‌اند.`}
+            />
+          )}
 
           <Form.Item name="badgeTheme" label="رنگ نشان (Badge Color)">
             <Radio.Group>
@@ -361,6 +459,15 @@ function SalesPage() {
                 <span style={{ color: '#dc2626' }}>●</span> آتشین (حراج ویژه)
               </Radio>
             </Radio.Group>
+          </Form.Item>
+
+          <Form.Item
+            name="showInFeatured"
+            label="نمایش در منتخب‌های صفحه اصلی"
+            valuePropName="checked"
+            extra="اگر فعال باشد، محصولات این تخفیف با لیبل همین تخفیف (نام تخفیف) در بخش «پیشنهادهای منتخب» صفحه‌ی اصلی نمایش داده می‌شوند. اگر خاموش باشد فقط قیمت تخفیفی اعمال می‌شود."
+          >
+            <Switch checkedChildren="نمایش" unCheckedChildren="عدم نمایش" />
           </Form.Item>
 
           <Form.Item name="isActive" label="وضعیت" valuePropName="checked">

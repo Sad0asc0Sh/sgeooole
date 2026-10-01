@@ -560,7 +560,17 @@ function ProductForm() {
       // برای محصولات ساده، price و stock اضافه کن
       if (productType === 'simple') {
         payload.price = values.price
-        payload.compareAtPrice = values.compareAtPrice !== undefined && values.compareAtPrice !== null && values.compareAtPrice !== '' ? values.compareAtPrice : null
+        // پاک‌سازی قیمت خط‌خورده طبق قرارداد قیمت: اگر از قیمت بیشتر نباشد نادیده گرفته می‌شود؛
+        // اگر بیش از ۱۰ برابر قیمت باشد فقط هشدار می‌دهد (خطای سخت نیست)
+        const cmpRaw = values.compareAtPrice !== undefined && values.compareAtPrice !== null && values.compareAtPrice !== '' ? Number(values.compareAtPrice) : null
+        if (cmpRaw !== null && Number.isFinite(cmpRaw) && cmpRaw > Number(values.price)) {
+          if (cmpRaw > Number(values.price) * 10) {
+            message.warning('قیمت خط‌خورده بیش از ۱۰ برابر قیمت است؛ احتمال اشتباه تایپی وجود دارد')
+          }
+          payload.compareAtPrice = cmpRaw
+        } else {
+          payload.compareAtPrice = null
+        }
         payload.stock = values.stock
       }
 
@@ -819,7 +829,7 @@ function ProductForm() {
                         <Form.Item
                           name="compareAtPrice"
                           label="قیمت قبل از تخفیف / خط‌خورده (تومان)"
-                          tooltip="اختیاری - اگر این فیلد پر باشد، قیمت به عنوان قیمت خط‌خورده قبلی نمایش داده می‌شود"
+                          tooltip="اختیاری و فقط نمایشی — مبنای محاسبه‌ی تخفیف همیشه «قیمت» است، نه این فیلد. اگر از قیمت بیشتر نباشد ذخیره نمی‌شود."
                         >
                           <InputNumber
                             style={{ width: '100%' }}

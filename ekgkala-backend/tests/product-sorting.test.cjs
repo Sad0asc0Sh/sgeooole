@@ -14,9 +14,10 @@ test('explicit price order takes precedence over exact SKU search matches', () =
   assert.deepEqual(ids(run(items, { search: 'Camera', sort: 'priceAsc' })), [2, 1])
 })
 
-test('discount order uses actual price reduction including compare-only markdowns', () => {
+test('discount order uses real discount only; compare-only markdowns are not discounts', () => {
   const items = [product(1, { discount: 10 }), product(2, { price: 500, compareAtPrice: 1000 }), product(3, { price: 600, compareAtPrice: 1000, discount: 40, isFlashDeal: true, flashDealEndTime: new Date('2020-01-01') })]
-  assert.deepEqual(ids(run(items, { sort: 'discount' })), [2, 1, 3])
+  // محصول ۲ فقط compare کهنه دارد (تخفیف واقعی ۰) و محصول ۳ منقضی شده؛ فقط محصول ۱ تخفیف واقعی دارد
+  assert.deepEqual(ids(run(items, { sort: 'discount' })), [1, 2, 3])
 })
 
 for (const [sort, expected] of [

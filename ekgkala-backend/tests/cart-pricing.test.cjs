@@ -7,26 +7,26 @@ const cases = [
   {
     name: 'no discount',
     item: { product: { productType: 'simple', price: 1000.6, discount: 0 } },
-    beforeRound: 1000.6,
-    roundedValue: 1001,
+    // بدون تخفیف فعال قیمت نهایی همان price است (بدون رُند)
+    expected: 1000.6,
   },
   {
     name: 'regular discount',
     item: { product: { productType: 'simple', price: 1001, discount: 10 } },
-    beforeRound: 900.9,
-    roundedValue: 901,
+    // با تخفیف فعال: Math.round(1001 × 0.9) = 901
+    expected: 901,
   },
   {
     name: 'active flash deal',
     item: { product: { productType: 'simple', price: 1003, discount: 10, isFlashDeal: true, flashDealEndTime: '2026-07-18T00:00:00.000Z' } },
-    beforeRound: 902.7,
-    roundedValue: 903,
+    // با تخفیف فعال: Math.round(1003 × 0.9) = 903
+    expected: 903,
   },
 ]
 
 for (const testCase of cases) {
   const pricing = computeItemPricing(testCase.item, now)
-  assert.strictEqual(pricing.finalPrice, testCase.beforeRound, `${testCase.name}: preserves checkout calculation`)
-  assert.notStrictEqual(pricing.finalPrice, testCase.roundedValue, `${testCase.name}: differs from the Torob-only rounded value`)
-  console.log(`${testCase.name}: checkout=${pricing.finalPrice}, torobRounded=${testCase.roundedValue}`)
+  // قرارداد قیمت: قیمت نهایی تخفیف‌دار همیشه Math.round می‌شود؛ بدون تخفیف همان price
+  assert.strictEqual(pricing.finalPrice, testCase.expected, `${testCase.name}: checkout follows the price contract`)
+  console.log(`${testCase.name}: checkout=${pricing.finalPrice}`)
 }
