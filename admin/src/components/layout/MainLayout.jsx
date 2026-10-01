@@ -112,15 +112,24 @@ function MainLayout({ children }) {
   /**
    * Open submenu keys. Controlled (not `defaultOpenKeys`) so the rail
    * follows navigation: landing on a nested page expands its section
-   * even if you arrived by URL or a search result.
+   * even if you arrived by URL or a search result. The route-derived
+   * section is merged with the sections the operator opened by hand,
+   * so manual expand/collapse keeps working alongside the
+   * navigation-following behavior.
    */
   const trail = useMemo(() => trailFor(location.pathname), [location.pathname])
 
-  const openKeys = useMemo(() => {
-    if (collapsed) return []
+  const [manualOpenKeys, setManualOpenKeys] = useState([])
+
+  const routeOpenKeys = useMemo(() => {
     if (trail?.parent) return [trail.parent.key]
     return []
-  }, [trail, collapsed])
+  }, [trail])
+
+  const openKeys = useMemo(() => {
+    if (collapsed) return []
+    return Array.from(new Set([...manualOpenKeys, ...routeOpenKeys]))
+  }, [manualOpenKeys, routeOpenKeys, collapsed])
 
   useEffect(() => {
     setDrawerOpenKeys((prev) => Array.from(new Set([...prev, ...openKeys])))
@@ -295,7 +304,7 @@ function MainLayout({ children }) {
               popupClassName="admin-sider-popup"
               selectedKeys={[location.pathname]}
               openKeys={openKeys}
-              onOpenChange={setOpenKeys}
+              onOpenChange={setManualOpenKeys}
               items={menuItems}
             />
           </div>
