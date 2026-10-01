@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDisableScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
@@ -13,6 +13,8 @@ import ProductActions from "./ProductActions";
 import ProductHistoryTracker from "./ProductHistoryTracker";
 import ProductSocialActions from "./ProductSocialActions";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
+import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
+import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
 
 type ProductDetailClientProps = {
     product: Product;
@@ -48,36 +50,54 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         return () => setIsProductPage(false);
     }, [setIsProductPage]);
 
-    const [product, setProduct] = useState<Product>(initialProduct);
+    // `snapshot` is the latest data received from the server (SSR/ISR or live refetch).
+    // `product` (below) is what the UI renders: the snapshot with any promotion whose
+    // countdown has already ended stripped out (label, badge, discount, old price).
+    const [snapshot, setSnapshot] = useState<Product>(initialProduct);
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
-        product.colors && product.colors.length > 0 ? product.colors[0] : null
+        initialProduct.colors && initialProduct.colors.length > 0 ? initialProduct.colors[0] : null
     );
 
-    // Sync state when navigating between products AND when a newer snapshot
-    // of the SAME product arrives (price/discount changed on the server).
-    // Previously only the id was compared, so a cached (pre-discount) price
-    // stayed on screen until a hard refresh.
-    useEffect(() => {
-        if (initialProduct.id !== product.id) {
-            setProduct(initialProduct);
-            // Reset color selection for new product
-            if (initialProduct.colors && initialProduct.colors.length > 0) {
-                setSelectedColor(initialProduct.colors[0]);
-            } else {
-                setSelectedColor(null);
-            }
-        } else if (pricingFingerprint(initialProduct) !== pricingFingerprint(product)) {
-            // Same product, fresher pricing snapshot: keep the selected color.
-            setProduct(initialProduct);
-        }
-    }, [initialProduct, product]);
+    // Re-render exactly at the next promotion expiry so the label disappears together
+    // with the price reverting, without re-rendering the page every second.
+    const boundaryInput = useMemo(() => [snapshot], [snapshot]);
+    const now = usePromotionBoundary(boundaryInput);
+    const product = useMemo(() => stripExpiredPromotion(snapshot, now), [snapshot, now]);
 
-    // Live-price guard: the SSR/ISR snapshot above can be up to `revalidate`
-    // seconds old (plus Next.js router cache on client-side navigation).
-    // Fetch the current snapshot in the background right after mount and
-    // whenever the tab becomes visible again, so a discount applied from the
-    // admin panel appears without requiring a manual refresh. Failures are
-    // ignored on purpose: the SSR snapshot stays visible.
+    // Sync state when navigating between products AND when a newer snapshot of the SAME
+    // product arrives from the server (ISR revalidation / router refresh).
+    // IMPORTANT: this effect must react only to changes of `initialProduct`. It used to
+    // also depend on the local state, so a fresher live snapshot fetched on the client
+    // differed from `initialProduct` and was immediately overwritten by the stale SSR one.
+    const lastInitialFingerprint = useRef(pricingFingerprint(initialProduct));
+    useEffect(() => {
+        const incomingFingerprint = pricingFingerprint(initialProduct);
+        setSnapshot((prev) => {
+            if (initialProduct.id !== prev.id) {
+                lastInitialFingerprint.current = incomingFingerprint;
+                return initialProduct;
+            }
+            if (incomingFingerprint !== lastInitialFingerprint.current) {
+                lastInitialFingerprint.current = incomingFingerprint;
+                return initialProduct;
+            }
+            return prev;
+        });
+    }, [initialProduct]);
+
+    // Reset color selection when navigating to another product.
+    const lastProductId = useRef(initialProduct.id);
+    useEffect(() => {
+        if (lastProductId.current === initialProduct.id) return;
+        lastProductId.current = initialProduct.id;
+        setSelectedColor(initialProduct.colors && initialProduct.colors.length > 0 ? initialProduct.colors[0] : null);
+    }, [initialProduct]);
+
+    // Live-price guard: the SSR/ISR snapshot can be up to `revalidate` seconds old (plus
+    // Next.js router cache on client-side navigation). Fetch the current snapshot right
+    // after mount, whenever the tab becomes visible again, and once more right after a
+    // promotion ends. Failures are ignored on purpose: the current snapshot stays visible.
+    const refreshLivePriceRef = useRef<() => void>(() => {});
     useEffect(() => {
         let cancelled = false;
 
@@ -86,15 +106,16 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 const { productService } = await import("@/services/productService");
                 const fresh = await productService.getById(initialProduct.id);
                 if (cancelled || !fresh || fresh.id !== initialProduct.id) return;
-                setProduct((prev) => {
+                setSnapshot((prev) => {
                     if (prev.id !== fresh.id) return prev;
                     return pricingFingerprint(prev) === pricingFingerprint(fresh) ? prev : fresh;
                 });
             } catch {
-                // Keep the SSR snapshot when offline or when the backend is unreachable.
+                // Keep the current snapshot when offline or when the backend is unreachable.
             }
         };
 
+        refreshLivePriceRef.current = refreshLivePrice;
         refreshLivePrice();
 
         const onVisibilityChange = () => {
@@ -103,9 +124,22 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         document.addEventListener("visibilitychange", onVisibilityChange);
         return () => {
             cancelled = true;
+            refreshLivePriceRef.current = () => {};
             document.removeEventListener("visibilitychange", onVisibilityChange);
         };
     }, [initialProduct.id]);
+
+    // When a promotion has just ended (the rendered product differs from the snapshot),
+    // ask the server for the authoritative state once per distinct end time. The key
+    // guard prevents a loop if a cached response still carries the expired promotion.
+    const expiryRefetchKey = useRef<string | null>(null);
+    useEffect(() => {
+        if (product === snapshot) return;
+        const key = `${snapshot.id}|${snapshot.flashDealEndTime ?? ""}|${snapshot.specialOfferEndTime ?? ""}`;
+        if (expiryRefetchKey.current === key) return;
+        expiryRefetchKey.current = key;
+        refreshLivePriceRef.current();
+    }, [product, snapshot]);
 
     // Memoize flash deal status
     const isFlashDealActive = useMemo(() => 

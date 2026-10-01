@@ -1,5 +1,6 @@
 "use client";
 import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 
 interface CartItemProps {
     item: {
@@ -36,9 +37,25 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
         item.isSpecialOffer &&
         (!item.specialOfferEndTime || new Date(item.specialOfferEndTime).getTime() > now)
     );
+    // A persisted (localStorage) cart item can carry a label whose promotion has ended.
+    const promotionKind = resolveProductPromotion(
+        {
+            price: item.price,
+            oldPrice: item.originalPrice,
+            discount: item.discount,
+            isFlashDeal: item.isFlashDeal,
+            flashDealEndTime: item.flashDealEndTime,
+            isSpecialOffer: item.isSpecialOffer,
+            specialOfferEndTime: item.specialOfferEndTime,
+            campaignLabel: item.campaignLabel,
+        },
+        now,
+    ).kind;
     const effectiveLabel =
-        item.campaignLabel ||
-        (isFlashActive ? "پیشنهاد لحظه‌ای" : isSpecialActive ? "پیشنهاد شگفت‌انگیز" : undefined);
+        promotionKind === "none"
+            ? undefined
+            : item.campaignLabel ||
+              (isFlashActive ? "پیشنهاد لحظه‌ای" : isSpecialActive ? "پیشنهاد شگفت‌انگیز" : undefined);
     const cleanLabel = effectiveLabel?.replace(/\?/g, "").trim();
     const campaignBadge = cleanLabel
         ? `${cleanLabel}${discountValue ? ` • ${discountValue}%` : ""}`

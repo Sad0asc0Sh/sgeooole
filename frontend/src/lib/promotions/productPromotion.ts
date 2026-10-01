@@ -121,3 +121,44 @@ export function getNextPromotionExpiry(
 
   return candidates.length > 0 ? Math.min(...candidates) : null;
 }
+
+/**
+ * Removes every trace of an EXPIRED timed promotion (label, theme, flags, discount,
+ * struck-through price) from a product snapshot and restores the pre-discount price.
+ *
+ * Why: ISR (revalidate=600) + the backend response cache mean a page can be rendered
+ * from a snapshot taken BEFORE a Sale / flash / special offer ended. Without this,
+ * components that only look at `campaignLabel` keep showing the badge after the
+ * countdown reached zero while the price already reverted.
+ *
+ * Rules:
+ *  - a live promotion, or a plain product with an ordinary discount (no timer flags,
+ *    no campaign metadata), is returned untouched (same reference → no re-render);
+ *  - only snapshots that carry timer flags / campaign metadata AND resolve to
+ *    kind === "none" are cleaned.
+ */
+export function stripExpiredPromotion<T extends ProductPromotionInput & { compareAtPrice?: number }>(
+  product: T,
+  now: number = Date.now(),
+): T {
+  const state = resolveProductPromotion(product, now);
+  if (state.kind !== "none") return product;
+
+  const hasTimerFlag = Boolean(product.isFlashDeal || product.isSpecialOffer);
+  const hasCampaignTrace = Boolean(product.campaignLabel || product.campaignTheme);
+  if (!hasTimerFlag && !hasCampaignTrace) return product;
+
+  return {
+    ...product,
+    price: state.displayPrice,
+    oldPrice: undefined,
+    compareAtPrice: undefined,
+    discount: 0,
+    isFlashDeal: false,
+    flashDealEndTime: undefined,
+    isSpecialOffer: false,
+    specialOfferEndTime: undefined,
+    campaignLabel: undefined,
+    campaignTheme: undefined,
+  } as T;
+}

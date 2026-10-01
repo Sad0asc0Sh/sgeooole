@@ -161,7 +161,7 @@ const getActiveSalesCampaignContext = async (now = new Date()) => {
     const activeSales = await Sale.find({
       isActive: true,
       startDate: { $lte: now },
-      endDate: { $gte: now },
+      endDate: { $gt: now },
     })
       .populate('categories', '_id')
       .select('name products categories discountPercentage badgeTheme endDate includeSubcategories')
@@ -288,6 +288,102 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
   }
 }
 
+const FLASH_LABEL = 'پیشنهاد لحظه‌ای'
+const FLASH_THEME = 'gold-red'
+
+const isTimerLive = (flag, end, now) => Boolean(flag) && (!end || new Date(end) > now)
+
+/**
+ * لایه‌ی تخفیف/لیبل برای پاسخ جزئیات محصول (منبع حقیقتِ واحد برای GET /:id و GET by-code).
+ *
+ * قواعد (هم‌راستا با pipeline لیست محصولات):
+ *  - Sale فعال (startDate ≤ now < endDate): درصد و لیبل Sale اعمال می‌شود.
+ *  - بدون Sale: تخفیف خودِ محصول فقط وقتی اعمال می‌شود که محصول فلگ زمان‌دار نداشته باشد
+ *    یا تایمرِ فلگ‌دارش هنوز نگذشته باشد. تایمر منقضی ⇒ تخفیف ۰، بدون لیبل، بدون قیمت خط‌خورده.
+ *  - لیبل «پیشنهاد لحظه‌ای» فقط برای فلش زنده‌ی دارای تخفیف است.
+ *
+ * @returns {{ promotionEndsAt: Date|null }} نزدیک‌ترین زمان پایانِ پروموشنِ اعمال‌شده؛ برای محدودکردن TTL کش
+ */
+const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date() } = {}) => {
+  // تخفیف ثبت‌شده‌ی خود محصول، قبل از جایگزینی با درصد کمپین (برای تشخیص داده‌ی قدیمی در resolveBasePrice)
+  const storedDiscount = Number(productObj.discount) || 0
+  let promotionEndsAt = null
+  const track = (date) => {
+    if (!date) return
+    const d = new Date(date)
+    if (Number.isNaN(d.getTime()) || d <= now) return
+    if (!promotionEndsAt || d < promotionEndsAt) promotionEndsAt = d
+  }
+
+  if (activeSale) {
+    productObj.campaignLabel = activeSale.name
+    productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
+    if (activeSale.discountPercentage > 0) {
+      productObj.discount = activeSale.discountPercentage
+      productObj.isSpecialOffer = true
+      productObj.isFromActiveSale = true
+      productObj.specialOfferEndTime = activeSale.endDate
+      applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
+    }
+    track(activeSale.endDate)
+    return { promotionEndsAt }
+  }
+
+  const flashLive = isTimerLive(productObj.isFlashDeal, productObj.flashDealEndTime, now)
+  const specialLive = isTimerLive(productObj.isSpecialOffer, productObj.specialOfferEndTime, now)
+  const hasTimerFlag = Boolean(productObj.isFlashDeal || productObj.isSpecialOffer)
+  const timerExpired = hasTimerFlag && !flashLive && !specialLive
+
+  if (timerExpired) {
+    // تایمر تمام شده: خروجی مثل لیست محصولات (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی)
+    productObj.discount = 0
+    if (productObj.compareAtPrice && productObj.compareAtPrice > productObj.price) {
+      productObj.price = productObj.compareAtPrice
+    }
+    delete productObj.compareAtPrice
+    delete productObj.campaignLabel
+    delete productObj.campaignTheme
+    productObj.isSpecialOffer = false
+    productObj.isFlashDeal = false
+    if (Array.isArray(productObj.variants)) {
+      productObj.variants = productObj.variants.map((v) => {
+        const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+        if (vObj.compareAtPrice && vObj.compareAtPrice > vObj.price) {
+          vObj.price = vObj.compareAtPrice
+        }
+        delete vObj.compareAtPrice
+        return vObj
+      })
+    }
+    return { promotionEndsAt: null }
+  }
+
+  if (storedDiscount > 0) {
+    applyDiscountToObject(productObj, storedDiscount, storedDiscount)
+    if (flashLive) {
+      productObj.campaignLabel = FLASH_LABEL
+      productObj.campaignTheme = FLASH_THEME
+      track(productObj.flashDealEndTime)
+    } else {
+      delete productObj.campaignLabel
+      delete productObj.campaignTheme
+    }
+    if (specialLive) track(productObj.specialOfferEndTime)
+  } else {
+    delete productObj.campaignLabel
+    delete productObj.campaignTheme
+    delete productObj.compareAtPrice
+  }
+  return { promotionEndsAt }
+}
+
+/** TTL کش (ثانیه) برای پاسخی که پروموشنش در promotionEndsAt تمام می‌شود؛ هرگز بیشتر از baseTtl و کمتر از ۱ نیست. */
+const ttlUntil = (promotionEndsAt, baseTtl, now = new Date()) => {
+  if (!promotionEndsAt) return baseTtl
+  const seconds = Math.ceil((new Date(promotionEndsAt).getTime() - new Date(now).getTime()) / 1000)
+  return Math.max(1, Math.min(baseTtl, seconds))
+}
+
 module.exports = {
   normalizeVariantOptions,
   getVariantKey,
@@ -296,6 +392,8 @@ module.exports = {
   getActiveSalesCampaignContext,
   resolveBasePrice,
   applyDiscountToObject,
+  applyPromotionOverlay,
+  ttlUntil,
   sanitizeCompareAtPrice,
   sanitizeVariantsCompareAtPrice,
   LEGACY_BASE_TOLERANCE,

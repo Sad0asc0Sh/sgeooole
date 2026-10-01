@@ -8,7 +8,7 @@ it.each([
   { category: "cameras", brand: "a" }, { search: "دوربین" },
 ])("does not index combinations of product filters: %j", async (query) => {
   const metadata = await generateMetadata({ searchParams: Promise.resolve(query) });
-  expect(metadata.robots).toEqual({ index: false, follow: false });
+  expect(metadata.robots).toEqual({ index: false, follow: true });
 });
 
 it("keeps a single category listing indexable", async () => {

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import imageStyles from "./ProductImageFrame.module.css";
 
 interface OptimizedProductCardProps {
@@ -121,7 +122,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     />
 
                     {/* Campaign Badge */}
-                    {product.campaignLabel && (
+                    {product.campaignLabel && resolveProductPromotion(product, now).kind !== "none" && (
                         <div className="absolute top-2 left-2 z-20">
                             <span
                                 className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"

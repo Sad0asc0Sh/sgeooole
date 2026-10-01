@@ -11,7 +11,7 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
-const { applyDiscountToObject, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
+const { applyPromotionOverlay, ttlUntil, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
@@ -978,7 +978,7 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     let activeSale = await Sale.findOne({
       isActive: true,
       startDate: { $lte: now },
-      endDate: { $gte: now },
+      endDate: { $gt: now },
       products: product._id,
     })
       .select('name discountPercentage badgeTheme endDate')
@@ -996,7 +996,7 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
       const categorySales = await Sale.find({
         isActive: true,
         startDate: { $lte: now },
-        endDate: { $gte: now },
+        endDate: { $gt: now },
         categories: { $in: categoryPathIds },
       })
         .select('name discountPercentage badgeTheme endDate includeSubcategories categories')
@@ -1021,28 +1021,9 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
       }
     }
 
-    // تخفیف ثبت‌شده‌ی خود محصول، قبل از جایگزینی با درصد کمپین (برای تشخیص داده‌ی قدیمی در resolveBasePrice)
-    const storedDiscount = Number(productObj.discount) || 0
-
-    if (activeSale) {
-      productObj.campaignLabel = activeSale.name
-      productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
-      if (activeSale.discountPercentage > 0) {
-        productObj.discount = activeSale.discountPercentage
-        productObj.isSpecialOffer = true
-        productObj.isFromActiveSale = true
-        productObj.specialOfferEndTime = activeSale.endDate
-        applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
-      }
-    } else if (productObj.discount > 0) {
-      // Apply direct product discount
-      applyDiscountToObject(productObj, productObj.discount, storedDiscount)
-
-      if (productObj.isFlashDeal) {
-        productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
-        productObj.campaignTheme = 'gold-red'
-      }
-    }
+    // لایه‌ی تخفیف/لیبل: منبع حقیقت واحد (timer-aware) + کوتاه‌کردن TTL کش تا لحظه‌ی پایان پروموشن
+    const { promotionEndsAt } = applyPromotionOverlay(productObj, { activeSale, now })
+    res.locals.cacheTtlSeconds = ttlUntil(promotionEndsAt, 300, now)
 
     res.json({
       success: true,
@@ -2523,7 +2504,7 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
       let activeSale = await Sale.findOne({
         isActive: true,
         startDate: { $lte: now },
-        endDate: { $gte: now },
+        endDate: { $gt: now },
         products: productObj._id,
       })
         .select('name discountPercentage badgeTheme endDate')
@@ -2537,7 +2518,7 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
         const categorySales = await Sale.find({
           isActive: true,
           startDate: { $lte: now },
-          endDate: { $gte: now },
+          endDate: { $gt: now },
           categories: { $in: categoryPathIds },
         })
           .select('name discountPercentage badgeTheme endDate includeSubcategories categories')
@@ -2562,28 +2543,9 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
         }
       }
 
-      // تخفیف ثبت‌شده‌ی خود محصول، قبل از جایگزینی با درصد کمپین (برای تشخیص داده‌ی قدیمی در resolveBasePrice)
-      const storedDiscount = Number(productObj.discount) || 0
-
-      if (activeSale) {
-        productObj.campaignLabel = activeSale.name
-        productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
-        if (activeSale.discountPercentage > 0) {
-          productObj.discount = activeSale.discountPercentage
-          productObj.isSpecialOffer = true
-          productObj.isFromActiveSale = true
-          productObj.specialOfferEndTime = activeSale.endDate
-          applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
-        }
-      } else if (productObj.discount > 0) {
-        // Apply direct product discount
-        applyDiscountToObject(productObj, productObj.discount, storedDiscount)
-
-        if (productObj.isFlashDeal) {
-          productObj.campaignLabel = 'پیشنهاد لحظه‌ای'
-          productObj.campaignTheme = 'gold-red'
-        }
-      }
+      // لایه‌ی تخفیف/لیبل: همان منطق مشترکِ GET /:id
+      const { promotionEndsAt } = applyPromotionOverlay(productObj, { activeSale, now })
+      res.locals.cacheTtlSeconds = ttlUntil(promotionEndsAt, 300, now)
     }
 
     res.json({

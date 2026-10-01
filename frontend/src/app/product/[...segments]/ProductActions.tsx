@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Product, ProductColor } from "@/services/productService";
@@ -28,7 +29,12 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
     );
 
     // Any active countdown (flash deal or special offer)
-    const hasActivePromotion = isFlashDealActive || isSpecialOfferActive || Boolean(product.campaignLabel);
+    // A campaign label counts only while its promotion is live; a label alone (stale snapshot
+    // with an ended countdown) must not keep the discount badge / struck-through price alive.
+    const hasActivePromotion =
+        isFlashDealActive ||
+        isSpecialOfferActive ||
+        (Boolean(product.campaignLabel) && resolveProductPromotion(product, now).kind === "campaign");
 
     // Price reversion: when flash deal or special offer with an end date expires, revert to original price
     const flashExpired = Boolean(product.isFlashDeal && product.flashDealEndTime && new Date(product.flashDealEndTime).getTime() <= now);

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 
 type SimpleGalleryProps = {
     product: Product;
@@ -30,7 +31,8 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
 
     const showCampaignBadge = Boolean(
         product.campaignLabel &&
-        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive)
+        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive) &&
+        resolveProductPromotion(product, now).kind !== "none"
     );
 
     useEffect(() => {

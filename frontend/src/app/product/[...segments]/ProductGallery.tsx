@@ -14,6 +14,7 @@ import { Product } from "@/services/productService";
 import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 type ProductGalleryProps = {
@@ -98,9 +99,12 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
         new Date(product.flashDealEndTime).getTime() > now
     );
 
+    // The badge is shown only while the promotion behind the label is still live
+    // (a stale label with an ended countdown must not survive).
     const showCampaignBadge = Boolean(
         product.campaignLabel &&
-        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive)
+        !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive) &&
+        resolveProductPromotion(product, now).kind !== "none"
     );
 
     // Modal content

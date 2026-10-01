@@ -79,10 +79,11 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
     const cached = cache.get(key)
 
     if (cached) {
+      const hitTtl = cached.ttl || ttlSeconds
       // Set cache headers
-      setCacheHeaders(res, ttlSeconds, cached.etag, !!req.user)
+      setCacheHeaders(res, hitTtl, cached.etag, !!req.user)
       res.setHeader('X-Cache', 'HIT')
-      res.setHeader('X-Cache-TTL', ttlSeconds)
+      res.setHeader('X-Cache-TTL', hitTtl)
 
       // Handle conditional requests (304 Not Modified)
       const clientEtag = req.headers['if-none-match']
@@ -105,12 +106,15 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
           const bodyString = JSON.stringify(payload)
           const etag = crypto.createHash('md5').update(bodyString).digest('hex').substring(0, 16)
 
-          setCacheHeaders(res, ttlSeconds, etag, !!req.user)
+          // هندلر می‌تواند TTL را کوتاه‌تر کند (مثلاً تا لحظه‌ی پایان تخفیف) تا لیبل/قیمتِ منقضی در کش نماند
+          const effectiveTtl = Math.max(1, Math.min(ttlSeconds, Number(res.locals?.cacheTtlSeconds) || ttlSeconds))
+          setCacheHeaders(res, effectiveTtl, etag, !!req.user)
           cache.set(key, {
             body: payload,
             status: res.statusCode || 200,
             etag,
-          }, ttlSeconds)
+            ttl: effectiveTtl,
+          }, effectiveTtl)
         }
       } catch (err) {
         console.error('[CACHE] Error caching response:', err.message)
