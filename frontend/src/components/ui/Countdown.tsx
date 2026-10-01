@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
+import { getServerNow } from "@/lib/serverClock";
 
 type CountdownVariant = "promotion" | "compact" | "hero" | "inline" | "badge";
 
@@ -30,7 +31,7 @@ const getTimeParts = (targetDate?: string | Date | number): TimeParts => {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
   }
 
-  const remaining = targetTime - Date.now();
+  const remaining = targetTime - getServerNow();
   if (remaining <= 0) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
   }

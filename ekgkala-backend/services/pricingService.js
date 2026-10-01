@@ -29,6 +29,31 @@ const resolveBasePrice = (price, compareAtPrice, storedDiscount = 0) => {
 
 // اعمال درصد تخفیف روی آبجکت محصول برای پاسخ جزئیات: price به قیمت نهایی
 // و compareAtPrice به مبنای resolved تبدیل می‌شود. قرارداد API عوض نمی‌شود.
+/**
+ * بازگرداندن قیمت پایه‌ی یک پروموشنِ منقضی‌شده روی شیء پاسخ (آینه‌ی شاخه‌ی expired در pipeline لیست).
+ * - فقط اگر price از قبل تخفیف‌خورده ذخیره شده باشد (داده‌ی قدیمی: price ≈ compareAtPrice × (1 − تخفیف ثبت‌شده))
+ *   قیمت به compareAtPrice برمی‌گردد؛ در غیر این صورت price دست‌نخورده می‌ماند.
+ *   (قبلاً هر compareAtPrice بزرگ‌تر از price جایگزین قیمت می‌شد؛ یک compareAtPrice کهنه مثل ۳۰م قیمت ۴٫۸م را
+ *   بعد از انقضا به ۳۰م می‌رساند.)
+ * - compareAtPrice حذف می‌شود تا قیمت خط‌خورده‌ی کهنه/جعلی (و درصد جعلی) ساخته نشود.
+ */
+const restoreBasePriceOnObject = (target, storedDiscount = 0) => {
+  if (!target) return target
+  if (target.price !== undefined && target.price > 0) {
+    target.price = resolveBasePrice(target.price, target.compareAtPrice, storedDiscount)
+  }
+  delete target.compareAtPrice
+  if (Array.isArray(target.variants) && target.variants.length > 0) {
+    target.variants = target.variants.map((v) => {
+      const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+      if (vObj.price > 0) vObj.price = resolveBasePrice(vObj.price, vObj.compareAtPrice, storedDiscount)
+      delete vObj.compareAtPrice
+      return vObj
+    })
+  }
+  return target
+}
+
 const applyDiscountToObject = (target, discountPct, storedDiscount = 0) => {
   if (!target || !(discountPct > 0)) return target
   if (target.price !== undefined && target.price > 0) {
@@ -337,24 +362,11 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
   if (timerExpired) {
     // تایمر تمام شده: خروجی مثل لیست محصولات (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی)
     productObj.discount = 0
-    if (productObj.compareAtPrice && productObj.compareAtPrice > productObj.price) {
-      productObj.price = productObj.compareAtPrice
-    }
-    delete productObj.compareAtPrice
+    restoreBasePriceOnObject(productObj, storedDiscount)
     delete productObj.campaignLabel
     delete productObj.campaignTheme
     productObj.isSpecialOffer = false
     productObj.isFlashDeal = false
-    if (Array.isArray(productObj.variants)) {
-      productObj.variants = productObj.variants.map((v) => {
-        const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
-        if (vObj.compareAtPrice && vObj.compareAtPrice > vObj.price) {
-          vObj.price = vObj.compareAtPrice
-        }
-        delete vObj.compareAtPrice
-        return vObj
-      })
-    }
     return { promotionEndsAt: null }
   }
 
@@ -393,6 +405,7 @@ module.exports = {
   resolveBasePrice,
   applyDiscountToObject,
   applyPromotionOverlay,
+  restoreBasePriceOnObject,
   ttlUntil,
   sanitizeCompareAtPrice,
   sanitizeVariantsCompareAtPrice,

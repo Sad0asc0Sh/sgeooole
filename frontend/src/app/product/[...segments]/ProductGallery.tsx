@@ -15,6 +15,7 @@ import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
 type ProductGalleryProps = {
@@ -92,7 +93,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     );
 
     // Compute flash deal status once (no interval needed)
-    const now = Date.now();
+    const now = getServerNow();
     const isFlashDealActive = Boolean(
         product.isFlashDeal &&
         product.flashDealEndTime &&

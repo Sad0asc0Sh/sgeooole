@@ -14,6 +14,7 @@ import {
     getNextPromotionExpiry,
     resolveProductPromotion,
 } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 import styles from "./ProductCard.module.css";
 
 
@@ -31,7 +32,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
     const isFavorite = isInWishlist(product.id);
     const isOutOfStock = product.countInStock <= 0;
     const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
-        resolveProductPromotion(product, Date.now());
+        resolveProductPromotion(product, getServerNow());
     const hasOldPriceMarkdown = Boolean(product.oldPrice && product.oldPrice > displayPrice);
     // Badge shows ONLY the real resolved discount. Never derive % from
     // oldPrice gap — stale compareAtPrice would fabricate 80%+ badges.
@@ -41,10 +42,12 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
     // ProductTimerBadge owns its second-by-second display. The card itself only
     // needs another render when the nearest promotion crosses its end boundary.
     useEffect(() => {
-        const nextExpiry = getNextPromotionExpiry(product, Date.now());
+        const currentTime = getServerNow();
+        const nextExpiry = getNextPromotionExpiry(product, currentTime);
         if (!nextExpiry) return;
 
-        const delay = Math.max(0, nextExpiry - Date.now()) + 50;
+        // Browser timers cannot represent delays greater than a signed 32-bit integer.
+        const delay = Math.min(Math.max(0, nextExpiry - currentTime) + 50, 2_147_483_647);
         const id = window.setTimeout(
             () => forcePromotionBoundaryRender((version) => version + 1),
             delay,

@@ -10,6 +10,8 @@ export interface PricingInput {
   now?: number;
 }
 
+import { getServerNow } from "./serverClock";
+
 export interface PricingResult {
   basePrice: number;
   finalPrice: number;
@@ -51,7 +53,8 @@ export function resolveBasePrice(price: number, compareAtPrice: number, storedDi
  * - Never inflates the final price to a stale compareAtPrice.
  */
 export function resolvePricing(input: PricingInput): PricingResult {
-  const now = input.now ?? Date.now();
+  // ساعت تصحیح‌شده‌ی سرور: اختلاف ساعت دستگاه نباید کارت را روی قیمت تخفیفی قفل کند.
+  const now = input.now ?? getServerNow();
   const isFuture = (value?: string) => {
     if (!value) return false;
     const ts = Date.parse(value);
@@ -83,12 +86,20 @@ export function resolvePricing(input: PricingInput): PricingResult {
   // مبنای واحد طبق قرارداد مرکزی — تشخیص داده‌ی قدیمی فقط با تخفیف ثبت‌شده‌ی خود محصول
   const basePrice = resolveBasePrice(rawPrice, input.compareAtPrice ?? 0, rawDiscount);
 
-  // If no discount is active, the final selling price MUST ALWAYS be the product's actual price.
-  // A stale compareAtPrice never inflates it — neither on expiry nor without discount.
+  // If no discount is active, the final selling price is the product's BASE price.
+  //
+  // IMPORTANT: the server already returns promotion snapshots with a DISCOUNTED `price`
+  // (+ `compareAtPrice` = base and `discount`). If this client decides the countdown has
+  // already ended (payload older than its end time, a cached/restored snapshot, or a
+  // device clock slightly ahead of the server), `rawPrice` is the discounted price, so
+  // using it would pin the card to the discounted amount with no badge. `basePrice` above
+  // restores the base ONLY for such a snapshot (price ≈ compareAtPrice × (1 − discount)),
+  // exactly as the backend does on expiry; a stale/inflated compareAtPrice that does not
+  // match the stored discount is still ignored, so it can never inflate the price.
   if (discount <= 0) {
     return {
-      basePrice: rawPrice,
-      finalPrice: rawPrice,
+      basePrice,
+      finalPrice: basePrice,
       discount: 0,
       flashActive: false,
       specialActive: false,

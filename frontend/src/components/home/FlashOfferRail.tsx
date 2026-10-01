@@ -19,6 +19,8 @@ import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
+import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
@@ -26,22 +28,32 @@ import { useVelocitySnap } from "@/hooks/useVelocitySnap";
  */
 function FlashOfferRail() {
   // SWR-based fetching with automatic caching
-  const { flashDeals, isLoading } = useFlashDeals(100);
-  const [now, setNow] = useState(() => Date.now());
+  const { flashDeals, isLoading, refresh } = useFlashDeals(100);
+  const [now, setNow] = useState(() => getServerNow());
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
 
   // Update timer every second - only for countdown display
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(getServerNow()), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // After the nearest flash boundary, ask the server once for the authoritative
+  // state so a cached discounted snapshot cannot linger past its end time.
+  useEffect(() => {
+    const currentTime = getServerNow();
+    const expiries = flashDeals
+      .map((product) => getNextPromotionExpiry(product, currentTime))
+      .filter((value): value is number => value !== null);
+    if (!expiries.length) return;
+    const delay = Math.min(Math.max(0, Math.min(...expiries) - currentTime) + 50, 2_147_483_647);
+    const id = window.setTimeout(() => { void refresh(); }, delay);
+    return () => window.clearTimeout(id);
+  }, [flashDeals, refresh]);
+
   // Filter products with active countdown - removes expired products in real-time
   const activeFlashDeals = useMemo(() => {
-    return flashDeals.filter((product) => {
-      if (!product.isFlashDeal || !product.flashDealEndTime) return false;
-      return new Date(product.flashDealEndTime).getTime() > now;
-    });
+    return flashDeals.filter((product) => resolveProductPromotion(product, now).isFlashDealActive);
   }, [flashDeals, now]);
 
   if (isLoading || activeFlashDeals.length === 0) {
@@ -99,23 +111,12 @@ function FlashOfferRail() {
           grabCursor
         >
           {activeFlashDeals.map((product, index) => {
-            // All products here have active countdowns (filtered by activeFlashDeals)
-            // Only need to check special offer countdown for price display logic
-            const isFlashDealCountdownActive = Boolean(
-              product.isFlashDeal &&
-              product.flashDealEndTime &&
-              new Date(product.flashDealEndTime).getTime() > now
-            );
-
-            // Flash deals in this section always have discount applied (they're active)
-            const effectiveDiscount = product.discount > 0 ? product.discount : 0;
-
+            // Single source: the shared resolver (all items here are live by filter).
+            const promotion = resolveProductPromotion(product, now);
+            const isFlashDealCountdownActive = promotion.isFlashDealActive;
+            const effectiveDiscount = promotion.effectiveDiscount;
             const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
-
-            const displayPrice =
-              (!isFlashDealCountdownActive && product.isFlashDeal && product.oldPrice)
-                ? product.oldPrice
-                : product.price;
+            const displayPrice = promotion.displayPrice;
 
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;

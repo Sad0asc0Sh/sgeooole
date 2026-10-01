@@ -18,6 +18,8 @@ import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
+import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 /**
  * Special Offer Rail Component
@@ -70,9 +72,22 @@ function CampaignSegment({ label }: { label: string }) {
 
 function SpecialOfferRail() {
   // SWR-based fetching with automatic caching
-  const { specialOffers: products, isLoading, error } = useSpecialOffers(100);
-  const [now, setNow] = useState(() => Date.now());
+  const { specialOffers: products, isLoading, error, refresh } = useSpecialOffers(100);
+  const [now, setNow] = useState(() => getServerNow());
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
+
+  // Refetch once right after the nearest special-offer boundary so the server
+  // (not a cached snapshot) decides the post-expiry price.
+  useEffect(() => {
+    const currentTime = getServerNow();
+    const expiries = products
+      .map((product) => getNextPromotionExpiry(product, currentTime))
+      .filter((value): value is number => value !== null);
+    if (!expiries.length) return;
+    const delay = Math.min(Math.max(0, Math.min(...expiries) - currentTime) + 50, 2_147_483_647);
+    const id = window.setTimeout(() => { void refresh(); }, delay);
+    return () => window.clearTimeout(id);
+  }, [products, refresh]);
 
   // Calculate earliest end time for global countdown
   const earliestEndTime = useMemo(() => {
@@ -88,7 +103,7 @@ function SpecialOfferRail() {
 
   // Update timer every second
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(getServerNow()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -151,17 +166,11 @@ function SpecialOfferRail() {
           {products.map((product, index) => {
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
-            const hasSpecialOfferCountdown = Boolean(
-              product.isSpecialOffer &&
-              product.specialOfferEndTime &&
-              new Date(product.specialOfferEndTime).getTime() > now
-            );
-            const effectiveDiscount = product.discount > 0 && (!product.isSpecialOffer || hasSpecialOfferCountdown)
-              ? product.discount
-              : 0;
-            const displayPrice = (!hasSpecialOfferCountdown && product.oldPrice)
-              ? product.oldPrice
-              : product.price;
+            // Single source: the shared resolver — no duplicated timer/discount math.
+            const promotion = resolveProductPromotion(product, now);
+            const hasSpecialOfferCountdown = promotion.isSpecialOfferActive;
+            const effectiveDiscount = promotion.effectiveDiscount;
+            const displayPrice = promotion.displayPrice;
 
             return (
               <SwiperSlide

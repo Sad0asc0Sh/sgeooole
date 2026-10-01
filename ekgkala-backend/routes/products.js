@@ -634,7 +634,26 @@ const validateNoActiveSaleConflict = async (data, currentProduct = null) => {
 // ============================================
 router.get('/', cacheMiddleware(300), async (req, res) => {
   try {
-    res.json(await listProducts(req.query, { Product, Category, Brand, Sale }))
+    const now = new Date()
+    const result = await listProducts(req.query, { Product, Category, Brand, Sale }, now)
+    // ساعت سرور برای اصلاح اختلاف ساعت کلاینت (فرانت آفست را از serverNow/هدر Date می‌سازد)
+    result.serverNow = now.toISOString()
+    // TTL کش لیست هم مثل جزئیات تا نزدیک‌ترین پایان پروموشن کوتاه می‌شود تا
+    // قیمت/لیبل منقضی در کش نماند. skipDiscount خام است و نیازی به کوتاه‌سازی ندارد.
+    if (req.query.skipDiscount !== 'true' && Array.isArray(result.data)) {
+      let nearest = null
+      for (const item of result.data) {
+        for (const key of ['flashDealEndTime', 'specialOfferEndTime']) {
+          const value = item && item[key]
+          if (!value) continue
+          const d = new Date(value)
+          if (Number.isNaN(d.getTime()) || d <= now) continue
+          if (!nearest || d < nearest) nearest = d
+        }
+      }
+      if (nearest) res.locals.cacheTtlSeconds = ttlUntil(nearest, 300, now)
+    }
+    res.json(result)
   } catch (error) {
     if (error instanceof ListingQueryError) {
       return res.status(400).json({ success: false, message: error.message })
@@ -969,6 +988,7 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
       return res.json({
         success: true,
         data: productObj,
+        serverNow: new Date().toISOString(),
       })
     }
 
@@ -1028,6 +1048,7 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     res.json({
       success: true,
       data: productObj,
+      serverNow: now.toISOString(),
     })
   } catch (error) {
     console.error('Error fetching product by id:', error)
@@ -2553,6 +2574,7 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
       data: {
         ...productObj,
       },
+      serverNow: new Date().toISOString(),
     })
   } catch (error) {
     console.error('Error fetching product by code:', error)

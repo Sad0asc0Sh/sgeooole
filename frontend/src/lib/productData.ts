@@ -2,6 +2,17 @@ import { cache } from "react";
 import type { Product, ProductColor } from "@/types/product";
 import { buildProductUrl } from "./paths";
 import { resolvePricing } from "@/lib/pricing";
+import { updateServerClock, updateServerClockFromPayload } from "@/lib/serverClock";
+
+const syncClockFromFetch = (response: Response | null | undefined, payload: unknown) => {
+  try {
+    updateServerClockFromPayload(payload);
+    const dateHeader = response?.headers?.get?.("date");
+    if (dateHeader) updateServerClock(dateHeader);
+  } catch {
+    // ignore clock sync errors
+  }
+};
 
 // Enhanced fetch with retry logic and exponential backoff
 const fetchWithRetry = async (
@@ -329,6 +340,7 @@ export const fetchProductById = cache(async (id: string): Promise<(Product & { i
     }
 
     const payload = await response.json();
+    syncClockFromFetch(response, payload);
     const data = (payload as any)?.data ?? payload;
     if (!data) return null;
 
@@ -372,6 +384,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
 
     if (response.ok) {
       const payload = await response.json();
+      syncClockFromFetch(response, payload);
       const data = (payload as any)?.data ?? payload;
       if (data) {
         const product = mapBackendProduct(data as BackendProduct, apiBaseUrl);
@@ -414,6 +427,7 @@ export const fetchProductsForStatic = async (limit: number = 100): Promise<(Prod
     );
     if (!response.ok) return [];
     const payload = await response.json();
+    syncClockFromFetch(response, payload);
     const items = Array.isArray(payload?.data) ? payload.data : [];
     return items.map((p: BackendProduct) => mapBackendProduct(p, apiBaseUrl));
   } catch (error) {
@@ -468,6 +482,7 @@ export const fetchRelatedProducts = cache(async (
       if (!response.ok) continue;
 
       const payload = await response.json();
+      syncClockFromFetch(response, payload);
       const items = Array.isArray(payload?.data) ? payload.data : [];
 
       // Filter out the current product

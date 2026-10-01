@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useCartStore } from "@/store/cartStore";
 import { authService } from "@/services/authService";
 import { resolvePricing } from "@/lib/pricing";
+import { getServerNow } from "@/lib/serverClock";
 
 export const useCart = () => {
   const { initialized, refreshCart, revalidateCartPrices, cartItems, addToCart, addBundleToCart, removeFromCart, updateQuantity, clearCart, cartConfig } = useCartStore();
   const isAuthenticated = authService.isAuthenticated();
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => getServerNow());
 
   // Initialize cart on mount (only once per app session)
   useEffect(() => {
@@ -17,7 +18,7 @@ export const useCart = () => {
 
   // Tick every second so countdown expirations reflect in pricing
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(getServerNow()), 1000);
     return () => clearInterval(id);
   }, []);
 

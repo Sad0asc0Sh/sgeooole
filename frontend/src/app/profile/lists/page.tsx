@@ -7,6 +7,7 @@ import { wishlistService, WishlistItem } from "@/services/wishlistService";
 import { useCart } from "@/hooks/useCart";
 import { Product } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
+import { getServerNow } from "@/lib/serverClock";
 
 const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
 
@@ -15,7 +16,7 @@ export default function ListsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [removingIds, setRemovingIds] = useState<Set<string>>(new Set());
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(() => getServerNow());
     const [currentPage, setCurrentPage] = useState(1);
 
     const { addToCart, updateQuantity, removeFromCart, getItemQuantity } = useCart();
@@ -27,7 +28,7 @@ export default function ListsPage() {
 
     // Tick every second so countdown expirations reflect in wishlist pricing/badges
     useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
+        const id = setInterval(() => setNow(getServerNow()), 1000);
         return () => clearInterval(id);
     }, []);
 

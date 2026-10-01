@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Product, ProductColor } from "@/services/productService";
@@ -15,35 +16,22 @@ type ProductActionsProps = {
 export default function ProductActions({ product, selectedColor, isDesktop = false }: ProductActionsProps) {
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(() => getServerNow());
 
-    // Check if flash deal countdown is still active
-    const isFlashDealActive = Boolean(
-        product.isFlashDeal &&
-        (!product.flashDealEndTime || new Date(product.flashDealEndTime).getTime() > now)
-    );
-
-    const isSpecialOfferActive = Boolean(
-        product.isSpecialOffer &&
-        (!product.specialOfferEndTime || new Date(product.specialOfferEndTime).getTime() > now)
-    );
+    // Single source: the shared resolver (server-corrected clock). No duplicated
+    // timer math — an expired snapshot restores the base price and a stale
+    // compareAtPrice can never inflate it.
+    const promotion = resolveProductPromotion(product, now);
+    const isFlashDealActive = promotion.isFlashDealActive;
+    const isSpecialOfferActive = promotion.isSpecialOfferActive;
 
     // Any active countdown (flash deal or special offer)
     // A campaign label counts only while its promotion is live; a label alone (stale snapshot
     // with an ended countdown) must not keep the discount badge / struck-through price alive.
-    const hasActivePromotion =
-        isFlashDealActive ||
-        isSpecialOfferActive ||
-        (Boolean(product.campaignLabel) && resolveProductPromotion(product, now).kind === "campaign");
+    const hasActivePromotion = promotion.kind !== "none";
 
-    // Price reversion: when flash deal or special offer with an end date expires, revert to original price
-    const flashExpired = Boolean(product.isFlashDeal && product.flashDealEndTime && new Date(product.flashDealEndTime).getTime() <= now);
-    const specialExpired = Boolean(product.isSpecialOffer && product.specialOfferEndTime && new Date(product.specialOfferEndTime).getTime() <= now);
-
-    const displayPrice =
-        (flashExpired || specialExpired) && product.oldPrice
-            ? product.oldPrice
-            : product.price;
+    // Price reversion: the resolver already restores the base price after expiry.
+    const displayPrice = promotion.displayPrice;
 
     // Calculate quantity for the SPECIFIC selected variant
     const [quantity, setQuantity] = useState(0);
@@ -62,7 +50,7 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
     }, [cartItems, product.id, selectedColor]);
 
     useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
+        const id = setInterval(() => setNow(getServerNow()), 1000);
         return () => clearInterval(id);
     }, []);
 

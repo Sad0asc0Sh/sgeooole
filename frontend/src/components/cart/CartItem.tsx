@@ -1,6 +1,7 @@
 "use client";
 import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 interface CartItemProps {
     item: {
@@ -23,22 +24,10 @@ interface CartItemProps {
 }
 
 export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps) {
-    const basePrice = item.originalPrice ?? item.price;
-    const priceDrop = basePrice > item.price;
-    const computedDiscount = priceDrop && basePrice > 0 ? Math.max(0, Math.round((1 - item.price / basePrice) * 100)) : 0;
-    const discountValue = computedDiscount || item.discount || 0;
-    const hasDiscount = priceDrop && discountValue > 0;
-    const now = Date.now();
-    const isFlashActive = Boolean(
-        item.isFlashDeal &&
-        (!item.flashDealEndTime || new Date(item.flashDealEndTime).getTime() > now)
-    );
-    const isSpecialActive = Boolean(
-        item.isSpecialOffer &&
-        (!item.specialOfferEndTime || new Date(item.specialOfferEndTime).getTime() > now)
-    );
-    // A persisted (localStorage) cart item can carry a label whose promotion has ended.
-    const promotionKind = resolveProductPromotion(
+    const now = getServerNow();
+    // Single source: the shared resolver. Never derive % from the price gap —
+    // a stale compareAtPrice would fabricate 80%+ badges.
+    const promotion = resolveProductPromotion(
         {
             price: item.price,
             oldPrice: item.originalPrice,
@@ -50,7 +39,14 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
             campaignLabel: item.campaignLabel,
         },
         now,
-    ).kind;
+    );
+    const promotionKind = promotion.kind;
+    const discountValue = promotion.effectiveDiscount;
+    const basePrice = item.originalPrice ?? item.price;
+    const hasDiscount = promotion.effectiveDiscount > 0 && basePrice > item.price;
+    const isFlashActive = promotion.isFlashDealActive;
+    const isSpecialActive = promotion.isSpecialOfferActive;
+    // A persisted (localStorage) cart item can carry a label whose promotion has ended.
     const effectiveLabel =
         promotionKind === "none"
             ? undefined

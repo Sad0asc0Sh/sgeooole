@@ -15,6 +15,7 @@ import ProductSocialActions from "./ProductSocialActions";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 type ProductDetailClientProps = {
     product: Product;
@@ -142,13 +143,14 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     }, [product, snapshot]);
 
     // Memoize flash deal status
-    const isFlashDealActive = useMemo(() => 
+    const isFlashDealActive = useMemo(() =>
         Boolean(
             product.isFlashDeal &&
             product.flashDealEndTime &&
-            new Date(product.flashDealEndTime).getTime() > Date.now()
+            new Date(product.flashDealEndTime).getTime() > getServerNow()
         ),
-        [product.isFlashDeal, product.flashDealEndTime]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [product.isFlashDeal, product.flashDealEndTime, now]
     );
 
     const _showCampaignBadge = useMemo(() =>
@@ -250,7 +252,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                         {/* Timer for Special Offers */}
                         {(() => {
-                            const now = Date.now();
+                            const now = getServerNow();
                             const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
                             const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 
@@ -441,7 +443,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                     {(() => {
                         // Helper logic for offer details - Priority: Campaign Label > Flash Deal > Special Offer
                         // Check if we have an active campaign or time-based offer
-                        const now = Date.now();
+                        const now = getServerNow();
                         const flashEndTs = product.flashDealEndTime ? Date.parse(product.flashDealEndTime) : NaN;
                         const specialEndTs = product.specialOfferEndTime ? Date.parse(product.specialOfferEndTime) : NaN;
 

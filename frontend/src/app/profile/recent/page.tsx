@@ -3,13 +3,15 @@ import { ArrowRight, Clock, Trash2, ShoppingBag, ChevronLeft, ChevronRight } fro
 import Link from "next/link";
 import { useHistoryStore } from "@/store/historyStore";
 import { useEffect, useState } from "react";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
 
 export default function RecentPage() {
     const { viewedProducts, clearHistory } = useHistoryStore();
     const [mounted, setMounted] = useState(false);
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(() => getServerNow());
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
@@ -17,7 +19,7 @@ export default function RecentPage() {
     }, []);
 
     useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
+        const id = setInterval(() => setNow(getServerNow()), 1000);
         return () => clearInterval(id);
     }, []);
 
@@ -91,14 +93,21 @@ export default function RecentPage() {
                     {/* Products Grid */}
                     <div className="p-4 md:max-w-6xl md:mx-auto md:px-6 grid grid-cols-2 md:grid-cols-5 gap-4">
                         {currentProducts.map((product) => {
-                            const hasSpecialOfferCountdown = Boolean(
-                                (product as any).isSpecialOffer &&
-                                (product as any).specialOfferEndTime &&
-                                new Date((product as any).specialOfferEndTime).getTime() > now
+                            // Single source: the shared resolver (history snapshots may be stale).
+                            const promotion = resolveProductPromotion(
+                                {
+                                    price: product.finalPrice || product.price,
+                                    oldPrice: product.price,
+                                    discount: product.discount,
+                                    isFlashDeal: (product as any).isFlashDeal,
+                                    flashDealEndTime: (product as any).flashDealEndTime,
+                                    isSpecialOffer: (product as any).isSpecialOffer,
+                                    specialOfferEndTime: (product as any).specialOfferEndTime,
+                                },
+                                now,
                             );
-                            const displayPrice = (!hasSpecialOfferCountdown && (product as any).isSpecialOffer && product.price)
-                                ? product.price
-                                : (product.finalPrice || product.price);
+                            const hasSpecialOfferCountdown = promotion.isSpecialOfferActive;
+                            const displayPrice = promotion.displayPrice;
 
                             return (
                                 <Link href={`/product/${product.slug || product._id}`} key={product._id} className="block group">

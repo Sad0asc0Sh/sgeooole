@@ -6,6 +6,7 @@ import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 
 type SimpleGalleryProps = {
     product: Product;
@@ -17,7 +18,7 @@ type SimpleGalleryProps = {
  */
 export default function SimpleGallery({ product }: SimpleGalleryProps) {
     const [activeIndex, setActiveIndex] = useState(0);
-    const [now, setNow] = useState(() => Date.now());
+    const [now, setNow] = useState(() => getServerNow());
 
     // Ensure images array exists and has at least one image
     const images = product.images && product.images.length > 0 ? product.images : [product.image];
@@ -36,7 +37,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
     );
 
     useEffect(() => {
-        const id = setInterval(() => setNow(Date.now()), 1000);
+        const id = setInterval(() => setNow(getServerNow()), 1000);
         return () => clearInterval(id);
     }, []);
 

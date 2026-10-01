@@ -4,6 +4,7 @@ import { memo } from "react";
 import ProductRail from "./ProductRail";
 import HomeProductRail from "./HomeProductRail";
 import { useNewestProducts, useBestSellers } from "@/hooks/useProducts";
+import { getServerNow } from "@/lib/serverClock";
 
 interface ProductRailContainerProps {
   title: string;
@@ -23,10 +24,13 @@ function ProductRailContainer({ title, fetchType, limit = 10 }: ProductRailConta
 
   if (products.length === 0 && (isLoading || error)) {
     return <HomeProductRail title={title} description={description} products={[]} viewAllHref={viewAllHref}
-      railKey={`rail_${title}`} now={Date.now()} loading={isLoading} error={Boolean(error)} onRetry={() => { void refresh(); }} />;
+      railKey={`rail_${title}`} now={getServerNow()} loading={isLoading} error={Boolean(error)} onRetry={() => { void refresh(); }} />;
   }
   if (products.length === 0) return null;
-  return <ProductRail title={title} description={description} products={products} viewAllHref={viewAllHref} />;
+  // After a promotion boundary, refetch once so the server (not a cached
+  // snapshot) decides the post-expiry price; the boundary re-render alone
+  // already restores the base price via the shared resolver.
+  return <ProductRail title={title} description={description} products={products} viewAllHref={viewAllHref} onExpire={() => { void refresh(); }} />;
 }
 
 export default memo(ProductRailContainer);

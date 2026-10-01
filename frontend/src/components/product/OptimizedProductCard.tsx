@@ -8,6 +8,7 @@ import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { getServerNow } from "@/lib/serverClock";
 import imageStyles from "./ProductImageFrame.module.css";
 
 interface OptimizedProductCardProps {
@@ -28,38 +29,22 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     product,
     variant = "default",
     priority = false,
-    now = Date.now(),
+    now = getServerNow(),
 }: OptimizedProductCardProps) {
-    // Memoize computed values
+    // Single price/promotion source: the shared resolver (server-corrected clock).
+    // No duplicated timer/discount math here — expired snapshots restore the base
+    // price and a stale compareAtPrice can never inflate it.
     const computedValues = useMemo(() => {
-        const isFlashActive = Boolean(
-            product.isFlashDeal &&
-            product.flashDealEndTime &&
-            new Date(product.flashDealEndTime).getTime() > now
-        );
-
-        const isSpecialActive = Boolean(
-            product.isSpecialOffer &&
-            product.specialOfferEndTime &&
-            new Date(product.specialOfferEndTime).getTime() > now
-        );
-
-        const effectiveDiscount = product.discount > 0 && (isFlashActive || isSpecialActive)
-            ? product.discount
-            : 0;
-
-        const displayPrice = (!isSpecialActive && !isFlashActive && product.oldPrice)
-            ? product.oldPrice
-            : product.price;
+        const promotion = resolveProductPromotion(product, now);
 
         const isOutOfStock = product.countInStock === 0;
         const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
         return {
-            isFlashActive,
-            isSpecialActive,
-            effectiveDiscount,
-            displayPrice,
+            isFlashActive: promotion.isFlashDealActive,
+            isSpecialActive: promotion.isSpecialOfferActive,
+            effectiveDiscount: promotion.effectiveDiscount,
+            displayPrice: promotion.displayPrice,
             isOutOfStock,
             isLowStock,
         };

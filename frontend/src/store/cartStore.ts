@@ -3,6 +3,7 @@ import { cartService, CartItem } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { Product, productService } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
+import { getServerNow } from "@/lib/serverClock";
 import { settingsService } from "@/services/settingsService";
 import {
     setLocalStorageWithExpiry,
@@ -128,7 +129,7 @@ export interface BundleAddResult {
 
 // Helper to transform backend items to local format
 const transformBackendItems = (backendItems: CartItem[]): LocalCartItem[] => {
-    const now = Date.now();
+    const now = getServerNow();
 
     const transformedItems: LocalCartItem[] = backendItems.map((item: CartItem) => {
         const rawItem: any = item as any;
@@ -489,7 +490,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                         isSpecialOffer: fresh.isSpecialOffer,
                         specialOfferEndTime: (fresh as any).specialOfferEndTime,
                         campaignLabel: fresh.campaignLabel,
-                        now: Date.now(),
+                        now: getServerNow(),
                     });
 
                     return {
@@ -546,7 +547,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     isSpecialOffer: product.isSpecialOffer,
                     specialOfferEndTime: (product as any).specialOfferEndTime,
                     campaignLabel: product.campaignLabel,
-                    now: Date.now(),
+                    now: getServerNow(),
                 });
                 const newItem: LocalCartItem = {
                     id: String(product.id),
@@ -607,7 +608,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     isSpecialOffer: product.isSpecialOffer,
                     specialOfferEndTime: (product as any).specialOfferEndTime,
                     campaignLabel: product.campaignLabel,
-                    now: Date.now(),
+                    now: getServerNow(),
                 });
                 const existingIndex = currentCart.findIndex((item) => {
                     if (item.id !== String(product.id)) return false;

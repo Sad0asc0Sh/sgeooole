@@ -1,4 +1,6 @@
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
+import { resolveBasePrice } from "@/lib/pricing";
+import { getServerNow } from "@/lib/serverClock";
 
 /**
  * Only the fields used by product cards to render promotion chrome and pricing.
@@ -45,7 +47,7 @@ const toFutureTimestamp = (value: string | undefined, now: number): number | nul
  */
 export function resolveProductPromotion(
   product: ProductPromotionInput,
-  now: number = Date.now(),
+  now: number = getServerNow(),
 ): ProductPromotionState {
   const flashEndTimestamp = toFutureTimestamp(product.flashDealEndTime, now);
   const specialEndTimestamp = toFutureTimestamp(product.specialOfferEndTime, now);
@@ -88,8 +90,11 @@ export function resolveProductPromotion(
     ? rawDiscount
     : 0;
 
+  // قیمت نمایان بعد از انقضا = قیمت پایه‌ی بازیابی‌شده (قرارداد واحد با resolvePricing
+  // و بک‌اند). oldPrice فقط وقتی مبناست که snapshot تخفیف‌خورده باشد؛ یک oldPrice
+  // کهنه/بزرگ که با تخفیف ثبت‌شده نخواند هرگز قیمت را بالا نمی‌برد.
   const displayPrice = !hasActiveTimedPromotion && hasPromotionFlag && product.oldPrice
-    ? product.oldPrice
+    ? resolveBasePrice(product.price, product.oldPrice, rawDiscount)
     : product.price;
 
   return {
@@ -112,7 +117,7 @@ export function getNextPromotionExpiry(
     ProductPromotionInput,
     "isFlashDeal" | "flashDealEndTime" | "isSpecialOffer" | "specialOfferEndTime"
   >,
-  now: number = Date.now(),
+  now: number = getServerNow(),
 ): number | null {
   const candidates = [
     product.isFlashDeal ? toFutureTimestamp(product.flashDealEndTime, now) : null,
@@ -139,7 +144,7 @@ export function getNextPromotionExpiry(
  */
 export function stripExpiredPromotion<T extends ProductPromotionInput & { compareAtPrice?: number }>(
   product: T,
-  now: number = Date.now(),
+  now: number = getServerNow(),
 ): T {
   const state = resolveProductPromotion(product, now);
   if (state.kind !== "none") return product;

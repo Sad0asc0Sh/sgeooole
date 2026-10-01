@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getServerNow } from "@/lib/serverClock";
 
 interface CountdownTimerProps {
     targetDate: string;
@@ -19,7 +20,7 @@ export default function CountdownTimer({ targetDate, className = "", showSeconds
 
     useEffect(() => {
         const calculateTimeLeft = () => {
-            const difference = +new Date(targetDate) - +new Date();
+            const difference = +new Date(targetDate) - getServerNow();
 
             if (difference > 0) {
                 return {

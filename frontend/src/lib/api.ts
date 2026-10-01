@@ -1,5 +1,6 @@
 import axios from "axios";
 import { getOrCreateSessionId } from "./sessionId";
+import { updateServerClock, updateServerClockFromPayload } from "./serverClock";
 
 // Server-side: use internal URL to avoid loopback through nginx/SSL
 // Client-side: use public URL
@@ -57,6 +58,15 @@ api.interceptors.request.use(
 // Response interceptor - Handle errors globally
 api.interceptors.response.use(
   (response) => {
+    // ساعت سرور را از بدنه (serverNow) یا هدر Date به‌روز کن تا تصمیم‌های
+    // «منقضی شد؟» با ساعت دستگاه جلو/عقب نروند. خرابی این مرحله نباید پاسخ را بشکند.
+    try {
+      updateServerClockFromPayload(response?.data);
+      const dateHeader = response?.headers?.date;
+      if (dateHeader) updateServerClock(dateHeader);
+    } catch {
+      // ignore clock sync errors
+    }
     // SAFETY CHECK: Backend sometimes returns 200 OK with success: false
     // This ensures such responses still trigger the catch block downstream
     if (response.data && response.data.success === false) {
