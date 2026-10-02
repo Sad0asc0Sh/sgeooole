@@ -130,7 +130,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`font-sans antialiased bg-gray-50 text-gray-900 ${iransans.className}`}
+        className={`font-sans antialiased bg-ekg-50 text-ekg-900 ${iransans.className}`}
       >
         <GoogleAuthProvider>
           <SWRProvider>

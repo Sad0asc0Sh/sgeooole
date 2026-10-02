@@ -17,18 +17,20 @@
   --color-secondary: hsl(var(--secondary));
   --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-  --color-ekg-50: #f8fafc;
-  --color-ekg-100: #f1f5f9;
-  --color-ekg-200: #e2e8f0;
-  --color-ekg-300: #cbd5e1;
-  --color-ekg-400: #94a3b8;
-  --color-ekg-500: #64748b;
-  --color-ekg-600: #475569;
-  --color-ekg-700: #334155;
-  --color-ekg-800: #1e293b;
-  --color-ekg-900: #0f172a;
-  --color-ekg-950: #020617;
+  /* EKG Neutrals — warm stone palette (shifted from cold slate) */
+  --color-ekg-50: #faf9f7;
+  --color-ekg-100: #f3f1ed;
+  --color-ekg-200: #e7e4de;
+  --color-ekg-300: #d4d0c8;
+  --color-ekg-400: #a8a29e;
+  --color-ekg-500: #78716c;
+  --color-ekg-600: #57534e;
+  --color-ekg-700: #44403c;
+  --color-ekg-800: #292524;
+  --color-ekg-900: #1c1917;
+  --color-ekg-950: #0c0a09;
 
+  /* Kala Brand — deep saffron/amber (unchanged core, enriched edges) */
   --color-kala-50: #fffbeb;
   --color-kala-100: #fef3c7;
   --color-kala-200: #fde68a;
@@ -61,25 +63,28 @@
   }
 }
 
-/* --------- سایر متغیرها (قابلیت تغییر نشد) --------- */
+/* --------- سایر متغیرها — warm palette --------- */
 :root {
-  /* Base Background (EKG Neutral) */
-  --background: 0 0% 100%;
-  /* White */
-  --foreground: 215 19% 35%;
+  /* Base Background — warm off-white, not sterile pure white */
+  --background: 40 20% 99%;
+  --foreground: 25 14% 30%;
 
-  /* Primary: Kala (Golden-Orange) */
-  --primary: 39 85% 49%;
+  /* Primary: Kala (Deep Saffron) — slightly warmer for trust */
+  --primary: 36 90% 50%;
   --primary-foreground: 0 0% 100%;
 
-  /* Secondary: EKG (Slate Gray) */
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
+  /* Secondary: EKG (Warm Stone) */
+  --secondary: 30 15% 95%;
+  --secondary-foreground: 25 20% 15%;
 
   /* Accents */
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --border: 214.3 31.8% 91.4%;
+  --muted: 30 12% 95%;
+  --muted-foreground: 25 10% 46%;
+  --border: 30 14% 90%;
+
+  /* Trust accents — for badges and trust signals */
+  --trust-green: 152 60% 36%;
+  --trust-blue: 210 65% 45%;
 }
 
 /* ---------- باقی‌ماندهٔ استایل‌ها (بدون تغییر) ---------- */
@@ -249,6 +254,19 @@
     display: block;
     max-width: 100%;
   }
+
+  /* Global warm body feel — subtle warm tint on selections */
+  ::selection {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: inherit;
+  }
+
+  /* Smoother font rendering */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
 }
 
 /* --- MEGA MENU SCROLLBAR (override global hide) --- */
@@ -324,13 +342,13 @@
 
 /* --- PREMIUM CMS DESIGN SYSTEM --- */
 :root {
-  --cms-primary: #0f172a;
-  --cms-accent: #2563eb;
-  --cms-accent-light: #eff6ff;
-  --cms-text-main: #475569;
-  --cms-text-dark: #0f172a;
+  --cms-primary: #1c1917;
+  --cms-accent: #b45309;
+  --cms-accent-light: #fffbeb;
+  --cms-text-main: #57534e;
+  --cms-text-dark: #1c1917;
   --cms-bg-card: #ffffff;
-  --cms-border: #e2e8f0;
+  --cms-border: #e7e4de;
   --cms-radius: 16px;
   --cms-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -383,7 +401,7 @@
 
 .cms-accordion[open] {
   border-color: var(--cms-accent);
-  box-shadow: 0 12px 30px -5px rgba(37, 99, 241, 0.1);
+  box-shadow: 0 12px 30px -5px rgba(180, 83, 9, 0.08);
 }
 
 .cms-summary {
@@ -496,7 +514,7 @@
   font-weight: 800;
   color: var(--cms-text-dark);
   background: #fef3c7;
-  color: #d97706;
+  color: #b45309;
   padding: 0.1rem 0.4rem;
   border-radius: 6px;
   font-size: 0.95em;
@@ -580,7 +598,7 @@
 
 /* Hero Section Support */
 .cms-hero {
-  background: linear-gradient(135deg, #0f172a 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #1c1917 0%, #b45309 100%);
   color: #ffffff;
   text-align: center;
   padding: 5rem 1.5rem 8rem 1.5rem;
@@ -588,5 +606,5 @@
   overflow: hidden;
   border-bottom-left-radius: 40px;
   border-bottom-right-radius: 40px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 10px 30px rgba(28, 25, 23, 0.15);
 }

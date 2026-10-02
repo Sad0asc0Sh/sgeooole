@@ -31,12 +31,12 @@ export const HOME_SECTION_LAYOUT_TOKENS: Record<HomeSectionVariant, HomeSectionL
   discovery: {
     spacingClassName: "py-0.5 md:py-1",
     containerStrategy: "none",
-    backgroundStrategy: "none",
+    backgroundStrategy: "soft",
   },
   products: {
     spacingClassName: "py-1 md:py-2",
     containerStrategy: "none",
-    backgroundStrategy: "none",
+    backgroundStrategy: "surface",
   },
   trust: {
     spacingClassName: "pt-2 pb-0 md:pt-4 md:pb-0",
@@ -53,6 +53,6 @@ export const HOME_SECTION_CONTAINER_TOKENS: Record<HomeSectionContainerStrategy,
 
 export const HOME_SECTION_BACKGROUND_TOKENS: Record<HomeSectionBackgroundStrategy, string> = {
   none: "",
-  soft: "",
-  surface: "",
+  soft: "bg-white/60",
+  surface: "bg-white",
 };

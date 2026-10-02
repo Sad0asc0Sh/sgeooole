@@ -111,7 +111,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
     return (
         <div
-            className={`${styles.card} ${isOutOfStock ? styles.outOfStockCard : ""} group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-lg border-gray-200' : 'border-gray-100'}`}
+            className={`${styles.card} ${isOutOfStock ? styles.outOfStockCard : ""} group relative bg-white rounded-2xl border transition-all duration-300 overflow-hidden flex flex-col h-full ${headerConfig ? 'pt-0' : 'pt-0'} ${isHovered ? 'shadow-md border-ekg-200' : 'shadow-sm border-ekg-100/80'}`}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >

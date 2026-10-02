@@ -6,7 +6,7 @@ type PromotionSectionProps = {
 
 export default function PromotionSection({ children }: PromotionSectionProps) {
   return (
-    <section className="border-y border-ekg-100 bg-gradient-to-l from-ekg-50 via-white to-kala-50 py-5 md:py-6">
+    <section className="border-y border-ekg-100/60 bg-gradient-to-l from-ekg-50/80 via-white to-kala-50/60 py-5 md:py-6">
       <div className="mx-auto w-full max-w-screen-2xl px-4">
         {children}
       </div>

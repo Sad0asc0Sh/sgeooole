@@ -11,29 +11,30 @@ const config: Config = {
             colors: {
                 border: "hsl(var(--border))",
                 background: "hsl(var(--background))",
-                foreground: "hsl(var(--foreground))", // EKG Logic
+                foreground: "hsl(var(--foreground))",
                 primary: {
-                    DEFAULT: "hsl(var(--primary))", // Kala Logic (Golden-Orange)
+                    DEFAULT: "hsl(var(--primary))",
                     foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: "hsl(var(--secondary))", // EKG Logic (Gray)
+                    DEFAULT: "hsl(var(--secondary))",
                     foreground: "hsl(var(--secondary-foreground))",
                 },
-                // Custom brand specifics if needed directly
+                /* Warm stone neutrals — convey reliability and warmth */
                 ekg: {
-                    50: '#f8fafc',
-                    100: '#f1f5f9',
-                    200: '#e2e8f0',
-                    300: '#cbd5e1',
-                    400: '#94a3b8',
-                    500: '#64748b',
-                    600: '#475569',
-                    700: '#334155',
-                    800: '#1e293b',
-                    900: '#0f172a',
-                    950: '#020617',
+                    50: '#faf9f7',
+                    100: '#f3f1ed',
+                    200: '#e7e4de',
+                    300: '#d4d0c8',
+                    400: '#a8a29e',
+                    500: '#78716c',
+                    600: '#57534e',
+                    700: '#44403c',
+                    800: '#292524',
+                    900: '#1c1917',
+                    950: '#0c0a09',
                 },
+                /* Deep saffron brand scale */
                 kala: {
                     50: '#fffbeb',
                     100: '#fef3c7',

@@ -111,22 +111,22 @@ function Footer() {
             <footer className="mt-8 mb-16 lg:mb-0" dir="rtl">
 
                 {/* ─── Trust Strip ─── */}
-                <div className="bg-white border-t border-gray-100">
-                    <div className="max-w-5xl mx-auto px-4 py-4">
-                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="bg-white border-t border-ekg-200/60">
+                    <div className="max-w-5xl mx-auto px-4 py-5">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             {[
-                                { icon: <Truck size={18} className="text-white" />, bg: "bg-orange-400", title: "ارسال سریع", desc: "تحویل ۲۴ ساعته" },
-                                { icon: <Headphones size={18} className="text-white" />, bg: "bg-blue-500", title: "پشتیبانی ۲۴/۷", desc: "همیشه در کنارتان" },
-                                { icon: <Shield size={18} className="text-white" />, bg: "bg-emerald-500", title: "ضمانت اصالت", desc: "۱۰۰٪ اورجینال" },
-                                { icon: <CreditCard size={18} className="text-white" />, bg: "bg-purple-500", title: "پرداخت امن", desc: "درگاه معتبر" },
+                                { icon: <Truck size={18} className="text-white" />, bg: "bg-kala-600", title: "ارسال سریع", desc: "تحویل ۲۴ ساعته" },
+                                { icon: <Headphones size={18} className="text-white" />, bg: "bg-ekg-700", title: "پشتیبانی ۲۴/۷", desc: "همیشه در کنارتان" },
+                                { icon: <Shield size={18} className="text-white" />, bg: "bg-emerald-700", title: "ضمانت اصالت", desc: "۱۰۰٪ اورجینال" },
+                                { icon: <CreditCard size={18} className="text-white" />, bg: "bg-kala-800", title: "پرداخت امن", desc: "درگاه معتبر" },
                             ].map((item, i) => (
-                                <div key={i} className="flex items-center gap-2.5">
-                                    <div className={`w-9 h-9 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0`}>
+                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-ekg-50 border border-ekg-100/80 hover:border-kala-200 hover:shadow-sm transition-all">
+                                    <div className={`w-10 h-10 rounded-lg ${item.bg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
                                         {item.icon}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-gray-800 text-xs">{item.title}</p>
-                                        <p className="text-gray-400 text-[11px]">{item.desc}</p>
+                                        <p className="font-bold text-ekg-800 text-xs">{item.title}</p>
+                                        <p className="text-ekg-400 text-[11px]">{item.desc}</p>
                                     </div>
                                 </div>
                             ))}
@@ -135,11 +135,11 @@ function Footer() {
                 </div>
 
                 {/* ─── Main Dark Section ─── */}
-                <div className="bg-[#0f2044] rounded-t-3xl overflow-hidden">
+                <div className="bg-ekg-900 rounded-t-3xl overflow-hidden">
                     <div className="max-w-5xl mx-auto px-4 pt-10 pb-6">
 
                         {/* ─── 4-col grid ─── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-8 border-b border-white/10">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 pb-8 border-b border-ekg-700/50">
 
                             {/* Col 1: Brand & Contact */}
                             <div className="flex flex-col items-center text-center lg:items-start lg:text-right">
@@ -147,7 +147,7 @@ function Footer() {
                                 <h3 className="font-extrabold text-white text-lg tracking-wide mb-1">
                                     {storeInfo.storeName || "EKG KALA"}
                                 </h3>
-                                <p className="text-amber-400 text-[11px] mb-5">
+                                <p className="text-kala-400 text-[11px] mb-5">
                                    هدف‌ما بالا بردن سطح امنیت شماست
                                 </p>
 
@@ -156,8 +156,8 @@ function Footer() {
                                     {storeInfo.storePhone && (
                                         <a href={`tel:${storeInfo.storePhone.replace(/\s/g, '')}`}
                                             className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                                <Phone size={14} className="text-amber-400" />
+                                            <div className="w-8 h-8 rounded-lg bg-kala-500/20 flex items-center justify-center flex-shrink-0">
+                                                <Phone size={14} className="text-kala-400" />
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-gray-500 text-[10px]">تماس با ما</p>
@@ -207,7 +207,7 @@ function Footer() {
                             {/* Col 2: Quick Links */}
                             <div className="flex flex-col items-center text-center lg:items-start lg:text-right">
                                 <div className="flex items-center gap-2 mb-5">
-                                    <span className="w-1 h-4 rounded-full bg-amber-400 inline-block" />
+                                    <span className="w-1 h-4 rounded-full bg-kala-400 inline-block" />
                                     <h4 className="font-bold text-white text-sm">دسترسی سریع</h4>
                                 </div>
                                 <ul className="space-y-3">
@@ -221,7 +221,7 @@ function Footer() {
                                         { href: "/contact", label: "تماس با ما" },
                                     ].map((link) => (
                                         <li key={link.href}>
-                                            <Link href={link.href} className="text-gray-400 text-sm">
+                                            <Link href={link.href} className="text-gray-400 hover:text-kala-400 transition-colors text-sm">
                                                 {link.label}
                                             </Link>
                                         </li>
@@ -232,7 +232,7 @@ function Footer() {
                             {/* Col 3: Customer Service */}
                             <div className="flex flex-col items-center text-center lg:items-start lg:text-right">
                                 <div className="flex items-center gap-2 mb-5">
-                                    <span className="w-1 h-4 rounded-full bg-blue-400 inline-block" />
+                                    <span className="w-1 h-4 rounded-full bg-ekg-400 inline-block" />
                                     <h4 className="font-bold text-white text-sm">خدمات مشتریان</h4>
                                 </div>
                                 <ul className="space-y-3">
@@ -245,7 +245,7 @@ function Footer() {
                                     ].map((link) => (
                                         <li key={link.href}>
                                             <Link href={link.href}
-                                                className="text-gray-400 hover:text-blue-400 transition-colors text-sm">
+                                                className="text-gray-400 hover:text-kala-400 transition-colors text-sm">
                                                 {link.label}
                                             </Link>
                                         </li>
@@ -256,7 +256,7 @@ function Footer() {
                             {/* Col 4: Newsletter + Social + Trust */}
                             <div className="flex flex-col items-center text-center lg:items-start lg:text-right">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <span className="w-1 h-4 rounded-full bg-emerald-400 inline-block" />
+                                    <span className="w-1 h-4 rounded-full bg-kala-500 inline-block" />
                                     <h4 className="font-bold text-white text-sm">خبرنامه</h4>
                                 </div>
                                 <p className="text-gray-500 text-xs mb-4 leading-relaxed">
@@ -280,7 +280,7 @@ function Footer() {
                                             placeholder="ایمیل خود را وارد کنید"
                                             className={`w-full rounded-xl border bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-gray-600 focus:outline-none transition-colors ${newsletterStatus === "error"
                                                 ? "border-red-500"
-                                                : "border-white/10 focus:border-amber-500"
+                                                : "border-white/10 focus:border-kala-500"
                                                 }`}
                                             dir="ltr"
                                             disabled={isSubmitting}
@@ -288,7 +288,7 @@ function Footer() {
                                         <button
                                             type="submit"
                                             disabled={isSubmitting || !email.trim()}
-                                            className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2.5 text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
+                                            className="w-full rounded-xl bg-kala-600 hover:bg-kala-700 px-4 py-2.5 text-white font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                                         >
                                             {isSubmitting
                                                 ? <Loader2 size={15} className="animate-spin" />
@@ -350,7 +350,7 @@ function Footer() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-5 text-center">
                             <p className="text-gray-500 text-xs">
                                 © ۱۴۰۴ — تمامی حقوق متعلق به{" "}
-                                <span className="text-amber-400 font-semibold">EKG KALA</span>{" "}
+                                <span className="text-kala-400 font-semibold">EKG KALA</span>{" "}
                                 می‌باشد.
                             </p>
                             <p className="text-gray-600 text-xs">
@@ -366,7 +366,7 @@ function Footer() {
             {showBackToTop && (
                 <button
                     onClick={scrollToTop}
-                    className="fixed bottom-[calc(var(--bottom-nav-total-height)_+_1rem)] left-4 lg:bottom-8 lg:left-8 z-50 w-11 h-11 rounded-full bg-amber-500 text-white flex items-center justify-center"
+                    className="fixed bottom-[calc(var(--bottom-nav-total-height)_+_1rem)] left-4 lg:bottom-8 lg:left-8 z-50 w-11 h-11 rounded-full bg-kala-600 text-white flex items-center justify-center shadow-lg hover:bg-kala-700 transition-colors"
                     aria-label="بازگشت به بالا"
                 >
                     <ChevronUp size={20} />

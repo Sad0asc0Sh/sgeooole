@@ -194,9 +194,9 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
               <div
                 key={banner._id}
                 className={`
-                  relative aspect-[16/5] rounded-xl overflow-hidden bg-gray-50
-                  shadow-md hover:shadow-lg transition-all duration-300
-                  hover:scale-[1.02] group
+                  relative aspect-[16/5] rounded-xl overflow-hidden bg-ekg-50
+                  shadow-sm hover:shadow-md transition-all duration-300
+                  hover:scale-[1.01] group
                   ${widthClass}
                   ${hasLink ? "cursor-pointer" : "cursor-default"}
                 `}

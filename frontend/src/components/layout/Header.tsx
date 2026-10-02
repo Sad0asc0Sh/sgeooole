@@ -76,7 +76,9 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                 className={`h-16 ${spacerReady ? "transition-[height] duration-300 ease-in-out" : ""} ${isNavVisible ? "md:h-[136px]" : "md:h-20"}`}
             />
 
-            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200 bg-white bg-white/80 backdrop-blur-md supports-[backdrop-filter:blur(12px)]:bg-white/80">
+            <header className="fixed inset-x-0 top-0 z-50 w-full border-b border-ekg-200/60 bg-white/85 backdrop-blur-xl shadow-[0_1px_3px_rgba(0,0,0,0.04)] supports-[backdrop-filter:blur(12px)]:bg-white/85">
+            {/* Brand accent line */}
+            <div className="h-[2px] w-full bg-gradient-to-l from-kala-600 via-kala-400 to-kala-600" />
             {/* MOBILE HEADER */}
             <div className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}
@@ -94,15 +96,15 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             type="text"
                             readOnly
                             placeholder="جستجو..."
-                            className="h-9 w-full min-w-0 rounded-full bg-ekg-50 px-8 text-xs text-ekg-900 placeholder:text-ekg-500 focus:outline-none cursor-pointer pointer-events-none"
+                            className="h-9 w-full min-w-0 rounded-full bg-ekg-100/80 px-8 text-xs text-ekg-900 placeholder:text-ekg-400 focus:outline-none cursor-pointer pointer-events-none border border-ekg-200/50"
                         />
-                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-ekg-500" />
+                        <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-ekg-400" />
                     </div>
 
                     {/* AI Assistant Overlay */}
                     <button
                         onClick={() => setIsAIOpen(true)}
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-kala-50 text-kala-600 hover:bg-kala-100 transition-colors border border-kala-200/50"
                     >
                         <Sparkles className="h-5 w-5" />
                     </button>
@@ -130,7 +132,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* AI Assistant */}
                             <button
                                 onClick={() => setIsAIOpen(true)}
-                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-to-r from-kala-500 to-kala-600 text-white hover:from-kala-600 hover:to-kala-700 transition-all shadow-md hover:shadow-lg"
+                                className="flex items-center gap-2 h-10 px-4 rounded-xl bg-gradient-to-r from-kala-600 to-kala-700 text-white hover:from-kala-700 hover:to-kala-800 transition-all shadow-sm hover:shadow-md"
                             >
                                 <Sparkles className="h-5 w-5" />
                                 <span className="text-sm font-medium">دستیار هوشمند</span>
@@ -139,7 +141,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* Profile */}
                             <Link
                                 href={user ? "/profile" : "/login"}
-                                className={`flex items-center gap-2 h-10 rounded-xl bg-ekg-50 text-ekg-700 hover:bg-ekg-100 transition-colors ${user ? 'w-10 justify-center' : 'px-4'
+                                className={`flex items-center gap-2 h-10 rounded-xl bg-ekg-100/80 text-ekg-700 hover:bg-ekg-200/80 hover:text-ekg-900 transition-all ${user ? 'w-10 justify-center' : 'px-4'
                                     }`}
                             >
                                 <User className="h-5 w-5" />
@@ -153,12 +155,12 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                             {/* Cart */}
                             <Link
                                 href="/cart"
-                                className="relative flex items-center gap-2 h-10 px-4 rounded-xl bg-ekg-50 text-ekg-700 hover:bg-ekg-100 transition-colors"
+                                className="relative flex items-center gap-2 h-10 px-4 rounded-xl bg-ekg-100/80 text-ekg-700 hover:bg-ekg-200/80 hover:text-ekg-900 transition-all"
                             >
                                 <ShoppingCart className="h-5 w-5" />
                                 <span className="text-sm font-medium">سبد خرید</span>
                                 {itemCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-kala-600 text-[10px] font-bold text-white ring-2 ring-white">
                                         {itemCount}
                                     </span>
                                 )}
@@ -168,7 +170,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
 
                     {/* Bottom Row: Navigation Links */}
                     <div
-                        className={`border-t border-ekg-100 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
+                        className={`border-t border-ekg-100/60 transition-all duration-300 ease-in-out overflow-hidden ${isNavVisible
                             ? 'max-h-14 opacity-100'
                             : 'max-h-0 opacity-0'
                             }`}
@@ -180,10 +182,10 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                                     key={link.href}
                                     href={link.href}
                                     onClick={link.href === "/" ? handleHomeClick : undefined}
-                                    className="text-sm font-medium text-ekg-700 hover:text-kala-600 transition-colors relative group whitespace-nowrap"
+                                    className="text-sm font-medium text-ekg-600 hover:text-kala-700 transition-colors relative group whitespace-nowrap"
                                 >
                                     {link.label}
-                                    <span className="absolute bottom-0 right-0 w-0 h-0.5 bg-kala-600 group-hover:w-full transition-all duration-300"></span>
+                                    <span className="absolute -bottom-0.5 right-0 w-0 h-[2px] bg-kala-500 group-hover:w-full transition-all duration-300 rounded-full"></span>
                                 </Link>
                             ))}
                         </nav>

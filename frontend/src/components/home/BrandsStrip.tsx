@@ -81,7 +81,7 @@ export default function BrandsStrip() {
   }
 
   return (
-    <div className="py-8 bg-white">
+    <div className="py-8 bg-white border-t border-ekg-100/60">
       <SectionTitle>برندهای همکار</SectionTitle>
 
       {loading ? (

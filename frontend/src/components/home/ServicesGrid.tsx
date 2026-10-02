@@ -17,8 +17,8 @@ export default function ServicesGrid() {
             <h3 className="mb-4 text-ekg-900 font-bold text-lg">خدمات اختصاصی ای‌کا‌جی کالا</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
                 {SERVICES.map((service) => (
-                    <div key={service.id} className="flex items-start gap-4 p-4 rounded-xl border border-ekg-100 bg-ekg-50 hover:bg-white hover:shadow-md hover:border-kala-200 transition-all duration-300 cursor-default group">
-                        <div className="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform duration-300">
+                    <div key={service.id} className="flex items-start gap-4 p-4 rounded-xl border border-ekg-100 bg-ekg-50/50 hover:bg-white hover:shadow-md hover:border-kala-200/60 transition-all duration-300 cursor-default group">
+                        <div className="p-2.5 bg-white rounded-xl shadow-sm border border-ekg-100/50 group-hover:scale-110 group-hover:border-kala-200 transition-all duration-300">
                             {getIcon(service.id)}
                         </div>
                         <div>
