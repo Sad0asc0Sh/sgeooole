@@ -6,7 +6,8 @@ import api from "@/lib/api";
  */
 export interface TicketMessage {
     _id: string;
-    sender: string; // 'user' or 'admin'
+    sender: string; // ObjectId (hex) یا آبجکت populateشده؛ شناسه نقش نیست
+    isAdminReply?: boolean; // true = پاسخ ثبت‌شده از پنل (ادمین/مدیر/پشتیبانی)
     message: string;
     createdAt: string;
 }

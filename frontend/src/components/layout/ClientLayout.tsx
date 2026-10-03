@@ -39,7 +39,10 @@ export default function ClientLayout({
     // We still hide the full "chrome" (footer/bottom nav) on product pages to avoid layout conflicts.
     const showHeader = !isLoginPage;
     const isProductsListingRoute = pathname === "/products";
-    const showChrome = !isLoginPage && !isProductPage && (!isProductsListingRoute || isCurrentRouteReady);
+    // Support messenger: full-screen focused experience — hide the whole
+    // chrome (BottomNav, footer, floating widgets) like product pages.
+    const isSupportMessenger = pathname?.startsWith("/profile/tickets");
+    const showChrome = !isLoginPage && !isProductPage && !isSupportMessenger && (!isProductsListingRoute || isCurrentRouteReady);
 
     // Footer is hidden on focused flows (account + purchase) where a big
     // marketing footer distracts from the task. BottomNav / Header (and the
