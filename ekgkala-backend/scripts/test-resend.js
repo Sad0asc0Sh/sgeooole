@@ -104,7 +104,7 @@ const testResendEmail = async () => {
 
         if (err.code === 'ERR_REQUIRE_FAILED' || err.message?.includes('Cannot find module')) {
             console.log('\n📦 ابتدا پکیج resend را نصب کنید:');
-            console.log('  npm install resend');
+            console.log('  pnpm install');
         }
     }
 

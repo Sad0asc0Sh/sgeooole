@@ -193,7 +193,7 @@ Run Lighthouse on `/products`:
 
 ```bash
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 - [ ] Dev server starts without errors
@@ -204,7 +204,7 @@ npm run dev
 
 ```bash
 cd frontend
-npm run build
+pnpm run build
 ```
 
 - [ ] Build completes successfully
@@ -215,7 +215,7 @@ npm run build
 ### Production Preview
 
 ```bash
-npm run start
+pnpm run start
 ```
 
 - [ ] Production build runs correctly

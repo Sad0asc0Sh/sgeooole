@@ -25,7 +25,7 @@ Backend API برای پنل مدیریت فروشگاه اینترنتی EkgKala
 ### 1. نصب Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 2. تنظیم Environment Variables
@@ -52,10 +52,10 @@ mongod
 
 ```bash
 # Development mode (با nodemon)
-npm run dev
+pnpm run dev
 
 # Production mode
-npm start
+pnpm start
 ```
 
 ## 🌐 Endpoints

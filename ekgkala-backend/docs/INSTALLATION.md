@@ -11,7 +11,7 @@
 بررسی نسخه‌ها:
 ```bash
 node --version   # باید v16.0.0 یا بالاتر باشد
-npm --version    # باید v8.0.0 یا بالاتر باشد
+pnpm --version   # باید v12.8.1 باشد
 mongod --version # باید v5.0.0 یا بالاتر باشد
 ```
 
@@ -32,7 +32,7 @@ cd ekgkala-backend
 ### مرحله 2: نصب Dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 **خروجی مورد انتظار:**
@@ -107,7 +107,7 @@ mongosh
 
 ```bash
 # Development mode (توصیه می‌شود)
-npm run dev
+pnpm run dev
 ```
 
 **خروجی موفق:**
@@ -266,7 +266,7 @@ Error: Cannot find module 'express'
 ```bash
 # حذف و نصب مجدد:
 rm -rf node_modules package-lock.json
-npm install
+pnpm install
 ```
 
 ---
@@ -284,10 +284,10 @@ ekgkala-backend/
 ├── uploads/
 │   └── categories/
 │       └── .gitkeep             ✅
-├── node_modules/                ✅ (بعد از npm install)
+├── node_modules/                ✅ (بعد از pnpm install)
 ├── server.js                    ✅
 ├── package.json                 ✅
-├── package-lock.json            ✅ (بعد از npm install)
+├── pnpm-lock.yaml              ✅ (بعد از pnpm install)
 ├── .env                         ✅ (کپی از .env.example)
 ├── .env.example                 ✅
 ├── .gitignore                   ✅
@@ -308,7 +308,7 @@ ekgkala-backend/
 
 ## 📞 نیاز به کمک؟
 
-- بررسی کنید `npm run dev` بدون خطا اجرا شود
+- بررسی کنید `pnpm run dev` بدون خطا اجرا شود
 - بررسی کنید `curl http://localhost:5000/api/health` پاسخ `200 OK` بدهد
 - Log‌های Console را بررسی کنید
 

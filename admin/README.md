@@ -27,16 +27,16 @@
 
 ### پیش‌نیازها
 - Node.js 18+
-- npm or yarn
+- pnpm 12.8.1 (see `packageManager` in package.json)
 
 ### مراحل نصب
 
 ```bash
 # 1. نصب وابستگی‌ها
-npm install
+pnpm install
 
 # 2. اجرای پروژه
-npm run dev
+pnpm run dev
 
 # 3. مشاهده در مرورگر
 # http://localhost:3000

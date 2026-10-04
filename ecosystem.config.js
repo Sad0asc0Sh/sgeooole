@@ -79,7 +79,9 @@ module.exports = {
         // ============================================
         {
             name: 'ekgkala-frontend',
-            script: 'npm',
+            // Run Next.js directly (no npm/pnpm wrapper process): works with pnpm's
+            // symlinked node_modules and does not require pnpm on PM2's PATH.
+            script: 'node_modules/next/dist/bin/next',
             args: 'start',
             cwd: './frontend',
 
@@ -120,12 +122,14 @@ module.exports = {
         // ============================================
         // Admin Panel (Optional - if separate build)
         // ============================================
-        // Uncomment if you have a separate admin panel server
+        // NOTE: admin is a static Vite build (admin/dist -> dist2) and has NO `start` script.
+        // Normally it is served as static files, not by PM2. Uncomment only if you really
+        // want a PM2-managed preview server (requires `pnpm` on PM2's PATH).
         /*
         {
           name: 'ekgkala-admin',
-          script: 'npm',
-          args: 'start',
+          script: 'pnpm',
+          args: 'run preview --port 3001',
           cwd: './admin',
           
           instances: 1,
@@ -159,7 +163,7 @@ module.exports = {
             repo: 'git@github.com:your-username/ekgkala.git',
             path: '/var/www/ekgkala',
             'pre-deploy-local': '',
-            'post-deploy': 'npm ci --include=dev && npm run install:all && npm run build && pm2 reload ecosystem.config.js --env production',
+            'post-deploy': 'pnpm run install:all && pnpm run build && pm2 reload ecosystem.config.js --env production',
             'pre-setup': '',
             env: {
                 NODE_ENV: 'production',

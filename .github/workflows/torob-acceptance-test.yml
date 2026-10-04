@@ -14,6 +14,11 @@ on:
       - 'ekgkala-backend/routes/torob.js'
       - 'ekgkala-backend/models/Product.js'
       - 'ekgkala-backend/tests/torob-acceptance.js'
+      # Re-run when the install/CI setup itself changes (pnpm migration safety net).
+      - 'ekgkala-backend/package.json'
+      - 'ekgkala-backend/pnpm-lock.yaml'
+      - 'ekgkala-backend/pnpm-workspace.yaml'
+      - '.github/workflows/torob-acceptance-test.yml'
 
 jobs:
   torob-e2e:
@@ -46,12 +51,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ekgkala-backend/package-lock.json
+
+      # Pinned, action-free pnpm install: the pnpm setup actions changed shape between pnpm 10 -> 11 -> 12
+      # (pnpm/action-setup vs pnpm/setup, v1..v3, auto-`pnpm install`), so a plain npm install of the
+      # exact version from "packageManager" is the lowest-risk option. Keep in sync with package.json.
+      - name: Install pnpm (pinned)
+        run: npm install -g pnpm@12.8.1
 
       - name: Install backend dependencies
         working-directory: ekgkala-backend
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Generate ephemeral RSA test keypair (used only inside this job)
         run: |

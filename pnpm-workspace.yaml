@@ -1,0 +1,6 @@
+# Root is an orchestration-only package (no dependencies). The three apps
+# (frontend / admin / ekgkala-backend) are STANDALONE pnpm projects, each with
+# its own pnpm-workspace.yaml + pnpm-lock.yaml. This file intentionally has no
+# `packages:` list - do not turn this repo into a single workspace while admin
+# (React 18) and frontend (React 19) differ.
+pmOnFail: ignore
