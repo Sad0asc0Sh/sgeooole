@@ -51,6 +51,7 @@
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
+  transition: border-color 180ms ease, background-color 180ms ease;
 }
 .navigation { display: flex; gap: 6px; }
 .navigation button {
@@ -64,6 +65,7 @@
   background: #fff;
   color: #334155;
   cursor: pointer;
+  transition: border-color 180ms ease, background-color 180ms ease;
 }
 .navigation button:disabled { opacity: .35; cursor: default; }
 .navigation button:not(:disabled):hover, .viewAll:hover { border-color: #d97706; background: #fffbeb; }
@@ -71,7 +73,16 @@
   outline: 2px solid #b45309;
   outline-offset: -3px;
 }
-.carousel { width: 100%; min-width: 0; padding: 2px 0 6px; }
+.carousel {
+  width: 100%;
+  min-width: 0;
+  /* Extra breathing room so the card hover elevation (lift + soft shadow)
+     is never clipped by the swiper's overflow: hidden. The compensating
+     negative margins keep the section's outer spacing identical. */
+  padding: 4px 0 16px;
+  margin-top: -2px;
+  margin-bottom: -10px;
+}
 .carousel .slide { height: auto; min-width: 0; box-sizing: border-box; display: flex; }
 .card {
   display: flex;
@@ -85,9 +96,30 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
-  transition: border-color 180ms ease;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 .card:hover { border-color: #d97706; }
+.card .imageFrame img {
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover elevation — only on devices with a real hover pointer, so the
+   raised state never sticks after a tap on touch screens. */
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 24px -10px rgba(180, 83, 9, 0.18),
+      0 4px 10px -6px rgba(28, 25, 23, 0.08);
+  }
+  .card:hover .imageFrame img {
+    transform: scale(1.05);
+  }
+  .moreCard:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(180, 83, 9, 0.14);
+  }
+}
 .promotionSlot { min-height: 36px; margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) 10px; }
 .promotionHeader { --promotion-color: #2563eb; --promotion-stripe: linear-gradient(to right, #60a5fa, #6366f1); border-bottom: 1px solid #f1f5f9; }
 .promotionHeader[data-promotion-theme="flash"] { --promotion-color: #b45309; --promotion-stripe: #f59e0b; }
@@ -132,7 +164,24 @@
 .originalPrice { color: #64748b; font-size: 11px; overflow-wrap: anywhere; }
 .price { min-height: 30px; display: flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 4px; font-size: 17px; font-weight: 900; overflow-wrap: anywhere; }
 .currency { color: #64748b; font-size: 10px; font-weight: 500; }
-.moreCard { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 320px; padding: 16px; gap: 14px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #fff; color: #334155; font-size: 14px; font-weight: 700; text-align: center; }
+.moreCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 320px;
+  padding: 16px;
+  gap: 14px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
 .moreCard:hover { border-color: #d97706; }
 .moreIcon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #fde68a; border-radius: 50%; background: #fffbeb; color: #b45309; }
 .moreDescription { font-size: 11px; font-weight: 500; color: #64748b; }
@@ -141,7 +190,7 @@
 .feedback { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 16px; color: #475569; font-size: 14px; }
 @keyframes pulse { 50% { opacity: .5; } }
 
-/* Fallback for browsers without @container (Chrome<105, Safari<16, Firefox<110)) */
+/* Fallback for browsers without @container (Chrome<105, Safari<16, Firefox<110) */
 @media (max-width: 1279px) { .skeletonCard { flex-basis: calc((100% - 48px) / 5); } }
 @media (max-width: 1039px) { .skeletonCard { flex-basis: calc((100% - 36px) / 4); } }
 @media (max-width: 799px) { .skeletonCard { flex-basis: calc((100% - 24px) / 3); } }
@@ -176,6 +225,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .card { transition: none; }
+  .card:hover, .moreCard:hover { transform: none; box-shadow: none; }
+  .card .imageFrame img { transition: none; transform: none; }
   .carousel :global(.swiper-wrapper) { transition-duration: 0ms !important; }
   .skeletonCard { animation: none; }
 }

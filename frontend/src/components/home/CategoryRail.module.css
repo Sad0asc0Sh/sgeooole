@@ -8,15 +8,33 @@
 .items { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 20px 16px; list-style: none; margin: 0; padding: 2px; }
 .item { min-width: 0; }
 .category { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; height: 100%; gap: 12px; padding: 10px 4px; }
-.thumbnail { display: grid; place-items: center; width: 96px; width: clamp(80px, 8cqi, 104px); aspect-ratio: 1; min-height: 80px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 50%; background: #f8fafc; color: #64748b; }
-.category:hover .thumbnail { border-color: #d97706; }
+.thumbnail {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  width: clamp(80px, 8cqi, 104px);
+  aspect-ratio: 1;
+  min-height: 80px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #64748b;
+  overflow: hidden;
+  transition: border-color 200ms ease, background-color 200ms ease, box-shadow 200ms ease;
+}
+.category:hover .thumbnail {
+  border-color: #d97706;
+  background-color: #fff;
+  box-shadow: 0 8px 16px -8px rgba(180, 83, 9, 0.28);
+}
 .image { position: relative; width: 100%; height: 100%; }
-.image img { width: 100%; height: 100%; object-fit: contain; }
+.image img { width: 100%; height: 100%; object-fit: contain; transition: transform 250ms ease; }
 .imageSkeleton { position: absolute; inset: 0; border-radius: 50%; background: #e2e8f0; }
-.name { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; min-height: 40px; max-height: 40px; overflow: hidden; overflow-wrap: anywhere; color: #334155; text-align: center; font-size: 12px; font-weight: 600; line-height: 20px; }
+.name { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; min-height: 40px; max-height: 40px; overflow: hidden; overflow-wrap: anywhere; color: #334155; text-align: center; font-size: 12px; font-weight: 600; line-height: 20px; transition: color 200ms ease; }
 .category:hover .name { color: #92400e; }
-.cards .category { padding: 16px 8px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; }
-.cards .category:hover { border-color: #d97706; }
+.cards .category { padding: 16px 8px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; transition: border-color 200ms ease, box-shadow 200ms ease; }
+.cards .category:hover { border-color: #d97706; box-shadow: 0 8px 16px -8px rgba(180, 83, 9, 0.18); }
 .cards .thumbnail { width: 76px; padding: 6px; border: none; border-radius: 8px; background: transparent; }
 .feedback { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 16px; min-height: 132px; border: 1px solid #e2e8f0; border-radius: 12px; color: #475569; font-size: 13px; }
 .skeletons { display: flex; gap: 16px; overflow: hidden; }
@@ -39,3 +57,15 @@
   }
 }
 @media (prefers-reduced-motion: no-preference) { .items { scroll-behavior: smooth; } }
+
+/* Gentle image zoom on hover — real hover pointers only, so the state never
+   sticks after a tap on touch screens. The thumbnail's overflow: hidden
+   keeps the zoom clipped inside the circle. */
+@media (hover: hover) and (pointer: fine) {
+  .category:hover .thumbnail img { transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumbnail, .image img, .name, .cards .category { transition: none; }
+  .category:hover .thumbnail img { transform: none; }
+}

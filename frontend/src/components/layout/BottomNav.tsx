@@ -45,6 +45,30 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
         { href: user ? "/profile" : "/login", label: "حساب کاربری", icon: User },
     ];
 
+    // Shared visual content for every nav item: the icon sits inside a pill
+    // that lights up in brand colors when the item is active, so all three
+    // render branches (sheet button / home button / link) stay identical.
+    const renderItemContent = (item: (typeof navItems)[number], isActive: boolean) => {
+        const Icon = item.icon;
+        return (
+            <>
+                <span
+                    aria-hidden
+                    className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors duration-200 ${isActive ? "bg-kala-100 text-kala-700" : "bg-transparent text-ekg-500"}`}
+                >
+                    <Icon size={20} strokeWidth={isActive ? 2.4 : 1.8} />
+                </span>
+                <span
+                    className={`text-[10px] leading-4 transition-colors duration-200 ${isActive ? "font-bold text-kala-700" : "font-medium text-ekg-500"}`}
+                >
+                    {item.label}
+                </span>
+            </>
+        );
+    };
+
+    const itemClass = "flex min-w-[56px] flex-col items-center justify-center gap-0.5";
+
     return (
         <>
             <nav className={`md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-lg border-t border-ekg-200/60 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
@@ -67,10 +91,10 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     key={item.href}
                                     type="button"
                                     onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                    aria-expanded={isCategoriesOpen}
+                                    className={itemClass}
                                 >
-                                    <item.icon size={20} />
-                                    <span className="text-[10px] font-medium">{item.label}</span>
+                                    {renderItemContent(item, isActive)}
                                 </button>
                             );
                         }
@@ -81,10 +105,10 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     key={item.href}
                                     type="button"
                                     onClick={handleHomeClick}
-                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={itemClass}
                                 >
-                                    <item.icon size={20} />
-                                    <span className="text-[10px] font-medium">{item.label}</span>
+                                    {renderItemContent(item, isActive)}
                                 </button>
                             );
                         }
@@ -97,10 +121,10 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     setTimeout(() => setIsCategoriesOpen(false), 500);
                                     onNavClick();
                                 }}
-                                className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                aria-current={isActive ? "page" : undefined}
+                                className={itemClass}
                             >
-                                <item.icon size={20} />
-                                <span className="text-[10px] font-medium">{item.label}</span>
+                                {renderItemContent(item, isActive)}
                             </Link>
                         );
                     })}
