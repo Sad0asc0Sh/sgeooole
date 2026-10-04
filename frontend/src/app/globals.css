@@ -269,6 +269,28 @@
   }
 }
 
+/* --- MOBILE & KEYBOARD POLISH (UX) --- */
+@layer base {
+
+  html {
+    /* Remove the default gray flash when tapping links/buttons on mobile —
+       the interface feels noticeably more native and app-like. */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent mobile browsers from auto-inflating body text. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Default keyboard focus ring in the brand color. Rules with higher
+     specificity (e.g. Tailwind's focus:outline-none, or the product rails'
+     own :focus-visible styles) still win, so this only adds a visible
+     focus state to elements that previously had none. */
+  :focus-visible {
+    outline: 2px solid var(--color-kala-600, #d97706);
+    outline-offset: 2px;
+  }
+}
+
 /* --- MEGA MENU SCROLLBAR (override global hide) --- */
 .mega-menu-scrollbar::-webkit-scrollbar {
   display: block !important;

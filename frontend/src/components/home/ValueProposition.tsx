@@ -7,7 +7,7 @@ export default function ValueProposition() {
         "اصالت و گارانتی معتبر شرکتی",
         "قیمت رقابتی و حذف واسطه",
         "دپارتمان تخصصی تعمیرات سخت افزار",
-        "دسترسی اسان (۳ شعبه فعال در مشهد)",
+        "دسترسی آسان (۳ شعبه فعال در مشهد)",
     ];
 
     return (
@@ -29,7 +29,7 @@ export default function ValueProposition() {
                     {benefits.map((benefit, index) => (
                         <div
                             key={index}
-                            className="flex items-center gap-3 md:gap-4 p-3 md:p-4 lg:p-5 rounded-xl bg-ekg-800/60 border border-ekg-700/60 hover:border-kala-600/50 hover:bg-ekg-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-kala-900/10"
+                            className="flex items-center gap-3 md:gap-4 p-3 md:p-4 lg:p-5 rounded-xl bg-ekg-800/60 border border-ekg-700/60 hover:border-kala-600/50 hover:bg-ekg-800/80 transition-all duration-300 hover:shadow-lg hover:shadow-kala-900/20"
                         >
                             <CheckCircle2
                                 className="w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 flex-shrink-0 text-kala-500"

@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 // (Phase 2 SEO: previously ssr:false forced a client-only hero.)
 const SwiperSlider = dynamic(() => import("./SwiperSlider"), {
   loading: () => (
-    <div className="w-full h-full bg-gray-100 animate-pulse" />
+    <div className="w-full h-full bg-ekg-100 animate-pulse" />
   ),
 });
 
@@ -93,14 +93,14 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
       <section className={heroContainerClass}>
         <div className="mb-4 animate-pulse">
           <div className={heroFrameClass}>
-            <div className="absolute inset-0 bg-gray-200" />
+            <div className="absolute inset-0 bg-ekg-200" />
           </div>
         </div>
         <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gray-200 animate-pulse rounded-xl"
+              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-ekg-200 animate-pulse rounded-xl"
             />
           ))}
         </div>
