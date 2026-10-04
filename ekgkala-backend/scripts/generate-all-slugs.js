@@ -11,8 +11,8 @@
  *   node scripts/generate-all-slugs.js --dry-run
  *   node scripts/generate-all-slugs.js --verbose
  * 
- * یا از طریق npm:
- *   npm run migrate:all-slugs
+ * یا از طریق pnpm:
+ *   pnpm run migrate:all-slugs
  */
 
 require('dotenv').config()

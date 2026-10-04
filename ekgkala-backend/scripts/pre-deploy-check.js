@@ -171,7 +171,7 @@ if (errors.length === 0 && warnings.length === 0) {
 }
 
 console.log('\n📖 Next steps:')
-console.log('   1. Run: npm audit')
+console.log('   1. Run: pnpm audit')
 console.log('   2. Run: node scripts/audit-logs.js')
 console.log('   3. Review deploy/DEPLOYMENT_GUIDE.md')
 console.log('   4. Copy deploy/nginx.conf to server')

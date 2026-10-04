@@ -9,8 +9,8 @@
  * Usage:
  *   node scripts/generate-product-slugs.js
  * 
- * یا از طریق npm:
- *   npm run migrate:slugs
+ * یا از طریق pnpm:
+ *   pnpm run migrate:slugs
  */
 
 require('dotenv').config()

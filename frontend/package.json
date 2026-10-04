@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx next dev",
-    "dev:turbo": "npx next dev --turbo",
-    "dev:webpack": "npx next dev --webpack",
-    "build": "npx next build",
-    "start": "npx next start",
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
+    "dev:webpack": "next dev --webpack",
+    "build": "next build",
+    "start": "next start",
     "clean:next": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\"",
-    "lint": "npx eslint",
+    "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "analyze": "ANALYZE=true npx next build",
-    "test": "npx jest",
-    "test:watch": "npx jest --watch",
-    "test:coverage": "npx jest --coverage"
+    "analyze": "ANALYZE=true next build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
@@ -67,14 +67,5 @@
     "ts-jest": "^29.4.12",
     "typescript": "^5.9.3"
   },
-  "overrides": {
-    "@babel/core": "^7.29.0",
-    "axios": "^1.19.0",
-    "follow-redirects": "^1.15.11",
-    "form-data": "^4.0.6",
-    "js-yaml": "^4.1.0",
-    "postcss": "^8.5.17",
-    "quill": "2.0.2",
-    "ws": "^8.18.0"
-  }
+  "packageManager": "pnpm@12.8.1"
 }

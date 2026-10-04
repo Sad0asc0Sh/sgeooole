@@ -1,0 +1,22 @@
+# pnpm settings for frontend (standalone project, NOT a workspace member).
+# NOTE: pnpm >= 11 reads settings ONLY from this file, not from package.json.
+#
+# This app runs React 19 while admin runs React 18; keep them as separate pnpm
+# projects so @types/react hoisting cannot leak between them.
+
+pmOnFail: ignore   # keep `packageManager` pin without polluting pnpm-lock.yaml
+
+# Packages allowed to run install/build scripts.
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+overrides:
+  "@babel/core": "^7.29.0"
+  "axios": "^1.19.0"
+  "follow-redirects": "^1.15.11"
+  "form-data": "^4.0.6"
+  "js-yaml": "^4.1.0"
+  "postcss": "^8.5.17"
+  "quill": "2.0.2"
+  "ws": "^8.18.0"

@@ -100,18 +100,18 @@ When adding security features:
 ### Local Development
 ```bash
 # Root level - runs all three apps with hot-reload
-npm run dev:backend      # Nodemon + Express @ port 5000
-npm run dev:frontend     # Next.js @ port 3000  
-npm run dev:admin        # Vite @ port 3001
+pnpm run dev:backend      # Nodemon + Express @ port 5000
+pnpm run dev:frontend     # Next.js @ port 3000  
+pnpm run dev:admin        # Vite @ port 3001
 
-# Each app has independent scripts (cd app && npm run dev)
+# Each app has independent scripts (cd app && pnpm run dev)
 ```
 
 ### Production Build
 ```bash
 # Root: Builds frontend + admin (backend deploys separately)
-npm run build:frontend   # Next build (Turbopack) → .next/
-npm run build:admin      # Vite build → dist/
+pnpm run build:frontend   # Next build (Turbopack) → .next/
+pnpm run build:admin      # Vite build → dist/
 
 # Build output considerations:
 # - Frontend: Static export + API routes (revalidation)
@@ -122,8 +122,8 @@ npm run build:admin      # Vite build → dist/
 ### Monorepo Package Management
 - **Root `package.json`**: Only build/dev orchestration scripts
 - **Each app**: Independent `package.json` with full dependency list
-- **Lockfiles**: npm creates lock at each level (managed separately)
-- **Installation**: `npm run install:all` or manual `cd app && npm ci`
+- **Lockfiles**: pnpm creates `pnpm-lock.yaml` per app (managed separately; apps are standalone pnpm projects, NOT a single workspace — admin is React 18, frontend is React 19). pnpm settings (overrides, allowBuilds) live in each app's `pnpm-workspace.yaml`, not in package.json.
+- **Installation**: `pnpm run install:all` or manual `cd app && pnpm install --frozen-lockfile` (requires pnpm 12.8.1, see `packageManager`)
 
 ---
 

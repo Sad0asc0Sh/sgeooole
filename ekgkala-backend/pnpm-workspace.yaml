@@ -1,0 +1,29 @@
+# pnpm settings for ekgkala-backend (standalone project).
+# NOTE: pnpm >= 11 reads settings ONLY from this file, not from package.json.
+
+pmOnFail: ignore   # keep `packageManager` pin without polluting pnpm-lock.yaml
+
+# Fail the install on a Node below engines.node (>=20.19.0). uuid@13 (forced by the override
+# below) is ESM-only and exceljs breaks at RUNTIME on older Node. NOTE: `engine-strict` in
+# .npmrc is ignored by pnpm 12 - it must be set here.
+engineStrict: true
+
+# Network resilience for deploys (moved from .npmrc: pnpm >= 11 silently ignores these keys there).
+fetchRetries: 3
+fetchRetryMintimeout: 2000
+fetchRetryMaxtimeout: 10000
+preferOffline: true
+
+allowBuilds: {}
+
+overrides:
+  "axios": "^1.19.0"
+  "body-parser": "^1.20.3"
+  "form-data": "^4.0.6"
+  "ip-address": "^10.1.1"
+  "lodash": "^4.18.1"
+  "minimatch": "10.2.3"
+  "nodemailer": "^9.0.3"
+  "picomatch": "^2.3.2"
+  "tmp": "^0.2.6"
+  "uuid": "^13.0.0"

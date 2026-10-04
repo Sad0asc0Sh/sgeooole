@@ -75,6 +75,6 @@ produced the current state). They are safe to re-run; each takes `--dry`.
 ## Build
 
 ```bash
-npm run dev     # vite on :3001
-npm run build   # node scripts/build.mjs → dist/
+pnpm run dev     # vite on :3001
+pnpm run build   # node scripts/build.mjs → dist/
 ```

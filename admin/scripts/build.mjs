@@ -8,7 +8,7 @@ const projectRoot = resolve(__dirname, '..')
 const viteBin = resolve(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js')
 
 if (!existsSync(viteBin)) {
-  console.error('Vite CLI was not found. Run `npm install` inside the admin directory first.')
+  console.error('Vite CLI was not found. Run `pnpm install` inside the admin directory first.')
   process.exit(1)
 }
 
