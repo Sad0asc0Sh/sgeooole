@@ -75,11 +75,11 @@ async function fetchBanners(): Promise<Banner[]> {
 }
 
 const SkeletonRail = ({ title }: { title: string }) => (
-  <div className="py-4 bg-white border-b border-gray-100 animate-pulse">
-    <div className="h-4 w-32 bg-gray-200 rounded mx-4 mb-4" aria-label={`${title} loading`} />
+  <div className="py-4 bg-white border-b border-ekg-100 animate-pulse">
+    <div className="h-4 w-32 bg-ekg-200 rounded mx-4 mb-4" aria-label={`${title} loading`} />
     <div className="flex gap-3 px-4 overflow-x-auto">
       {Array.from({ length: 6 }).map((_, idx) => (
-        <div key={idx} className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0" />
+        <div key={idx} className="w-20 h-20 bg-ekg-100 rounded-xl flex-shrink-0" />
       ))}
     </div>
   </div>
@@ -89,13 +89,13 @@ const SkeletonHero = () => (
   <section className="w-[96%] md:w-[98%] max-w-screen-2xl mx-auto px-2 md:px-4 animate-pulse">
     <div className="mb-4">
       <div className="relative w-full aspect-[21/9] md:aspect-[4/1] rounded-2xl overflow-hidden mt-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+        <div className="absolute inset-0 bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
       </div>
     </div>
     <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200 rounded-xl" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200 rounded-xl hidden md:block" />
+      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200 rounded-xl hidden xl:block" />
     </div>
   </section>
 );
