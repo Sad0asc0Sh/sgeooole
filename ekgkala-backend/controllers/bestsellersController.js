@@ -1,6 +1,6 @@
 /**
  * 🏆 Controller برای بخش پرفروش‌ترین‌ها
- * 
+ *
  * Endpoints:
  * - GET /api/v1/products/bestsellers - دریافت پرفروش‌ترین‌ها
  * - POST /api/v1/tracking/impression - ثبت impression
@@ -12,8 +12,99 @@ const Product = require('../models/Product')
 const ProductView = require('../models/ProductView')
 const SalesEvent = require('../models/SalesEvent')
 const { recalculateAllScores } = require('../services/bestsellersScoreEngine')
-const { resolveBasePrice, getEffectiveOwnDiscount, isTimerLive } = require('../services/pricingService')
+const {
+  resolveBasePrice,
+  getEffectiveOwnDiscount,
+  isTimerLive,
+  getActiveSalesCampaignContext,
+  ttlUntil,
+} = require('../services/pricingService')
 const redis = require('../utils/redis')
+
+// TTL پیش‌فرض کش Redis پرفروش‌ترین‌ها؛ هنگام ذخیره تا نزدیک‌ترین پایان پروموشن کوتاه می‌شود
+const BESTSELLERS_CACHE_TTL = 900
+
+// ============================================
+// قیمت‌گذاری (قرارداد مرکزی + تخفیف زمان‌دار)
+// ============================================
+
+// قرارداد مرکزی قیمت: مبنای تخفیف همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده.
+// تخفیف زمان‌دار (Sale / بخش مالی) درصد خودش را جایگزین می‌کند و فقط وقتی اینجا می‌رسد که
+// فعال و در بازه‌ی زمانی باشد (getActiveSalesCampaignContext فقط همین‌ها را برمی‌گرداند).
+// تخفیف خودِ محصول فقط وقتی اعمال می‌شود که پیشنهاد لحظه‌ای یا شگفت‌انگیز زنده باشد.
+const buildPromotionPrice = (product, now = new Date(), activeSale = null) => {
+  const storedDiscount = Number(product.discount) || 0
+  const basePrice = resolveBasePrice(product.price, product.compareAtPrice, storedDiscount)
+
+  if (activeSale && Number(activeSale.discount) > 0 && basePrice > 0) {
+    const pct = Math.min(100, Number(activeSale.discount))
+    return {
+      price: Math.round(basePrice * (1 - pct / 100)),
+      compareAtPrice: basePrice,
+      discount: pct,
+      promotionEndsAt: activeSale.endDate || null,
+    }
+  }
+
+  const effectiveDiscount = getEffectiveOwnDiscount(product, now)
+  const hasDiscount = basePrice > 0 && effectiveDiscount > 0 && effectiveDiscount < 100
+  const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
+  const specialLive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
+
+  return {
+    price: hasDiscount ? Math.round(basePrice * (1 - effectiveDiscount / 100)) : basePrice,
+    compareAtPrice: hasDiscount ? basePrice : undefined,
+    discount: effectiveDiscount,
+    promotionEndsAt: flashLive
+      ? product.flashDealEndTime || null
+      : specialLive
+        ? product.specialOfferEndTime || null
+        : null,
+  }
+}
+
+// تخفیف زمان‌دارِ فعالِ مرتبط با محصول: اولویت با انتساب مستقیمِ محصول است، سپس دسته‌بندی
+// (منطبق بر productListingService/pricingService: انتساب مستقیم بر دسته‌بندی ترجیح دارد)
+const resolveActiveSale = (product, salesContext) => {
+  if (!product || !salesContext) return null
+  const pid = product._id && product._id.toString()
+  if (pid && salesContext.campaignMap && salesContext.campaignMap.has(pid)) {
+    return salesContext.campaignMap.get(pid)
+  }
+  const category = product.category
+  const cid = category && typeof category === 'object'
+    ? (category._id ? category._id.toString() : null)
+    : category
+      ? category.toString()
+      : null
+  if (cid && salesContext.categoryDiscountMap && salesContext.categoryDiscountMap.has(cid)) {
+    return salesContext.categoryDiscountMap.get(cid)
+  }
+  return null
+}
+
+// برچسب/تم کمپین و وضعیت زنده‌ی پروموشن برای خروجی کارت محصول
+const buildPromotionBadges = (product, now, activeSale) => {
+  const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
+  const specialLive = activeSale ? true : isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
+
+  return {
+    isFlashDeal: flashLive,
+    flashDealEndTime: flashLive ? product.flashDealEndTime : null,
+    isSpecialOffer: specialLive,
+    specialOfferEndTime: activeSale
+      ? activeSale.endDate || null
+      : specialLive ? product.specialOfferEndTime : null,
+    campaignLabel: activeSale
+      ? activeSale.name || 'پیشنهاد شگفت‌انگیز'
+      : flashLive
+        ? product.campaignLabel || 'پیشنهاد لحظه‌ای'
+        : specialLive ? product.campaignLabel : null,
+    campaignTheme: activeSale
+      ? activeSale.theme || 'green-orange'
+      : (flashLive || specialLive) ? product.campaignTheme : null,
+  }
+}
 
 // ============================================
 // دریافت پرفروش‌ترین‌ها
@@ -45,19 +136,18 @@ exports.getBestsellers = async (req, res) => {
 
     let result = []
 
-    // قرارداد مرکزی قیمت: مبنای تخفیف همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده
-    // تخفیف خودِ محصول فقط وقتی اعمال می‌شود که پیشنهاد لحظه‌ای یا شگفت‌انگیز زنده باشد
-    const buildPromotionPrice = (product, now = new Date()) => {
-      const storedDiscount = Number(product.discount) || 0
-      const basePrice = resolveBasePrice(product.price, product.compareAtPrice, storedDiscount)
-      const effectiveDiscount = getEffectiveOwnDiscount(product, now)
-      const hasDiscount = basePrice > 0 && effectiveDiscount > 0 && effectiveDiscount < 100
+    // ساعت مبنای همین پاسخ + زمینه‌ی تخفیف‌های زمان‌دارِ فعال (Sale) برای همه‌ی آیتم‌ها
+    const now = new Date()
+    const salesContext = await getActiveSalesCampaignContext(now)
 
-      return {
-        price: hasDiscount ? Math.round(basePrice * (1 - effectiveDiscount / 100)) : basePrice,
-        compareAtPrice: hasDiscount ? basePrice : undefined,
-        discount: effectiveDiscount,
-      }
+    // نزدیک‌ترین پایان پروموشن بین آیتم‌ها؛ TTL کش تا همین لحظه کوتاه می‌شود تا
+    // قیمت/لیبل منقضی در کش باقی نماند.
+    let soonestPromotionEnd = null
+    const trackPromotionEnd = (end) => {
+      if (!end) return
+      const t = new Date(end).getTime()
+      if (!Number.isFinite(t) || t <= now.getTime()) return
+      if (!soonestPromotionEnd || t < soonestPromotionEnd) soonestPromotionEnd = t
     }
 
     if (scoreCount > 0) {
@@ -89,10 +179,11 @@ exports.getBestsellers = async (req, res) => {
       result = bestsellers
         .filter((score) => score.product_id) // فیلتر محصولات حذف شده
         .map((score) => {
-          const now = new Date()
-          const promotionPrice = buildPromotionPrice(product, now)
-          const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
-          const specialLive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
+          const product = score.product_id
+          const activeSale = resolveActiveSale(product, salesContext)
+          const promotionPrice = buildPromotionPrice(product, now, activeSale)
+          trackPromotionEnd(promotionPrice.promotionEndsAt)
+          const badges = buildPromotionBadges(product, now, activeSale)
 
           // Extract image URL from images array
           let imageData = null
@@ -113,12 +204,12 @@ exports.getBestsellers = async (req, res) => {
             price: promotionPrice.price,
             discount: promotionPrice.discount,
             compareAtPrice: promotionPrice.compareAtPrice,
-            isFlashDeal: flashLive,
-            flashDealEndTime: flashLive ? product.flashDealEndTime : null,
-            isSpecialOffer: specialLive,
-            specialOfferEndTime: specialLive ? product.specialOfferEndTime : null,
-            campaignLabel: flashLive ? (product.campaignLabel || 'پیشنهاد لحظه‌ای') : (specialLive ? product.campaignLabel : null),
-            campaignTheme: (flashLive || specialLive) ? product.campaignTheme : null,
+            isFlashDeal: badges.isFlashDeal,
+            flashDealEndTime: badges.flashDealEndTime,
+            isSpecialOffer: badges.isSpecialOffer,
+            specialOfferEndTime: badges.specialOfferEndTime,
+            campaignLabel: badges.campaignLabel,
+            campaignTheme: badges.campaignTheme,
             average_rating: product.rating || 0,
             review_count: product.numReviews || 0,
             stock: product.stock || 0,
@@ -221,10 +312,10 @@ exports.getBestsellers = async (req, res) => {
       }
 
       result = fallbackProducts.map((product) => {
-        const now = new Date()
-        const promotionPrice = buildPromotionPrice(product, now)
-        const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
-        const specialLive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
+        const activeSale = resolveActiveSale(product, salesContext)
+        const promotionPrice = buildPromotionPrice(product, now, activeSale)
+        trackPromotionEnd(promotionPrice.promotionEndsAt)
+        const badges = buildPromotionBadges(product, now, activeSale)
         let imageData = null
         if (product.images && product.images.length > 0) {
           const img = product.images[0]
@@ -243,12 +334,12 @@ exports.getBestsellers = async (req, res) => {
           price: promotionPrice.price,
           discount: promotionPrice.discount,
           compareAtPrice: promotionPrice.compareAtPrice,
-          isFlashDeal: flashLive,
-          flashDealEndTime: flashLive ? product.flashDealEndTime : null,
-          isSpecialOffer: specialLive,
-          specialOfferEndTime: specialLive ? product.specialOfferEndTime : null,
-          campaignLabel: flashLive ? (product.campaignLabel || 'پیشنهاد لحظه‌ای') : (specialLive ? product.campaignLabel : null),
-          campaignTheme: (flashLive || specialLive) ? product.campaignTheme : null,
+          isFlashDeal: badges.isFlashDeal,
+          flashDealEndTime: badges.flashDealEndTime,
+          isSpecialOffer: badges.isSpecialOffer,
+          specialOfferEndTime: badges.specialOfferEndTime,
+          campaignLabel: badges.campaignLabel,
+          campaignTheme: badges.campaignTheme,
           average_rating: product.rating || 0,
           review_count: product.numReviews || 0,
           stock: product.stock || 0,
@@ -269,9 +360,11 @@ exports.getBestsellers = async (req, res) => {
       })
     }
 
-    // ذخیره در کش (TTL: 15 دقیقه)، مگر آن‌که مصرف‌کننده دادهٔ تازه خواسته باشد.
+    // ذخیره در کش: TTL پایه ۱۵ دقیقه است اما تا نزدیک‌ترین پایان پروموشن کوتاه می‌شود تا
+    // تخفیف منقضی در کش باقی نماند. علاوه بر این، job چرخه‌ی عمر تخفیف‌ها هنگام
+    // غیرفعال‌سازی هر پروموشن/Sale، کلیدهای bestsellers:* را هم باطل می‌کند.
     if (!bypassCache && redis && result.length > 0) {
-      await redis.setCache(cacheKey, result, 900)
+      await redis.setCache(cacheKey, result, ttlUntil(soonestPromotionEnd, BESTSELLERS_CACHE_TTL, now))
     }
 
     res.json({

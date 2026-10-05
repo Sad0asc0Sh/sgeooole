@@ -112,7 +112,7 @@ const fetchWithRetry = async (
 };
 
 // Reduced from 3600 (1 hour) to 30 seconds for real-time discount updates from admin panel
-export const PRODUCT_REVALIDATE = 600;
+export const PRODUCT_REVALIDATE = 30;
 
 type BackendImage = string | { url?: string };
 
@@ -462,7 +462,7 @@ export const fetchRelatedProducts = cache(async (
     let relatedProducts: (Product & { isActive?: boolean })[] = [];
 
     // Strategy: Start from the leaf category and move up to parent categories
-    // Use includeChildren to get products from subcategories too
+    // Use includeChildren to get products from this category and all its children
     for (let i = categoryPath.length - 1; i >= 0 && relatedProducts.length < limit; i--) {
       const category = categoryPath[i];
       if (!category?.id) continue;
@@ -471,9 +471,9 @@ export const fetchRelatedProducts = cache(async (
       const response = await fetchWithRetry(
         `${apiBaseUrl}/products?category=${category.id}&includeChildren=true&limit=${fetchLimit}&nocache=true`,
         {
-          // Phase 2 SEO #13: 600s to match the PDP route revalidate (lowest
-          // fetch revalidate wins for the route's Cache-Control header).
-          next: { revalidate: 600 },
+          // 30s to match the PDP route revalidate (lowest fetch revalidate wins
+          // for the route's Cache-Control header).
+          next: { revalidate: 30 },
         } as RequestInit,
         2,
         1000

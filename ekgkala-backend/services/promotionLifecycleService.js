@@ -8,8 +8,9 @@
 //     - discount صفر می‌شود (تخفیف از روی محصول برداشته می‌شود)؛
 //     - اگر price از قبل تخفیف‌خورده ذخیره شده بود (داده‌ی قدیمی)، به قیمت پایه برمی‌گردد
 //       تا با صفر شدن discount، قیمت تخفیفی به‌صورت دائمی روی محصول باقی نماند.
-//   تخفیف زمان‌دار (Sale / بخش مالی) به هیچ‌وجه لمس نمی‌شود؛ آن کمپین‌ها درصد خودشان را
-//   مستقل از فیلد discount محصول اعمال می‌کنند.
+//   توجه: توابع سطحِ محصولِ این ماژول تخفیف زمان‌دار (Sale / بخش مالی) را لمس نمی‌کنند؛
+//   آن کمپین‌ها درصد خودشان را مستقل از فیلد discount محصول اعمال می‌کنند.
+//   چرخه‌ی عمر خودِ سند Sale (غیرفعال‌شدن خودکار بعد از endDate) در runSaleCleanup است.
 // ============================================
 
 const { resolveBasePrice, isTimerLive } = require('./pricingService')
@@ -136,6 +137,23 @@ async function runPromotionCleanup(Product, { now = new Date(), batchSize = 500 
 }
 
 /**
+ * غیرفعال‌سازی خودکار تخفیف‌های زمان‌دارِ منقضی (Sale / بخش مالی).
+ * همه‌ی مسیرهای خواندن، Sale را با isActive + بازه‌ی زمانی فیلتر می‌کنند، اما تا وقتی
+ * سندِ منقضی isActive=true بماند در پنل ادمین «فعال» دیده می‌شود و هر مسیر آینده‌ای که
+ * فقط isActive را چک کند دوباره تخفیف را اعمال خواهد کرد. با غیرفعال‌کردن سندِ منقضی،
+ * انقضا در سطح داده هم نهایی می‌شود و «منقضی شده اما فعال» دیگر اتفاق نمی‌افتد.
+ *
+ * @returns {Promise<number>} تعداد تخفیف‌های زمان‌داری که تازه غیرفعال شدند
+ */
+async function runSaleCleanup(Sale, { now = new Date() } = {}) {
+  const result = await Sale.updateMany(
+    { isActive: true, endDate: { $lte: now } },
+    { $set: { isActive: false } },
+  )
+  return result.modifiedCount || 0
+}
+
+/**
  * غیرفعال‌سازی گروهی یک کمپین (flash | special) از پنل ادمین: فلگ خاموش، تایمر پاک و
  * تخفیف محصولات حذف می‌شود. اعضای تخفیف زمان‌دار (excludedIds) لمس نمی‌شوند.
  *
@@ -224,6 +242,7 @@ module.exports = {
   planPromotionCleanup,
   staleCandidatesFilter,
   runPromotionCleanup,
+  runSaleCleanup,
   deactivateCampaign,
   applyOwnPromotionRules,
 }

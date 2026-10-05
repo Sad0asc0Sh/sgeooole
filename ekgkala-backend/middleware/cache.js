@@ -132,6 +132,23 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
 // ============================================
 const clearCacheByKey = (key) => cache.del(key)
 
+// کش Redis پرفروش‌ترین‌ها از روی داده‌ی محصولات ساخته می‌شود؛ با هر باطل‌سازی کشِ
+// محصولات (ویرایش محصول، تغییر/غیرفعال‌سازی تخفیف زمان‌دار، job انقضا و ...) آن هم
+// باطل می‌شود تا قیمت/تخفیفِ منقضی در بخش پرفروش‌ترین‌ها باقی نماند.
+const PRODUCT_CACHE_PREFIXES = ['/api/products', '/api/v1/admin/products']
+
+const invalidateBestsellersRedisCache = () => {
+  try {
+    // require تنبل تا هیچ وابستگی چرخه‌ای/ترتیب لودی ایجاد نشود؛ Redis اختیاری است
+    const redis = require('../utils/redis')
+    if (redis && typeof redis.deleteCachePattern === 'function') {
+      Promise.resolve(redis.deleteCachePattern('bestsellers:*')).catch(() => {})
+    }
+  } catch (_) {
+    // خطای Redis نباید باطل‌سازی کش اصلی را بشکند
+  }
+}
+
 const clearCacheByPrefix = (prefix) => {
   const keys = cache.keys()
   let cleared = 0
@@ -144,6 +161,11 @@ const clearCacheByPrefix = (prefix) => {
   if (cleared > 0) {
     console.log(`[CACHE] Cleared ${cleared} cache entries matching prefix: ${prefix}`)
   }
+
+  if (typeof prefix === 'string' && PRODUCT_CACHE_PREFIXES.some((p) => prefix.includes(p))) {
+    invalidateBestsellersRedisCache()
+  }
+
   return cleared
 }
 
