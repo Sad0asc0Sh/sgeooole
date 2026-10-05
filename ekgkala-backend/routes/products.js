@@ -98,6 +98,7 @@ const csvUpload = multer({
     // 25MB default - override with env for larger catalogs
     fileSize: Number(process.env.CSV_IMPORT_MAX_FILE_SIZE || 25 * 1024 * 1024),
     files: 1,
+    fieldArrayIndexLimit: 20, // multer>=2.3 DoS hardening
   },
   fileFilter: (req, file, cb) => {
     const allowedMimeTypes = new Set([

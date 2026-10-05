@@ -105,6 +105,7 @@ const upload = multer({
   storage,
   limits: {
     fileSize: MAX_UPLOAD_FILE_SIZE_BYTES,
+    fieldArrayIndexLimit: 20, // multer>=2.3 DoS hardening (max real index is 9)
     files: 10,
   },
   fileFilter: secureFileFilter,
