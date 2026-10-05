@@ -12,7 +12,7 @@ const Product = require('../models/Product')
 const ProductView = require('../models/ProductView')
 const SalesEvent = require('../models/SalesEvent')
 const { recalculateAllScores } = require('../services/bestsellersScoreEngine')
-const { resolveBasePrice } = require('../services/pricingService')
+const { resolveBasePrice, getEffectiveOwnDiscount, isTimerLive } = require('../services/pricingService')
 const redis = require('../utils/redis')
 
 // ============================================
@@ -46,15 +46,17 @@ exports.getBestsellers = async (req, res) => {
     let result = []
 
     // قرارداد مرکزی قیمت: مبنای تخفیف همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده
-    const buildPromotionPrice = (product) => {
+    // تخفیف خودِ محصول فقط وقتی اعمال می‌شود که پیشنهاد لحظه‌ای یا شگفت‌انگیز زنده باشد
+    const buildPromotionPrice = (product, now = new Date()) => {
       const storedDiscount = Number(product.discount) || 0
       const basePrice = resolveBasePrice(product.price, product.compareAtPrice, storedDiscount)
-      const discount = storedDiscount
-      const hasDiscount = basePrice > 0 && discount > 0 && discount < 100
+      const effectiveDiscount = getEffectiveOwnDiscount(product, now)
+      const hasDiscount = basePrice > 0 && effectiveDiscount > 0 && effectiveDiscount < 100
 
       return {
-        price: hasDiscount ? Math.round(basePrice * (1 - discount / 100)) : basePrice,
-        compareAtPrice: hasDiscount ? basePrice : product.compareAtPrice,
+        price: hasDiscount ? Math.round(basePrice * (1 - effectiveDiscount / 100)) : basePrice,
+        compareAtPrice: hasDiscount ? basePrice : undefined,
+        discount: effectiveDiscount,
       }
     }
 
@@ -87,8 +89,10 @@ exports.getBestsellers = async (req, res) => {
       result = bestsellers
         .filter((score) => score.product_id) // فیلتر محصولات حذف شده
         .map((score) => {
-          const product = score.product_id
-          const promotionPrice = buildPromotionPrice(product)
+          const now = new Date()
+          const promotionPrice = buildPromotionPrice(product, now)
+          const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
+          const specialLive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
 
           // Extract image URL from images array
           let imageData = null
@@ -107,14 +111,14 @@ exports.getBestsellers = async (req, res) => {
             slug: product.slug,
             image: imageData,
             price: promotionPrice.price,
-            discount: product.discount || 0,
+            discount: promotionPrice.discount,
             compareAtPrice: promotionPrice.compareAtPrice,
-            isFlashDeal: Boolean(product.isFlashDeal),
-            flashDealEndTime: product.flashDealEndTime || null,
-            isSpecialOffer: Boolean(product.isSpecialOffer),
-            specialOfferEndTime: product.specialOfferEndTime || null,
-            campaignLabel: product.campaignLabel || null,
-            campaignTheme: product.campaignTheme || null,
+            isFlashDeal: flashLive,
+            flashDealEndTime: flashLive ? product.flashDealEndTime : null,
+            isSpecialOffer: specialLive,
+            specialOfferEndTime: specialLive ? product.specialOfferEndTime : null,
+            campaignLabel: flashLive ? (product.campaignLabel || 'پیشنهاد لحظه‌ای') : (specialLive ? product.campaignLabel : null),
+            campaignTheme: (flashLive || specialLive) ? product.campaignTheme : null,
             average_rating: product.rating || 0,
             review_count: product.numReviews || 0,
             stock: product.stock || 0,
@@ -217,7 +221,10 @@ exports.getBestsellers = async (req, res) => {
       }
 
       result = fallbackProducts.map((product) => {
-        const promotionPrice = buildPromotionPrice(product)
+        const now = new Date()
+        const promotionPrice = buildPromotionPrice(product, now)
+        const flashLive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
+        const specialLive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
         let imageData = null
         if (product.images && product.images.length > 0) {
           const img = product.images[0]
@@ -234,14 +241,14 @@ exports.getBestsellers = async (req, res) => {
           slug: product.slug,
           image: imageData,
           price: promotionPrice.price,
-          discount: product.discount || 0,
+          discount: promotionPrice.discount,
           compareAtPrice: promotionPrice.compareAtPrice,
-          isFlashDeal: Boolean(product.isFlashDeal),
-          flashDealEndTime: product.flashDealEndTime || null,
-          isSpecialOffer: Boolean(product.isSpecialOffer),
-          specialOfferEndTime: product.specialOfferEndTime || null,
-          campaignLabel: product.campaignLabel || null,
-          campaignTheme: product.campaignTheme || null,
+          isFlashDeal: flashLive,
+          flashDealEndTime: flashLive ? product.flashDealEndTime : null,
+          isSpecialOffer: specialLive,
+          specialOfferEndTime: specialLive ? product.specialOfferEndTime : null,
+          campaignLabel: flashLive ? (product.campaignLabel || 'پیشنهاد لحظه‌ای') : (specialLive ? product.campaignLabel : null),
+          campaignTheme: (flashLive || specialLive) ? product.campaignTheme : null,
           average_rating: product.rating || 0,
           review_count: product.numReviews || 0,
           stock: product.stock || 0,

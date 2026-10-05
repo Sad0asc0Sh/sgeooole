@@ -677,6 +677,10 @@ const connectDB = async () => {
       const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
       startCartCleanupJob()
 
+      // غیرفعال‌سازی خودکار پیشنهاد لحظه‌ای/شگفت‌انگیزِ منقضی + حذف تخفیف (هر دقیقه)
+      const { startPromotionExpiryJob } = require('./jobs/promotionExpiryJob')
+      startPromotionExpiryJob()
+
       // Bestsellers Score Recalculation (every 30 minutes)
       const { recalculateAllScores } = require('./services/bestsellersScoreEngine')
       const BESTSELLERS_RECALC_INTERVAL = 30 * 60 * 1000 // 30 minutes

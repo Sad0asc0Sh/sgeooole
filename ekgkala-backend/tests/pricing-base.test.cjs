@@ -79,12 +79,20 @@ test('computeItemPricing: همان محصول بدون تخفیف → ۴٬۸۰۰
   assert.equal(pricing.discount, 0)
 })
 
-test('computeItemPricing: legacy بدون کمپین → ۸۰۰ با مبنای ۱۰۰۰', () => {
-  const item = { product: { productType: 'simple', price: 800, compareAtPrice: 1000, discount: 20 } }
-  const pricing = computeItemPricing(item, now)
-  assert.equal(pricing.basePrice, 1000)
-  assert.equal(pricing.finalPrice, 800)
-  assert.equal(pricing.discount, 20)
+test('computeItemPricing: legacy با پیشنهاد لحظه‌ای فعال → ۸۰۰ با مبنای ۱۰۰۰ (بدون پیشنهاد → ۱۰۰۰ و تخفیف ۰)', () => {
+  const future = new Date('2026-09-18T00:00:00Z')
+  const itemActive = { product: { productType: 'simple', price: 800, compareAtPrice: 1000, discount: 20, isFlashDeal: true, flashDealEndTime: future } }
+  const pricingActive = computeItemPricing(itemActive, now)
+  assert.equal(pricingActive.basePrice, 1000)
+  assert.equal(pricingActive.finalPrice, 800)
+  assert.equal(pricingActive.discount, 20)
+
+  // بدون پیشنهاد لحظه‌ای/شگفت‌انگیز: تخفیف اعمال نمی‌شود و قیمت پایه حفظ می‌شود
+  const itemInactive = { product: { productType: 'simple', price: 800, compareAtPrice: 1000, discount: 20 } }
+  const pricingInactive = computeItemPricing(itemInactive, now)
+  assert.equal(pricingInactive.basePrice, 1000)
+  assert.equal(pricingInactive.finalPrice, 1000)
+  assert.equal(pricingInactive.discount, 0)
 })
 
 test('computeItemPricing: legacy با کمپین ۱۰٪ → ۹۰۰ با مبنای ۱۰۰۰', () => {
@@ -123,18 +131,25 @@ test('computeItemPricing: واریانت با compare کهنه — مبنا pric
   assert.equal(pricing.finalPrice, 4512000)
 })
 
-test('computeItemPricing: price=0 و تخفیف ۱۰۰٪', () => {
-  const item = { product: { productType: 'simple', price: 0, compareAtPrice: 5000, discount: 100 } }
+test('computeItemPricing: price=0 و تخفیف ۱۰۰٪ با پیشنهاد فعال', () => {
+  const future = new Date('2026-09-18T00:00:00Z')
+  const item = { product: { productType: 'simple', price: 0, compareAtPrice: 5000, discount: 100, isFlashDeal: true, flashDealEndTime: future } }
   const pricing = computeItemPricing(item, now)
   assert.equal(pricing.basePrice, 5000)
   assert.equal(pricing.finalPrice, 0)
 })
 
 test('computeItemPricing: قیمت نهایی تخفیف‌دار رُند می‌شود (Math.round)', () => {
-  const item = { product: { productType: 'simple', price: 1001, discount: 10 } }
+  const future = new Date('2026-09-18T00:00:00Z')
+  const item = { product: { productType: 'simple', price: 1001, discount: 10, isSpecialOffer: true, specialOfferEndTime: future } }
   assert.equal(computeItemPricing(item, now).finalPrice, 901)
-  const item2 = { product: { productType: 'simple', price: 1003, discount: 10, isFlashDeal: true, flashDealEndTime: new Date('2026-09-18T00:00:00Z') } }
+  const item2 = { product: { productType: 'simple', price: 1003, discount: 10, isFlashDeal: true, flashDealEndTime: future } }
   assert.equal(computeItemPricing(item2, now).finalPrice, 903)
+
+  // بدون پیشنهاد فعال: تخفیف اعمال نمی‌شود
+  const itemInactive = { product: { productType: 'simple', price: 1001, discount: 10 } }
+  assert.equal(computeItemPricing(itemInactive, now).finalPrice, 1001)
+  assert.equal(computeItemPricing(itemInactive, now).discount, 0)
 })
 
 // ---------------------------------------------------------------- applyDiscountToObject
@@ -219,8 +234,10 @@ test('همسانی resolveBasePrice با pipeline مونگو روی مجموعه
     [799999, 1000000, 20],
     [2500000, 2500000, 0],
   ]
+  const future = new Date('2026-10-05T00:00:00Z')
   const products = fixtures.map(([price, compareAtPrice, discount], i) => ({
     _id: id(11 + i), name: `P${i}`, isActive: true, price, compareAtPrice, discount,
+    isFlashDeal: discount > 0, flashDealEndTime: discount > 0 ? future : null,
     stock: 2, rating: 4, createdAt: now, variants: [], productType: 'simple',
   }))
   const result = listingRun(products, { sort: 'priceAsc' }, [campaign])

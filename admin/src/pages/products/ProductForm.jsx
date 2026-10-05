@@ -186,14 +186,26 @@ function ProductForm() {
             setVariants(p.variants || [])
 
             // Load promotion fields (ISO strings for JalaliDateTimePicker)
-            setDiscount(p.discount || 0)
-            setIsFlashDeal(p.isFlashDeal || false)
-            setFlashDealEndTime(p.flashDealEndTime || '')
-            setIsSpecialOffer(p.isSpecialOffer || false)
-            setSpecialOfferEndTime(p.specialOfferEndTime || '')
-            setCampaignLabel(p.campaignLabel || '')
-            setCampaignTheme(p.campaignTheme || '')
+            const now = new Date()
+            const flashExpired = Boolean(p.isFlashDeal && p.flashDealEndTime && new Date(p.flashDealEndTime) <= now)
+            const specialExpired = Boolean(p.isSpecialOffer && p.specialOfferEndTime && new Date(p.specialOfferEndTime) <= now)
+
+            const liveFlash = Boolean(p.isFlashDeal && !flashExpired)
+            const liveSpecial = Boolean(p.isSpecialOffer && !specialExpired)
+
+            // اگر منقضی شده یا هر دو غیرفعال‌اند، تخفیف صفر و فیلدهای کمپین خاموش می‌شوند
+            setIsFlashDeal(liveFlash)
+            setFlashDealEndTime(liveFlash ? (p.flashDealEndTime || '') : '')
+            setIsSpecialOffer(liveSpecial)
+            setSpecialOfferEndTime(liveSpecial ? (p.specialOfferEndTime || '') : '')
+            setDiscount((liveFlash || liveSpecial) ? (p.discount || 0) : 0)
+            setCampaignLabel((liveFlash || liveSpecial) ? (p.campaignLabel || '') : '')
+            setCampaignTheme((liveFlash || liveSpecial) ? (p.campaignTheme || '') : '')
             setIsFromActiveSale(p.isFromActiveSale || false)
+
+            if (flashExpired || specialExpired) {
+              message.info('کمپین تخفیف این محصول منقضی شده بود و به طور هوشمند غیرفعال شد.')
+            }
 
             // Load specs from product.properties
             if (p.properties && Array.isArray(p.properties)) {
@@ -580,24 +592,34 @@ function ProductForm() {
         payload.variants = variants
       }
 
-      // اضافه کردن فیلدهای فروش ویژه
-      payload.isFlashDeal = isFlashDeal
+      // اضافه کردن فیلدهای فروش ویژه و تخفیف
+      payload.isFlashDeal = Boolean(isFlashDeal)
       if (isFlashDeal && flashDealEndTime) {
-        // flashDealEndTime might be Date object or ISO string
         payload.flashDealEndTime = flashDealEndTime instanceof Date
           ? flashDealEndTime.toISOString()
           : new Date(flashDealEndTime).toISOString()
+      } else {
+        payload.isFlashDeal = false
+        payload.flashDealEndTime = null
       }
 
-      payload.isSpecialOffer = isSpecialOffer
+      payload.isSpecialOffer = Boolean(isSpecialOffer)
       if (isSpecialOffer && specialOfferEndTime) {
-        // specialOfferEndTime might be Date object or ISO string
         payload.specialOfferEndTime = specialOfferEndTime instanceof Date
           ? specialOfferEndTime.toISOString()
           : new Date(specialOfferEndTime).toISOString()
-      } else if (!isSpecialOffer) {
-        // Explicitly clear the timer if special offer is disabled
+      } else {
+        payload.isSpecialOffer = false
         payload.specialOfferEndTime = null
+      }
+
+      // تخفیف محصول فقط زمانی معتبر است که پیشنهاد لحظه‌ای یا شگفت‌انگیز فعال باشد
+      if (!payload.isFlashDeal && !payload.isSpecialOffer) {
+        payload.discount = 0
+        payload.campaignLabel = ''
+        payload.campaignTheme = ''
+      } else {
+        payload.discount = Number(discount) || 0
       }
 
       // اضافه کردن فیلدهای کمپین
@@ -1010,7 +1032,7 @@ function ProductForm() {
                 label: 'فروش ویژه و تخفیف',
                 children: (
                   <Space direction="vertical" style={{ width: '100%' }} size="large">
-                    {/* بخش تخفیف عمومی */}
+                    {/* بخش تخفیف محصول */}
                     <Card title="تخفیف محصول" size="small">
                       <Form.Item label="درصد تخفیف (%)">
                         <InputNumber
@@ -1018,12 +1040,15 @@ function ProductForm() {
                           onChange={(value) => setDiscount(value || 0)}
                           min={0}
                           max={100}
+                          disabled={!isFlashDeal && !isSpecialOffer}
                           style={{ width: '200px' }}
-                          placeholder="مثلاً: 20"
+                          placeholder={(!isFlashDeal && !isSpecialOffer) ? "ابتدا یک پیشنهاد را فعال کنید" : "مثلاً: 20"}
                           parser={parseNumericInput}
                         />
                         <p style={{ marginTop: 8, color: '#888', fontSize: '13px' }}>
-                          این تخفیف روی کارت محصول نمایش داده می‌شود
+                          {(!isFlashDeal && !isSpecialOffer)
+                            ? '⚠️ درصد تخفیف فقط با فعال‌سازی «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» اعمال می‌شود. با غیرفعال‌سازی آن‌ها، تخفیف به طور خودکار حذف می‌شود.'
+                            : 'این درصد روی پیشنهاد فعال (لحظه‌ای یا شگفت‌انگیز) اعمال خواهد شد.'}
                         </p>
                       </Form.Item>
                     </Card>
@@ -1050,6 +1075,12 @@ function ProductForm() {
                                 return
                               }
                               setIsFlashDeal(e.target.checked)
+                              if (!e.target.checked) {
+                                setFlashDealEndTime('')
+                                if (!isSpecialOffer) {
+                                  setDiscount(0)
+                                }
+                              }
                             }}
                             style={{
                               width: '18px',
@@ -1152,6 +1183,12 @@ function ProductForm() {
                                 return
                               }
                               setIsSpecialOffer(e.target.checked)
+                              if (!e.target.checked) {
+                                setSpecialOfferEndTime('')
+                                if (!isFlashDeal) {
+                                  setDiscount(0)
+                                }
+                              }
                             }}
                             style={{
                               width: '18px',

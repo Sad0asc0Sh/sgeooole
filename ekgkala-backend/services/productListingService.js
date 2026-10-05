@@ -237,6 +237,7 @@ const numeric = (path) => ({ $convert: { input: path, to: 'double', onNull: 0, o
 const round = (value) => ({ $floor: { $add: [value, 0.5] } })
 const ref = (key) => `$${INTERNAL}.${key}`
 const timedActive = (flag, end, now) => ({ $and: [flag, { $or: [{ $eq: [{ $ifNull: [end, null] }, null] }, { $gt: [end, now] }] }] })
+const timedExpired = (flag, end, now) => ({ $and: [flag, { $ne: [{ $ifNull: [end, null] }, null] }, { $lte: [end, now] }] })
 
 function pricingStages(campaigns, now) {
   // Direct assignment wins over category assignment, regardless of discount size.
@@ -276,12 +277,12 @@ function pricingStages(campaigns, now) {
   return [
     { $addFields: { [INTERNAL]: { campaign: branches.length ? { $switch: { branches, default: null } } : null } } },
     { $addFields: {
-      [`${INTERNAL}.eligible`]: { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now), { $and: [{ $not: ['$isFlashDeal'] }, { $not: ['$isSpecialOffer'] }] }] },
+      [`${INTERNAL}.eligible`]: { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now)] },
       [`${INTERNAL}.variable`]: { $and: [{ $eq: ['$productType', 'variable'] }, { $gt: [{ $size: { $ifNull: ['$variants', []] } }, 0] }] },
     } },
     { $addFields: {
       [`${INTERNAL}.discount`]: { $cond: [ref('eligible'), { $min: [100, { $max: [0, { $cond: [hasCampaign, ref('campaign.discount'), numeric('$discount')] }] }] }, 0] },
-      [`${INTERNAL}.expired`]: { $not: [ref('eligible')] },
+      [`${INTERNAL}.expired`]: { $or: [timedExpired('$isFlashDeal', '$flashDealEndTime', now), timedExpired('$isSpecialOffer', '$specialOfferEndTime', now)] },
       [`${INTERNAL}.stock`]: { $cond: [{ $eq: ['$productType', 'variable'] }, { $sum: '$variants.stock' }, numeric('$stock')] },
     } },
     { $addFields: {

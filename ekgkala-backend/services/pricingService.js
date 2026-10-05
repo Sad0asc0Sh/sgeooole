@@ -239,6 +239,35 @@ const getActiveSalesCampaignContext = async (now = new Date()) => {
   }
 }
 
+// ============================================
+// قاعده‌ی واحد تخفیف خودِ محصول (بخش «فروش ویژه و تخفیف» در پنل ادمین)
+// --------------------------------------------
+// فیلد discount محصول فقط «درصدِ» پیشنهاد لحظه‌ای / شگفت‌انگیز است و به‌تنهایی
+// هیچ اعتباری ندارد: فقط وقتی اعمال می‌شود که یکی از این دو روی همان محصول «زنده»
+// باشد (فلگ روشن و تایمر نگذشته). با غیرفعال‌شدن دستی یا پایان تایمر، تخفیف
+// کاملاً حذف می‌شود و هرگز به‌عنوان «تخفیف ساده» باقی نمی‌ماند.
+// تخفیف زمان‌دار (Sale / بخش مالی) مسیر مستقل خودش را دارد و از این قاعده تأثیر نمی‌گیرد.
+// ============================================
+const isTimerLive = (flag, end, now = new Date()) => {
+  if (!flag) return false
+  if (!end) return true // فلگ روشن بدون زمان پایان = بدون انقضا (رفتار قبلی حفظ می‌شود)
+  const d = new Date(end)
+  return !Number.isNaN(d.getTime()) && d > now
+}
+
+const isOwnPromotionLive = (product, now = new Date()) =>
+  Boolean(product) && (
+    isTimerLive(product.isFlashDeal, product.flashDealEndTime, now) ||
+    isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
+  )
+
+/** درصد تخفیف خودِ محصول که واقعاً قابل اعمال است (۰ اگر لحظه‌ای/شگفت‌انگیز زنده نباشد). */
+const getEffectiveOwnDiscount = (product, now = new Date()) => {
+  if (!isOwnPromotionLive(product, now)) return 0
+  const d = Number(product.discount) || 0
+  return d > 0 ? Math.min(100, d) : 0
+}
+
 const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
   const product = item?.product || {}
   const quantity = Number(item.quantity || item.qty || 1) || 1
@@ -258,11 +287,9 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
   }
 
   let rawDiscount = Number(product.discount) || 0
-  const flashEnd = product.flashDealEndTime ? new Date(product.flashDealEndTime) : null
-  const specialEnd = product.specialOfferEndTime ? new Date(product.specialOfferEndTime) : null
 
-  let flashActive = Boolean(product.isFlashDeal && (!flashEnd || flashEnd > now))
-  let specialActive = Boolean(product.isSpecialOffer && (!specialEnd || specialEnd > now))
+  let flashActive = isTimerLive(product.isFlashDeal, product.flashDealEndTime, now)
+  let specialActive = isTimerLive(product.isSpecialOffer, product.specialOfferEndTime, now)
   let campaignLabel = product.campaignLabel || null
   let specialOfferEndTime = product.specialOfferEndTime || null
 
@@ -291,9 +318,10 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
   } else if (specialActive) {
     appliedDiscount = rawDiscount
     campaignLabel = campaignLabel || 'پیشنهاد شگفت‌انگیز'
-  } else if (!product.isFlashDeal && !product.isSpecialOffer && rawDiscount > 0) {
-    // Non-timer discounts remain valid when no countdown flags are set
-    appliedDiscount = rawDiscount
+  } else {
+    // نه لحظه‌ای/شگفت‌انگیز زنده است و نه تخفیف زمان‌دار: تخفیف ثبت‌شده‌ی محصول
+    // (حتی بدون فلگ) هرگز به‌عنوان «تخفیف ساده» اعمال نمی‌شود.
+    campaignLabel = null
   }
 
   const finalPrice =
@@ -316,15 +344,13 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
 const FLASH_LABEL = 'پیشنهاد لحظه‌ای'
 const FLASH_THEME = 'gold-red'
 
-const isTimerLive = (flag, end, now) => Boolean(flag) && (!end || new Date(end) > now)
-
 /**
  * لایه‌ی تخفیف/لیبل برای پاسخ جزئیات محصول (منبع حقیقتِ واحد برای GET /:id و GET by-code).
  *
  * قواعد (هم‌راستا با pipeline لیست محصولات):
  *  - Sale فعال (startDate ≤ now < endDate): درصد و لیبل Sale اعمال می‌شود.
- *  - بدون Sale: تخفیف خودِ محصول فقط وقتی اعمال می‌شود که محصول فلگ زمان‌دار نداشته باشد
- *    یا تایمرِ فلگ‌دارش هنوز نگذشته باشد. تایمر منقضی ⇒ تخفیف ۰، بدون لیبل، بدون قیمت خط‌خورده.
+ *  - بدون Sale: تخفیف خودِ محصول فقط وقتی اعمال می‌شود که پیشنهاد لحظه‌ای یا شگفت‌انگیزِ
+ *    همان محصول زنده باشد. غیرفعال (دستی) یا تایمر منقضی ⇒ تخفیف ۰، بدون لیبل، بدون قیمت خط‌خورده.
  *  - لیبل «پیشنهاد لحظه‌ای» فقط برای فلش زنده‌ی دارای تخفیف است.
  *
  * @returns {{ promotionEndsAt: Date|null }} نزدیک‌ترین زمان پایانِ پروموشنِ اعمال‌شده؛ برای محدودکردن TTL کش
@@ -356,11 +382,10 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
 
   const flashLive = isTimerLive(productObj.isFlashDeal, productObj.flashDealEndTime, now)
   const specialLive = isTimerLive(productObj.isSpecialOffer, productObj.specialOfferEndTime, now)
-  const hasTimerFlag = Boolean(productObj.isFlashDeal || productObj.isSpecialOffer)
-  const timerExpired = hasTimerFlag && !flashLive && !specialLive
 
-  if (timerExpired) {
-    // تایمر تمام شده: خروجی مثل لیست محصولات (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی)
+  if (!flashLive && !specialLive) {
+    // لحظه‌ای/شگفت‌انگیز غیرفعال (دستی) یا تایمرش تمام شده: تخفیف کاملاً حذف می‌شود
+    // (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی) — مثل لیست محصولات.
     productObj.discount = 0
     restoreBasePriceOnObject(productObj, storedDiscount)
     delete productObj.campaignLabel
@@ -402,6 +427,9 @@ module.exports = {
   findMatchingVariant,
   computeItemPricing,
   getActiveSalesCampaignContext,
+  isTimerLive,
+  isOwnPromotionLive,
+  getEffectiveOwnDiscount,
   resolveBasePrice,
   applyDiscountToObject,
   applyPromotionOverlay,

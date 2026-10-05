@@ -436,12 +436,17 @@ function ProductsList({ mode }) {
     {
       title: 'ویژگی‌ها',
       key: 'features',
-      render: (_, record) => (
-        <Space size={[0, 4]} wrap>
-          {record.isSpecialOffer && <Tag color="red">شگفت‌انگیز</Tag>}
-          {record.isFlashDeal && <Tag color="gold">لحظه‌ای</Tag>}
-        </Space>
-      ),
+      render: (_, record) => {
+        const now = new Date()
+        const isSpecialActive = Boolean(record.isSpecialOffer && (!record.specialOfferEndTime || new Date(record.specialOfferEndTime) > now))
+        const isFlashActive = Boolean(record.isFlashDeal && (!record.flashDealEndTime || new Date(record.flashDealEndTime) > now))
+        return (
+          <Space size={[0, 4]} wrap>
+            {isSpecialActive && <Tag color="red">شگفت‌انگیز{record.discount ? ` (${record.discount}%)` : ''}</Tag>}
+            {isFlashActive && <Tag color="gold">لحظه‌ای{record.discount ? ` (${record.discount}%)` : ''}</Tag>}
+          </Space>
+        )
+      },
     },
     {
       title: 'دسته‌بندی',

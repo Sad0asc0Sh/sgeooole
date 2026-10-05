@@ -17,6 +17,7 @@ const signEdDsaJwt = (payload, privateKey, header = { alg: 'EdDSA', typ: 'JWT', 
 const product = {
   _id: '123', productCode: 'KY-0000001', slug: 'test-product', name: 'Test product',
   description: '<p> A <strong>description</strong> </p>', productType: 'variable', isActive: true,
+  isSpecialOffer: true,
   discount: 10, compareAtPrice: 1500, createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-02T00:00:00.000Z',
   category: { name: 'Test category' }, images: [{ url: 'https://cdn.example/product.jpg' }],
   properties: [{ label: 'Material', value: 'Steel' }], specifications: { Brand: 'EkgKala' },

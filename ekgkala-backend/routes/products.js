@@ -13,6 +13,7 @@ const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
 const { applyPromotionOverlay, ttlUntil, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
+const { applyOwnPromotionRules, deactivateCampaign } = require('../services/promotionLifecycleService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
@@ -676,16 +677,13 @@ router.put(
       const { endTime, disable } = req.body
 
       if (disable) {
+        // غیرفعال‌سازی دستیِ شگفت‌انگیز: قبلاً فقط تایمر پاک می‌شد و محصول با فلگ روشن و
+        // بدون زمان پایان، تخفیفش را برای همیشه نگه می‌داشت. حالا کمپین واقعاً خاموش
+        // می‌شود: فلگ خاموش، تایمر پاک و تخفیف از روی محصولات برداشته می‌شود.
         // تایمر گروهی نباید کمپین مالی را لمس کند: محصولاتی که عضو یک تخفیف
         // زمان‌دار فعال/آینده هستند از این عملیات مستثنی‌اند (گزارش در skippedCount).
         const excludedIds = await getSaleMemberProductIds()
-        const timerFilter = { isSpecialOffer: true }
-        if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
-        // Clear timer for all special offer products
-        const result = await Product.updateMany(
-          timerFilter,
-          { $unset: { specialOfferEndTime: "" } }
-        )
+        const result = await deactivateCampaign(Product, 'special', { excludedIds })
         const skippedCount = excludedIds.length
           ? await Product.countDocuments({ isSpecialOffer: true, _id: { $in: excludedIds } })
           : 0
@@ -695,8 +693,8 @@ router.put(
 
         return res.json({
           success: true,
-          message: `Timer disabled for ${result.modifiedCount} products`,
-          data: { modifiedCount: result.modifiedCount, skippedCount }
+          message: `Special offer deactivated for ${result.modified} products`,
+          data: { modifiedCount: result.modified, skippedCount }
         })
       }
 
@@ -712,6 +710,12 @@ router.put(
         return res.status(400).json({
           success: false,
           message: 'Invalid end time value',
+        })
+      }
+      if (parsedEndTime <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'زمان پایان باید در آینده باشد. برای پایان دادن به کمپین از «غیرفعال‌سازی» استفاده کنید.',
         })
       }
 
@@ -764,14 +768,10 @@ router.put(
       const { endTime, disable } = req.body
 
       if (disable) {
-        // مثل تایمر شگفت‌انگیز: اعضای تخفیف‌های زمان‌دار فعال/آینده مستثنی‌اند.
+        // غیرفعال‌سازی دستیِ پیشنهاد لحظه‌ای: کمپین کاملاً خاموش می‌شود:
+        // فلگ خاموش، تایمر پاک و تخفیف از روی محصولات برداشته می‌شود.
         const excludedIds = await getSaleMemberProductIds()
-        const timerFilter = { isFlashDeal: true }
-        if (excludedIds.length) timerFilter._id = { $nin: excludedIds }
-        const result = await Product.updateMany(
-          timerFilter,
-          { $unset: { flashDealEndTime: "" } }
-        )
+        const result = await deactivateCampaign(Product, 'flash', { excludedIds })
         const skippedCount = excludedIds.length
           ? await Product.countDocuments({ isFlashDeal: true, _id: { $in: excludedIds } })
           : 0
@@ -781,8 +781,8 @@ router.put(
 
         return res.json({
           success: true,
-          message: `Timer disabled for ${result.modifiedCount} products`,
-          data: { modifiedCount: result.modifiedCount, skippedCount }
+          message: `Flash deal deactivated for ${result.modified} products`,
+          data: { modifiedCount: result.modified, skippedCount }
         })
       }
 
@@ -798,6 +798,12 @@ router.put(
         return res.status(400).json({
           success: false,
           message: 'Invalid end time value',
+        })
+      }
+      if (parsedEndTime <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'زمان پایان باید در آینده باشد. برای پایان دادن به کمپین از «غیرفعال‌سازی» استفاده کنید.',
         })
       }
 
@@ -1157,6 +1163,16 @@ router.post(
       // Apply Timer Synchronization
       await syncOfferTimers(productData)
 
+      // اعمال قواعد چرخه‌ی عمر پیشنهاد لحظه‌ای/شگفت‌انگیز:
+      // اگر زمان پایان گذشته باشد خطا می‌دهد؛ اگر هیچ‌کدام فعال/زنده نباشد، تخفیف صفر می‌شود.
+      const promoRule = applyOwnPromotionRules(productData)
+      if (promoRule.error) {
+        return res.status(400).json({
+          success: false,
+          message: promoRule.error,
+        })
+      }
+
       const product = await Product.create(productData)
 
       clearCacheByPrefix('/api/products')
@@ -1362,6 +1378,19 @@ router.put(
       // Apply Timer Synchronization
       await syncOfferTimers(updates, product);
 
+      const unsetFields = {}
+
+      // اعمال قواعد چرخه‌ی عمر پیشنهاد لحظه‌ای/شگفت‌انگیز:
+      // اگر ادمین تیک لحظه‌ای یا شگفت‌انگیز را بردارد، یا تایمر گذشته باشد، تخفیف محصول صفر
+      // و فلگ‌ها خاموش می‌شوند و قیمت قدیمیِ تخفیف‌خورده به پایه برمی‌گردد.
+      const promoRule = applyOwnPromotionRules(updates, unsetFields, product)
+      if (promoRule.error) {
+        return res.status(400).json({
+          success: false,
+          message: promoRule.error,
+        })
+      }
+
       // Use findByIdAndUpdate for simple updates to avoid full validation
       console.log(`[UPDATE PRODUCT] ID: ${req.params.id}`)
       console.log(`[UPDATE PRODUCT] SKU in updates:`, updates.sku)
@@ -1389,7 +1418,11 @@ router.put(
       // If compareAtPrice is explicitly null, empty or 0, unset it from database so it doesn't inflate pricing
       if (updates.compareAtPrice === null || updates.compareAtPrice === '' || updates.compareAtPrice === 0) {
         delete updates.compareAtPrice
-        updateMongoQuery.$unset = { compareAtPrice: "" }
+        unsetFields.compareAtPrice = ""
+      }
+
+      if (Object.keys(unsetFields).length > 0) {
+        updateMongoQuery.$unset = unsetFields
       }
 
       const updatedProduct = await Product.findByIdAndUpdate(

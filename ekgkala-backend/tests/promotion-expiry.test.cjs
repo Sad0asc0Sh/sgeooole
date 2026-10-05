@@ -60,11 +60,13 @@ test('live flash deal: discount + flash label, TTL ends at flash end', () => {
   assert.deepEqual(promotionEndsAt, future)
 })
 
-test('plain product discount without timer flags is unaffected; live special offer gets no flash label', () => {
+test('product discount without active deal is stripped (price remains base); live special offer gets discount but no flash label', () => {
   const plain = base({ discount: 10 })
   applyPromotionOverlay(plain, { activeSale: null, now })
-  assert.equal(plain.price, 4320000)
+  assert.equal(plain.price, 4800000)
+  assert.equal(plain.discount, 0)
   assert.equal(plain.campaignLabel, undefined)
+  assert.equal(plain.compareAtPrice, undefined)
 
   const special = base({ discount: 10, isSpecialOffer: true, specialOfferEndTime: future })
   applyPromotionOverlay(special, { activeSale: null, now })

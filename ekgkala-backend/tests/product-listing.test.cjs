@@ -24,7 +24,11 @@ const count = (result) => result.total[0]?.count || 0
 // Real emitted pipeline runs on Mingo. This is not a handwritten pricing/query mock.
 // Mongo-specific ObjectId/graph traversal context is additionally checked below.
 test('discounted filtering, count, sorting and range all precede pagination', () => {
-  const products = [product(3, { price: 900 }), product(2, { price: 1500, discount: 60 }), product(1, { price: 1200, discount: 50 })]
+  const products = [
+    product(3, { price: 900 }),
+    product(2, { price: 1500, discount: 60, isFlashDeal: true, flashDealEndTime: future }),
+    product(1, { price: 1200, discount: 50, isFlashDeal: true, flashDealEndTime: future }),
+  ]
   const first = run(products, { maxPrice: '700', sort: 'priceAsc', limit: '1' })
   assert.deepEqual(ids(first), [String(id(1))])
   assert.equal(first.data[0].price, 600)
@@ -38,7 +42,10 @@ test('discounted filtering, count, sorting and range all precede pagination', ()
 })
 
 test('precomputed discounts use compareAtPrice once; Math.round halves not bankers rounding', () => {
-  const result = run([product(1, { price: 800, compareAtPrice: 1000, discount: 20 }), product(2, { price: 1005, discount: 50 })], { sort: 'priceAsc' })
+  const result = run([
+    product(1, { price: 800, compareAtPrice: 1000, discount: 20, isFlashDeal: true, flashDealEndTime: future }),
+    product(2, { price: 1005, discount: 50, isFlashDeal: true, flashDealEndTime: future }),
+  ], { sort: 'priceAsc' })
   assert.deepEqual(result.data.map((p) => p.price), [503, 800])
   assert.equal(result.data[1].compareAtPrice, 1000)
 })
@@ -76,7 +83,7 @@ test('direct campaign overrides category campaign and existing product discount'
 })
 
 test('variable display price is minimum discounted variant and stock is summed', () => {
-  const variable = product(1, { productType: 'variable', price: 1, stock: 0, discount: 20, variants: [
+  const variable = product(1, { productType: 'variable', price: 1, stock: 0, discount: 20, isFlashDeal: true, flashDealEndTime: future, variants: [
     { sku: 'blue', price: 600, stock: 0 }, { sku: 'red', price: 1000, stock: 3 }, { price: 800, stock: 2 },
   ] })
   const result = run([variable], { inStock: 'true', minPrice: '480', maxPrice: '480', onSale: 'true' })
@@ -90,10 +97,10 @@ test('variable display price is minimum discounted variant and stock is summed',
 })
 
 test('zero bounds are valid; zero-price and 100% discounts are not lost', () => {
-  const result = run([product(1, { price: 0 }), product(2, { price: 100, discount: 100 }), product(3)], { minPrice: '0', maxPrice: '0' })
+  const result = run([product(1, { price: 0 }), product(2, { price: 100, discount: 100, isFlashDeal: true, flashDealEndTime: future }), product(3)], { minPrice: '0', maxPrice: '0' })
   assert.deepEqual(result.data.map((p) => p.price), [0, 0])
   assert.equal(count(result), 2)
-  assert.equal(count(run([product(1, { price: 100, discount: 100 })], { onSale: 'true', maxPrice: '0' })), 1)
+  assert.equal(count(run([product(1, { price: 100, discount: 100, isFlashDeal: true, flashDealEndTime: future })], { onSale: 'true', maxPrice: '0' })), 1)
   const zero = run([product(1, { price: 0, compareAtPrice: 100, discount: 20, isFlashDeal: true, flashDealEndTime: future })], { onSale: 'true', maxPrice: '0' })
   assert.equal(count(zero), 1)
   assert.equal(zero.data[0].price, 0)
@@ -126,7 +133,7 @@ test('legacy advanced filters, inactive access, dates and raw admin behavior', (
 })
 
 test('projection happens after pricing and cannot leak internal sort fields', () => {
-  const p = product(1, { price: 1200, discount: 50, sku: 'Exact' })
+  const p = product(1, { price: 1200, discount: 50, sku: 'Exact', isFlashDeal: true, flashDealEndTime: future })
   const result = run([p], { fields: 'name,price,-_id', search: 'Exact' })
   assert.deepEqual(result.data, [{ name: 'Product 1', price: 600 }])
   assert.equal(JSON.stringify(result).includes('__listing'), false)
