@@ -2,7 +2,6 @@ const Product = require('../models/Product')
 const Sale = require('../models/Sale')
 const { clearCacheByPrefix } = require('../middleware/cache')
 const { runPromotionCleanup, runSaleCleanup } = require('../services/promotionLifecycleService')
-const redis = require('../utils/redis')
 
 /**
  * غیرفعال‌سازی خودکار تخفیف‌ها بعد از پایان زمانشان (هر ۶۰ ثانیه).
@@ -14,20 +13,11 @@ const redis = require('../utils/redis')
  *    داده هم نهایی شود؛ در پنل ادمین دیگر «فعال» دیده نمی‌شود و اگر مسیر آینده‌ای فقط
  *    isActive را چک کند، تخفیف منقضی برنمی‌گردد.
  *
- * بعد از هر تغییری، کش محصولات (node-cache) و کش Redis پرفروش‌ترین‌ها باطل می‌شود تا
- * قیمت/لیبل منقضی در هیچ خروجی‌ای بیش از چند ثانیه باقی نماند.
+ * بعد از هر تغییری، کش محصولات باطل می‌شود؛ clearCacheByPrefix برای prefix محصولات،
+ * کش Redis پرفروش‌ترین‌ها را هم باطل می‌کند تا قیمت/لیبل منقضی در هیچ خروجی‌ای نماند.
  */
 const INTERVAL_MS = 60 * 1000
 let running = false
-
-const invalidateBestsellersCache = async () => {
-  if (!redis || typeof redis.deleteCachePattern !== 'function') return
-  try {
-    await redis.deleteCachePattern('bestsellers:*')
-  } catch (error) {
-    console.warn('[PROMOTION-EXPIRY] Could not invalidate bestsellers cache:', error.message)
-  }
-}
 
 const checkExpiredPromotions = async () => {
   if (running) return
@@ -39,9 +29,9 @@ const checkExpiredPromotions = async () => {
 
     if (scanned > 0 || deactivatedSales > 0) {
       // حتی اگر worker دیگری زودتر اعمال کرده باشد، کش همین پروسه هم باید تازه شود
+      // (برای prefix محصولات، کش Redis پرفروش‌ترین‌ها هم خودکار باطل می‌شود)
       clearCacheByPrefix('/api/products')
       clearCacheByPrefix('/api/v1/admin/products')
-      await invalidateBestsellersCache()
     }
     if (modified > 0) {
       console.log(`[PROMOTION-EXPIRY] ${modified} محصول: پیشنهاد لحظه‌ای/شگفت‌انگیز غیرفعال و تخفیف حذف شد.`)
