@@ -27,3 +27,4 @@ overrides:
   "picomatch": "^2.3.2"
   "tmp": "^0.2.6"
   "uuid": "^13.0.0"
+  "proxy-addr": "^2.0.8"
