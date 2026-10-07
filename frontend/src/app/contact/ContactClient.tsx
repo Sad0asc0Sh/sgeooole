@@ -1,269 +1,169 @@
-"use client";
-
-import { MapPin, Phone, Building2, ChevronLeft, Clock, MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { Building2, ChevronLeft, Clock, MapPin, MessageCircle, Phone } from "lucide-react";
+import shared from "../about/About.module.css";
+import styles from "./Contact.module.css";
 
-// Animation variants
-const fadeInUp = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-} as const;
+/*
+ * Server component (no framer-motion): content is plain HTML and always
+ * visible, and the styling is legacy-browser safe (see About.module.css).
+ */
 
-const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.15
-        }
-    }
-} as const;
-
-const cardVariant = {
-    hidden: { opacity: 0, y: 20, scale: 0.95 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        transition: { duration: 0.5, ease: "easeOut" }
-    }
-} as const;
-
-// Branch data
 const branches = [
     {
         id: 1,
         name: "شعبه ۱",
         address: "پیروزی 75 بین ولایتی 9و11",
         phones: ["05135021720"],
-        color: "from-kala-500 to-blue-600",
-        bgColor: "from-kala-50 to-blue-50",
-        borderColor: "border-kala-200"
+        theme: styles.tBlue,
     },
     {
         id: 2,
         name: "شعبه ۲",
         address: "میدان صاحب الزمان پاساژ سبحان طبقه +۱ واحد ۱۶",
         phones: ["05137136355", "05137136356"],
-        color: "from-emerald-500 to-teal-600",
-        bgColor: "from-emerald-50 to-teal-50",
-        borderColor: "border-emerald-200"
+        theme: styles.tGreen,
     },
     {
         id: 3,
         name: "شعبه ۳",
         address: "خین عرب طرح چی6 - پ63",
         phones: ["09154191788"],
-        color: "from-amber-500 to-orange-600",
-        bgColor: "from-amber-50 to-orange-50",
-        borderColor: "border-amber-200"
-    }
+        theme: styles.tAmber,
+    },
 ];
 
 export default function ContactPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white" dir="rtl">
-            {/* Header */}
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-100 md:hidden">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex items-center gap-4">
-                        <Link
-                            href="/"
-                            className="flex items-center gap-2 text-gray-600 hover:text-kala-600 transition-colors"
-                        >
-                            <ChevronLeft size={20} />
-                            <span className="text-sm font-medium">بازگشت</span>
-                        </Link>
-                        <h1 className="text-lg font-bold text-gray-900">تماس با ما</h1>
-                    </div>
+        <div className={shared.page} dir="rtl">
+            {/* Mobile standalone header (global header is hidden on mobile for /contact) */}
+            <div className={shared.mobileBar}>
+                <div className={shared.mobileBarInner}>
+                    <p className={shared.mobileBarTitle}>تماس با ما</p>
+                    <Link href="/" className={shared.backLink}>
+                        <span>بازگشت</span>
+                        <ChevronLeft size={20} aria-hidden />
+                    </Link>
                 </div>
             </div>
 
-            {/* Hero Section */}
-            <motion.section
-                className="relative overflow-hidden bg-gradient-to-br from-[#142755] via-[#1e3a7a] to-[#2a4d9f] py-16 px-4"
-                initial="hidden"
-                animate="visible"
-                variants={fadeInUp}
-            >
-                {/* Decorative elements */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-kala-500/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"></div>
-
-                <div className="container mx-auto relative z-10">
-                    <motion.div
-                        className="text-center max-w-3xl mx-auto"
-                        variants={fadeInUp}
-                    >
-                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm mb-6 shadow-lg">
-                            <Building2 className="w-10 h-10 text-white" />
-                        </div>
-                        <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 leading-tight">
-                            ای‌کا‌جی کالا
-                        </h1>
-                        <p className="text-lg text-blue-100 leading-relaxed">
-                            فروش و پخش انواع سیستم‌های حفاظتی امنیتی
-                        </p>
-                        <div className="mt-6 inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full">
-                            <MapPin className="w-5 h-5 text-kala-300" />
-                            <span className="text-white font-medium">مشهد</span>
-                        </div>
-                    </motion.div>
+            {/* Hero */}
+            <section className={shared.hero}>
+                <div className={`${shared.heroInner} ${shared.reveal}`}>
+                    <div className={shared.heroIcon}>
+                        <Building2 size={36} aria-hidden />
+                    </div>
+                    <h1 className={shared.heroTitle}>ای‌کا‌جی کالا</h1>
+                    <p className={shared.heroText}>فروش و پخش انواع سیستم‌های حفاظتی امنیتی</p>
+                    <span className={shared.heroBadge} style={{ marginTop: 18, marginBottom: 0 }}>
+                        مشهد · ۳ شعبه فعال
+                    </span>
                 </div>
-            </motion.section>
+            </section>
 
-            {/* Main Content */}
-            <motion.div
-                className="container mx-auto px-4 py-10 space-y-6"
-                initial="hidden"
-                animate="visible"
-                variants={staggerContainer}
-            >
-                {/* Branches Grid */}
-                {branches.map((branch) => (
-                    <motion.div
-                        key={branch.id}
-                        className={`bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden hover:shadow-2xl transition-shadow duration-300`}
-                        variants={cardVariant}
-                    >
-                        {/* Branch Header */}
-                        <div className={`bg-gradient-to-l ${branch.bgColor} px-6 py-4 border-b ${branch.borderColor}`}>
-                            <div className="flex items-center gap-3">
-                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${branch.color} flex items-center justify-center shadow-lg`}>
-                                    <span className="text-white font-bold text-lg">{branch.id}</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-xl font-bold text-gray-900">{branch.name}</h2>
-                                    <p className="text-sm text-gray-500">گروه مهندسی کیان</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Branch Content */}
-                        <div className="p-6 space-y-5">
-                            {/* Address */}
-                            <div className="flex items-start gap-4">
-                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${branch.color} flex items-center justify-center flex-shrink-0`}>
-                                    <MapPin className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs text-gray-500 mb-1">آدرس</p>
-                                    <p className="text-gray-800 font-medium leading-7">{branch.address}</p>
-                                </div>
-                            </div>
-
-                            {/* Phones */}
-                            <div className="flex items-start gap-4">
-                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${branch.color} flex items-center justify-center flex-shrink-0`}>
-                                    <Phone className="w-5 h-5 text-white" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs text-gray-500 mb-2">شماره تماس</p>
-                                    <div className="flex flex-wrap gap-3">
-                                        {branch.phones.map((phone, phoneIndex) => (
-                                            <a
-                                                key={phoneIndex}
-                                                href={`tel:${phone}`}
-                                                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-l ${branch.bgColor} border ${branch.borderColor} hover:shadow-md transition-all duration-300`}
-                                            >
-                                                <Phone className="w-4 h-4 text-gray-600" />
-                                                <span className="font-mono font-bold text-gray-800 tracking-wide" dir="ltr">
-                                                    {phone}
-                                                </span>
-                                            </a>
-                                        ))}
+            <div className={`${shared.container} ${shared.stack}`}>
+                {/* Branches — overlap the hero */}
+                <ul className={`${styles.branches} ${shared.reveal} ${shared.d1}`}>
+                    {branches.map((branch) => (
+                        <li key={branch.id}>
+                            <section className={`${shared.card} ${styles.branchCard} ${branch.theme}`}>
+                                <div className={styles.head}>
+                                    <div className={styles.badge}>{branch.id}</div>
+                                    <div>
+                                        <h2 className={styles.branchTitle}>{branch.name}</h2>
+                                        <p className={styles.branchSub}>گروه مهندسی کیان</p>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
 
-                {/* Working Hours Card */}
-                <motion.div
-                    className="bg-white rounded-3xl shadow-xl shadow-gray-100/50 border border-gray-100 overflow-hidden"
-                    variants={cardVariant}
-                >
-                    <div className="bg-gradient-to-l from-purple-50 to-indigo-50 px-6 py-4 border-b border-purple-100">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
-                                <Clock className="w-5 h-5 text-white" />
-                            </div>
-                            <h2 className="text-xl font-bold text-gray-900">ساعات کاری</h2>
-                        </div>
-                    </div>
-                    <div className="p-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                <p className="text-sm text-gray-500 mb-1">شنبه تا چهارشنبه</p>
-                                <p className="font-bold text-gray-800">۹ صبح - ۹ شب</p>
-                            </div>
-                            <div className="bg-gray-50 rounded-xl p-4 text-center">
-                                <p className="text-sm text-gray-500 mb-1">پنج‌شنبه</p>
-                                <p className="font-bold text-gray-800">۹ صبح - ۲ عصر</p>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
+                                <div className={styles.branchBody}>
+                                    <div className={styles.row}>
+                                        <div className={styles.rowIcon}>
+                                            <MapPin size={18} aria-hidden />
+                                        </div>
+                                        <div className={styles.rowBody}>
+                                            <p className={styles.label}>آدرس</p>
+                                            <p className={styles.address}>{branch.address}</p>
+                                        </div>
+                                    </div>
 
-                {/* Quick Contact CTA */}
-                <motion.section
-                    className="relative overflow-hidden bg-gradient-to-br from-[#142755] via-[#1e3a7a] to-[#2a4d9f] rounded-3xl shadow-xl p-8"
-                    variants={cardVariant}
-                >
-                    {/* Decorative elements */}
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full blur-2xl"></div>
-                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-kala-500/10 rounded-full blur-3xl"></div>
+                                    <div className={styles.row}>
+                                        <div className={styles.rowIcon}>
+                                            <Phone size={18} aria-hidden />
+                                        </div>
+                                        <div className={styles.rowBody}>
+                                            <p className={styles.label}>شماره تماس</p>
+                                            <div className={styles.phones}>
+                                                {branch.phones.map((phone) => (
+                                                    <a key={phone} href={`tel:${phone}`} className={styles.chip}>
+                                                        <Phone size={16} aria-hidden />
+                                                        <span className={styles.phone} dir="ltr">
+                                                            {phone}
+                                                        </span>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+                        </li>
+                    ))}
+                </ul>
 
-                    <div className="relative z-10 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-6">
-                            <MessageCircle className="w-8 h-8 text-white" />
+                {/* Working hours + quick contact (side by side on desktop) */}
+                <div className={`${styles.lower} ${shared.reveal} ${shared.d2}`}>
+                    <section className={shared.card}>
+                        <div className={`${shared.cardHead} ${styles.headPurple}`}>
+                            <div className={`${shared.cardHeadIcon} ${styles.iconPurple}`}>
+                                <Clock size={22} aria-hidden />
+                            </div>
+                            <h2 className={shared.cardTitle}>ساعات کاری</h2>
                         </div>
-                        <h3 className="text-xl font-bold text-white mb-3">
-                            نیاز به مشاوره دارید؟
-                        </h3>
-                        <p className="text-blue-100 mb-6 max-w-md mx-auto">
-                            کارشناسان ما آماده پاسخگویی به سوالات شما هستند
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                            <a
-                                href="tel:05135021720"
-                                className="inline-flex items-center justify-center gap-2 bg-white text-[#142755] px-6 py-3 rounded-xl font-bold hover:shadow-lg transition-all duration-300"
-                            >
-                                <Phone size={18} />
+                        <div className={shared.cardBody}>
+                            <ul className={styles.hoursGrid}>
+                                <li className={styles.hour}>
+                                    <p className={styles.hourDay}>شنبه تا چهارشنبه</p>
+                                    <p className={styles.hourTime}>۹ صبح - ۹ شب</p>
+                                </li>
+                                <li className={styles.hour}>
+                                    <p className={styles.hourDay}>پنج‌شنبه</p>
+                                    <p className={styles.hourTime}>۹ صبح - ۲ عصر</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section className={shared.mission}>
+                        <div className={shared.missionIcon}>
+                            <MessageCircle size={28} aria-hidden />
+                        </div>
+                        <h2 className={styles.missionTitle}>نیاز به مشاوره دارید؟</h2>
+                        <p className={styles.missionSub}>کارشناسان ما آماده پاسخگویی به سوالات شما هستند</p>
+                        <div className={styles.actions}>
+                            <a href="tel:05135021720" className={`${styles.btn} ${styles.btnLight}`}>
+                                <Phone size={18} aria-hidden />
                                 <span dir="ltr">051-35021720</span>
                             </a>
                             <a
                                 href="https://wa.me/989154191788"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center justify-center gap-2 bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-emerald-600 hover:shadow-lg transition-all duration-300"
+                                className={`${styles.btn} ${styles.btnGreen}`}
                             >
-                                <MessageCircle size={18} />
-                                واتساپ
+                                <MessageCircle size={18} aria-hidden />
+                                <span>واتساپ</span>
                             </a>
                         </div>
-                    </div>
-                </motion.section>
+                    </section>
+                </div>
 
                 {/* Back to About */}
-                <motion.div
-                    className="text-center"
-                    variants={cardVariant}
-                >
-                    <Link
-                        href="/about"
-                        className="inline-flex items-center gap-2 text-kala-600 hover:text-kala-700 font-medium transition-colors"
-                    >
+                <div className={styles.about}>
+                    <Link href="/about" className={styles.aboutLink}>
                         <span>درباره ما بیشتر بدانید</span>
-                        <ChevronLeft size={18} />
+                        <ChevronLeft size={18} aria-hidden />
                     </Link>
-                </motion.div>
-            </motion.div>
-
-            {/* Bottom spacing for mobile nav */}
-            <div className="h-20"></div>
+                </div>
+            </div>
         </div>
     );
 }
