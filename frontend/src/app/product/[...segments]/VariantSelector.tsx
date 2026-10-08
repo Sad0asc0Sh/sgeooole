@@ -1,5 +1,6 @@
 "use client";
 import { useMemo } from "react";
+import { Check } from "lucide-react";
 import type { ProductAttribute, ProductVariant } from "@/types/product";
 import {
     colorHexFor,
@@ -18,14 +19,24 @@ type VariantSelectorProps = {
 };
 
 /**
- * جایگزین ColorSelector برای محصولات متغیر.
- * - ویژگی «رنگ» (یا displayType=color): دایره‌های رنگی
- * - بقیه‌ی ویژگی‌ها: دکمه‌ی متنی
- * - گزینه‌ی ناموجود: خط‌خورده ولی قابل انتخاب (تا کاربر «ناموجود» را ببیند)
- * - زیر هر گزینه: اختلاف قیمتش نسبت به ارزان‌ترین ترکیب («+۲۰٬۰۰۰»)
+ * جایگزین ColorSelector برای محصولات متغیر — نسخه‌ی بازطراحی‌شده.
  *
- * برای محصول ساده (بدون attributes/variants) هیچ‌چیز رندر نمی‌کند تا
- * ColorSelector قدیمی بدون تداخل کار کند.
+ * چیدمان:
+ * - ویژگی‌های متنی به‌جای flex-wrap بی‌نظم، داخل یک Grid یکسان رندر می‌شوند:
+ *   موبایل کوچک ۱ ستونه، از ۴۲۰px به بالا ۲ ستونه، دسکتاپ عریض ۳ ستونه.
+ *   عرض و ارتفاع همه‌ی گزینه‌های یک ردیف همیشه برابر است.
+ * - هر گزینه یک کارت هم‌اندازه با نشان رادیویی، متن مقدار و چیپ اختلاف قیمت
+ *   در لبه‌ی مخالف است؛ گزینه‌ی ناموجود چیپ «ناموجود» می‌گیرد.
+ * - ویژگی «رنگ» (یا displayType=color): دایره‌های رنگی هم‌اندازه با نام و
+ *   ردیف اختلاف قیمت با ارتفاع ثابت (ستون‌ها هم‌تراز می‌مانند).
+ *
+ * قراردادهای حفظ‌شده (تست‌ها به آن‌ها وابسته‌اند):
+ * - متن سربرگ دقیقاً «نام: مقدار» در یک span واحد
+ * - دایره‌ی رنگ: aria-label «نام مقدار»، اولین span = سواچ با backgroundColor،
+ *   خط قرمز ناموجودی با کلاس bg-red-500
+ * - متن چیپ اختلاف قیمت دقیقاً «+۲۰٬۰۰۰» (یک بار برای هر گزینه)
+ * - جمله‌ی راهنمای بازه‌ی قیمت بدون تغییر
+ * - محصول ساده (بدون attributes/variants) هیچ‌چیز رندر نمی‌کند
  */
 export default function VariantSelector({
     attributes,
@@ -66,12 +77,13 @@ export default function VariantSelector({
         return Math.min(...compatible.map((v) => v.price));
     };
 
+    /** چیپ اختلاف قیمت — متن دقیقاً «+۲۰٬۰۰۰» / «−۲۰٬۰۰۰» (قرارداد تست). */
     const renderDiff = (diff: number | null) => {
         if (diff === null || diff === 0) return null;
         return (
             <span
-                className={`text-[11px] font-bold leading-none ${
-                    diff > 0 ? "text-orange-600" : "text-green-600"
+                className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                    diff > 0 ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"
                 }`}
             >
                 {diff > 0 ? "+" : "−"}
@@ -81,19 +93,23 @@ export default function VariantSelector({
     };
 
     return (
-        <div className="space-y-5 mb-6">
+        <div className="space-y-6 mb-6">
             {visibleAttributes.map((attr) => {
                 const colorMode = isColorAttribute(attr);
                 const selectedValue = selection?.[attr.name] ?? "";
 
                 return (
                     <div key={attr.name}>
-                        <span className="text-sm font-bold text-gray-800 block mb-3">
-                            {attr.name}: {selectedValue || "—"}
-                        </span>
+                        {/* سربرگ ویژگی: نوار accent + «نام: مقدار انتخاب‌شده» (متن واحد — قرارداد تست) */}
+                        <div className="mb-3 flex items-center gap-2">
+                            <span aria-hidden className="h-4 w-1 rounded-full bg-kala-500" />
+                            <span className="text-sm font-bold text-gray-800">
+                                {attr.name}: {selectedValue || "—"}
+                            </span>
+                        </div>
 
                         {colorMode ? (
-                            <div className="flex flex-wrap gap-3">
+                            <div className="flex flex-wrap gap-x-3 gap-y-4">
                                 {attr.values.map((value) => {
                                     const isSelected = selectedValue === value;
                                     const out = isOptionOutOfStock(variants, selection, attr.name, value);
@@ -105,21 +121,21 @@ export default function VariantSelector({
                                     const diff =
                                         cheapest !== null && range ? cheapest - range.min : null;
                                     return (
-                                        <div key={value} className="flex flex-col items-center gap-1">
+                                        <div key={value} className="flex w-16 flex-col items-center gap-1.5">
                                             <button
                                                 type="button"
                                                 onClick={() => onChange(attr.name, value)}
                                                 title={value}
                                                 aria-label={`${attr.name} ${value}`}
                                                 aria-pressed={isSelected}
-                                                className={`w-9 h-9 rounded-full border-2 flex items-center justify-center transition-all relative ${
+                                                className={`relative flex h-11 w-11 items-center justify-center rounded-full border-2 outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-kala-500/50 active:scale-95 ${
                                                     isSelected
-                                                        ? "border-kala-500 ring-2 ring-kala-200 scale-110"
-                                                        : "border-gray-200 hover:border-gray-400"
-                                                } ${out ? "opacity-50" : ""}`}
+                                                        ? "scale-110 border-kala-500 ring-2 ring-kala-200"
+                                                        : "border-gray-200 hover:scale-105 hover:border-gray-400"
+                                                } ${out ? "opacity-60" : ""}`}
                                             >
                                                 <span
-                                                    className={`w-7 h-7 rounded-full border ${isLight ? "border-gray-300" : "border-gray-100"}`}
+                                                    className={`h-8 w-8 rounded-full border ${isLight ? "border-gray-300" : "border-gray-100"}`}
                                                     style={{ backgroundColor: hex }}
                                                 />
                                                 {out && (
@@ -129,14 +145,23 @@ export default function VariantSelector({
                                                     />
                                                 )}
                                             </button>
-                                            <span className="text-[11px] text-gray-500 leading-none">{value}</span>
-                                            {renderDiff(diff)}
+                                            <span className="w-full truncate text-center text-[11px] font-medium leading-none text-gray-600">
+                                                {value}
+                                            </span>
+                                            {/* ردیف با ارتفاع ثابت تا ستون‌های رنگ هم‌تراز بمانند */}
+                                            <span className="flex h-4 items-center justify-center">
+                                                {renderDiff(diff)}
+                                            </span>
                                         </div>
                                     );
                                 })}
                             </div>
                         ) : (
-                            <div className="flex flex-wrap gap-2">
+                            <div
+                                role="group"
+                                aria-label={attr.name}
+                                className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 xl:grid-cols-3"
+                            >
                                 {attr.values.map((value) => {
                                     const isSelected = selectedValue === value;
                                     const out = isOptionOutOfStock(variants, selection, attr.name, value);
@@ -149,24 +174,38 @@ export default function VariantSelector({
                                             type="button"
                                             onClick={() => onChange(attr.name, value)}
                                             aria-pressed={isSelected}
-                                            className={`min-w-[44px] px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all relative ${
+                                            className={`group flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border-2 px-3.5 py-3 text-right outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-kala-500/50 active:scale-[0.98] ${
                                                 isSelected
-                                                    ? "border-kala-500 bg-kala-50 text-kala-700"
-                                                    : "border-gray-200 text-gray-700 hover:border-gray-400"
-                                            } ${out ? "opacity-60" : ""}`}
+                                                    ? "border-kala-500 bg-kala-50/70 shadow-sm"
+                                                    : "border-gray-200 bg-white hover:border-kala-300 hover:bg-kala-50/40"
+                                            } ${out ? "opacity-70" : ""}`}
                                         >
-                                            <span className={out ? "line-through decoration-red-500" : ""}>
-                                                {value}
-                                            </span>
-                                            {diff !== null && diff !== 0 && (
+                                            <span className="flex min-w-0 items-center gap-2.5">
+                                                {/* نشان رادیویی انتخاب */}
                                                 <span
-                                                    className={`block text-[10px] font-bold ${
-                                                        diff > 0 ? "text-orange-600" : "text-green-600"
+                                                    aria-hidden
+                                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                                        isSelected
+                                                            ? "border-kala-500 bg-kala-500 text-white"
+                                                            : "border-gray-300 text-transparent group-hover:border-kala-300"
                                                     }`}
                                                 >
-                                                    {diff > 0 ? "+" : "−"}
-                                                    {Math.abs(diff).toLocaleString("fa-IR")}
+                                                    <Check size={12} strokeWidth={3.5} />
                                                 </span>
+                                                <span
+                                                    className={`break-words text-sm font-bold leading-5 ${
+                                                        isSelected ? "text-kala-700" : "text-gray-700"
+                                                    } ${out ? "line-through decoration-red-400" : ""}`}
+                                                >
+                                                    {value}
+                                                </span>
+                                            </span>
+                                            {out ? (
+                                                <span className="shrink-0 whitespace-nowrap rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-red-500">
+                                                    ناموجود
+                                                </span>
+                                            ) : (
+                                                renderDiff(diff)
                                             )}
                                         </button>
                                     );
@@ -179,9 +218,8 @@ export default function VariantSelector({
 
             {/* راهنمای بازه‌ی قیمت ترکیب‌ها */}
             {selectedVariant && range && range.max > range.min && (
-                <p className="text-[11px] text-gray-400">
-                    قیمت از {range.min.toLocaleString("fa-IR")} تا {range.max.toLocaleString("fa-IR")} تومان
-                    متغیر است
+                <p className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 text-[11px] text-gray-500">
+                    قیمت از {range.min.toLocaleString("fa-IR")} تا {range.max.toLocaleString("fa-IR")} تومان متغیر است
                 </p>
             )}
         </div>
