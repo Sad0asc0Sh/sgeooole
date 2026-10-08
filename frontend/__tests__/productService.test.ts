@@ -80,6 +80,62 @@ describe("productService", () => {
     expect(product.price).toBe(422400);
   });
 
+  it.each([
+    ["getFlashDeals", () => productService.getFlashDeals(10)],
+    ["getSpecialOffers", () => productService.getSpecialOffers(10)],
+    ["getNewest", () => productService.getNewest(10)],
+  ])("requests productType+variants for rail cards (%s) so variable pricing resolves per-variant", async (_name, fetch) => {
+    mockedApi.get.mockResolvedValue({ data: { success: true, data: [] } });
+
+    await fetch();
+
+    const url = mockedApi.get.mock.calls[0][0] as string;
+    const params = new URLSearchParams(url.split("?")[1]);
+    const fields = (params.get("fields") || "").split(",");
+    expect(fields).toEqual(expect.arrayContaining(["productType", "variants"]));
+  });
+
+  it("maps bestseller variable items per-variant with exclusions", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: {
+        success: true,
+        data: [
+          {
+            _id: "var-best",
+            name: "متغیر پرفروش",
+            slug: "var-best",
+            image: "/uploads/v.png",
+            price: 700000,
+            discount: 20,
+            compareAtPrice: 700000,
+            stock: 10,
+            isSpecialOffer: true,
+            specialOfferEndTime: "2099-01-01T00:00:00.000Z",
+            productType: "variable",
+            variants: [
+              { _id: "cheap", price: 700000, stock: 5, options: [], images: [], excludeFromPromotion: true },
+              { _id: "a", price: 800000, compareAtPrice: 1000000, stock: 5, options: [], images: [] },
+            ],
+          },
+        ],
+      },
+    });
+
+    const [product] = await productService.getBestSellers(1);
+
+    expect(product.productType).toBe("variable");
+    expect(product.variants).toHaveLength(2);
+    // مستثنی: قیمت پایه بدون تخفیف مجدد
+    expect(product.variants![0].price).toBe(700000);
+    expect(product.variants![0].oldPrice).toBeUndefined();
+    expect(product.variants![0].excludeFromPromotion).toBe(true);
+    // غیرمستثنی: ۲۰٪ روی ۱٬۰۰۰٬۰۰۰
+    expect(product.variants![1].price).toBe(800000);
+    expect(product.variants![1].oldPrice).toBe(1000000);
+    // سطح کارت: ارزان‌ترین مدل
+    expect(product.price).toBe(700000);
+  });
+
   it("sends listing filter params including stock, sale, rating and multi-value properties", async () => {
     mockedApi.get.mockResolvedValue({
       data: { success: true, data: [], pagination: { totalItems: 0, totalPages: 1, currentPage: 1 } },

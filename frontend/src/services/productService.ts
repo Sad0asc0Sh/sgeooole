@@ -399,7 +399,10 @@ export const productService = {
   getNewest: async (limit: number = 10): Promise<Product[]> => {
     try {
       // Include all promotion metadata required by the shared card resolver.
-      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,campaignLabel,campaignTheme';
+      // productType + variants are mandatory: without them a variable product
+      // arrives variant-less and the card falls back to product-level pricing
+      // (the exact discount bug this file's mapper otherwise prevents).
+      const fields = 'name,slug,productCode,price,discount,images,stock,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,campaignLabel,campaignTheme,productType,variants';
       const response = await api.get(`/products?sort=-createdAt&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -460,6 +463,40 @@ export const productService = {
             campaignLabel: item.campaignLabel,
           });
 
+          // Variable products: same per-variant pricing contract as the main
+          // mapper (excluded models keep their base price). The endpoint does
+          // not return variants today, so this is defensive — when absent the
+          // card keeps the previous simple-product behavior.
+          const rawVariants = Array.isArray(item.variants) ? item.variants : [];
+          const isVariable = item.productType === "variable" && rawVariants.length > 0;
+          const variants: ProductVariant[] = isVariable
+            ? rawVariants
+              .filter((v: unknown): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
+              .map((v: any) => {
+                const excluded = v.excludeFromPromotion === true;
+                const vp = resolvePricing({
+                  price: Number(v.price) || 0,
+                  discount: excluded ? 0 : item.discount,
+                  compareAtPrice: v.compareAtPrice,
+                  isFlashDeal: excluded ? false : item.isFlashDeal,
+                  flashDealEndTime: item.flashDealEndTime,
+                  isSpecialOffer: excluded ? false : item.isSpecialOffer,
+                  specialOfferEndTime: item.specialOfferEndTime,
+                  campaignLabel: excluded ? undefined : item.campaignLabel,
+                });
+                return {
+                  id: v._id,
+                  sku: v.sku,
+                  stock: Number(v.stock) || 0,
+                  options: Array.isArray(v.options) ? v.options : [],
+                  price: vp.finalPrice,
+                  oldPrice: vp.oldPrice,
+                  images: (Array.isArray(v.images) ? v.images : []).map(normalizeImage).filter((x: unknown): x is string => Boolean(x)),
+                  ...(excluded ? { excludeFromPromotion: true as const } : {}),
+                };
+              })
+            : [];
+
           return {
             id: item._id,
             name: item.name || "",
@@ -482,6 +519,13 @@ export const productService = {
             flashDealEndTime: item.flashDealEndTime || undefined,
             isSpecialOffer: Boolean(item.isSpecialOffer),
             specialOfferEndTime: item.specialOfferEndTime || undefined,
+            productType: isVariable ? "variable" : "simple",
+            attributes: [],
+            variants,
+            ...(isVariable && variants.length > 0 && {
+              price: Math.min(...variants.map((v) => v.price)),
+              countInStock: variants.reduce((sum, v) => sum + v.stock, 0),
+            }),
           } as Product;
         });
       }
@@ -564,9 +608,10 @@ export const productService = {
   getFlashDeals: async (limit: number = 10): Promise<Product[]> => {
     try {
       // Query products with isFlashDeal=true and flashDealEndTime greater than now
-      // OPTIMIZED: Only fetch fields needed for rail display
+      // OPTIMIZED: Only fetch fields needed for rail display (+ productType/variants
+      // so variable products resolve per-variant pricing instead of product-level).
       const now = new Date().toISOString();
-      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice';
+      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,productType,variants';
       const response = await api.get(`/products?isFlashDeal=true&flashDealEndTime[gt]=${now}&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);
@@ -584,8 +629,9 @@ export const productService = {
     try {
       // «منتخب‌ها»: شگفت‌انگیزهای دستی فعال + محصولات تخفیف‌های زمان‌داری که گزینه‌ی
       // «نمایش در منتخب‌های صفحه اصلی» دارند (با لیبل همان تخفیف). فیلتر زمانی در بک‌اند اعمال می‌شود.
-      // OPTIMIZED: Only fetch fields needed for rail display
-      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme';
+      // OPTIMIZED: Only fetch fields needed for rail display (+ productType/variants
+      // so variable products resolve per-variant pricing instead of product-level).
+      const fields = 'name,slug,productCode,price,discount,images,stock,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,compareAtPrice,campaignLabel,campaignTheme,productType,variants';
       const response = await api.get(`/products?featured=true&limit=${limit}&fields=${fields}&nocache=true`);
       const items = productService._extractList(response);
       return items.map(mapBackendToFrontend);

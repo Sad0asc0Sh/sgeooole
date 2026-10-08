@@ -214,6 +214,9 @@ function FlashOfferRail() {
                           تومان
                         </span>
                       </div>
+                      {pricing.isPartial && !isOutOfStock && (
+                        <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+                      )}
                     </div>
                   </div>
                 </Link>
