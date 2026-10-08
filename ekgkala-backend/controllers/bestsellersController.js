@@ -17,6 +17,7 @@ const {
   getEffectiveOwnDiscount,
   isTimerLive,
   getActiveSalesCampaignContext,
+  priceVariantsForCard,
   ttlUntil,
 } = require('../services/pricingService')
 const redis = require('../utils/redis')
@@ -150,6 +151,68 @@ exports.getBestsellers = async (req, res) => {
       if (!soonestPromotionEnd || t < soonestPromotionEnd) soonestPromotionEnd = t
     }
 
+    // شکل‌دهی یکنواخت آیتم کارت برای هر ۴ مسیر (اصلی + ۳ fallback).
+    // محصول متغیر بدون variants قابل نمایش درست نیست: قیمت سطح محصول برای آن
+    // بی‌معناست، پس مدل‌های قیمت‌گذاری‌شده (با احترام به excludeFromPromotion)
+    // و productType همیشه همراه آیتم فرستاده می‌شود تا کارت نماینده‌ی واقعی را
+    // نشان دهد. موجودی محصول متغیر هم جمع موجودی مدل‌هاست (مثل pipeline لیست).
+    const shapeBestsellerCard = (product, score) => {
+      const activeSale = resolveActiveSale(product, salesContext)
+      const promotionPrice = buildPromotionPrice(product, now, activeSale)
+      trackPromotionEnd(promotionPrice.promotionEndsAt)
+      const badges = buildPromotionBadges(product, now, activeSale)
+
+      // Extract image URL from images array
+      let imageData = null
+      if (product.images && product.images.length > 0) {
+        const img = product.images[0]
+        if (typeof img === 'string') {
+          imageData = img
+        } else if (img && img.url) {
+          imageData = img
+        }
+      }
+
+      const storedVariants = Array.isArray(product.variants) ? product.variants : []
+      const isVariable = product.productType === 'variable' || storedVariants.length > 0
+      const variants = isVariable
+        ? priceVariantsForCard(storedVariants, {
+          discountPct: promotionPrice.discount,
+          storedDiscount: Number(product.discount) || 0,
+        })
+        : []
+      const cheapest = variants.length > 0
+        ? variants.reduce((a, b) => ((b.price ?? Infinity) < (a.price ?? Infinity) ? b : a))
+        : null
+
+      return {
+        _id: product._id,
+        name: product.name,
+        slug: product.slug,
+        image: imageData,
+        price: cheapest ? cheapest.price : promotionPrice.price,
+        discount: promotionPrice.discount,
+        compareAtPrice: cheapest
+          ? (promotionPrice.discount > 0 ? cheapest.compareAtPrice : undefined)
+          : promotionPrice.compareAtPrice,
+        isFlashDeal: badges.isFlashDeal,
+        flashDealEndTime: badges.flashDealEndTime,
+        isSpecialOffer: badges.isSpecialOffer,
+        specialOfferEndTime: badges.specialOfferEndTime,
+        campaignLabel: badges.campaignLabel,
+        campaignTheme: badges.campaignTheme,
+        productType: isVariable ? 'variable' : 'simple',
+        variants,
+        average_rating: product.rating || 0,
+        review_count: product.numReviews || 0,
+        stock: cheapest
+          ? variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0)
+          : (product.stock || 0),
+        bestsellers_score: score,
+        category: product.category,
+      }
+    }
+
     if (scoreCount > 0) {
       // ===== مسیر اصلی: استفاده از ProductScore =====
       const query = {
@@ -167,7 +230,7 @@ exports.getBestsellers = async (req, res) => {
         .limit(parseInt(limit) || 8)
         .populate({
           path: 'product_id',
-          select: 'name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme',
+          select: 'name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
           populate: {
             path: 'category',
             select: 'name slug',
@@ -178,51 +241,13 @@ exports.getBestsellers = async (req, res) => {
       // تحویل محصولات در فرمت مورد نیاز Frontend
       result = bestsellers
         .filter((score) => score.product_id) // فیلتر محصولات حذف شده
-        .map((score) => {
-          const product = score.product_id
-          const activeSale = resolveActiveSale(product, salesContext)
-          const promotionPrice = buildPromotionPrice(product, now, activeSale)
-          trackPromotionEnd(promotionPrice.promotionEndsAt)
-          const badges = buildPromotionBadges(product, now, activeSale)
-
-          // Extract image URL from images array
-          let imageData = null
-          if (product.images && product.images.length > 0) {
-            const img = product.images[0]
-            if (typeof img === 'string') {
-              imageData = img
-            } else if (img && img.url) {
-              imageData = img
-            }
-          }
-
-          return {
-            _id: product._id,
-            name: product.name,
-            slug: product.slug,
-            image: imageData,
-            price: promotionPrice.price,
-            discount: promotionPrice.discount,
-            compareAtPrice: promotionPrice.compareAtPrice,
-            isFlashDeal: badges.isFlashDeal,
-            flashDealEndTime: badges.flashDealEndTime,
-            isSpecialOffer: badges.isSpecialOffer,
-            specialOfferEndTime: badges.specialOfferEndTime,
-            campaignLabel: badges.campaignLabel,
-            campaignTheme: badges.campaignTheme,
-            average_rating: product.rating || 0,
-            review_count: product.numReviews || 0,
-            stock: product.stock || 0,
-            bestsellers_score: {
-              decayed_score: score.decayed_score,
-              final_score: score.final_score,
-              trend_score: score.trend_score,
-              is_new: score.is_new_product,
-              trend_up: score.trend_score > 0.5,
-            },
-            category: product.category,
-          }
-        })
+        .map((score) => shapeBestsellerCard(score.product_id, {
+          decayed_score: score.decayed_score,
+          final_score: score.final_score,
+          trend_score: score.trend_score,
+          is_new: score.is_new_product,
+          trend_up: score.trend_score > 0.5,
+        }))
 
       console.log(`[BestSellers] ✅ ${result.length} محصول از ProductScore برگردانده شد`)
     } else {
@@ -260,7 +285,7 @@ exports.getBestsellers = async (req, res) => {
           isActive: true,
           ...stockFilter,
         })
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants')
           .populate('category', 'name slug')
           .lean()
 
@@ -286,7 +311,7 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ salesCount: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme salesCount')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme salesCount productType variants')
           .populate('category', 'name slug')
           .lean()
 
@@ -304,55 +329,20 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ views: -1, rating: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme views')
+          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme views productType variants')
           .populate('category', 'name slug')
           .lean()
 
         console.log(`[BestSellers] ⚠️ هیچ داده فروشی وجود ندارد - ${fallbackProducts.length} محصول از views/rating fallback`)
       }
 
-      result = fallbackProducts.map((product) => {
-        const activeSale = resolveActiveSale(product, salesContext)
-        const promotionPrice = buildPromotionPrice(product, now, activeSale)
-        trackPromotionEnd(promotionPrice.promotionEndsAt)
-        const badges = buildPromotionBadges(product, now, activeSale)
-        let imageData = null
-        if (product.images && product.images.length > 0) {
-          const img = product.images[0]
-          if (typeof img === 'string') {
-            imageData = img
-          } else if (img && img.url) {
-            imageData = img
-          }
-        }
-
-        return {
-          _id: product._id,
-          name: product.name,
-          slug: product.slug,
-          image: imageData,
-          price: promotionPrice.price,
-          discount: promotionPrice.discount,
-          compareAtPrice: promotionPrice.compareAtPrice,
-          isFlashDeal: badges.isFlashDeal,
-          flashDealEndTime: badges.flashDealEndTime,
-          isSpecialOffer: badges.isSpecialOffer,
-          specialOfferEndTime: badges.specialOfferEndTime,
-          campaignLabel: badges.campaignLabel,
-          campaignTheme: badges.campaignTheme,
-          average_rating: product.rating || 0,
-          review_count: product.numReviews || 0,
-          stock: product.stock || 0,
-          bestsellers_score: {
-            decayed_score: 0,
-            final_score: 0,
-            trend_score: 0,
-            is_new: false,
-            trend_up: false,
-          },
-          category: product.category,
-        }
-      })
+      result = fallbackProducts.map((product) => shapeBestsellerCard(product, {
+        decayed_score: 0,
+        final_score: 0,
+        trend_score: 0,
+        is_new: false,
+        trend_up: false,
+      }))
 
       // شروع محاسبه امتیازات در پس‌زمینه (بدون بلاک کردن ریکوئست)
       recalculateAllScores().catch((err) => {

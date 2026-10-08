@@ -439,11 +439,39 @@ const ttlUntil = (promotionEndsAt, baseTtl, now = new Date()) => {
   return Math.max(1, Math.min(baseTtl, seconds))
 }
 
+// مدل‌های قیمت‌گذاری‌شده برای کارت‌های خلاصه (مثلاً /bestsellers که pipeline
+// لیست را اجرا نمی‌کند). آینه‌ی شاخه‌ی variants در productListingService با همان
+// قرارداد، تا فرانت با resolvePricing دوباره دقیقاً همان را حساب کند (idempotent):
+// - مدل مستثنی (excludeFromPromotion=true) یا بدون تخفیف زنده: قیمت پایه، بدون compareAtPrice
+// - بقیه: همان درصدِ اعمال‌شده روی خود محصول روی مبنای legacy-aware
+// ورودی‌های خراب (null/غیرآبجکت) نادیده گرفته می‌شوند؛ بقیه‌ی فیلدهای مدل دست‌نخورده می‌مانند.
+const priceVariantsForCard = (variants, { discountPct = 0, storedDiscount = 0 } = {}) => {
+  if (!Array.isArray(variants)) return []
+  const d = Number(discountPct) || 0
+  const stored = Number(storedDiscount) || 0
+  return variants
+    .filter((v) => v && typeof v === 'object')
+    .map((v) => {
+      const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+      const raw = Number(vObj.price) || 0
+      const base = resolveBasePrice(vObj.price, vObj.compareAtPrice, stored)
+      if (isVariantExcluded(vObj) || !(d > 0)) {
+        return { ...vObj, price: base, compareAtPrice: undefined }
+      }
+      return {
+        ...vObj,
+        price: raw > 0 ? Math.round(base - (base * d) / 100) : raw,
+        compareAtPrice: base,
+      }
+    })
+}
+
 module.exports = {
   normalizeVariantOptions,
   getVariantKey,
   findMatchingVariant,
   isVariantExcluded,
+  priceVariantsForCard,
   computeItemPricing,
   getActiveSalesCampaignContext,
   isTimerLive,

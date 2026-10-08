@@ -219,10 +219,13 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
   // Variable-product mapping — mirror of services/productService mapBackendToFrontend.
   // The PDP is server-rendered through this mapper, so without it the page would
   // still show variable products as out-of-stock with no selector.
-  const isVariable = backend.productType === "variable" && (backend.variants?.length ?? 0) > 0;
+  // A non-empty variants array MEANS variable, even for legacy docs whose
+  // productType was never set (same rule as the client mapper).
+  const rawBackendVariants = Array.isArray(backend.variants) ? backend.variants : [];
+  const isVariable = rawBackendVariants.length > 0;
 
   const mappedVariants: ProductVariant[] = isVariable
-    ? backend.variants!
+    ? rawBackendVariants
       .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
       .map((v) => {
         // مدل مستثنی: تخفیف صفر تا قیمت پایه بماند؛ آینه‌ی services/productService.

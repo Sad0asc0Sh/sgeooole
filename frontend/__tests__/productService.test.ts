@@ -242,6 +242,37 @@ describe("productService", () => {
       expect(product.countInStock).toBe(7);
     });
 
+    it("treats legacy docs with variants but no productType flag as variable", async () => {
+      mockedApi.get.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            // نه productType دارد، نه پرچم؛ فقط آرایه‌ی مدل‌ها (داکیومنت قدیمی)
+            _id: "legacy1",
+            name: "قدیمی",
+            price: 1000000,
+            discount: 20,
+            stock: 0,
+            isSpecialOffer: true,
+            specialOfferEndTime: "2099-01-01T00:00:00.000Z",
+            variants: [
+              { _id: "v1", price: 800000, compareAtPrice: 1000000, stock: 2, options: [] },
+            ],
+          },
+        },
+      });
+
+      const product = await productService.getById("legacy1");
+
+      // باید مسیر متغیر برود، نه قیمت پایه‌ی سطح محصول با بج فانتوم
+      expect(product.productType).toBe("variable");
+      expect(product.variants).toHaveLength(1);
+      expect(product.variants![0].price).toBe(800000);
+      expect(product.variants![0].oldPrice).toBe(1000000);
+      expect(product.price).toBe(800000);
+      expect(product.countInStock).toBe(2);
+    });
+
     it("skips corrupt variant entries instead of crashing", async () => {
       mockedApi.get.mockResolvedValue({
         data: {

@@ -117,6 +117,27 @@ describe("mapBackendProduct — محصول متغیر (مسیر SSR)", () => {
         expect(p.variants![1].excludeFromPromotion).toBeUndefined();
     });
 
+    it("داکیومنت قدیمی بدون پرچم productType ولی با مدل‌ها، متغیر شناخته می‌شود", () => {
+        const { productType: _drop, ...legacy } = backendVariable as any;
+        const p = mapBackendProduct(
+            {
+                ...legacy,
+                price: 1000000,
+                discount: 20,
+                stock: 0,
+                isSpecialOffer: true,
+                specialOfferEndTime: "2099-01-01T00:00:00.000Z",
+            },
+            API_URL,
+        );
+
+        expect(p.productType).toBe("variable");
+        expect(p.variants).toHaveLength(2);
+        // قیمت سطح کارت از مدل‌ها می‌آید، نه قیمت پایه‌ی سطح محصول
+        expect(p.price).toBe(400000);
+        expect(p.countInStock).toBe(3);
+    });
+
     it("محصول ساده دقیقاً مثل قبل مپ می‌شود", () => {
         const p = mapBackendProduct(
             { _id: "s1", name: "ساده", price: 100000, discount: 0, stock: 7 },

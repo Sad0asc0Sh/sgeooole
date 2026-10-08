@@ -173,10 +173,15 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
   // Variable-product mapping: each variant gets the same pricing contract as
   // simple products (resolvePricing with the product-level discount/flags).
   // Guards: corrupt entries (null, non-object) are skipped, never crash mapping.
-  const isVariable = backendProduct.productType === "variable" && (backendProduct.variants?.length ?? 0) > 0;
+  // A non-empty variants array MEANS variable — even for legacy docs whose
+  // productType was never set (or was overwritten to 'simple' by an edit that
+  // didn't touch variants). Otherwise such products fall back to product-level
+  // pricing: a phantom discount on a base price with no «از» prefix.
+  const rawBackendVariants = Array.isArray(backendProduct.variants) ? backendProduct.variants : [];
+  const isVariable = rawBackendVariants.length > 0;
 
   const variants: ProductVariant[] = isVariable
-    ? backendProduct.variants!
+    ? rawBackendVariants
       .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
       .map((v) => {
         // وariant مستثنی: تخفیف صفر تا قیمت پایه بماند؛ بقیه مثل قبل با تخفیف محصول.
@@ -468,7 +473,9 @@ export const productService = {
           // not return variants today, so this is defensive — when absent the
           // card keeps the previous simple-product behavior.
           const rawVariants = Array.isArray(item.variants) ? item.variants : [];
-          const isVariable = item.productType === "variable" && rawVariants.length > 0;
+          // Same rule as the main mappers: a non-empty variants array means
+          // variable (covers legacy docs and stale caches without the flag).
+          const isVariable = rawVariants.length > 0;
           const variants: ProductVariant[] = isVariable
             ? rawVariants
               .filter((v: unknown): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
