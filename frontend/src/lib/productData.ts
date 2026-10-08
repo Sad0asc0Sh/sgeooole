@@ -160,7 +160,7 @@ type BackendProduct = {
   categoryPath?: { _id?: string; id?: string; slug?: string; name?: string }[];
   productType?: "simple" | "variable";
   attributes?: Array<{ name: string; values: string[]; displayType?: "button" | "color"; swatches?: Array<{ value: string; hex: string }> }>;
-  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[] }>;
+  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[]; excludeFromPromotion?: boolean }>;
 };
 
 const getAssetBase = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");
@@ -225,15 +225,17 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     ? backend.variants!
       .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
       .map((v) => {
+        // مدل مستثنی: تخفیف صفر تا قیمت پایه بماند؛ آینه‌ی services/productService.
+        const excluded = v.excludeFromPromotion === true;
         const vp = resolvePricing({
           price: Number(v.price) || 0,
-          discount: backend.discount,
+          discount: excluded ? 0 : backend.discount,
           compareAtPrice: v.compareAtPrice,
-          isFlashDeal: backend.isFlashDeal,
+          isFlashDeal: excluded ? false : backend.isFlashDeal,
           flashDealEndTime: backend.flashDealEndTime,
-          isSpecialOffer: backend.isSpecialOffer,
+          isSpecialOffer: excluded ? false : backend.isSpecialOffer,
           specialOfferEndTime: backend.specialOfferEndTime,
-          campaignLabel: backend.campaignLabel,
+          campaignLabel: excluded ? undefined : backend.campaignLabel,
         });
         return {
           id: v._id,
@@ -245,6 +247,7 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
           images: (v.images ?? [])
             .map((img) => normalizeImage(img, assetBase))
             .filter((x): x is string => Boolean(x)),
+          ...(excluded ? { excludeFromPromotion: true as const } : {}),
         };
       })
     : [];

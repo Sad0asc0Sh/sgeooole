@@ -20,6 +20,7 @@ import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
 import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { getServerNow } from "@/lib/serverClock";
 
 /**
@@ -51,9 +52,13 @@ function FlashOfferRail() {
     return () => window.clearTimeout(id);
   }, [flashDeals, refresh]);
 
-  // Filter products with active countdown - removes expired products in real-time
+  // Filter products with active countdown - removes expired products in real-time.
+  // Variable products need at least one sellable discounted variant to stay in the rail.
   const activeFlashDeals = useMemo(() => {
-    return flashDeals.filter((product) => resolveProductPromotion(product, now).isFlashDealActive);
+    return flashDeals.filter((product) => {
+      if (!resolveProductPromotion(product, now).isFlashDealActive) return false;
+      return resolveCardPricing(product, { now, context: "promo" }).hasDiscountedVariant;
+    });
   }, [flashDeals, now]);
 
   if (isLoading || activeFlashDeals.length === 0) {
@@ -111,12 +116,12 @@ function FlashOfferRail() {
           grabCursor
         >
           {activeFlashDeals.map((product, index) => {
-            // Single source: the shared resolver (all items here are live by filter).
-            const promotion = resolveProductPromotion(product, now);
-            const isFlashDealCountdownActive = promotion.isFlashDealActive;
-            const effectiveDiscount = promotion.effectiveDiscount;
-            const showSpecialOfferPricing = effectiveDiscount > 0 && Boolean(product.oldPrice);
-            const displayPrice = promotion.displayPrice;
+            // Single source: the card pricing resolver in promo context (all items
+            // here are live by filter; the rep is the cheapest discounted variant).
+            const pricing = resolveCardPricing(product, { now, context: "promo" });
+            const effectiveDiscount = pricing.discountPercent;
+            const showSpecialOfferPricing = pricing.originalPrice !== undefined;
+            const displayPrice = pricing.displayPrice;
 
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
@@ -180,11 +185,11 @@ function FlashOfferRail() {
                     <div className="mt-auto flex flex-col gap-1">
                       {/* Row 1: Old Price (if discount and in stock) */}
                       <div className="flex h-5 items-center justify-between gap-1">
-                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing ? (
+                        {product.countInStock > 0 && effectiveDiscount > 0 && showSpecialOfferPricing && pricing.originalPrice !== undefined ? (
                           <>
                             <PromotionBadge label={`${effectiveDiscount.toLocaleString("fa-IR")}٪`} tone="discount" />
                             <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
-                              {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
+                              {pricing.originalPrice.toLocaleString("fa-IR")}
                             </span>
                           </>
                         ) : (
@@ -196,7 +201,9 @@ function FlashOfferRail() {
                       <div
                         className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : "text-gray-800"
                           }`}
+                        aria-label={pricing.isFrom && !isOutOfStock ? `شروع از ${displayPrice.toLocaleString("fa-IR")} تومان` : `${displayPrice.toLocaleString("fa-IR")} تومان`}
                       >
+                        {!isOutOfStock && pricing.isFrom && <span className="text-[10px] text-gray-500 ml-1">از</span>}
                         <span className="text-[15px] font-black tracking-tight">
                           {displayPrice.toLocaleString("fa-IR")}
                         </span>

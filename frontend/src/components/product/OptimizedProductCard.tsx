@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
-import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { getServerNow } from "@/lib/serverClock";
 import imageStyles from "./ProductImageFrame.module.css";
 
@@ -35,22 +35,25 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
     // No duplicated timer/discount math here — expired snapshots restore the base
     // price and a stale compareAtPrice can never inflate it.
     const computedValues = useMemo(() => {
-        const promotion = resolveProductPromotion(product, now);
+        const context = variant === "flash" || variant === "special" ? "promo" : "listing";
+        const pricing = resolveCardPricing(product, { now, context });
 
         const isOutOfStock = product.countInStock === 0;
         const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
         return {
-            isFlashActive: promotion.isFlashDealActive,
-            isSpecialActive: promotion.isSpecialOfferActive,
-            effectiveDiscount: promotion.effectiveDiscount,
-            displayPrice: promotion.displayPrice,
+            hasPromotion: pricing.kind !== "none",
+            effectiveDiscount: pricing.discountPercent,
+            displayPrice: pricing.displayPrice,
+            originalPrice: pricing.originalPrice,
+            isFrom: pricing.isFrom,
+            isPartial: pricing.isPartial,
             isOutOfStock,
             isLowStock,
         };
-    }, [product, now]);
+    }, [product, now, variant]);
 
-    const { effectiveDiscount, displayPrice, isOutOfStock, isLowStock, isFlashActive, isSpecialActive } = computedValues;
+    const { hasPromotion, effectiveDiscount, displayPrice, originalPrice, isFrom, isPartial, isOutOfStock, isLowStock } = computedValues;
 
     // Theme colors based on variant
     const themeClasses = useMemo(() => {
@@ -107,7 +110,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     />
 
                     {/* Campaign Badge */}
-                    {product.campaignLabel && resolveProductPromotion(product, now).kind !== "none" && (
+                    {product.campaignLabel && hasPromotion && (
                         <div className="absolute top-2 left-2 z-20">
                             <span
                                 className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"
@@ -150,24 +153,30 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
 
                 {/* Price Section */}
                 <div className="flex flex-col gap-1 mt-auto">
-                    {/* Discount Row */}
+                    {/* Discount Row (fixed h-5 keeps rail alignment) */}
                     <div className="flex items-center justify-between h-5">
-                        {!isOutOfStock && effectiveDiscount > 0 && (isFlashActive || isSpecialActive) ? (
+                        {!isOutOfStock && originalPrice !== undefined ? (
                             <>
                                 <div className={`${themeClasses.badge} text-[11px] font-bold px-2 py-0.5 rounded-full`}>
                                     {effectiveDiscount.toLocaleString("fa-IR")}٪
                                 </div>
                                 <span className="text-[11px] text-gray-400 line-through">
-                                    {(product.compareAtPrice || product.oldPrice || product.price).toLocaleString("fa-IR")}
+                                    {originalPrice.toLocaleString("fa-IR")}
                                 </span>
                             </>
+                        ) : !isOutOfStock && isPartial ? (
+                            <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
                         ) : (
                             <div className="h-5" />
                         )}
                     </div>
 
                     {/* Price Row */}
-                    <div className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : themeClasses.price}`}>
+                    <div
+                        className={`flex items-center justify-end gap-1 ${isOutOfStock ? "text-gray-400" : themeClasses.price}`}
+                        aria-label={isFrom && !isOutOfStock ? `شروع از ${displayPrice.toLocaleString("fa-IR")} تومان` : `${displayPrice.toLocaleString("fa-IR")} تومان`}
+                    >
+                        {!isOutOfStock && isFrom && <span className="text-[10px] text-gray-500 ml-1">از</span>}
                         <span className="text-[15px] font-black tracking-tight">
                             {displayPrice.toLocaleString("fa-IR")}
                         </span>
@@ -175,6 +184,9 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                             تومان
                         </span>
                     </div>
+                    {isPartial && originalPrice !== undefined && !isOutOfStock && (
+                        <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+                    )}
                 </div>
             </div>
         </Link>

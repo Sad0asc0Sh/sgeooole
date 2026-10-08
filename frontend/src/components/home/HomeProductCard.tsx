@@ -7,7 +7,7 @@ import { AlertTriangle } from "lucide-react";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
-import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import type { Product } from "@/types/product";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import styles from "./HomeProductRail.module.css";
@@ -18,11 +18,15 @@ type HomeProductCardProps = {
 };
 
 function HomeProductCard({ product, now }: HomeProductCardProps) {
-  const { kind, effectiveDiscount, displayPrice, endTime } = resolveProductPromotion(product, now);
+  const pricing = resolveCardPricing(product, { now, context: "listing" });
+  const kind = pricing.kind;
+  const endTime = pricing.endTime;
   const isOutOfStock = product.countInStock <= 0;
   const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
-  const originalPrice = product.compareAtPrice || product.oldPrice || product.price;
-  const hasDiscount = !isOutOfStock && effectiveDiscount > 0 && originalPrice > displayPrice;
+  const originalPrice = pricing.originalPrice;
+  const hasDiscount = !isOutOfStock && originalPrice !== undefined;
+  const effectiveDiscount = pricing.discountPercent;
+  const displayPrice = pricing.displayPrice;
   const label = kind === "flash" ? "پیشنهاد لحظه‌ای" : kind === "campaign"
     ? product.campaignLabel || "فروش ویژه" : kind === "amazing" ? "شگفت‌انگیز" : null;
   const campaignTheme = product.campaignTheme || "";
@@ -69,17 +73,26 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
       </h3>
       <div className={styles.pricing}>
         <div className={styles.discountRow}>
-          {hasDiscount && <>
+          {hasDiscount ? <>
             <span className={`${styles.discountBadge} ${campaignTheme === "red-purple" ? styles.discountRose : ""}`}>{effectiveDiscount.toLocaleString("fa-IR")}٪</span>
-            <del className={styles.originalPrice}>{originalPrice.toLocaleString("fa-IR")}</del>
-          </>}
+            <del className={styles.originalPrice}>{(originalPrice as number).toLocaleString("fa-IR")}</del>
+          </> : pricing.isPartial && !isOutOfStock ? (
+            <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+          ) : null}
         </div>
-        <div className={`${styles.price} ${isOutOfStock ? "text-gray-400" : "text-ekg-900"}`}>
+        <div
+          className={`${styles.price} ${isOutOfStock ? "text-gray-400" : "text-ekg-900"}`}
+          aria-label={pricing.isFrom && !isOutOfStock ? `شروع از ${displayPrice.toLocaleString("fa-IR")} تومان` : `${displayPrice.toLocaleString("fa-IR")} تومان`}
+        >
           {isOutOfStock ? <span className="text-sm font-bold">ناموجود</span> : <>
+            {pricing.isFrom && <span className="text-[10px] text-gray-500 ml-1">از</span>}
             <span>{displayPrice.toLocaleString("fa-IR")}</span>
             <span className={styles.currency}>تومان</span>
           </>}
         </div>
+        {pricing.isPartial && hasDiscount && !isOutOfStock && (
+          <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+        )}
       </div>
     </Link>
   );

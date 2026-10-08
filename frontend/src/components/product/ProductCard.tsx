@@ -12,8 +12,8 @@ import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import {
     getNextPromotionExpiry,
-    resolveProductPromotion,
 } from "@/lib/promotions/productPromotion";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { getServerNow } from "@/lib/serverClock";
 import styles from "./ProductCard.module.css";
 
@@ -31,13 +31,9 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
     const isFavorite = isInWishlist(product.id);
     const isOutOfStock = product.countInStock <= 0;
-    const { kind: promotionKind, effectiveDiscount, displayPrice, endTime } =
-        resolveProductPromotion(product, getServerNow());
-    const hasOldPriceMarkdown = Boolean(product.oldPrice && product.oldPrice > displayPrice);
-    // Badge shows ONLY the real resolved discount. Never derive % from
-    // oldPrice gap — stale compareAtPrice would fabricate 80%+ badges.
-    const finalDiscount = effectiveDiscount;
-    const showSpecialOfferPricing = finalDiscount > 0 && hasOldPriceMarkdown;
+    const pricing = resolveCardPricing(product, { now: getServerNow(), context: "listing" });
+    const promotionKind = pricing.kind;
+    const endTime = pricing.endTime;
 
     // ProductTimerBadge owns its second-by-second display. The card itself only
     // needs another render when the nearest promotion crosses its end boundary.
@@ -220,24 +216,30 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
                 <div className={`${styles.footerRow} mt-auto`}>
                     <div className={`${styles.priceColumn} flex flex-col`}>
-                        {product.oldPrice && showSpecialOfferPricing && (
-                            <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1`}>
-                                {finalDiscount > 0 && (
+                        <div className={`${styles.oldPriceRow} flex items-center gap-1 mb-1 h-5`}>
+                            {pricing.originalPrice && !isOutOfStock ? (
+                                <>
                                     <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                        {finalDiscount}%
+                                        {pricing.discountPercent.toLocaleString("fa-IR")}٪
                                     </span>
-                                )}
-                                <span className={`${styles.oldPriceValue} text-[11px] text-gray-400 line-through decoration-red-500/50`}>
-                                    {product.oldPrice.toLocaleString("fa-IR")}
-                                </span>
-                            </div>
-                        )}
-                        <div className={`${styles.priceLine} ${isOutOfStock ? "text-gray-400" : ""}`}>
+                                    <span className={`${styles.oldPriceValue} text-[11px] text-gray-400 line-through decoration-red-500/50`}>
+                                        {pricing.originalPrice.toLocaleString("fa-IR")}
+                                    </span>
+                                </>
+                            ) : pricing.isPartial ? (
+                                <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+                            ) : null}
+                        </div>
+                        <div className={`${styles.priceLine} ${isOutOfStock ? "text-gray-400" : ""}`} aria-label={pricing.isFrom ? `شروع از ${pricing.displayPrice.toLocaleString("fa-IR")} تومان` : `${pricing.displayPrice.toLocaleString("fa-IR")} تومان`}>
+                            {pricing.isFrom && !isOutOfStock && <span className="text-[10px] text-gray-500 ml-1">از</span>}
                             <span className={`${styles.priceValue} text-base font-black ${isOutOfStock ? "text-gray-500" : "text-gray-900"}`}>
-                                {displayPrice.toLocaleString("fa-IR")}
+                                {pricing.displayPrice.toLocaleString("fa-IR")}
                             </span>
                             <span className={`${styles.priceCurrency} text-[10px] text-gray-500`}>تومان</span>
                         </div>
+                        {pricing.isPartial && pricing.originalPrice && !isOutOfStock && (
+                            <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+                        )}
                     </div>
                 </div>
             </div>

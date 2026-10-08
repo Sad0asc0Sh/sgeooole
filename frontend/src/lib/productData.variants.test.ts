@@ -81,6 +81,42 @@ describe("mapBackendProduct — محصول متغیر (مسیر SSR)", () => {
         expect(p.price).toBe(400000);
     });
 
+    it("مدل مستثنی از تخفیف: قیمت پایه می‌ماند و دوباره تخفیف نمی‌خورد", () => {
+        const p = mapBackendProduct(
+            {
+                ...backendVariable,
+                discount: 20,
+                isSpecialOffer: true,
+                specialOfferEndTime: "2099-01-01T00:00:00.000Z",
+                variants: [
+                    {
+                        _id: "v1",
+                        price: 500000,
+                        stock: 3,
+                        options: [{ name: "رنگ", value: "مشکی" }],
+                        excludeFromPromotion: true,
+                    },
+                    {
+                        _id: "v2",
+                        price: 520000,
+                        stock: 2,
+                        options: [{ name: "رنگ", value: "قرمز" }],
+                    },
+                ],
+            },
+            API_URL,
+        );
+
+        // مستثنی: قیمت پایه بدون oldPrice
+        expect(p.variants![0].price).toBe(500000);
+        expect(p.variants![0].oldPrice).toBeUndefined();
+        expect(p.variants![0].excludeFromPromotion).toBe(true);
+        // غیرمستثنی: تخفیف خورده
+        expect(p.variants![1].price).toBe(416000);
+        expect(p.variants![1].oldPrice).toBe(520000);
+        expect(p.variants![1].excludeFromPromotion).toBeUndefined();
+    });
+
     it("محصول ساده دقیقاً مثل قبل مپ می‌شود", () => {
         const p = mapBackendProduct(
             { _id: "s1", name: "ساده", price: 100000, discount: 0, stock: 7 },

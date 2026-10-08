@@ -19,6 +19,7 @@ import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
 import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { getServerNow } from "@/lib/serverClock";
 
 /**
@@ -89,7 +90,18 @@ function SpecialOfferRail() {
     return () => window.clearTimeout(id);
   }, [products, refresh]);
 
-  // Calculate earliest end time for global countdown
+  // Only products with a live special offer AND at least one sellable
+  // discounted variant stay in the rail (variable products with all models
+  // excluded from the promotion are dropped).
+  const activeProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (!resolveProductPromotion(p, now).isSpecialOfferActive) return false;
+      return resolveCardPricing(p, { now, context: "promo" }).hasDiscountedVariant;
+    });
+  }, [products, now]);
+
+  // Calculate earliest end time for global countdown (from all products —
+  // preserves the original curated section expiry behavior).
   const earliestEndTime = useMemo(() => {
     if (products.length === 0) return undefined;
     const times = products
@@ -107,8 +119,9 @@ function SpecialOfferRail() {
     return () => clearInterval(id);
   }, []);
 
-  // Hide section if loading, error, no products, or expired
-  if (isLoading || error || products.length === 0 || isExpired) {
+  // Hide section if loading, error, expired, or no product has a sellable
+  // discounted variant left (e.g. all variable models excluded from promotion).
+  if (isLoading || error || products.length === 0 || activeProducts.length === 0 || isExpired) {
     return null;
   }
 
@@ -163,14 +176,15 @@ function SpecialOfferRail() {
           className="w-full !pb-2"
           grabCursor
         >
-          {products.map((product, index) => {
+          {activeProducts.map((product, index) => {
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
-            // Single source: the shared resolver — no duplicated timer/discount math.
-            const promotion = resolveProductPromotion(product, now);
-            const hasSpecialOfferCountdown = promotion.isSpecialOfferActive;
-            const effectiveDiscount = promotion.effectiveDiscount;
-            const displayPrice = promotion.displayPrice;
+            // Single source: the card pricing resolver in promo context — the rep
+            // is the cheapest sellable discounted variant.
+            const pricing = resolveCardPricing(product, { now, context: "promo" });
+            const hasSpecialOfferCountdown = pricing.kind !== "none";
+            const effectiveDiscount = pricing.discountPercent;
+            const displayPrice = pricing.displayPrice;
 
             return (
               <SwiperSlide
@@ -231,11 +245,11 @@ function SpecialOfferRail() {
                     {/* Price Section */}
                     <div className="mt-auto flex flex-col gap-1">
                       <div className="flex h-5 items-center justify-between gap-1">
-                        {product.countInStock > 0 && effectiveDiscount > 0 && hasSpecialOfferCountdown ? (
+                        {product.countInStock > 0 && effectiveDiscount > 0 && hasSpecialOfferCountdown && pricing.originalPrice !== undefined ? (
                           <>
                             <PromotionBadge label={`${effectiveDiscount.toLocaleString("fa-IR")}٪`} tone="discount" />
                             <span className="text-[11px] text-gray-300 line-through decoration-gray-300">
-                              {(product.compareAtPrice || product.price).toLocaleString("fa-IR")}
+                              {pricing.originalPrice.toLocaleString("fa-IR")}
                             </span>
                           </>
                         ) : (
@@ -243,7 +257,11 @@ function SpecialOfferRail() {
                         )}
                       </div>
 
-                      <div className={`flex items-center justify-end gap-1 ${isOutOfStock ? 'text-gray-400' : 'text-gray-800'}`}>
+                      <div
+                        className={`flex items-center justify-end gap-1 ${isOutOfStock ? 'text-gray-400' : 'text-gray-800'}`}
+                        aria-label={pricing.isFrom && !isOutOfStock ? `شروع از ${displayPrice.toLocaleString("fa-IR")} تومان` : `${displayPrice.toLocaleString("fa-IR")} تومان`}
+                      >
+                        {!isOutOfStock && pricing.isFrom && <span className="text-[10px] text-gray-500 ml-1">از</span>}
                         <span className="text-[15px] font-black tracking-tight">
                           {displayPrice.toLocaleString("fa-IR")}
                         </span>
