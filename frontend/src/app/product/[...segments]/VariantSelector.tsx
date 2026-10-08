@@ -23,7 +23,11 @@ type VariantSelectorProps = {
  *
  * چیدمان:
  * - ویژگی‌های متنی به‌جای flex-wrap بی‌نظم، داخل یک Grid یکسان رندر می‌شوند:
- *   موبایل کوچک ۱ ستونه، از ۴۲۰px به بالا ۲ ستونه، دسکتاپ عریض ۳ ستونه.
+ *   موبایل کوچک ۱ ستونه، از ۴۲۰px به بالا ۲ ستونه.
+ *   متن‌های کوتاه در دسکتاپ عریض ۳ ستونه می‌شوند، ولی متن‌های بلند
+ *   (مثل «همراه با دو عدد ریموت و تگ») سقف ۲ ستونه دارند تا کارت باریک
+ *   نشود و متن به ۲-۳ خط بد نشکند؛ چیپ اختلاف قیمت هم زیر متن می‌نشیند
+ *   تا عرض کامل به نوشته برسد (با شکست متعادل خطوط).
  *   عرض و ارتفاع همه‌ی گزینه‌های یک ردیف همیشه برابر است.
  * - هر گزینه یک کارت هم‌اندازه با نشان رادیویی، متن مقدار و چیپ اختلاف قیمت
  *   در لبه‌ی مخالف است؛ گزینه‌ی ناموجود چیپ «ناموجود» می‌گیرد.
@@ -97,6 +101,13 @@ export default function VariantSelector({
             {visibleAttributes.map((attr) => {
                 const colorMode = isColorAttribute(attr);
                 const selectedValue = selection?.[attr.name] ?? "";
+                // متن بلند در ستون باریک ۳تایی به ۲-۳ خط بد می‌شکند؛ سقف ۲ ستون.
+                const longText =
+                    !colorMode &&
+                    attr.values.some((v) => String(v ?? "").trim().length > 12);
+                const textGridClass = longText
+                    ? "grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2"
+                    : "grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 xl:grid-cols-3";
 
                 return (
                     <div key={attr.name}>
@@ -160,7 +171,7 @@ export default function VariantSelector({
                             <div
                                 role="group"
                                 aria-label={attr.name}
-                                className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 xl:grid-cols-3"
+                                className={textGridClass}
                             >
                                 {attr.values.map((value) => {
                                     const isSelected = selectedValue === value;
@@ -168,6 +179,49 @@ export default function VariantSelector({
                                     const cheapest = cheapestForValue(attr.name, value);
                                     const diff =
                                         cheapest !== null && range ? cheapest - range.min : null;
+                                    if (longText) {
+                                        return (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() => onChange(attr.name, value)}
+                                                aria-pressed={isSelected}
+                                                className={`group flex min-h-[60px] w-full items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-right outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-kala-500/50 active:scale-[0.98] ${
+                                                    isSelected
+                                                        ? "border-kala-500 bg-kala-50/70 shadow-sm"
+                                                        : "border-gray-200 bg-white hover:border-kala-300 hover:bg-kala-50/40"
+                                                } ${out ? "opacity-70" : ""}`}
+                                            >
+                                                {/* نشان رادیویی انتخاب */}
+                                                <span
+                                                    aria-hidden
+                                                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                                                        isSelected
+                                                            ? "border-kala-500 bg-kala-500 text-white"
+                                                            : "border-gray-300 text-transparent group-hover:border-kala-300"
+                                                    }`}
+                                                >
+                                                    <Check size={12} strokeWidth={3.5} />
+                                                </span>
+                                                <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                                                    <span
+                                                        className={`break-words text-balance text-sm font-bold leading-6 ${
+                                                            isSelected ? "text-kala-700" : "text-gray-700"
+                                                        } ${out ? "line-through decoration-red-400" : ""}`}
+                                                    >
+                                                        {value}
+                                                    </span>
+                                                    {out ? (
+                                                        <span className="whitespace-nowrap rounded-md bg-red-50 px-1.5 py-0.5 text-[10px] font-bold leading-none text-red-500">
+                                                            ناموجود
+                                                        </span>
+                                                    ) : (
+                                                        renderDiff(diff)
+                                                    )}
+                                                </span>
+                                            </button>
+                                        );
+                                    }
                                     return (
                                         <button
                                             key={value}

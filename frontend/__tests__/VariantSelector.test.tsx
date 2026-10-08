@@ -96,3 +96,79 @@ describe("VariantSelector — نمایش واریانت‌های ثبت‌شده
         expect(container).toBeEmptyDOMElement();
     });
 });
+
+describe("VariantSelector — چیدمان دسکتاپ متن‌های بلند (ریموت/تگ)", () => {
+    const longAttributes: ProductAttribute[] = [
+        {
+            name: "ریموت و تگ",
+            values: [
+                "بدون ریموت و تگ",
+                "همراه با دو عدد ریموت",
+                "همراه با دو عدد تگ",
+                "همراه با دو عدد ریموت و تگ",
+            ],
+            displayType: "button",
+        },
+    ];
+    const longVariants: ProductVariant[] = [
+        { id: "l1", price: 2700000, stock: 5, options: [{ name: "ریموت و تگ", value: "بدون ریموت و تگ" }] },
+        { id: "l2", price: 3182500, stock: 5, options: [{ name: "ریموت و تگ", value: "همراه با دو عدد ریموت" }] },
+        { id: "l3", price: 2850000, stock: 5, options: [{ name: "ریموت و تگ", value: "همراه با دو عدد تگ" }] },
+        { id: "l4", price: 3325000, stock: 5, options: [{ name: "ریموت و تگ", value: "همراه با دو عدد ریموت و تگ" }] },
+    ];
+
+    function mountLong() {
+        const selection = { "ریموت و تگ": "بدون ریموت و تگ" };
+        return render(
+            <VariantSelector
+                attributes={longAttributes}
+                variants={longVariants}
+                selection={selection}
+                selectedVariant={findVariant(longVariants, selection)}
+                onChange={jest.fn()}
+            />,
+        );
+    }
+
+    it("متن بلند سقف ۲ ستون دارد (نه ۳ ستونه‌ی باریک دسکتاپ)", () => {
+        const { container } = mountLong();
+        const group = container.querySelector('[role="group"][aria-label="ریموت و تگ"]');
+        expect(group).not.toBeNull();
+        expect(group?.className).toMatch(/min-\[480px\]:grid-cols-2/);
+        expect(group?.className).not.toMatch(/xl:grid-cols-3/);
+    });
+
+    it("هر ۴ گزینه با ارتفاع یکسان و چیپ اختلاف قیمت رندر می‌شوند", () => {
+        const { container } = mountLong();
+        const group = container.querySelector('[role="group"][aria-label="ریموت و تگ"]');
+        const buttons = Array.from(group?.querySelectorAll("button") ?? []);
+        expect(buttons).toHaveLength(4);
+        for (const b of buttons) {
+            expect(b.className).toMatch(/min-h-\[60px\]/);
+            expect(b.className).toMatch(/w-full/);
+        }
+        // چیپ‌های اختلاف قیمت هر سه گزینه‌ی گران‌تر
+        expect(screen.getByText(`+${(482500).toLocaleString("fa-IR")}`)).toBeInTheDocument();
+        expect(screen.getByText(`+${(150000).toLocaleString("fa-IR")}`)).toBeInTheDocument();
+        expect(screen.getByText(`+${(625000).toLocaleString("fa-IR")}`)).toBeInTheDocument();
+    });
+
+    it("متن کوتاه همچنان ۳ ستونه‌ی دسکتاپ می‌شود", () => {
+        const { container } = render(
+            <VariantSelector
+                attributes={[{ name: "سایز", values: ["S", "M", "L", "XL"], displayType: "button" }]}
+                variants={[
+                    { id: "s1", price: 100000, stock: 2, options: [{ name: "سایز", value: "S" }] },
+                    { id: "s2", price: 100000, stock: 2, options: [{ name: "سایز", value: "M" }] },
+                    { id: "s3", price: 110000, stock: 2, options: [{ name: "سایز", value: "L" }] },
+                    { id: "s4", price: 120000, stock: 2, options: [{ name: "سایز", value: "XL" }] },
+                ]}
+                selection={{ "سایز": "S" }}
+                selectedVariant={undefined}
+                onChange={jest.fn()}
+            />,
+        );
+        const group = container.querySelector('[role="group"][aria-label="سایز"]');
+        expect(group?.className).toMatch(/xl:grid-cols-3/);
+    });
+});
