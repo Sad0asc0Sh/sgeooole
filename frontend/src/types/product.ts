@@ -53,6 +53,29 @@ export interface CategoryDetails {
     properties: CategoryProperty[];
 }
 
+// Variant / Attribute types (variable products: backend productType === 'variable')
+export interface ProductVariantOption {
+    name: string;
+    value: string;
+}
+
+export interface ProductVariant {
+    id: string;
+    sku?: string;
+    price: number; // قیمت نهایی (بعد از تخفیف)
+    oldPrice?: number; // قیمت خط‌خورده (مبنای قبل از تخفیف)
+    stock: number;
+    options: ProductVariantOption[];
+    images?: string[];
+}
+
+export interface ProductAttribute {
+    name: string;
+    values: string[];
+    displayType?: "button" | "color";
+    swatches?: Record<string, string>; // { "قرمز": "#dc2626" }
+}
+
 // Frontend Product Interface (matching our UI expectations)
 export interface Product {
     id: string;
@@ -86,6 +109,11 @@ export interface Product {
     flashDealEndTime?: string; // ISO date string
     isSpecialOffer?: boolean;
     specialOfferEndTime?: string; // ISO date string
+
+    // Variable-product fields (only set when backend productType === 'variable')
+    productType?: "simple" | "variable";
+    attributes?: ProductAttribute[];
+    variants?: ProductVariant[];
 }
 
 // Extended product with optional isActive flag (for admin/internal use)

@@ -18,6 +18,7 @@ interface CartItemProps {
         flashDealEndTime?: string;
         isSpecialOffer?: boolean;
         specialOfferEndTime?: string;
+        variantOptions?: Array<{ name: string; value: string }>;
     };
     onIncrease: () => void;
     onDecrease: () => void;
@@ -79,14 +80,22 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
             <div className="flex-1 flex flex-col justify-between py-1">
                 <h3 className="text-xs font-bold text-gray-800 leading-5 line-clamp-2">{item.name}</h3>
 
-                {/* Color/Variant */}
-                <div className="flex items-center gap-1 mt-1">
-                    <span
-                        className="w-3 h-3 rounded-full border border-gray-200"
-                        style={{ backgroundColor: item.color || "#e5e7eb" }}
-                    />
-                    <span className="text-[10px] text-gray-500">رنگ / گزینه‌های انتخابی</span>
-                </div>
+                {/* Color/Variant — مقادیر واقعی انتخاب‌شده؛ fallback قدیمی فقط وقتی variantOptions نیست */}
+                {item.variantOptions && item.variantOptions.length > 0 ? (
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                        {item.variantOptions.map((o) => (
+                            <span key={o.name} className="text-[11px] text-gray-500">{o.name}: {o.value}</span>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-1 mt-1">
+                        <span
+                            className="w-3 h-3 rounded-full border border-gray-200"
+                            style={{ backgroundColor: item.color || "#e5e7eb" }}
+                        />
+                        <span className="text-[10px] text-gray-500">رنگ / گزینه‌های انتخابی</span>
+                    </div>
+                )}
 
                 {/* Price & Actions Row */}
                 <div className="flex items-end justify-between mt-2">

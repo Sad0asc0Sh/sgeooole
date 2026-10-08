@@ -27,6 +27,9 @@ export type {
   CategoryProperty,
   CategoryDetails,
   ProductWithStatus,
+  ProductAttribute,
+  ProductVariant,
+  ProductVariantOption,
 } from "@/types/product";
 
 // Import types for internal use
@@ -36,6 +39,8 @@ import type {
   ProductSpec,
   CategoryPathItem,
   CategoryDetails,
+  ProductAttribute,
+  ProductVariant,
 } from "@/types/product";
 
 
@@ -91,6 +96,11 @@ interface BackendProduct {
 
   // Dynamic properties (category-based specifications)
   properties?: Array<{ label: string; value: string }>;
+
+  // Variable-product fields (only present when productType === 'variable')
+  productType?: "simple" | "variable";
+  attributes?: Array<{ name: string; values: string[]; displayType?: "button" | "color"; swatches?: Array<{ value: string; hex: string }> }>;
+  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[] }>;
 }
 
 /**
@@ -159,6 +169,46 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     : (backendProduct.countInStock !== undefined
       ? Number(backendProduct.countInStock)
       : 0);
+
+  // Variable-product mapping: each variant gets the same pricing contract as
+  // simple products (resolvePricing with the product-level discount/flags).
+  // Guards: corrupt entries (null, non-object) are skipped, never crash mapping.
+  const isVariable = backendProduct.productType === "variable" && (backendProduct.variants?.length ?? 0) > 0;
+
+  const variants: ProductVariant[] = isVariable
+    ? backendProduct.variants!
+      .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
+      .map((v) => {
+        const vp = resolvePricing({
+          price: Number(v.price) || 0,
+          discount: backendProduct.discount,
+          compareAtPrice: v.compareAtPrice,
+          isFlashDeal: backendProduct.isFlashDeal,
+          flashDealEndTime: backendProduct.flashDealEndTime,
+          isSpecialOffer: backendProduct.isSpecialOffer,
+          specialOfferEndTime: backendProduct.specialOfferEndTime,
+          campaignLabel: backendProduct.campaignLabel,
+        });
+        return {
+          id: v._id,
+          sku: v.sku,
+          stock: Number(v.stock) || 0,
+          options: Array.isArray(v.options) ? v.options : [],
+          price: vp.finalPrice,
+          oldPrice: vp.oldPrice,
+          images: (v.images ?? []).map(normalizeImage).filter((x): x is string => Boolean(x)),
+        };
+      })
+    : [];
+
+  const attributes: ProductAttribute[] = (backendProduct.attributes ?? [])
+    .filter((a): a is NonNullable<typeof a> => Boolean(a) && typeof a === "object")
+    .map((a) => ({
+      name: a.name,
+      values: Array.isArray(a.values) ? a.values : [],
+      displayType: a.displayType,
+      swatches: Object.fromEntries((a.swatches ?? []).map((s) => [s.value, s.hex])),
+    }));
 
   return {
     // MongoDB uses _id, our UI expects id
@@ -275,6 +325,19 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     flashDealEndTime: backendProduct.flashDealEndTime || undefined,
     isSpecialOffer: Boolean(backendProduct.isSpecialOffer),
     specialOfferEndTime: backendProduct.specialOfferEndTime || undefined,
+
+    // Variable-product fields. For variable products the card-level price is the
+    // cheapest variant and stock is the total (this also fixes variable products
+    // showing as "ناموجود" since top-level price/stock are empty for them).
+    // Spread last so it overrides the simple-product price/countInStock above.
+    // Simple products are untouched (isVariable === false → no override).
+    productType: isVariable ? "variable" : "simple",
+    attributes,
+    variants,
+    ...(isVariable && variants.length > 0 && {
+      price: Math.min(...variants.map((v) => v.price)),
+      countInStock: variants.reduce((sum, v) => sum + v.stock, 0),
+    }),
   };
 };
 

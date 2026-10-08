@@ -5,6 +5,7 @@ const paymentService = require('../utils/paymentService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
 const {
   computeItemPricing,
+  findMatchingVariant,
   getActiveSalesCampaignContext,
   normalizeVariantOptions,
 } = require('../services/pricingService')
@@ -33,6 +34,26 @@ const repriceOrderItemsFromDb = async (orderItems) => {
     }
 
     const variantOptions = normalizeVariantOptions(item.variantOptions)
+    const quantity = Math.max(1, Number(item.quantity) || 1)
+
+    // اعتبارسنجی موجودی variant (فقط محصول متغیر): ترکیب نامعتبر یا ناموجود
+    // قابل سفارش نیست — کسر موجودی فقط تا صفر clamp می‌شود وگرنه oversell می‌شد.
+    // محصول ساده دست‌نخورده (رفتار قبلی حفظ می‌شود).
+    if (product.productType === 'variable' && variantOptions.length > 0) {
+      const matchingVariant = findMatchingVariant(product, variantOptions)
+      if (!matchingVariant) {
+        const err = new Error(`ترکیب انتخابی برای محصول «${product.name || 'نامشخص'}» معتبر نیست`)
+        err.statusCode = 400
+        throw err
+      }
+      if (Number(matchingVariant.stock || 0) < quantity) {
+        const err = new Error(`موجودی ترکیب انتخابی محصول «${product.name || 'نامشخص'}» کافی نیست`)
+        err.statusCode = 400
+        err.code = 'VARIANT_OUT_OF_STOCK'
+        throw err
+      }
+    }
+
     const pricing = computeItemPricing(
       { product, quantity: item.quantity, variantOptions },
       now,

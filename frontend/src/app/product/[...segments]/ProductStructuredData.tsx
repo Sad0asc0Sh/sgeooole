@@ -1,5 +1,6 @@
 import type { Product } from "@/types/product";
 import { buildProductUrl } from "@/lib/paths";
+import { priceRange } from "@/lib/variants";
 
 type ProductStructuredDataProps = {
     product: Product;
@@ -53,7 +54,45 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
         },
     }));
 
-    // Build structured data with Product and BreadcrumbList schemas
+    // Build structured data with Product and BreadcrumbList schemas.
+    // محصول متغیر: AggregateOffer با کف/سقف بازه‌ی variantها؛ محصول ساده: تک Offer مثل قبل.
+    const isVariable = product.productType === "variable" && (product.variants?.length ?? 0) > 0;
+    const range = isVariable ? priceRange(product.variants) : null;
+    const inStock = product.countInStock > 0;
+    const offers =
+        isVariable && range && range.max > range.min
+            ? {
+                "@type": "AggregateOffer" as const,
+                priceCurrency: "IRR",
+                lowPrice: Math.round(range.min * 10),
+                highPrice: Math.round(range.max * 10),
+                offerCount: product.variants!.length,
+                itemCondition: "https://schema.org/NewCondition",
+                availability: inStock
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock",
+                seller: {
+                    "@type": "Organization",
+                    name: siteName,
+                },
+                url: productUrl,
+            }
+            : {
+                "@type": "Offer" as const,
+                priceCurrency: "IRR",
+                price: Math.round((product.price || 0) * 10),
+                itemCondition: "https://schema.org/NewCondition",
+                availability: inStock
+                    ? "https://schema.org/InStock"
+                    : "https://schema.org/OutOfStock",
+                seller: {
+                    "@type": "Organization",
+                    name: siteName,
+                },
+                url: productUrl,
+                // Add price validity for rich results
+                priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            };
     const structuredData = {
         "@context": "https://schema.org",
         "@graph": [
@@ -65,22 +104,7 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
                 brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
                 sku: product.sku || product.id,
                 mpn: product.sku,
-                offers: {
-                    "@type": "Offer",
-                    priceCurrency: "IRR",
-                    price: Math.round((product.price || 0) * 10),
-                    itemCondition: "https://schema.org/NewCondition",
-                    availability: product.countInStock > 0
-                        ? "https://schema.org/InStock"
-                        : "https://schema.org/OutOfStock",
-                    seller: {
-                        "@type": "Organization",
-                        name: siteName,
-                    },
-                    url: productUrl,
-                    // Add price validity for rich results
-                    priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                },
+                offers,
                 // Only emit aggregateRating with real review data — never fabricate
                 // a reviewCount (Google penalizes fake rich-result markup).
                 aggregateRating:

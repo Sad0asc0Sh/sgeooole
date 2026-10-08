@@ -9,6 +9,7 @@ import ProductTabs from "@/components/product/ProductTabs";
 import ProductHeader from "./ProductHeader";
 import ProductGallery from "./ProductGallery";
 import ColorSelector from "./ColorSelector";
+import VariantSelector from "./VariantSelector";
 import ProductActions from "./ProductActions";
 import ProductHistoryTracker from "./ProductHistoryTracker";
 import ProductSocialActions from "./ProductSocialActions";
@@ -16,6 +17,14 @@ import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
 import { getServerNow } from "@/lib/serverClock";
+import {
+    applyChoice,
+    findVariant,
+    initialSelection,
+    toOptions,
+    withSelectedVariant,
+    type Selection,
+} from "@/lib/variants";
 
 type ProductDetailClientProps = {
     product: Product;
@@ -38,6 +47,8 @@ const pricingFingerprint = (p: Product) =>
         Boolean(p.isSpecialOffer),
         p.specialOfferEndTime ?? null,
         p.countInStock ?? null,
+        p.productType ?? "simple",
+        (p.variants ?? []).map((v) => [v.id, v.price, v.oldPrice ?? null, v.stock]),
     ]);
 
 export default function ProductDetailClient({ product: initialProduct }: ProductDetailClientProps) {
@@ -55,8 +66,13 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     // `product` (below) is what the UI renders: the snapshot with any promotion whose
     // countdown has already ended stripped out (label, badge, discount, old price).
     const [snapshot, setSnapshot] = useState<Product>(initialProduct);
+    // رنگ‌های legacy محصول ساده (فیلد `colors` بک‌اند) — برای سازگاری عقب‌رو نگه داشته شد.
     const [selectedColor, setSelectedColor] = useState<ProductColor | null>(
         initialProduct.colors && initialProduct.colors.length > 0 ? initialProduct.colors[0] : null
+    );
+    // انتخاب محصول متغیر (سیستم جدید `attributes`/`variants`).
+    const [selection, setSelection] = useState<Selection>(() =>
+        initialSelection(initialProduct.variants ?? [])
     );
 
     // Re-render exactly at the next promotion expiry so the label disappears together
@@ -64,6 +80,32 @@ export default function ProductDetailClient({ product: initialProduct }: Product
     const boundaryInput = useMemo(() => [snapshot], [snapshot]);
     const now = usePromotionBoundary(boundaryInput);
     const product = useMemo(() => stripExpiredPromotion(snapshot, now), [snapshot, now]);
+
+    // مشتق‌های variant: variant انتخاب‌شده + محصول نمایشی (قیمت/موجودی/تصویر variant).
+    // برای محصول ساده selectedVariant همیشه undefined و viewProduct همان product است.
+    const selectedVariant = useMemo(
+        () => findVariant(product.variants ?? [], selection),
+        [product.variants, selection]
+    );
+    const viewProduct = useMemo(
+        () => withSelectedVariant(product, selectedVariant),
+        [product, selectedVariant]
+    );
+    // variantOptions یکپارچه برای سبد: سیستم جدید یا رنگ‌های legacy.
+    const variantOptions = useMemo(
+        () =>
+            (product.variants ?? []).length > 0
+                ? toOptions(selection)
+                : selectedColor
+                    ? [{ name: "رنگ", value: selectedColor.name }]
+                    : [],
+        [product.variants, selection, selectedColor]
+    );
+    const handleVariantChange = useCallback(
+        (name: string, value: string) =>
+            setSelection((s) => applyChoice(product.variants ?? [], s, name, value)),
+        [product.variants]
+    );
 
     // Sync state when navigating between products AND when a newer snapshot of the SAME
     // product arrives from the server (ISR revalidation / router refresh).
@@ -86,12 +128,13 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         });
     }, [initialProduct]);
 
-    // Reset color selection when navigating to another product.
+    // Reset color/selection when navigating to another product.
     const lastProductId = useRef(initialProduct.id);
     useEffect(() => {
         if (lastProductId.current === initialProduct.id) return;
         lastProductId.current = initialProduct.id;
         setSelectedColor(initialProduct.colors && initialProduct.colors.length > 0 ? initialProduct.colors[0] : null);
+        setSelection(initialSelection(initialProduct.variants ?? []));
     }, [initialProduct]);
 
     // Live-price guard: the SSR/ISR snapshot can be up to `revalidate` seconds old (plus
@@ -161,6 +204,15 @@ export default function ProductDetailClient({ product: initialProduct }: Product
         [product.campaignLabel, isFlashDealActive]
     );
 
+    // انتخاب را معتبر نگه دار وقتی snapshot تازه می‌رسد (مثلاً ادمین حین باز
+    // بودن صفحه متغیرها را عوض کرده): بازگشت به اولین variant موجود.
+    // برای محصول ساده (بدون variants) هیچ کاری نمی‌کند.
+    useEffect(() => {
+        const vs = product.variants ?? [];
+        if (vs.length === 0) return;
+        setSelection((s) => (findVariant(vs, s) ? s : initialSelection(vs)));
+    }, [product.variants]);
+
     // Memoize color change handler
     const _handleColorChange = useCallback((color: ProductColor) => {
         setSelectedColor(color);
@@ -182,7 +234,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 <div className="flex flex-row-reverse gap-10 min-w-0">
                     {/* Right Column - Gallery + Breadcrumb + Title (all sticky together) */}
                     <div className="w-[45%] max-w-[45%] min-w-0 flex-shrink self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)] supports-[height:100dvh]:max-h-[calc(100dvh-theme(spacing.36)-2rem)] [@media(pointer:coarse)]:max-h-[calc(100svh-theme(spacing.36)-2.5rem)]">
-                        <ProductGallery product={product} />
+                        <ProductGallery product={viewProduct} />
 
                         {/* Breadcrumb - Below Gallery */}
                         <div className="shrink-0 space-y-1.5 mt-5">
@@ -319,12 +371,23 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                         <hr className="border-gray-100 my-6" />
 
-                        {/* Color Selector */}
-                        <ColorSelector
-                            colors={product.colors || []}
-                            selectedColor={selectedColor}
-                            onColorChange={setSelectedColor}
+                        {/* Variant Selector (سیستم جدید attributes/variants) */}
+                        <VariantSelector
+                            attributes={product.attributes ?? []}
+                            variants={product.variants ?? []}
+                            selection={selection}
+                            selectedVariant={selectedVariant}
+                            onChange={handleVariantChange}
                         />
+
+                        {/* Legacy color selector — فقط برای محصول ساده‌ی دارای `colors` */}
+                        {(product.variants ?? []).length === 0 && (
+                            <ColorSelector
+                                colors={product.colors || []}
+                                selectedColor={selectedColor}
+                                onColorChange={setSelectedColor}
+                            />
+                        )}
 
                         {/* Features (Stock, Brand) */}
                         <div className="bg-gray-50 rounded-xl p-5 space-y-4 mb-6">
@@ -338,22 +401,22 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                                 </>
                             )}
                             <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <Store size={20} className={product.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
+                                <Store size={20} className={viewProduct.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
                                 <span>
-                                    {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                                    {viewProduct.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
                                 </span>
                             </div>
                         </div>
 
                         {/* Low Stock Warning */}
-                        {product.countInStock > 0 && product.countInStock <= 3 && (
+                        {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (
                             <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
                                 <div className="p-2 bg-amber-100 rounded-lg">
                                     <AlertTriangle size={22} className="text-amber-600" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-base font-bold text-amber-800">
-                                        تنها {product.countInStock} عدد باقی مانده!
+                                        تنها {viewProduct.countInStock} عدد باقی مانده!
                                     </span>
                                     <span className="text-sm text-amber-600">
                                         قبل از اتمام موجودی اقدام کنید
@@ -364,7 +427,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                         {/* Desktop Price & Add to Cart Box */}
                         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
-                            <ProductActions product={product} selectedColor={selectedColor} isDesktop={true} />
+                            <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop={true} />
                         </div>
 
                         {/* Product Tabs */}
@@ -376,7 +439,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             {/* Mobile Layout - Unchanged */}
             <div className="lg:hidden">
                 {/* Gallery Slider - Compact */}
-                <ProductGallery product={product} />
+                <ProductGallery product={viewProduct} />
 
                 {/* Info Section - Seamless connection with gallery */}
                 <div className="px-4 py-2 relative bg-white z-10">
@@ -523,12 +586,23 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                     <hr className="border-gray-100 mb-6" />
 
-                    {/* Color Selector (if colors available) */}
-                    <ColorSelector
-                        colors={product.colors || []}
-                        selectedColor={selectedColor}
-                        onColorChange={setSelectedColor}
+                    {/* Variant Selector (سیستم جدید attributes/variants) */}
+                    <VariantSelector
+                        attributes={product.attributes ?? []}
+                        variants={product.variants ?? []}
+                        selection={selection}
+                        selectedVariant={selectedVariant}
+                        onChange={handleVariantChange}
                     />
+
+                    {/* Legacy color selector — فقط برای محصول ساده‌ی دارای `colors` */}
+                    {(product.variants ?? []).length === 0 && (
+                        <ColorSelector
+                            colors={product.colors || []}
+                            selectedColor={selectedColor}
+                            onColorChange={setSelectedColor}
+                        />
+                    )}
 
                     {/* Features (Stock, Brand) */}
                     <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6">
@@ -542,22 +616,22 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                             </>
                         )}
                         <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Store size={18} className={product.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
+                            <Store size={18} className={viewProduct.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
                             <span>
-                                {product.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                                {viewProduct.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
                             </span>
                         </div>
                     </div>
 
                     {/* Low Stock Warning - Only show when stock is 1, 2, or 3 */}
-                    {product.countInStock > 0 && product.countInStock <= 3 && (
+                    {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (
                         <div className="mb-6 p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
                             <div className="p-2 bg-amber-100 rounded-lg">
                                 <AlertTriangle size={20} className="text-amber-600" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-sm font-bold text-amber-800">
-                                    تنها {product.countInStock} عدد باقی مانده!
+                                    تنها {viewProduct.countInStock} عدد باقی مانده!
                                 </span>
                                 <span className="text-xs text-amber-600">
                                     قبل از اتمام موجودی اقدام کنید
@@ -572,7 +646,7 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 </div>
 
                 {/* Sticky Action Bar */}
-                <ProductActions product={product} selectedColor={selectedColor} />
+                <ProductActions product={viewProduct} variantOptions={variantOptions} />
             </div>
         </div>
     );

@@ -69,6 +69,12 @@ const attributeSchema = new mongoose.Schema(
         trim: true,
       },
     ],
+
+    // نحوه‌ی نمایش در صفحه‌ی محصول: دکمه‌ی متنی یا دایره‌ی رنگی
+    // (اختیاری؛ فرانت اگر نباشد از روی نام «رنگ» یا مقادیر شناخته‌شده حدس می‌زند)
+    displayType: { type: String, enum: ['button', 'color'], default: 'button' },
+    // نگاشت مقدار به کد رنگ (مثلاً: [{value: 'قرمز', hex: '#dc2626'}])
+    swatches: [new mongoose.Schema({ value: String, hex: String }, { _id: false })],
   },
   { _id: false },
 )

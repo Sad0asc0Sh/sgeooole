@@ -4,16 +4,29 @@ import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { getServerNow } from "@/lib/serverClock";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
-import { Product, ProductColor } from "@/services/productService";
+import { Product } from "@/services/productService";
+import type { ProductVariantOption } from "@/types/product";
+import { optionsKey } from "@/lib/variants";
 import { useCart } from "@/hooks/useCart";
 
 type ProductActionsProps = {
     product: Product;
-    selectedColor: ProductColor | null;
+    variantOptions: ProductVariantOption[];
+    /** @deprecated فقط برای سازگاری عقب‌رو؛ استفاده نکنید */
+    selectedColor?: { name: string } | null;
     isDesktop?: boolean;
 };
 
-export default function ProductActions({ product, selectedColor, isDesktop = false }: ProductActionsProps) {
+export default function ProductActions({ product, variantOptions = [], selectedColor, isDesktop = false }: ProductActionsProps) {
+    // سازگاری عقب‌رو: اگر variantOptions داده نشد ولی selectedColor قدیمی آمد.
+    const effectiveVariantOptions: ProductVariantOption[] =
+        variantOptions.length > 0
+            ? variantOptions
+            : selectedColor
+                ? [{ name: "رنگ", value: selectedColor.name }]
+                : [];
+    // کلید پایدار برای useEffect (آرایه هر رندر رفرنس جدید دارد).
+    const variantKey = optionsKey(effectiveVariantOptions);
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
     const [now, setNow] = useState(() => getServerNow());
@@ -37,17 +50,9 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
     const [quantity, setQuantity] = useState(0);
 
     useEffect(() => {
-        const matchedItem = cartItems.find((item) => {
-            if (item.id !== product.id) return false;
-
-            if (selectedColor) {
-                const variantOptions = item.variantOptions || [];
-                return variantOptions.some((v) => v.name === "رنگ" && v.value === selectedColor.name);
-            }
-            return true;
-        });
-        setQuantity(matchedItem?.qty || 0);
-    }, [cartItems, product.id, selectedColor]);
+        const matched = cartItems.find((i) => i.id === product.id && optionsKey(i.variantOptions) === variantKey);
+        setQuantity(matched?.qty || 0);
+    }, [cartItems, product.id, variantKey]);
 
     useEffect(() => {
         const id = setInterval(() => setNow(getServerNow()), 1000);
@@ -57,8 +62,7 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
     const handleAddToCart = async () => {
         try {
             setAddingToCart(true);
-            const variantOptions = selectedColor ? [{ name: "رنگ", value: selectedColor.name }] : [];
-            await addToCart(product, 1, variantOptions);
+            await addToCart(product, 1, effectiveVariantOptions);
         } catch (err: any) {
             console.error("Error adding to cart:", err);
             alert(`Error: ${err.message || "Unknown error"}`);
@@ -69,8 +73,7 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
 
     const handleIncrement = async () => {
         try {
-            const variantOptions = selectedColor ? [{ name: "رنگ", value: selectedColor.name }] : [];
-            await updateQuantity(product.id, quantity + 1, variantOptions);
+            await updateQuantity(product.id, quantity + 1, effectiveVariantOptions);
         } catch (err) {
             console.error("Error incrementing:", err);
         }
@@ -78,11 +81,10 @@ export default function ProductActions({ product, selectedColor, isDesktop = fal
 
     const handleDecrement = async () => {
         try {
-            const variantOptions = selectedColor ? [{ name: "رنگ", value: selectedColor.name }] : [];
             if (quantity > 1) {
-                await updateQuantity(product.id, quantity - 1, variantOptions);
+                await updateQuantity(product.id, quantity - 1, effectiveVariantOptions);
             } else {
-                await removeFromCart(product.id, variantOptions);
+                await removeFromCart(product.id, effectiveVariantOptions);
             }
         } catch (err) {
             console.error("Error decrementing:", err);

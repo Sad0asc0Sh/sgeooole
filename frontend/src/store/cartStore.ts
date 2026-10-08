@@ -3,6 +3,7 @@ import { cartService, CartItem } from "@/services/cartService";
 import { authService } from "@/services/authService";
 import { Product, productService } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
+import { findVariant, fromOptions, withSelectedVariant } from "@/lib/variants";
 import { getServerNow } from "@/lib/serverClock";
 import { settingsService } from "@/services/settingsService";
 import {
@@ -481,31 +482,38 @@ export const useCartStore = create<CartState>((set, get) => ({
                     const fresh = await productService.getById(item.id);
                     if (!fresh || String(fresh.id) !== String(item.id)) return item;
 
+                    // Same variant rule as addToCart: the fresh variable record
+                    // carries min-price/total-stock; re-apply this line's variant.
+                    const line = withSelectedVariant(
+                        fresh,
+                        findVariant(fresh.variants ?? [], fromOptions(item.variantOptions ?? [])),
+                    );
+
                     const pricing = resolvePricing({
-                        price: fresh.price,
-                        discount: fresh.discount,
-                        compareAtPrice: fresh.compareAtPrice || (fresh as any).oldPrice,
-                        isFlashDeal: fresh.isFlashDeal,
-                        flashDealEndTime: (fresh as any).flashDealEndTime,
-                        isSpecialOffer: fresh.isSpecialOffer,
-                        specialOfferEndTime: (fresh as any).specialOfferEndTime,
-                        campaignLabel: fresh.campaignLabel,
+                        price: line.price,
+                        discount: line.discount,
+                        compareAtPrice: line.compareAtPrice || (line as any).oldPrice,
+                        isFlashDeal: line.isFlashDeal,
+                        flashDealEndTime: (line as any).flashDealEndTime,
+                        isSpecialOffer: line.isSpecialOffer,
+                        specialOfferEndTime: (line as any).specialOfferEndTime,
+                        campaignLabel: line.campaignLabel,
                         now: getServerNow(),
                     });
 
                     return {
                         ...item,
-                        name: fresh.title || item.name,
+                        name: line.title || item.name,
                         price: pricing.finalPrice,
                         originalPrice: pricing.basePrice,
-                        image: fresh.images?.[0] || item.image,
+                        image: line.images?.[0] || item.image,
                         discount: pricing.discount,
-                        compareAtPrice: fresh.compareAtPrice,
-                        isFlashDeal: fresh.isFlashDeal,
-                        flashDealEndTime: (fresh as any).flashDealEndTime,
-                        isSpecialOffer: fresh.isSpecialOffer,
-                        specialOfferEndTime: (fresh as any).specialOfferEndTime,
-                        campaignLabel: fresh.campaignLabel,
+                        compareAtPrice: line.compareAtPrice,
+                        isFlashDeal: line.isFlashDeal,
+                        flashDealEndTime: (line as any).flashDealEndTime,
+                        isSpecialOffer: line.isSpecialOffer,
+                        specialOfferEndTime: (line as any).specialOfferEndTime,
+                        campaignLabel: line.campaignLabel,
                     };
                 } catch {
                     return item;
@@ -533,6 +541,15 @@ export const useCartStore = create<CartState>((set, get) => ({
             }
         } catch {
             // keep rendered snapshot
+        }
+
+        // Variant correctness: the fresh record of a variable product carries the
+        // cheapest price / total stock, NOT the selected variant's. Re-apply the
+        // requested variantOptions so the cart line stores variant pricing.
+        // No-op for simple products (findVariant returns undefined).
+        if (variantOptions && variantOptions.length > 0) {
+            const match = findVariant(product.variants ?? [], fromOptions(variantOptions));
+            if (match) product = withSelectedVariant(product, match);
         }
 
         try {

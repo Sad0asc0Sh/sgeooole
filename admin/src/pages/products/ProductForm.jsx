@@ -75,6 +75,9 @@ function ProductForm() {
   const [newAttributeName, setNewAttributeName] = useState('')
   const [newAttributeValues, setNewAttributeValues] = useState('')
 
+  // قیمت پایه‌ی متغیرها: یک‌بار وارد می‌شود و فقط تفاوت‌ها اصلاح می‌شوند
+  const [basePrice, setBasePrice] = useState(0)
+
   // ============================================
   // State برای فروش ویژه و تایمر
   // ============================================
@@ -184,6 +187,11 @@ function ProductForm() {
             setProductType(p.productType || 'simple')
             setAttributes(p.attributes || [])
             setVariants(p.variants || [])
+            // قیمت پایه را از ارزان‌ترین متغیر موجود مقداردهی کن تا تگ‌های تفاوت درست نمایش داده شوند
+            if (Array.isArray(p.variants) && p.variants.length > 0) {
+              const prices = p.variants.map((v) => Number(v.price) || 0).filter((n) => n > 0)
+              if (prices.length > 0) setBasePrice(Math.min(...prices))
+            }
 
             // Load promotion fields (ISO strings for JalaliDateTimePicker)
             const now = new Date()
@@ -336,8 +344,8 @@ function ProductForm() {
       return {
         _id: existing?._id || `variant-${Date.now()}-${index}`,
         sku: existing?.sku || '',
-        price: existing?.price || 0,
-        stock: existing?.stock || 0,
+        price: existing?.price ?? basePrice,
+        stock: existing?.stock ?? 0,
         options,
         images: existing?.images || [],
       }
@@ -387,18 +395,25 @@ function ProductForm() {
       title: 'قیمت (تومان)',
       dataIndex: 'price',
       key: 'price',
-      width: 150,
+      width: 200,
       render: (text, record) => (
-        <InputNumber
-          value={text}
-          onChange={(value) =>
-            handleVariantChange(record._id, 'price', value)
-          }
-          min={0}
-          style={{ width: '100%' }}
-          formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-          parser={parseNumericInput}
-        />
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <InputNumber
+            value={text}
+            onChange={(value) =>
+              handleVariantChange(record._id, 'price', value)
+            }
+            min={0}
+            style={{ width: '100%' }}
+            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={parseNumericInput}
+          />
+          {record.price !== basePrice && basePrice > 0 && (
+            <Tag color={record.price > basePrice ? 'orange' : 'green'}>
+              {record.price > basePrice ? '+' : '−'}{Math.abs(record.price - basePrice).toLocaleString('fa-IR')}
+            </Tag>
+          )}
+        </Space>
       ),
     },
     {
@@ -1402,6 +1417,23 @@ function ProductForm() {
                         {/* بخش ۲: تولید خودکار متغیرها */}
                         <Card title="متغیرها (Variants)" size="small">
                           <Space direction="vertical" style={{ width: '100%' }}>
+                            <Space wrap>
+                              <InputNumber
+                                value={basePrice}
+                                onChange={(value) => setBasePrice(value || 0)}
+                                min={0}
+                                placeholder="قیمت پایه"
+                                formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                parser={parseNumericInput}
+                                style={{ width: 200 }}
+                              />
+                              <Button
+                                onClick={() => setVariants((p) => p.map((v) => ({ ...v, price: basePrice })))}
+                                disabled={variants.length === 0}
+                              >
+                                اعمال قیمت پایه به همه
+                              </Button>
+                            </Space>
                             <Button
                               type="primary"
                               onClick={generateVariants}

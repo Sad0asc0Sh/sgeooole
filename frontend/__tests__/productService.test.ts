@@ -110,5 +110,104 @@ describe("productService", () => {
     expect(params.getAll("properties[رنگ]")).toEqual(["آبی", "قرمز"]);
     expect(params.getAll("properties[گارانتی]")).toEqual(["۱۸ ماهه"]);
   });
+
+  describe("variable products", () => {
+    const variableBackend = {
+      _id: "var1",
+      name: "تی‌شرت متغیر",
+      productType: "variable",
+      // top-level price/stock are empty for variable products
+      price: 0,
+      stock: 0,
+      discount: 10,
+      isSpecialOffer: true,
+      specialOfferEndTime: "2099-01-01T00:00:00.000Z",
+      attributes: [
+        {
+          name: "رنگ",
+          values: ["مشکی", "قرمز"],
+          displayType: "color",
+          swatches: [{ value: "قرمز", hex: "#ff0000" }],
+        },
+      ],
+      variants: [
+        {
+          _id: "v1",
+          price: 500000,
+          stock: 3,
+          options: [{ name: "رنگ", value: "مشکی" }],
+          images: ["/uploads/black.png"],
+        },
+        {
+          _id: "v2",
+          price: 520000,
+          stock: 0,
+          options: [{ name: "رنگ", value: "قرمز" }],
+          images: [],
+        },
+      ],
+    };
+
+    it("maps variants with the same pricing contract, min price and total stock", async () => {
+      mockedApi.get.mockResolvedValue({ data: { success: true, data: variableBackend } });
+
+      const product = await productService.getById("var1");
+
+      expect(product.productType).toBe("variable");
+      expect(product.variants).toHaveLength(2);
+      // 10% special-offer discount applies to each variant
+      expect(product.variants![0].price).toBe(450000);
+      expect(product.variants![0].oldPrice).toBe(500000);
+      expect(product.variants![0].stock).toBe(3);
+      expect(product.variants![1].price).toBe(468000);
+      // card-level: cheapest price + total stock (fixes «ناموجود» for variable)
+      expect(product.price).toBe(450000);
+      expect(product.countInStock).toBe(3);
+      // attribute swatches array -> record
+      expect(product.attributes![0].swatches).toEqual({ "قرمز": "#ff0000" });
+      expect(product.attributes![0].displayType).toBe("color");
+      // variant images are normalized with backend base
+      expect(product.variants![0].images![0]).toContain("/uploads/black.png");
+    });
+
+    it("keeps simple products untouched (no variants/attributes override)", async () => {
+      mockedApi.get.mockResolvedValue({
+        data: {
+          success: true,
+          data: { _id: "s1", name: "ساده", price: 100000, discount: 0, stock: 7 },
+        },
+      });
+
+      const product = await productService.getById("s1");
+
+      expect(product.productType).toBe("simple");
+      expect(product.variants).toEqual([]);
+      expect(product.price).toBe(100000);
+      expect(product.countInStock).toBe(7);
+    });
+
+    it("skips corrupt variant entries instead of crashing", async () => {
+      mockedApi.get.mockResolvedValue({
+        data: {
+          success: true,
+          data: {
+            _id: "var2",
+            name: "خراب",
+            productType: "variable",
+            variants: [null, { _id: "v9", price: 200000, stock: 1, options: null, images: null }],
+            attributes: [null],
+          },
+        },
+      });
+
+      const product = await productService.getById("var2");
+
+      expect(product.productType).toBe("variable");
+      expect(product.variants).toHaveLength(1);
+      expect(product.variants![0].options).toEqual([]);
+      expect(product.price).toBe(200000);
+      expect(product.countInStock).toBe(1);
+    });
+  });
 });
 

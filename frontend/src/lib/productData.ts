@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { Product, ProductColor } from "@/types/product";
+import type { Product, ProductAttribute, ProductColor, ProductVariant } from "@/types/product";
 import { buildProductUrl } from "./paths";
 import { resolvePricing } from "@/lib/pricing";
 import { updateServerClock, updateServerClockFromPayload } from "@/lib/serverClock";
@@ -158,6 +158,9 @@ type BackendProduct = {
   specialOfferEndTime?: string;
   isActive?: boolean;
   categoryPath?: { _id?: string; id?: string; slug?: string; name?: string }[];
+  productType?: "simple" | "variable";
+  attributes?: Array<{ name: string; values: string[]; displayType?: "button" | "color"; swatches?: Array<{ value: string; hex: string }> }>;
+  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[] }>;
 };
 
 const getAssetBase = (apiUrl: string) => apiUrl.replace(/\/api\/?$/, "");
@@ -212,6 +215,48 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
   }
 
   const countInStock = backend.stock ?? backend.countInStock ?? 0;
+
+  // Variable-product mapping — mirror of services/productService mapBackendToFrontend.
+  // The PDP is server-rendered through this mapper, so without it the page would
+  // still show variable products as out-of-stock with no selector.
+  const isVariable = backend.productType === "variable" && (backend.variants?.length ?? 0) > 0;
+
+  const mappedVariants: ProductVariant[] = isVariable
+    ? backend.variants!
+      .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
+      .map((v) => {
+        const vp = resolvePricing({
+          price: Number(v.price) || 0,
+          discount: backend.discount,
+          compareAtPrice: v.compareAtPrice,
+          isFlashDeal: backend.isFlashDeal,
+          flashDealEndTime: backend.flashDealEndTime,
+          isSpecialOffer: backend.isSpecialOffer,
+          specialOfferEndTime: backend.specialOfferEndTime,
+          campaignLabel: backend.campaignLabel,
+        });
+        return {
+          id: v._id,
+          sku: v.sku,
+          stock: Number(v.stock) || 0,
+          options: Array.isArray(v.options) ? v.options : [],
+          price: vp.finalPrice,
+          oldPrice: vp.oldPrice,
+          images: (v.images ?? [])
+            .map((img) => normalizeImage(img, assetBase))
+            .filter((x): x is string => Boolean(x)),
+        };
+      })
+    : [];
+
+  const mappedAttributes: ProductAttribute[] = (backend.attributes ?? [])
+    .filter((a): a is NonNullable<typeof a> => Boolean(a) && typeof a === "object")
+    .map((a) => ({
+      name: a.name,
+      values: Array.isArray(a.values) ? a.values : [],
+      displayType: a.displayType,
+      swatches: Object.fromEntries((a.swatches ?? []).map((s) => [s.value, s.hex])),
+    }));
 
   const category =
     typeof backend.category === "object" && backend.category !== null
@@ -287,7 +332,10 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     description: backend.description,
     rating: backend.rating ?? 0,
     reviewCount: backend.numReviews ?? backend.reviewCount ?? 0,
-    countInStock: Number(countInStock) || 0,
+    countInStock:
+      isVariable && mappedVariants.length > 0
+        ? mappedVariants.reduce((sum, v) => sum + v.stock, 0)
+        : Number(countInStock) || 0,
     colors: backend.colors,
     specs: backend.specs,
     campaignLabel: backend.campaignLabel,
@@ -298,6 +346,14 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     isSpecialOffer: Boolean(backend.isSpecialOffer),
     specialOfferEndTime: backend.specialOfferEndTime || undefined,
     isActive: backend.isActive,
+    // Variable-product fields; price override (cheapest) comes last.
+    productType: isVariable ? "variable" : "simple",
+    attributes: mappedAttributes,
+    variants: mappedVariants,
+    ...(isVariable &&
+      mappedVariants.length > 0 && {
+        price: Math.min(...mappedVariants.map((v) => v.price)),
+      }),
   };
 };
 
