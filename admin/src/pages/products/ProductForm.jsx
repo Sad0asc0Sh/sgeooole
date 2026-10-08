@@ -589,7 +589,17 @@ function ProductForm() {
       // برای محصولات متغیر، attributes و variants اضافه کن
       if (productType === 'variable') {
         payload.attributes = attributes
-        payload.variants = variants
+        // حذف _idهای موقت (مثل `variant-<timestamp>-<index>`) که ObjectId معتبر
+        // نیستند و باعث خطای 500 سمت سرور می‌شدند؛ فقط _id واقعی حفظ می‌شود
+        const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/
+        payload.variants = variants.map((v) => {
+          if (!v || typeof v !== 'object') return v
+          const copy = { ...v }
+          if (copy._id !== undefined && !(typeof copy._id === 'string' && OBJECT_ID_RE.test(copy._id.trim()))) {
+            delete copy._id
+          }
+          return copy
+        })
       }
 
       // اضافه کردن فیلدهای فروش ویژه و تخفیف

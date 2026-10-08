@@ -629,6 +629,65 @@ const validateNoActiveSaleConflict = async (data, currentProduct = null) => {
 }
 
 // ============================================
+// Sanitize variants/attributes from admin panel before save (low-risk defensive fix)
+// علت خطای 500 در PUT /:id برای محصول متغیر: فرانت برای ردیف‌های جدید _id موقت
+// مثل `variant-<timestamp>-<index>` می‌سازد که ObjectId معتبر نیست و مانگوس موقع
+// $set روی variants با خطای `Cast to ObjectId failed ... at path "_id"` کل آپدیت
+// را 500 می‌کند. این تابع فقط _idهای نامعتبر را حذف می‌کند تا مانگو خودش _id
+// بسازد؛ _idهای ۲۴-کاراکتری واقعی (خوانده‌شده از دیتابیس) دست‌نخورده می‌مانند.
+// هیچ رفتار دیگری تغییر نمی‌کند.
+// ============================================
+const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/
+const isValidVariantId = (val) => typeof val === 'string' && OBJECT_ID_RE.test(val.trim())
+
+const sanitizeVariantsForSave = (variants) => {
+  if (!Array.isArray(variants)) return variants
+  return variants.map((v) => {
+    if (!v || typeof v !== 'object') return v
+    const copy = { ...v }
+    // حذف _id موقت/نامعتبر؛ فقط ObjectId واقعی نگه داشته می‌شود
+    if (copy._id !== undefined && !isValidVariantId(copy._id)) {
+      delete copy._id
+    }
+    // نرمال‌سازی حداقلی قیمت/موجودی خالی ('' / null / undefined / NaN -> 0)
+    // تا CastError ندهد؛ مقادیر عددی معتبر دست نمی‌خورند
+    if (copy.price === '' || copy.price === null || copy.price === undefined) {
+      copy.price = 0
+    } else {
+      const n = Number(copy.price)
+      if (!Number.isFinite(n)) copy.price = 0
+    }
+    if (copy.stock === '' || copy.stock === null || copy.stock === undefined) {
+      copy.stock = 0
+    } else {
+      const n = Number(copy.stock)
+      if (!Number.isFinite(n)) copy.stock = 0
+    }
+    // اطمینان از رشته بودن name/value در options (اگر آبجکت آمده باشد رشته می‌شود)
+    if (Array.isArray(copy.options)) {
+      copy.options = copy.options
+        .filter((o) => o && o.name != null && o.value != null)
+        .map((o) => ({ name: String(o.name).trim(), value: String(o.value).trim() }))
+        .filter((o) => o.name !== '' && o.value !== '')
+    }
+    return copy
+  })
+}
+
+const sanitizeAttributesForSave = (attributes) => {
+  if (!Array.isArray(attributes)) return attributes
+  return attributes
+    .filter((a) => a && typeof a === 'object' && String(a.name || '').trim() !== '')
+    .map((a) => ({
+      name: String(a.name).trim(),
+      values: (Array.isArray(a.values) ? a.values : []).map((val) =>
+        val != null && typeof val === 'object' ? String(val.value ?? val.name ?? '') : String(val),
+      ).map((s) => s.trim()).filter(Boolean),
+    }))
+    .filter((a) => a.values.length > 0)
+}
+
+// ============================================
 // GET /api/products
 // Public products list with filters & pagination
 // Query params:
@@ -1145,9 +1204,9 @@ router.post(
 
       // ویژگی‌ها و متغیرها برای محصول متغیر
       if (productType === 'variable') {
-        productData.attributes = attributes || []
+        productData.attributes = sanitizeAttributesForSave(attributes || [])
         // پاک‌سازی قیمت خط‌خورده‌ی واریانت‌ها با همان قاعده‌ی محصول ساده
-        const sanitizedVariants = sanitizeVariantsCompareAtPrice(variants || [])
+        const sanitizedVariants = sanitizeVariantsCompareAtPrice(sanitizeVariantsForSave(variants || []))
         productData.variants = sanitizedVariants.variants
         sanitizedVariants.warnings.forEach((w) => console.warn(`[CREATE PRODUCT] ${w} (name: ${name})`))
       }
@@ -1409,11 +1468,15 @@ router.put(
         if (sanitized.warning) warnings.push(sanitized.warning)
         updates.compareAtPrice = sanitized.value
       }
-      // همان قاعده برای واریانت‌ها
+      // همان قاعده برای واریانت‌ها + حذف _idهای موقت فرانت (عامل خطای 500 محصول متغیر)
       if (Array.isArray(updates.variants)) {
-        const sanitizedVariants = sanitizeVariantsCompareAtPrice(updates.variants)
+        const sanitizedVariants = sanitizeVariantsCompareAtPrice(sanitizeVariantsForSave(updates.variants))
         updates.variants = sanitizedVariants.variants
         warnings.push(...sanitizedVariants.warnings)
+      }
+      // نرمال‌سازی attributes (مقادیر غیررشته‌ای به رشته تبدیل می‌شوند؛ رکورد خالی حذف می‌شود)
+      if (Array.isArray(updates.attributes)) {
+        updates.attributes = sanitizeAttributesForSave(updates.attributes)
       }
 
       // If compareAtPrice is explicitly null, empty or 0, unset it from database so it doesn't inflate pricing
