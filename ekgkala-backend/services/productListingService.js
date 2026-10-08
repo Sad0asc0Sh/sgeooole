@@ -249,7 +249,9 @@ function pricingStages(campaigns, now) {
   const hasCampaign = { $ne: [ref('campaign'), null] }
   // آینه‌ی resolveBasePrice با عملگرهای مونگو (pipeline نمی‌تواند JS صدا بزند).
   // هر تغییری در منطق باید در هر دو جا اعمال و با تست همسانی پوشش داده شود.
-  const priceObject = (source, storedDiscountExpr) => {
+  // discountExpr برای سطح وariant قابل بازنویسی است تا وariant مستثنی
+  // (excludeFromPromotion=true) تخفیف صفر بگیرد؛ ریشه همیشه ref('discount').
+  const priceObject = (source, storedDiscountExpr, discountExpr = ref('discount')) => {
     const price = numeric(`${source}.price`)
     const compare = numeric(`${source}.compareAtPrice`)
     const storedDiscount = storedDiscountExpr
@@ -270,8 +272,8 @@ function pricingStages(campaigns, now) {
       ],
     }
     return {
-      price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [ref('discount'), 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, ref('discount')] }, 100] }] }), price] }] },
-      compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [ref('discount'), 0] }] }, base, compare] },
+      price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [discountExpr, 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, discountExpr] }, 100] }] }), price] }] },
+      compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [discountExpr, 0] }] }, base, compare] },
     }
   }
   return [
@@ -288,7 +290,9 @@ function pricingStages(campaigns, now) {
     { $addFields: {
       // تخفیف ثبت‌شده‌ی خود محصول برای تشخیص داده‌ی قدیمی؛ داخل $map هم به سند ریشه اشاره می‌کند
       [`${INTERNAL}.root`]: priceObject('$$ROOT', numeric('$discount')),
-      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'))] } } },
+      // وariant مستثنی (excludeFromPromotion=true) تخفیف صفر می‌گیرد و با قیمت پایه می‌ماند؛
+      // بقیه دقیقاً مثل قبل با تخفیف محصول/کمپین محاسبه می‌شوند. فیلد ناموجود => falsy => شامل تخفیف.
+      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'), { $cond: [{ $eq: ['$$variant.excludeFromPromotion', true] }, 0, ref('discount')] })] } } },
     } },
     { $addFields: {
       [`${INTERNAL}.display`]: { $cond: [ref('variable'), { $reduce: { input: ref('variants'), initialValue: null, in: { $cond: [{ $or: [{ $eq: ['$$value', null] }, { $lt: ['$$this.price', '$$value.price'] }] }, '$$this', '$$value'] } } }, ref('root')] },

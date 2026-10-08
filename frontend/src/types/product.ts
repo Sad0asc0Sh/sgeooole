@@ -67,6 +67,8 @@ export interface ProductVariant {
     stock: number;
     options: ProductVariantOption[];
     images?: string[];
+    // مستثنی از تخفیف: تیک تخفیف در ادمین خاموش => هیچ تخفیفی روی این وariant اعمال نمی‌شود
+    excludeFromPromotion?: boolean;
 }
 
 export interface ProductAttribute {

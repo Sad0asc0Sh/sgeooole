@@ -18,6 +18,8 @@ import {
   Tag,
   Divider,
   Alert,
+  Checkbox,
+  Tooltip,
 } from 'antd'
 import {
   InboxOutlined,
@@ -348,6 +350,8 @@ function ProductForm() {
         stock: existing?.stock ?? 0,
         options,
         images: existing?.images || [],
+        // حفظ تیک تخفیف متغیر موجود؛ متغیر جدید默认 شامل تخفیف است
+        excludeFromPromotion: existing?.excludeFromPromotion === true,
       }
     })
 
@@ -431,6 +435,23 @@ function ProductForm() {
           style={{ width: '100%' }}
           parser={parseNumericInput}
         />
+      ),
+    },
+    {
+      title: 'تخفیف',
+      key: 'promotion',
+      width: 130,
+      render: (_, record) => (
+        <Tooltip title="تیک روشن = تخفیف روی این متغیر اعمال می‌شود؛ خاموش = این متغیر از تخفیف مستثنی می‌شود">
+          <Checkbox
+            checked={record.excludeFromPromotion !== true}
+            onChange={(e) =>
+              handleVariantChange(record._id, 'excludeFromPromotion', !e.target.checked)
+            }
+          >
+            فعال
+          </Checkbox>
+        </Tooltip>
       ),
     },
     {
@@ -1459,6 +1480,13 @@ function ProductForm() {
                             >
                               ایجاد متغیرها از ویژگی‌ها
                             </Button>
+
+                            <Alert
+                              message="تیک «تخفیف» هر متغیر را در جدول خاموش کنید تا کمپین (لحظه‌ای / شگفت‌انگیز / زمان‌دار) روی همان متغیر اعمال نشود. پیش‌فرض روشن است و رفتار قبلی حفظ می‌شود."
+                              type="info"
+                              showIcon
+                              style={{ fontSize: 12 }}
+                            />
 
                             {/* جدول متغیرها */}
                             {variants.length > 0 && (

@@ -100,7 +100,7 @@ interface BackendProduct {
   // Variable-product fields (only present when productType === 'variable')
   productType?: "simple" | "variable";
   attributes?: Array<{ name: string; values: string[]; displayType?: "button" | "color"; swatches?: Array<{ value: string; hex: string }> }>;
-  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[] }>;
+  variants?: Array<{ _id: string; sku?: string; price: number; compareAtPrice?: number; stock: number; options: Array<{ name: string; value: string }>; images?: BackendImage[]; excludeFromPromotion?: boolean }>;
 }
 
 /**
@@ -179,15 +179,17 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     ? backendProduct.variants!
       .filter((v): v is NonNullable<typeof v> => Boolean(v) && typeof v === "object")
       .map((v) => {
+        // وariant مستثنی: تخفیف صفر تا قیمت پایه بماند؛ بقیه مثل قبل با تخفیف محصول.
+        const excluded = (v as { excludeFromPromotion?: unknown }).excludeFromPromotion === true;
         const vp = resolvePricing({
           price: Number(v.price) || 0,
-          discount: backendProduct.discount,
+          discount: excluded ? 0 : backendProduct.discount,
           compareAtPrice: v.compareAtPrice,
-          isFlashDeal: backendProduct.isFlashDeal,
+          isFlashDeal: excluded ? false : backendProduct.isFlashDeal,
           flashDealEndTime: backendProduct.flashDealEndTime,
-          isSpecialOffer: backendProduct.isSpecialOffer,
+          isSpecialOffer: excluded ? false : backendProduct.isSpecialOffer,
           specialOfferEndTime: backendProduct.specialOfferEndTime,
-          campaignLabel: backendProduct.campaignLabel,
+          campaignLabel: excluded ? undefined : backendProduct.campaignLabel,
         });
         return {
           id: v._id,
@@ -197,6 +199,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
           price: vp.finalPrice,
           oldPrice: vp.oldPrice,
           images: (v.images ?? []).map(normalizeImage).filter((x): x is string => Boolean(x)),
+          ...(excluded ? { excludeFromPromotion: true as const } : {}),
         };
       })
     : [];

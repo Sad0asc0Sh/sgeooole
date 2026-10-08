@@ -54,6 +54,10 @@ const restoreBasePriceOnObject = (target, storedDiscount = 0) => {
   return target
 }
 
+// متغیر مستثنی‌شده هیچ تخفیفی نمی‌گیرد (تیک تخفیف در پنل ادمین خاموش شده).
+// داده‌های قدیمی بدون این فیلد => falsy => رفتار قبلی (شامل تخفیف).
+const isVariantExcluded = (variant) => Boolean(variant && variant.excludeFromPromotion === true)
+
 const applyDiscountToObject = (target, discountPct, storedDiscount = 0) => {
   if (!target || !(discountPct > 0)) return target
   if (target.price !== undefined && target.price > 0) {
@@ -65,6 +69,12 @@ const applyDiscountToObject = (target, discountPct, storedDiscount = 0) => {
   if (Array.isArray(target.variants) && target.variants.length > 0) {
     target.variants = target.variants.map((v) => {
       const vObj = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+      if (isVariantExcluded(vObj)) {
+        // مستثنی: قیمت به پایه برمی‌گردد و مقایسه‌ی تخفیفی ساخته نمی‌شود
+        if (vObj.price > 0) vObj.price = resolveBasePrice(vObj.price, vObj.compareAtPrice, storedDiscount)
+        delete vObj.compareAtPrice
+        return vObj
+      }
       if (vObj.price > 0) {
         const origV = resolveBasePrice(vObj.price, vObj.compareAtPrice, storedDiscount)
         const vDiscount = (origV * discountPct) / 100
@@ -312,7 +322,15 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
 
   let appliedDiscount = 0
 
-  if (flashActive) {
+  // مستثنی‌سازی سطح وariant: اگر ترکیب انتخابی تیک تخفیفش خاموش است،
+  // هیچ تخفیفی (لحظه‌ای / شگفت‌انگیز / زمان‌دار) روی همین قلم اعمال نمی‌شود.
+  // محصول ساده یا وariant بدون فلگ => رفتار قبلی.
+  const variantExcluded = isVariantExcluded(matchingVariant)
+
+  if (variantExcluded) {
+    appliedDiscount = 0
+    campaignLabel = null
+  } else if (flashActive) {
     appliedDiscount = rawDiscount
     campaignLabel = campaignLabel || 'پیشنهاد لحظه‌ای'
   } else if (specialActive) {
@@ -425,6 +443,7 @@ module.exports = {
   normalizeVariantOptions,
   getVariantKey,
   findMatchingVariant,
+  isVariantExcluded,
   computeItemPricing,
   getActiveSalesCampaignContext,
   isTimerLive,

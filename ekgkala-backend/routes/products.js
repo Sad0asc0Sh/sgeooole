@@ -716,6 +716,9 @@ const sanitizeVariantsForSave = (variants) => {
         .map((o) => ({ name: String(o.name).trim(), value: String(o.value).trim() }))
         .filter((o) => o.name !== '' && o.value !== '')
     }
+    // تیک تخفیف وariant: فقط true واقعی مستثنی می‌کند؛ بقیه (false/undefined/رشته) => شامل تخفیف.
+    // نرمال‌سازی به boolean تا ورودی‌های آلوده ذخیره نشوند؛ رفتار داده‌های قدیمی حفظ می‌شود.
+    copy.excludeFromPromotion = copy.excludeFromPromotion === true
     return copy
   })
 }
