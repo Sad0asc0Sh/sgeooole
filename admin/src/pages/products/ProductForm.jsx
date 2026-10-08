@@ -617,22 +617,40 @@ function ProductForm() {
         })
       }
 
+      // رفع باگ تایمر مشترک: اگر زمان محلی خالی بود، زمان تایمر مشترک فعال جایگزین می‌شود.
+      // قبلاً وقتی تایمر مشترک فعال بود، فرم فقط متن زمان را نشان می‌داد و مقدارش در state
+      // قرار نمی‌گرفت، پس شرط `isFlashDeal && flashDealEndTime` برقرار نمی‌شد و فرم خودش
+      // فلگ را خاموش می‌کرد. حالا زمان موثر (محلی یا مشترک) ارسال می‌شود.
+      const effectiveFlashDealEndTime = flashDealEndTime || activeGlobalFlashDealTime || ''
+      const effectiveSpecialOfferEndTime = specialOfferEndTime || activeGlobalOfferTime || ''
+
+      if (isFlashDeal && !effectiveFlashDealEndTime) {
+        message.error('برای فعال‌سازی پیشنهاد لحظه‌ای باید زمان پایان مشخص شود.')
+        setLoading(false)
+        return
+      }
+      if (isSpecialOffer && !effectiveSpecialOfferEndTime) {
+        message.error('برای فعال‌سازی شگفت‌انگیز باید زمان پایان مشخص شود.')
+        setLoading(false)
+        return
+      }
+
       // اضافه کردن فیلدهای فروش ویژه و تخفیف
       payload.isFlashDeal = Boolean(isFlashDeal)
-      if (isFlashDeal && flashDealEndTime) {
-        payload.flashDealEndTime = flashDealEndTime instanceof Date
-          ? flashDealEndTime.toISOString()
-          : new Date(flashDealEndTime).toISOString()
+      if (isFlashDeal && effectiveFlashDealEndTime) {
+        payload.flashDealEndTime = effectiveFlashDealEndTime instanceof Date
+          ? effectiveFlashDealEndTime.toISOString()
+          : new Date(effectiveFlashDealEndTime).toISOString()
       } else {
         payload.isFlashDeal = false
         payload.flashDealEndTime = null
       }
 
       payload.isSpecialOffer = Boolean(isSpecialOffer)
-      if (isSpecialOffer && specialOfferEndTime) {
-        payload.specialOfferEndTime = specialOfferEndTime instanceof Date
-          ? specialOfferEndTime.toISOString()
-          : new Date(specialOfferEndTime).toISOString()
+      if (isSpecialOffer && effectiveSpecialOfferEndTime) {
+        payload.specialOfferEndTime = effectiveSpecialOfferEndTime instanceof Date
+          ? effectiveSpecialOfferEndTime.toISOString()
+          : new Date(effectiveSpecialOfferEndTime).toISOString()
       } else {
         payload.isSpecialOffer = false
         payload.specialOfferEndTime = null

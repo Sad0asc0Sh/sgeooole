@@ -628,6 +628,52 @@ const validateNoActiveSaleConflict = async (data, currentProduct = null) => {
   }
 }
 
+// فلگ روشن بدون زمان پایان و بدون تایمر مشترک نباید پیشنهاد بدون انقضا بسازد.
+// فقط وقتی کلاینت صراحتاً فلگ را روشن می‌کند (data[flag] === true) بررسی می‌شود تا
+// ویرایش فیلدهای نامرتبط محصولات قدیمی مسدود نشود. اگر زمان در payload یا سند فعلی
+// نباشد، وجود تایمر مشترک فعال (به‌جز خود محصول در ویرایش) بررسی می‌شود؛
+// در غیر این صورت خطای ۴۰۰ برمی‌گردد تا پیشنهاد بدون انقضا ساخته نشود.
+const validateOfferEndTimes = async (data, currentProduct = {}) => {
+  const now = new Date()
+  const targets = [
+    { flagKey: 'isFlashDeal', timeKey: 'flashDealEndTime', label: 'پیشنهاد لحظه‌ای' },
+    { flagKey: 'isSpecialOffer', timeKey: 'specialOfferEndTime', label: 'شگفت‌انگیز' },
+  ]
+
+  for (const { flagKey, timeKey, label } of targets) {
+    if (data[flagKey] !== true) continue
+
+    const payloadEnd = data[timeKey]
+    if (payloadEnd) {
+      const d = new Date(payloadEnd)
+      // زمان معتبرِ آینده قبول است؛ زمان گذشته/نامعتبر را به applyOwnPromotionRules
+      // می‌سپاریم تا خطای دقیق خودش را بدهد.
+      if (!Number.isNaN(d.getTime()) && d > now) continue
+      continue
+    }
+
+    const currentEnd = currentProduct ? currentProduct[timeKey] : null
+    if (currentEnd) {
+      const d = new Date(currentEnd)
+      if (!Number.isNaN(d.getTime()) && d > now) continue
+    }
+
+    const masterQuery = { [flagKey]: true, [timeKey]: { $gt: now } }
+    if (currentProduct && currentProduct._id) {
+      masterQuery._id = { $ne: currentProduct._id }
+    }
+    const master = await Product.findOne(masterQuery).select(timeKey).lean()
+    if (master && master[timeKey]) continue
+
+    return {
+      valid: false,
+      message: `برای فعال‌سازی ${label} باید زمان پایان مشخص شود؛ تایمر مشترک فعالی یافت نشد.`,
+    }
+  }
+
+  return { valid: true }
+}
+
 // ============================================
 // Sanitize variants/attributes from admin panel before save (low-risk defensive fix)
 // علت خطای 500 در PUT /:id برای محصول متغیر: فرانت برای ردیف‌های جدید _id موقت
@@ -1220,6 +1266,15 @@ router.post(
         })
       }
 
+      // فلگ روشن بدون زمان پایان و بدون تایمر مشترک نباید پیشنهاد بدون انقضا بسازد
+      const offerTimeCheck = await validateOfferEndTimes(productData, {})
+      if (!offerTimeCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: offerTimeCheck.message,
+        })
+      }
+
       // Apply Timer Synchronization
       await syncOfferTimers(productData)
 
@@ -1432,6 +1487,15 @@ router.put(
           code: 'CAMPAIGN_CONFLICT',
           message: saleConflictCheck.message,
           data: { sales: saleConflictCheck.sales },
+        })
+      }
+
+      // فلگ روشن بدون زمان پایان و بدون تایمر مشترک نباید پیشنهاد بدون انقضا بسازد
+      const offerTimeCheck = await validateOfferEndTimes(updates, product)
+      if (!offerTimeCheck.valid) {
+        return res.status(400).json({
+          success: false,
+          message: offerTimeCheck.message,
         })
       }
 
