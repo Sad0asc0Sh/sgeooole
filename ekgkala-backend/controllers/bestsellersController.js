@@ -189,6 +189,9 @@ exports.getBestsellers = async (req, res) => {
         _id: product._id,
         name: product.name,
         slug: product.slug,
+        // کد محصول برای ساخت لینک canonical در فرانت (buildProductUrl)؛ بدون آن
+        // کارت‌های پرفروش‌ترین‌ها به آدرس قدیمی /product/<_id>/… لینک می‌شدند.
+        productCode: product.productCode || undefined,
         image: imageData,
         price: cheapest ? cheapest.price : promotionPrice.price,
         discount: promotionPrice.discount,
@@ -230,7 +233,7 @@ exports.getBestsellers = async (req, res) => {
         .limit(parseInt(limit) || 8)
         .populate({
           path: 'product_id',
-          select: 'name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
+          select: 'name slug productCode images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
           populate: {
             path: 'category',
             select: 'name slug',
@@ -285,7 +288,7 @@ exports.getBestsellers = async (req, res) => {
           isActive: true,
           ...stockFilter,
         })
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants')
+          .select('name slug productCode images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants')
           .populate('category', 'name slug')
           .lean()
 
@@ -311,7 +314,7 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ salesCount: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme salesCount productType variants')
+          .select('name slug productCode images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme salesCount productType variants')
           .populate('category', 'name slug')
           .lean()
 
@@ -329,7 +332,7 @@ exports.getBestsellers = async (req, res) => {
         fallbackProducts = await Product.find(productQuery)
           .sort({ views: -1, rating: -1 })
           .limit(parsedLimit)
-          .select('name slug images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme views productType variants')
+          .select('name slug productCode images price discount compareAtPrice rating numReviews stock category isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme views productType variants')
           .populate('category', 'name slug')
           .lean()
 

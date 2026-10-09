@@ -509,6 +509,10 @@ export const productService = {
             name: item.name || "",
             title: item.name || "",
             slug: item.slug || "",
+            // Without productCode, buildProductUrl() falls back to the Mongo
+            // _id and best-seller cards link to the legacy /product/<id>/…
+            // format instead of the canonical /product/KY-…/… URL.
+            productCode: item.productCode || undefined,
             price: pricing.finalPrice,
             oldPrice: pricing.oldPrice,
             compareAtPrice: pricing.basePrice,

@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import { productService } from "@/services/productService";
+import { buildProductUrl } from "@/lib/paths";
 
 jest.mock("@/lib/api", () => ({
   __esModule: true,
@@ -78,6 +79,37 @@ describe("productService", () => {
     expect(product.discount).toBe(12);
     expect(product.oldPrice).toBe(480000);
     expect(product.price).toBe(422400);
+  });
+
+  it("passes productCode through best-seller cards so their links are canonical", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: {
+        success: true,
+        data: [
+          {
+            _id: "6aac1427784c4750566d5dfd",
+            name: "ماژول ریموتگ بتا",
+            slug: "ماژول-ریموتگ-بتا",
+            productCode: "KY-0008061",
+            image: "/uploads/beta.png",
+            price: 2677200,
+            discount: 3,
+            compareAtPrice: 2760000,
+            stock: 10,
+            isFlashDeal: false,
+            isSpecialOffer: false,
+          },
+        ],
+      },
+    });
+
+    const [product] = await productService.getBestSellers(1);
+
+    expect(product.productCode).toBe("KY-0008061");
+    // The card link must be the canonical KY URL — without productCode it
+    // fell back to /product/<ObjectId>/… (legacy format) for every
+    // best-seller card.
+    expect(buildProductUrl(product)).toBe("/product/ky-0008061/ماژول-ریموتگ-بتا");
   });
 
   it.each([

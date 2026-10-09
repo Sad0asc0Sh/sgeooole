@@ -5,7 +5,7 @@ import Breadcrumbs from "@/components/ui/Breadcrumbs";
 import ProductDetailClient from "../product/[...segments]/ProductDetailClient";
 import ProductStructuredData from "../product/[...segments]/ProductStructuredData";
 import { fetchProductBySlug } from "@/lib/productData";
-import { buildProductUrl } from "@/lib/paths";
+import { buildProductUrl, encodeRedirectPath } from "@/lib/paths";
 import { NOT_FOUND_METADATA } from "@/lib/seo";
 import { buildProductMetaDescription, buildProductSeoTitle } from "@/lib/seo";
 import type { Product } from "@/types/product";
@@ -154,7 +154,11 @@ export default async function CatchAllPage({ params }: { params: CatchAllParams 
     // 308 (not 307) so Google drops the old URL and consolidates ranking signals.
     const currentPath = `/${segments.join("/")}`;
     if (canonicalPath !== currentPath) {
-      permanentRedirect(siteUrl ? `${siteUrl}${canonicalPath}` : canonicalPath);
+      // Encode before redirecting: canonicalPath carries the raw (e.g.
+      // Persian) slug, and a raw non-ASCII Location header makes Node throw
+      // ERR_INVALID_CHAR, turning this 308 into a plain-text 500.
+      const redirectPath = encodeRedirectPath(canonicalPath);
+      permanentRedirect(siteUrl ? `${siteUrl}${redirectPath}` : redirectPath);
     }
 
     const breadcrumbs = [

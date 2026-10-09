@@ -5,7 +5,7 @@ import ProductDetailClient from "./ProductDetailClient";
 import ProductStructuredData from "./ProductStructuredData";
 import RelatedProducts from "./RelatedProducts";
 import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/productData";
-import { buildProductUrl } from "@/lib/paths";
+import { buildProductUrl, encodeRedirectPath } from "@/lib/paths";
 import { buildProductMetaDescription, buildProductSeoTitle } from "@/lib/seo";
 
 // Phase 2 SEO #13 (edge caching): ISR revalidate drives the Cache-Control
@@ -143,7 +143,10 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
     // redirect (308) to the new SEO-friendly URL so ranking signals consolidate.
     if (!isNewFormat && (product as any).productCode) {
         const newUrl = buildProductUrl(product);
-        permanentRedirect(newUrl);
+        // The slug is raw (e.g. Persian) at this point; a Location header
+        // must be ASCII-only or Node throws ERR_INVALID_CHAR and the whole
+        // request dies as a plain-text 500 instead of redirecting.
+        permanentRedirect(encodeRedirectPath(newUrl));
     }
 
     // Get product code - use stored productCode or generate from SKU/ID
