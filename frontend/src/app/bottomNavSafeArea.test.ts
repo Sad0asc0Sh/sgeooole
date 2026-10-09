@@ -10,9 +10,12 @@
  * and leaves a tall empty band under the nav (user screenshot, 2026-10-10).
  *
  * These tests pin the contract: --safe-area-bottom stays 0px, no bottom
- * consumer reads env(safe-area-inset-bottom) directly, and the viewport
- * stays non-cover. If the site migrates to viewport-fit=cover, update the
- * token AND this test together (see the note in globals.css).
+ * consumer reads env(safe-area-inset-bottom) directly, the viewport
+ * stays non-cover, and the BottomNav stays `sticky` in flow (a `fixed`
+ * bar drifts under the dynamic toolbars of Firefox/Chrome for Android
+ * while scrolling — user report, 2026-10-10). If the site migrates to
+ * viewport-fit=cover, update the token AND this test together (see the
+ * notes in globals.css).
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -22,6 +25,7 @@ const read = (rel: string) => readFileSync(join(__dirname, rel), "utf8");
 const globalsCss = read("globals.css");
 const layoutTsx = read("layout.tsx");
 const bottomNavTsx = read("../components/layout/BottomNav.tsx");
+const footerTsx = read("../components/layout/Footer.tsx");
 const productsClientTsx = read("products/ProductsPageClient.tsx");
 const productActionsTsx = read("product/[...segments]/ProductActions.tsx");
 
@@ -41,10 +45,21 @@ describe("BottomNav safe-area contract", () => {
     expect(layoutTsx).not.toMatch(/viewportFit/);
   });
 
-  it("anchors BottomNav explicitly to both bottom corners", () => {
-    expect(bottomNavTsx).toContain("fixed inset-x-0 bottom-0");
+  it("anchors BottomNav with sticky bottom-0, never fixed", () => {
+    // A fixed bar is re-anchored to the visual viewport by the browser and
+    // drifts/lags under dynamic toolbars (Firefox/Chrome Android) while
+    // scrolling; a sticky in-flow bar is composited with the document and
+    // cannot drift. See the positioning note in globals.css.
+    expect(bottomNavTsx).toContain("sticky bottom-0");
+    expect(bottomNavTsx).not.toMatch(/<nav[^>]*\bfixed\b/);
     expect(bottomNavTsx).toContain("pb-safe-area");
     expect(bottomNavTsx).toContain("h-[var(--bottom-nav-height)]");
+  });
+
+  it("Footer carries no bottom margin reserving the nav height", () => {
+    // The mb-16 only existed to clear the formerly fixed nav; the sticky
+    // nav docks into its own flow slot directly under the footer.
+    expect(footerTsx).not.toContain("mb-16");
   });
 
   it("no bottom consumer reads env(safe-area-inset-bottom) directly", () => {

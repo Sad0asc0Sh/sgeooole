@@ -108,7 +108,7 @@ function Footer() {
     /* ─────────────────────────────────────────────────────── */
     return (
         <>
-            <footer className="mt-8 mb-16 lg:mb-0" dir="rtl">
+            <footer className="mt-8" dir="rtl">
 
                 {/* ─── Trust Strip ─── */}
                 <div className="bg-white border-t border-ekg-200/60">

@@ -114,14 +114,27 @@
    env(safe-area-inset-bottom, 0px) here in this one place — but only after
    auditing every top-anchored header, because cover also activates the
    TOP inset and would require safe-area-top compensation in the
-   fixed/sticky headers (Header, ProductHeader, cart/checkout/tracking/...). */
+   fixed/sticky headers (Header, ProductHeader, cart/checkout/tracking/...).
+
+   Positioning note: BottomNav is `sticky; bottom: 0` in normal flow (last
+   item of the page column in ClientLayout), NOT `fixed`. A fixed bar is
+   re-anchored to the visual viewport by the browser, and on browsers with
+   a dynamic (auto-hiding) toolbar — Firefox/Chrome for Android — that
+   re-anchoring drifts and lags while scrolling: the bar travelled up and
+   down with the toolbar and sank during programmatic smooth
+   scroll-to-top (user report, 2026-10-10). A sticky bar is composited as
+   part of the document itself, so it cannot drift relative to the page
+   in any engine, and at the end of the page it docks into its own flow
+   slot — which is also why Footer no longer carries a bottom margin
+   reserving the bar's height. Do not switch it back to fixed without a
+   visual-viewport anchoring strategy. */
 :root {
   /* Fixed content height of the BottomNav row (mirrored by BottomNav.tsx inner row). */
   --bottom-nav-height: 4rem;
   /* Bottom inset actually left for consumers: 0px while the viewport is not
      viewport-fit=cover (see the safe-area note above). */
   --safe-area-bottom: 0px;
-  /* Fully rendered height of the fixed BottomNav: content + 1px top border + inset. */
+  /* Fully rendered height of the BottomNav: content + 1px top border + inset. */
   --bottom-nav-total-height: calc(var(--bottom-nav-height) + 1px + var(--safe-area-bottom));
 
   /* Bottom-navigation stacking layers (ascending). */
@@ -136,7 +149,9 @@
   padding-bottom: var(--safe-area-bottom);
 }
 
-/* Content clearance for the scrollable page area beneath the fixed BottomNav. */
+/* End-of-content clearance: the sticky BottomNav reserves its own height
+   in flow; this is the extra breathing room at the end of the page and
+   keeps the last content clear of the fixed bars stacked above the nav. */
 @utility pb-nav-clearance {
   padding-bottom: calc(var(--bottom-nav-total-height) + 4rem);
 }

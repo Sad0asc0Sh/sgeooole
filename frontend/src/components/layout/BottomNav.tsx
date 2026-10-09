@@ -47,7 +47,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
 
     return (
         <>
-            <nav className={`md:hidden fixed inset-x-0 bottom-0 w-full bg-white/95 backdrop-blur-lg border-t border-ekg-200/60 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
+            <nav className={`md:hidden sticky bottom-0 w-full shrink-0 bg-white/95 backdrop-blur-lg border-t border-ekg-200/60 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
                 <div className="flex justify-between items-center px-4 h-[var(--bottom-nav-height)]">
                     {navItems.map((item) => {
                         const isCat = item.href === "/categories";
