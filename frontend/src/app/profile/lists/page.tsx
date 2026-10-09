@@ -5,8 +5,8 @@ import Link from "next/link";
 import ResilientImage from "@/components/ui/ResilientImage";
 import { wishlistService, WishlistItem } from "@/services/wishlistService";
 import { useCart } from "@/hooks/useCart";
-import { Product } from "@/services/productService";
-import { resolvePricing } from "@/lib/pricing";
+import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
+import { wishlistItemToProduct } from "@/lib/wishlistCard";
 import { getServerNow } from "@/lib/serverClock";
 
 const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
@@ -79,52 +79,12 @@ export default function ListsPage() {
     };
 
     /**
-     * Convert WishlistItem to Product for useCart
-     */
-    const mapToProduct = (item: WishlistItem): Product => {
-        const pricing = resolvePricing({
-            price: item.price,
-            discount: item.discount || 0,
-            compareAtPrice: item.compareAtPrice || item.price,
-            isFlashDeal: item.isFlashDeal,
-            flashDealEndTime: item.flashDealEndTime,
-            isSpecialOffer: item.isSpecialOffer,
-            specialOfferEndTime: item.specialOfferEndTime,
-            campaignLabel: item.campaignLabel,
-            now,
-        });
-
-        return {
-            id: item._id,
-            name: item.name,
-            title: item.name,
-            price: pricing.finalPrice,
-            oldPrice: pricing.oldPrice,
-            compareAtPrice: pricing.basePrice,
-            discount: pricing.discount,
-            image: item.images && item.images.length > 0 ? item.images[0].url : "/placeholder.jpg",
-            images: item.images ? item.images.map(img => img.url) : [],
-            category: item.category || "",
-            rating: item.rating || 0,
-            reviewCount: 0,
-            countInStock: item.countInStock ?? item.stock ?? 0,
-            slug: item.slug,
-            campaignLabel: item.campaignLabel,
-            campaignTheme: item.campaignTheme,
-            isFlashDeal: item.isFlashDeal,
-            flashDealEndTime: item.flashDealEndTime,
-            isSpecialOffer: item.isSpecialOffer,
-            specialOfferEndTime: item.specialOfferEndTime,
-        };
-    };
-
-    /**
      * Handle Add/Increase
      */
     const handleIncrease = async (item: WishlistItem) => {
         const qty = getItemQuantity(item._id);
         if (qty === 0) {
-            await addToCart(mapToProduct(item), 1);
+            await addToCart(wishlistItemToProduct(item, now), 1);
         } else {
             await updateQuantity(item._id, qty + 1);
         }
@@ -141,19 +101,6 @@ export default function ListsPage() {
             await removeFromCart(item._id);
         }
     };
-
-    const getPricing = (item: WishlistItem) =>
-        resolvePricing({
-            price: item.price,
-            discount: item.discount || 0,
-            compareAtPrice: item.compareAtPrice || item.price,
-            isFlashDeal: item.isFlashDeal,
-            flashDealEndTime: item.flashDealEndTime,
-            isSpecialOffer: item.isSpecialOffer,
-            specialOfferEndTime: item.specialOfferEndTime,
-            campaignLabel: item.campaignLabel,
-            now,
-        });
 
     /**
      * Get first image URL or fallback
@@ -267,12 +214,15 @@ export default function ListsPage() {
                     <div className="p-4 md:max-w-6xl md:mx-auto md:px-6 grid grid-cols-2 md:grid-cols-5 gap-4">
                         {currentItems.map((product) => {
                             const qty = getItemQuantity(product._id);
-                            const stock = product.countInStock ?? product.stock;
-                            const isOutOfStock = stock !== undefined && stock <= 0;
-                            const pricing = getPricing(product);
+                            // نمای واحد کارت: قیمت/بج/خط‌خورده از resolveCardPricing می‌آید تا
+                            // محصول متغیر هم مثل بقیه‌ی کارت‌ها نماینده‌ی واقعی داشته باشد.
+                            const card = wishlistItemToProduct(product, now);
+                            const pricing = resolveCardPricing(card, { now, context: "listing" });
+                            const isOutOfStock = card.countInStock <= 0;
+                            const showMarkdown = pricing.originalPrice !== undefined && !isOutOfStock;
 
                             return (
-                                <div key={product._id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50 hover:shadow-md transition-shadow flex flex-col">
+                                <div key={product._id} className="bg-white p-3 rounded-2xl shadow-sm border border-gray-50 hover:shadow-md transition-shadow flex flex-col min-w-0">
                                     {/* Product Image */}
                                     <Link href={`/product/${product._id}`} className="relative aspect-square bg-gray-100 rounded-xl overflow-hidden mb-3">
                                         <ResilientImage
@@ -282,11 +232,6 @@ export default function ListsPage() {
                                             alt={product.name}
                                             fallbackSrc="/placeholder.png"
                                         />
-                                        {pricing.discount > 0 && (
-                                            <div className="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
-                                                {pricing.discount}%
-                                            </div>
-                                        )}
                                         {isOutOfStock && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-white/40">
                                                 <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-md">ناموجود</span>
@@ -299,15 +244,36 @@ export default function ListsPage() {
                                         {product.name}
                                     </Link>
 
-                                    <div className="flex items-center gap-2 mt-3">
-                                        <span className="text-sm font-black text-gray-900">
-                                            {pricing.finalPrice.toLocaleString("fa-IR")}
-                                        </span>
-                                        <span className="text-[9px] text-gray-500">تومان</span>
-                                        {pricing.oldPrice && pricing.discount > 0 && (
-                                            <span className="text-[10px] text-gray-400 line-through">
-                                                {pricing.oldPrice.toLocaleString("fa-IR")}
+                                    {/* Price block: fixed discount row + wrapped price row (mobile-safe) */}
+                                    <div className="mt-3 flex flex-col gap-1 min-w-0">
+                                        <div className="flex h-5 items-center gap-1.5">
+                                            {showMarkdown ? (
+                                                <>
+                                                    <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md tabular-nums shrink-0">
+                                                        {pricing.discountPercent.toLocaleString("fa-IR")}٪
+                                                    </span>
+                                                    <del className="text-[10px] text-gray-400 tabular-nums truncate">
+                                                        {(pricing.originalPrice as number).toLocaleString("fa-IR")}
+                                                    </del>
+                                                </>
+                                            ) : pricing.isPartial && !isOutOfStock ? (
+                                                <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
+                                            ) : null}
+                                        </div>
+                                        <div
+                                            className="flex items-baseline justify-end flex-wrap gap-x-1 gap-y-0.5"
+                                            aria-label={pricing.isFrom && !isOutOfStock ? `شروع از ${pricing.displayPrice.toLocaleString("fa-IR")} تومان` : `${pricing.displayPrice.toLocaleString("fa-IR")} تومان`}
+                                        >
+                                            {pricing.isFrom && !isOutOfStock && (
+                                                <span className="text-[10px] text-gray-500">از</span>
+                                            )}
+                                            <span className={`text-sm font-black tabular-nums ${isOutOfStock ? "text-gray-400" : "text-gray-900"}`}>
+                                                {pricing.displayPrice.toLocaleString("fa-IR")}
                                             </span>
+                                            <span className="text-[9px] text-gray-500">تومان</span>
+                                        </div>
+                                        {pricing.isPartial && showMarkdown && (
+                                            <span className="text-[10px] text-gray-500">تخفیف روی چند مدل</span>
                                         )}
                                     </div>
 

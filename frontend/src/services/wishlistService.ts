@@ -3,6 +3,17 @@ import api from "@/lib/api";
 /**
  * Wishlist Item Interface - Frontend representation
  */
+export interface WishlistVariant {
+  _id: string;
+  sku?: string;
+  price: number;
+  compareAtPrice?: number;
+  stock: number;
+  options?: Array<{ name: string; value: string }>;
+  images?: Array<string | { url?: string }>;
+  excludeFromPromotion?: boolean;
+}
+
 export interface WishlistItem {
   _id: string;
   slug?: string;
@@ -26,6 +37,9 @@ export interface WishlistItem {
   brand?: string;
   rating?: number;
   isActive?: boolean;
+  // Variable-product fields (present when the backend sends variants)
+  productType?: "simple" | "variable";
+  variants?: WishlistVariant[];
 }
 
 /**

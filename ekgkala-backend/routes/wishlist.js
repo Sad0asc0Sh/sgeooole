@@ -18,7 +18,10 @@ router.get('/', protect, async (req, res) => {
       path: 'wishlist',
       // Include time-based promotion fields so the frontend can correctly hide expired discounts
       // and revert pricing when countdowns end (Flash Deals / Special Offers).
-      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme',
+      // productType + variants are required so variable products resolve
+      // per-variant pricing on their cards (product-level price/discount is
+      // meaningless for them and produces phantom discount badges).
+      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
       match: { isActive: true }, // Only return active products
     });
 
