@@ -998,7 +998,7 @@ function ProductListingContent() {
                     {renderFilterContent(true)}
                   </div>
                   {/* Bottom Actions */}
-                  <div style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }} className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center gap-3 bg-white">
+                  <div style={{ paddingBottom: "max(1rem, var(--safe-area-bottom))" }} className="shrink-0 border-t border-gray-100 px-6 py-4 flex items-center gap-3 bg-white">
                     <button
                       onClick={() => {
                         handleClearFilters();

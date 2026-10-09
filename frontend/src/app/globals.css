@@ -97,16 +97,30 @@
    handling and the bottom stacking order. Components must reference these
    tokens instead of hardcoding px values (e.g. bottom-[65px], pb-16, pb-19).
 
-   Safe-area note: env(safe-area-inset-bottom) evaluates to 0px today because
-   the app intentionally does NOT set viewport-fit=cover. Enabling cover also
-   activates the TOP inset and would require safe-area-top compensation in the
-   fixed/sticky headers (Header, ProductHeader, cart/checkout/tracking/...).
-   Do not enable it without auditing every top-anchored header. */
+   Safe-area note: the app intentionally does NOT set viewport-fit=cover, so
+   no page content can ever render inside the bottom safe area — every
+   browser's layout viewport already ends above the system navigation bar /
+   home indicator, and a `fixed; bottom: 0` bar sits flush on that edge.
+   env(safe-area-inset-bottom) is therefore NOT safe to consume here: it is
+   0px in spec-compliant browsers without cover, but Gecko (Firefox for
+   Android) reports the full system navigation-bar height (~42px) even
+   though its layout viewport already stops above that bar. Feeding env()
+   into the BottomNav padding double-counted the bar and left a tall empty
+   white band under the nav items on those browsers (the bar looked
+   detached from the bottom of the screen; verified from a user screenshot,
+   2026-10-10). --safe-area-bottom is therefore deliberately 0px: the token
+   and all its consumers stay in place, only the value stops trusting env().
+   If the site ever migrates to viewport-fit=cover, restore
+   env(safe-area-inset-bottom, 0px) here in this one place — but only after
+   auditing every top-anchored header, because cover also activates the
+   TOP inset and would require safe-area-top compensation in the
+   fixed/sticky headers (Header, ProductHeader, cart/checkout/tracking/...). */
 :root {
   /* Fixed content height of the BottomNav row (mirrored by BottomNav.tsx inner row). */
   --bottom-nav-height: 4rem;
-  /* Real bottom safe-area inset; 0px on devices/browsers without one. */
-  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  /* Bottom inset actually left for consumers: 0px while the viewport is not
+     viewport-fit=cover (see the safe-area note above). */
+  --safe-area-bottom: 0px;
   /* Fully rendered height of the fixed BottomNav: content + 1px top border + inset. */
   --bottom-nav-total-height: calc(var(--bottom-nav-height) + 1px + var(--safe-area-bottom));
 
@@ -117,7 +131,7 @@
   --z-bottom-drawer: 10004; /* drawers/sheets above that backdrop (e.g. products filters) */
 }
 
-/* Bottom safe-area padding — for the fixed bottom-0 BottomNav to respect the home indicator. */
+/* Bottom inset padding — bound to --safe-area-bottom (see its note above). */
 @utility pb-safe-area {
   padding-bottom: var(--safe-area-bottom);
 }
