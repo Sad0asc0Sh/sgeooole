@@ -142,6 +142,17 @@ export default function RootLayout({
                   inner boundary. A page-level Suspense here would silently turn any
                   future unsuspended useSearchParams() into a site-wide CSR shell
                   (the deindex-era bug) — we want the build to fail loudly instead.
+
+                  Soft-404 fix (2026-10): there is intentionally NO root
+                  app/loading.tsx either (and none in product/[...segments]).
+                  A loading fallback starts streaming the response with HTTP
+                  200 before the page can call notFound(), and once headers
+                  are sent the status can never become 404 — every unknown
+                  URL was a soft-404 despite rendering the 404 page (see the
+                  Next.js docs, loading file convention → Status Codes).
+                  RouteLoadingProvider's progress bar is the global loading
+                  UI instead. Do not re-add a root/PDP loading.tsx without
+                  re-checking unknown-URL status codes with curl.
                 */}
                 <RouteLoadingProvider>
                   <ClientLayout>{children}</ClientLayout>

@@ -138,3 +138,28 @@ describe("/home.md route (Markdown homepage)", () => {
     }
   });
 });
+
+describe("soft-404 status guard", () => {
+  // A loading.tsx above a page starts streaming the response with HTTP 200
+  // before the page can call notFound(), and the status can then never
+  // become 404 (Next.js docs: loading file convention → Status Codes).
+  // That is exactly how every unknown URL became a soft-404 while still
+  // rendering the 404 page. Guard the two boundaries that mask a
+  // notFound(): the root segment (catch-all, guides, glossary, compare)
+  // and the PDP segment. /products keeps its loading.tsx on purpose —
+  // that route never calls notFound().
+  const fs = require("fs");
+  const path = require("path");
+  const appDir = path.join(process.cwd(), "src", "app");
+
+  test("no root app/loading.tsx (would stream every notFound as 200)", () => {
+    expect(fs.existsSync(path.join(appDir, "loading.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(appDir, "loading.js"))).toBe(false);
+  });
+
+  test("no loading.tsx in the PDP segment", () => {
+    const pdpDir = path.join(appDir, "product", "[...segments]");
+    expect(fs.existsSync(path.join(pdpDir, "loading.tsx"))).toBe(false);
+    expect(fs.existsSync(path.join(pdpDir, "loading.js"))).toBe(false);
+  });
+});
