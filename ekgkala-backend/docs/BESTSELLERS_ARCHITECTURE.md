@@ -7,8 +7,19 @@
 FinalScore = (SalesScore × 0.40) + (ConversionScore × 0.25) + 
              (RevenueScore × 0.15) + (RatingScore × 0.10) + (TrendScore × 0.10)
 
-DecayedScore = FinalScore / (age_hours + 2)^1.8
+DecayedScore = FinalScore × RecencyFactor
+RecencyFactor = 1 / (1 + age_days / 30)   (فروش امروز ≈ 1، 30 روز پیش = 0.5)
+محصولِ بدون فروش: DecayedScore = FinalScore × 0.02
 ```
+
+> اصلاح: فرمول قبلیِ `FinalScore / (age_hours + 2)^1.8` امتیاز را تا مرتبه‌ی
+> 1e-6 خرد می‌کرد و رتبه عملاً فقط با «ساعت آخرین فروش» تعیین می‌شد، نه حجم
+> فروش. همچنین RevenueScore قبلاً در حاشیه سود ضرب می‌شد ولی `margin_pct`
+> همیشه صفر ثبت می‌شود (داده‌ی هزینه وجود ندارد) و RatingScore روی فیلد
+> اشتباه Review (`product_id` به‌جای `product`) محاسبه می‌شد؛ هر دو مؤلفه
+> مرده بودند و اصلاح شدند. با ثبت هر فروش نیز یک محاسبه‌ی مجدد با تأخیر
+> ~۱ دقیقه زمان‌بندی می‌شود (`scheduleRecalculation`) و چرخه‌ی ۳۰ دقیقه‌ای
+> نقش پشتیبان دارد.
 
 ### سیگنال‌های تشکیل‌دهنده
 
@@ -16,7 +27,7 @@ DecayedScore = FinalScore / (age_hours + 2)^1.8
 |--------|------|----------|-----------|
 | **SalesScore** | 40% | 30 روز | تعداد واحد × وزن نمایی |
 | **ConversionScore** | 25% | 14 روز | فروش ÷ بازدید |
-| **RevenueScore** | 15% | 30 روز | درآمد × حاشیه سود |
+| **RevenueScore** | 15% | 30 روز | درآمد (حاشیه سود تا زمان وجود داده‌ی هزینه اعمال نمی‌شود) |
 | **RatingScore** | 10% | تمام زمان | امتیاز × log(تعداد نظرات) |
 | **TrendScore** | 10% | 14 روز | (فروش هفته اخیر - هفته قبل) ÷ هفته قبل |
 

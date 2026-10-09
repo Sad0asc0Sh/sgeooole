@@ -147,6 +147,16 @@ const recordSalesEvents = async (orderItems, orderId) => {
       } catch (cacheErr) {
         // Cache invalidation failure is non-critical
       }
+
+      // Schedule a score recalculation so this purchase moves the
+      // bestsellers ranking within ~a minute instead of waiting for the
+      // periodic 30-minute recalculation (which remains as backstop).
+      try {
+        const { scheduleRecalculation } = require('../services/bestsellersScoreEngine')
+        scheduleRecalculation()
+      } catch (recalcErr) {
+        // Non-critical
+      }
     }
   } catch (error) {
     // SalesEvent recording should never block the order flow
@@ -173,6 +183,14 @@ const revertSalesEvents = async (orderId) => {
           }
         }
       } catch (cacheErr) {
+        // Non-critical
+      }
+
+      // Keep the ranking in sync after the revert as well
+      try {
+        const { scheduleRecalculation } = require('../services/bestsellersScoreEngine')
+        scheduleRecalculation()
+      } catch (recalcErr) {
         // Non-critical
       }
     }

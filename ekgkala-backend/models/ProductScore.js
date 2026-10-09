@@ -7,7 +7,9 @@
  * فرمول نهایی:
  * FinalScore = (SalesScore × 0.40) + (ConversionScore × 0.25) + 
  *              (RevenueScore × 0.15) + (RatingScore × 0.10) + (TrendScore × 0.10)
- * DecayedScore = FinalScore / (age_hours + 2) ^ 1.8
+ * DecayedScore = FinalScore × RecencyFactor ،
+ * RecencyFactor = 1 / (1 + age_days / 30) و برای محصولِ بدون فروش = 0.02
+ * (منطق اصلی در services/bestsellersScoreEngine.js است)
  */
 
 const mongoose = require('mongoose')
@@ -205,13 +207,15 @@ ProductScoreSchema.index({ stock_available: 1, decayed_score: -1 })
 ProductScoreSchema.index({ last_calculated_at: 1 }) // برای پیدا کردن محصولاتی که نیاز به بروزرسانی دارند
 
 // Method برای محاسبه decayed_score
+// هم‌گام با computeDecayedScore در services/bestsellersScoreEngine.js:
+// ضریب تازگی کران‌دار است تا حجم فروش زیر سایه‌ی «ساعت آخرین فروش» گم نشود.
 ProductScoreSchema.methods.calculateDecayedScore = function () {
   if (this.last_sale_at) {
-    const ageHours = (Date.now() - this.last_sale_at.getTime()) / (1000 * 60 * 60)
-    this.decayed_score = this.final_score / Math.pow(ageHours + 2, 1.8)
+    const ageDays = Math.max(0, (Date.now() - this.last_sale_at.getTime()) / (1000 * 60 * 60 * 24))
+    this.decayed_score = this.final_score / (1 + ageDays / 30)
   } else {
     // اگر هیچ فروشی نشده، امتیاز خیلی پایین است
-    this.decayed_score = this.final_score * 0.1
+    this.decayed_score = this.final_score * 0.02
   }
   return this.decayed_score
 }

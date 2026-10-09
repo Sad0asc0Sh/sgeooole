@@ -176,7 +176,12 @@ async function calculateConversionScore() {
 
 /**
  * محاسبه RevenueScore (15%)
- * درآمد × حاشیه سود در 30 روز اخیر
+ * درآمد فروش در 30 روز اخیر
+ *
+ * نکته: قبلاً درآمد در حاشیه سود ضرب می‌شد، اما margin_pct در تمام رویدادهای
+ * فروش صفر ثبت می‌شود (داده‌ی هزینه در سیستم وجود ندارد)، پس weighted_revenue
+ * همیشه صفر و این مؤلفه عملاً مرده بود. تا وقتی داده‌ی هزینه واقعی وصل نشده،
+ * امتیاز فقط بر اساس خودِ درآمد محاسبه می‌شود.
  */
 async function calculateRevenueScore() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -191,32 +196,18 @@ async function calculateRevenueScore() {
       $group: {
         _id: '$product_id',
         total_revenue: { $sum: '$revenue' },
-        avg_margin: { $avg: '$margin_pct' },
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        weighted_revenue: {
-          $multiply: [
-            '$total_revenue',
-            {
-              $divide: ['$avg_margin', 100],
-            },
-          ],
-        },
       },
     },
   ])
 
   const p95 = getPercentile(
-    revenueByProduct.map((r) => r.weighted_revenue),
+    revenueByProduct.map((r) => r.total_revenue),
     95
   )
 
   const scoreMap = {}
   for (const revenue of revenueByProduct) {
-    const normalized = normalizeScore(revenue.weighted_revenue, 0, p95)
+    const normalized = normalizeScore(revenue.total_revenue, 0, p95)
     scoreMap[revenue._id.toString()] = normalized
   }
 
@@ -228,10 +219,12 @@ async function calculateRevenueScore() {
  * میانگین امتیاز × log(تعداد نظرات)
  */
 async function calculateRatingScore() {
+  // فیلد ارجاع به محصول در مدل Review، «product» است نه «product_id»؛ با نام
+  // اشتباه، همه‌ی نظرات زیر _id=null گروه می‌شدند و این مؤلفه همیشه صفر بود.
   const reviewStats = await Review.aggregate([
     {
       $group: {
-        _id: '$product_id',
+        _id: '$product',
         avg_rating: { $avg: '$rating' },
         review_count: { $sum: 1 },
       },
@@ -338,18 +331,69 @@ async function calculateTrendScore() {
 // محاسبه و بروزرسانی امتیازات تمام محصولات
 // ============================================
 
+// ضریب تازگی فروش: فروش امروز ≈ 1، فروش 30 روز پیش = 1/2، فروش 90 روز پیش = 1/4.
+// فرمول قبلی (تقسیم بر (ساعت + 2)^1.8) امتیاز نهایی را آن‌قدر خرد می‌کرد
+// (مرتبه‌ی 1e-6) که عملاً فقط «ساعتِ آخرین فروش» رتبه را تعیین می‌کرد و حجم
+// فروش هیچ اثری نداشت؛ این ضریب کران‌دار، تازگی را مهم نگه می‌دارد ولی اجازه
+// نمی‌دهد بر حجم فروش غلبه‌ی مطلق پیدا کند.
+const RECENCY_WINDOW_DAYS = 30
+// محصولی که هرگز فروش نداشته، همیشه پایین‌تر از هر محصولِ فروش‌رفته می‌ایستد.
+const NEVER_SOLD_FACTOR = 0.02
+
+function recencyFactor(lastSaleAt, now = new Date()) {
+  if (!lastSaleAt) return NEVER_SOLD_FACTOR
+  const ageDays = Math.max(0, (now.getTime() - new Date(lastSaleAt).getTime()) / (1000 * 60 * 60 * 24))
+  return 1 / (1 + ageDays / RECENCY_WINDOW_DAYS)
+}
+
+function computeDecayedScore(finalScore, lastSaleAt, now = new Date()) {
+  return Math.max(0, finalScore) * recencyFactor(lastSaleAt, now)
+}
+
 async function recalculateAllScores() {
   try {
     console.log('[BestSellers] شروع محاسبه امتیازات...')
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
 
-    // محاسبه تمام نمرات
-    const [salesScores, conversionScores, revenueScores, ratingScores, trendScores] = await Promise.all([
-      calculateSalesScore(),
-      calculateConversionScore(),
-      calculateRevenueScore(),
-      calculateRatingScore(),
-      calculateTrendScore(),
-    ])
+    // محاسبه تمام نمرات + آمار تجمیعی هر محصول در چند کوئری یکجا (به‌جای
+    // چند کوئری به‌ازای هر محصول)
+    const [salesScores, conversionScores, revenueScores, ratingScores, trendScores, saleStats, lastSales, viewStats] =
+      await Promise.all([
+        calculateSalesScore(),
+        calculateConversionScore(),
+        calculateRevenueScore(),
+        calculateRatingScore(),
+        calculateTrendScore(),
+        // واحدهای فروخته‌شده و درآمد 30 روز اخیر، به‌ازای هر محصول
+        SalesEvent.aggregate([
+          { $match: { sold_at: { $gte: thirtyDaysAgo } } },
+          {
+            $group: {
+              _id: '$product_id',
+              units: { $sum: '$quantity' },
+              revenue: { $sum: '$revenue' },
+            },
+          },
+        ]),
+        // آخرین فروشِ هر محصول در تمام زمان‌ها (برای ضریب تازگی و last_sale_at)
+        SalesEvent.aggregate([
+          { $group: { _id: '$product_id', last_sale_at: { $max: '$sold_at' } } },
+        ]),
+        // بازدیدهای 14 روز اخیر، به‌ازای هر محصول
+        ProductView.aggregate([
+          { $match: { viewed_at: { $gte: fourteenDaysAgo } } },
+          { $group: { _id: '$product_id', views: { $sum: 1 } } },
+        ]),
+      ])
+
+    const saleStatsMap = {}
+    for (const s of saleStats) saleStatsMap[s._id.toString()] = s
+    const lastSaleMap = {}
+    for (const s of lastSales) lastSaleMap[s._id.toString()] = s.last_sale_at
+    const viewMap = {}
+    for (const v of viewStats) viewMap[v._id.toString()] = v.views
 
     // دریافت تمام محصولات فعال
     // CRITICAL FIX: Product model uses 'isActive' (camelCase), not 'is_active' (snake_case)
@@ -359,98 +403,108 @@ async function recalculateAllScores() {
     )
 
     let updated = 0
+    let failed = 0
 
     for (const product of allProducts) {
-      const productId = product._id.toString()
+      // خطای یک محصول نباید کل چرخه را متوقف و امتیاز بقیه را برای همیشه
+      // فریز کند؛ خطا شمرده و لاگ می‌شود و محاسبه ادامه پیدا می‌کند.
+      try {
+        const productId = product._id.toString()
 
-      // استخراج نمرات (یا 0 اگر موجود نیست)
-      const sales = salesScores[productId] || 0
-      const conversion = conversionScores[productId] || 0
-      const revenue = revenueScores[productId] || 0
-      const rating = ratingScores[productId] || 0
-      const trend = trendScores[productId] || 0
+        // استخراج نمرات (یا 0 اگر موجود نیست)
+        const sales = salesScores[productId] || 0
+        const conversion = conversionScores[productId] || 0
+        const revenue = revenueScores[productId] || 0
+        const rating = ratingScores[productId] || 0
+        const trend = trendScores[productId] || 0
 
-      // محاسبه FinalScore
-      const finalScore = sales * 0.4 + conversion * 0.25 + revenue * 0.15 + rating * 0.1 + trend * 0.1
+        // محاسبه FinalScore
+        const finalScore = sales * 0.4 + conversion * 0.25 + revenue * 0.15 + rating * 0.1 + trend * 0.1
 
-      // دریافت آخرین فروش
-      const lastSale = await SalesEvent.findOne({ product_id: product._id }).sort({ sold_at: -1 }).lean()
+        const lastSaleAt = lastSaleMap[productId] || null
+        const stats = saleStatsMap[productId] || { units: 0, revenue: 0 }
 
-      // محاسبه Boost برای محصولات جدید
-      const createdAt = product.createdAt || new Date()
-      const ageInDays = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
-      const newProductBoost = ageInDays < 7 ? 0.15 : 0
+        // محاسبه Boost برای محصولات جدید
+        const createdAt = product.createdAt || now
+        const ageInDays = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+        const newProductBoost = ageInDays < 7 ? 0.15 : 0
 
-      // محاسبه Penalty برای نرخ برگشت بالا
-      const returnRate = await calculateReturnRate(product._id) // نیاز به پیاده‌سازی
-      const highReturnPenalty = returnRate > 0.15 ? returnRate * 0.3 : 0
+        // محاسبه Penalty برای نرخ برگشت بالا
+        const returnRate = await calculateReturnRate(product._id) // نیاز به پیاده‌سازی
+        const highReturnPenalty = returnRate > 0.15 ? returnRate * 0.3 : 0
 
-      // محاسبه DecayedScore
-      const decayedScore = lastSale
-        ? finalScore / Math.pow((Date.now() - lastSale.sold_at.getTime()) / (1000 * 60 * 60) + 2, 1.8)
-        : finalScore * 0.1
-
-      // دریافت آمار محصول
-      const viewCount = await ProductView.countDocuments({
-        product_id: product._id,
-        viewed_at: { $gte: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000) },
-      })
-
-      const saleCount = await SalesEvent.countDocuments({
-        product_id: product._id,
-        sold_at: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
-      })
-
-      const totalRevenue = await SalesEvent.aggregate([
-        {
-          $match: {
+        // پیدا کردن یا ایجاد رکورد ProductScore
+        await ProductScore.findOneAndUpdate(
+          { product_id: product._id },
+          {
             product_id: product._id,
-            sold_at: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+            sales_score: sales,
+            conversion_score: conversion,
+            revenue_score: revenue,
+            rating_score: rating,
+            trend_score: trend,
+            final_score: finalScore,
+            decayed_score: computeDecayedScore(finalScore, lastSaleAt, now),
+            last_sale_at: lastSaleAt,
+            // مجموع واحدهای فروخته‌شده است، نه تعداد رویدادها (قبلاً با
+            // countDocuments، تعداد سفارش‌ها شمرده می‌شد نه تعداد واحدها)
+            total_units_sold: stats.units || 0,
+            total_views_14d: viewMap[productId] || 0,
+            return_rate: returnRate,
+            avg_rating: product.rating || 0,
+            stock_available: (product.stock || 0) > 0,
+            is_new_product: ageInDays < 7,
+            new_product_boost: newProductBoost,
+            high_return_penalty: highReturnPenalty,
+            last_calculated_at: now,
           },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: '$revenue' },
-          },
-        },
-      ])
+          { upsert: true, new: true }
+        )
 
-      // پیدا کردن یا ایجاد رکورد ProductScore
-      const scoreRecord = await ProductScore.findOneAndUpdate(
-        { product_id: product._id },
-        {
-          product_id: product._id,
-          sales_score: sales,
-          conversion_score: conversion,
-          revenue_score: revenue,
-          rating_score: rating,
-          trend_score: trend,
-          final_score: finalScore,
-          decayed_score: Math.max(0, decayedScore),
-          last_sale_at: lastSale ? lastSale.sold_at : null,
-          total_units_sold: saleCount,
-          total_views_14d: viewCount,
-          return_rate: returnRate,
-          avg_rating: product.rating || 0,
-          stock_available: (product.stock || 0) > 0,
-          is_new_product: ageInDays < 7,
-          new_product_boost: newProductBoost,
-          high_return_penalty: highReturnPenalty,
-          last_calculated_at: new Date(),
-        },
-        { upsert: true, new: true }
-      )
-
-      updated++
+        updated++
+      } catch (productError) {
+        failed++
+        console.error(`[BestSellers] ❌ خطا در محاسبه محصول ${product._id}:`, productError.message)
+      }
     }
 
-    console.log(`[BestSellers] ✅ ${updated} محصول بروزرسانی شد`)
+    console.log(`[BestSellers] ✅ ${updated} محصول بروزرسانی شد${failed ? ` (${failed} خطا)` : ''}`)
     return updated
   } catch (error) {
     console.error('[BestSellers] ❌ خطا در محاسبه امتیازات:', error)
     throw error
   }
+}
+
+// ============================================
+// محاسبه‌ی زمان‌بندی‌شده پس از ثبت فروش
+// ============================================
+
+// با ثبت هر فروش، یک محاسبه‌ی مجدد با تأخیر کوتاه زمان‌بندی می‌شود تا خرید
+// جدید حداکثر ظرف حدود یک دقیقه در رتبه‌بندی دیده شود، نه حداکثر 30 دقیقه
+// بعد (چرخه‌ی دوره‌ای سرور). فراخوانی‌های پشت‌سرهم در یک محاسبه ادغام
+// می‌شوند و تایمر unref است تا جلوی خاموش‌شدن پردازه را نگیرد.
+let recalcTimer = null
+let recalcRunning = false
+
+function scheduleRecalculation(delayMs = 60 * 1000) {
+  if (recalcTimer) return
+  recalcTimer = setTimeout(async () => {
+    recalcTimer = null
+    if (recalcRunning) {
+      scheduleRecalculation(delayMs)
+      return
+    }
+    recalcRunning = true
+    try {
+      await recalculateAllScores()
+    } catch (error) {
+      console.error('[BestSellers] ❌ خطا در محاسبه‌ی زمان‌بندی‌شده:', error.message)
+    } finally {
+      recalcRunning = false
+    }
+  }, delayMs)
+  if (typeof recalcTimer.unref === 'function') recalcTimer.unref()
 }
 
 /**
@@ -464,6 +518,9 @@ async function calculateReturnRate(productId) {
 
 module.exports = {
   recalculateAllScores,
+  scheduleRecalculation,
+  computeDecayedScore,
+  recencyFactor,
   calculateSalesScore,
   calculateConversionScore,
   calculateRevenueScore,

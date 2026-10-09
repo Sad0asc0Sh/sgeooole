@@ -228,8 +228,10 @@ exports.getBestsellers = async (req, res) => {
       }
 
       // دریافت پرفروش‌ترین‌ها از ProductScore
+      // مرتب‌سازی ثانویه برای تساوی‌ها (مثلاً چند محصول با امتیاز صفر) تا
+      // ترتیب انتهای لیست بین ریکوئست‌ها ثابت و قابل پیش‌بینی باشد.
       const bestsellers = await ProductScore.find(query)
-        .sort({ decayed_score: -1 })
+        .sort({ decayed_score: -1, final_score: -1, total_units_sold: -1 })
         .limit(parseInt(limit) || 8)
         .populate({
           path: 'product_id',
