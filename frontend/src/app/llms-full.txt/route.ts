@@ -1,7 +1,8 @@
 /**
  * /llms-full.txt — the full text of the site's editorial content
- * (guides, glossary, comparisons) in one machine-readable file,
- * generated from the validated programmatic content layer.
+ * (guides, glossary, comparisons) plus the store FAQ and a citable
+ * store-facts block, in one machine-readable file, generated from the
+ * validated programmatic content layer.
  *
  * Lets an AI agent get everything in a single request instead of crawling.
  */
@@ -12,6 +13,7 @@ import {
   comparisons,
   type ContentBlock,
 } from "@/content/programmatic";
+import { defaultFAQs } from "@/app/faq/defaultFaqs";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
 
@@ -33,11 +35,25 @@ function renderBlock(block: ContentBlock): string {
 }
 
 function buildBody(): string {
+  // Freshness signal: the newest editorial update across the content layer.
+  const lastUpdated = [...guides, ...glossaryTerms, ...comparisons]
+    .map((entry) => entry.updatedAt)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+
   const parts: string[] = [
     `# ekgkala (ای کا جی کالا) — محتوای کامل راهنماها، واژه‌نامه و مقایسه‌ها`,
     ``,
     `> این فایل نسخه متنی کامل محتوای تحریریه‌ای سایت برای دستیارهای هوش مصنوعی است.`,
     `> وب‌سایت: ${SITE_URL}`,
+    ...(lastUpdated ? [`> آخرین به‌روزرسانی محتوای تحریریه‌ای: ${lastUpdated}`] : []),
+    ``,
+    `---`,
+    ``,
+    `# درباره ای کا جی کالا`,
+    ``,
+    `ای کا جی کالا (ekgkala) فروشگاه اینترنتی تخصصی تجهیزات نظارت تصویری و امنیتی در ایران است که از سال ۱۳۹۶ در مشهد فعالیت می‌کند و سه شعبه فعال دارد. پرداخت از طریق درگاه‌های امن زرین‌پال و سداد انجام می‌شود؛ سفارش‌های مشهد معمولاً همان روز کاری و شهرستان‌ها ۵ تا ۷ روز کاری تحویل می‌شوند. قیمت و موجودی زنده فقط روی صفحات محصول (${SITE_URL}/products) معتبر است.`,
     ``,
     `---`,
     ``,
@@ -93,6 +109,15 @@ function buildBody(): string {
     }
     parts.push(`---`, ``);
   }
+
+  // Store FAQ — the same default set rendered on /faq (ordering, payment,
+  // shipping, returns). Included so an agent can answer store-policy
+  // questions from this single file, without a second fetch.
+  parts.push(`# سوالات متداول فروشگاه`, ``, `${SITE_URL}/faq`, ``);
+  for (const faq of defaultFAQs) {
+    parts.push(`**${faq.question}**`, ``, faq.answer, ``);
+  }
+  parts.push(`---`, ``);
 
   return parts.join("\n");
 }

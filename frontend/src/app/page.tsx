@@ -156,9 +156,12 @@ export default async function Home() {
     fetchBanners(),
   ]);
 
-  // Never publish a fabricated phone number as factual data: contactPoint is
-  // emitted only when a real phone is configured via NEXT_PUBLIC_CONTACT_PHONE.
-  const contactPhone = (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim();
+  // Never publish a fabricated phone number as factual data: contactPoint
+  // uses NEXT_PUBLIC_CONTACT_PHONE when configured, and otherwise falls back
+  // to the branch-1 landline already published on the site's own /contact
+  // page (ContactClient branches) — a real, publicly listed number.
+  const contactPhone =
+    (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim() || "05135021720";
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -182,6 +185,16 @@ export default async function Home() {
               },
             }
           : {}),
+        // Postal address of branch 1, exactly as published on /contact —
+        // completes the Organization entity for AI assistants verifying
+        // the business (agent-readiness: contactPoint + address).
+        address: {
+          "@type": "PostalAddress",
+          addressCountry: "IR",
+          addressLocality: "مشهد",
+          streetAddress: "پیروزی 75 بین ولایتی 9و11",
+        },
+
         sameAs: (process.env.NEXT_PUBLIC_SOCIAL_LINKS || "")
           .split(",")
           .map((s) => s.trim())
