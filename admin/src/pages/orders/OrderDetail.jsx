@@ -432,6 +432,28 @@ function OrderDetail() {
       mobileTitle: true,
     },
     {
+      // The variant the customer actually picked (e.g. رنگ: قرمز). The order
+      // API has always returned variantOptions on each item — this column is
+      // what lets the admin identify it; same Tag pattern as AbandonedCartsPage.
+      title: 'متغیر انتخاب‌شده',
+      dataIndex: 'variantOptions',
+      key: 'variantOptions',
+      render: (variantOptions) => {
+        if (!Array.isArray(variantOptions) || variantOptions.length === 0) return '—'
+        return (
+          <Space size={[4, 4]} wrap>
+            {variantOptions
+              .filter((opt) => opt && opt.name != null && opt.value != null)
+              .map((opt, i) => (
+                <Tag key={i} style={{ margin: 0 }}>
+                  {opt.name}: {opt.value}
+                </Tag>
+              ))}
+          </Space>
+        )
+      },
+    },
+    {
       title: 'SKU',
       dataIndex: ['product', 'sku'],
       key: 'sku',
