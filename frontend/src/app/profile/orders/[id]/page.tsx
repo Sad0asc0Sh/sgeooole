@@ -130,8 +130,12 @@ export default function OrderDetailsPage() {
     return (
         <div className="min-h-screen bg-gray-50 pb-24 lg:pb-12">
             <div className="lg:max-w-6xl lg:mx-auto lg:px-6 lg:pt-8">
-            {/* Header: sticky app-bar on mobile, page card on desktop */}
-            <div className="bg-white p-4 lg:p-6 shadow-sm sticky top-0 z-10 md:static lg:rounded-2xl lg:border lg:border-gray-100 lg:shadow-sm lg:mb-6">
+            {/* Header: sticky app-bar on mobile, page card on desktop.
+                z-30 keeps the app-bar above every page-content stacking
+                context (cards isolate their inner z-indexes — see the
+                Status Tracker card below) while staying under the global
+                header / overlays (z-50). */}
+            <div className="bg-white p-4 lg:p-6 shadow-sm sticky top-0 z-30 md:static lg:rounded-2xl lg:border lg:border-gray-100 lg:shadow-sm lg:mb-6">
                 <nav className="hidden lg:flex items-center gap-1.5 text-xs text-gray-400 mb-3">
                     <Link href="/profile" className="hover:text-kala-600 transition-colors">حساب کاربری</Link>
                     <ChevronRight size={14} className="rotate-180 shrink-0" />
@@ -150,8 +154,15 @@ export default function OrderDetailsPage() {
             <div className="p-4 lg:p-0 grid gap-4 lg:gap-6 lg:grid-cols-12 items-start">
                 {/* ── Main column: tracker + tracking + items ── */}
                 <div className="lg:col-span-8 space-y-4 lg:space-y-6 min-w-0">
-                {/* Status Tracker */}
-                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm">
+                {/* Status Tracker. `isolate` gives the card its own stacking
+                    context: the steps row's inner z-10 (it must paint above
+                    the progress track inside the card) stays trapped in the
+                    card, so while scrolling it slides UNDER the sticky
+                    app-bar instead of painting over its title — without
+                    isolation, the card creates no stacking context and the
+                    row's z-10 ties with the app-bar's and wins by DOM order
+                    (user screenshot, 2026-10-10). */}
+                <div className="bg-white rounded-2xl p-5 lg:p-6 border border-gray-100 shadow-sm isolate">
                     <div className="flex flex-wrap justify-between items-center gap-2 mb-6">
                         <span className="text-sm font-bold text-gray-700">کد سفارش: <span className="font-mono text-gray-900" dir="ltr">{order.orderCode || order._id.slice(-6).toUpperCase()}</span></span>
                         <span className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString('fa-IR')}</span>
