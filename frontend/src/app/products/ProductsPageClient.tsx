@@ -872,19 +872,19 @@ function ProductListingContent() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-6 bg-gradient-to-l from-white via-white to-[#faf8f0] rounded-2xl border border-gray-100 shadow-sm p-6 overflow-hidden relative"
+            className="mb-6 bg-gradient-to-l from-white via-white to-[#faf8f0] rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6 overflow-hidden relative"
           >
             <div className="absolute left-0 top-0 bottom-0 w-24 bg-gradient-to-r from-[#D4AF37]/5 to-transparent" />
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#C9A033] flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
-                <Search className="w-6 h-6 text-white" />
+            <div className="flex items-start gap-3 sm:items-center sm:gap-4 relative z-10">
+              <div className="w-11 h-11 sm:w-14 sm:h-14 shrink-0 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#C9A033] flex items-center justify-center shadow-lg shadow-[#D4AF37]/20">
+                <Search className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div className="flex-1">
-                <h1 className="text-lg font-bold text-gray-900">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base leading-7 sm:text-lg font-bold text-gray-900">
                   نتایج جستجو برای{" "}
-                  <span className="text-[#D4AF37]">«{searchQuery}»</span>
+                  <span className="text-[#D4AF37] [overflow-wrap:anywhere]">«{searchQuery}»</span>
                 </h1>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5 sm:mt-1">
                   {showInitialLoader ? (
                     <span className="inline-flex items-center gap-1">
                       <Loader2 className="w-3 h-3 animate-spin" />
@@ -898,10 +898,11 @@ function ProductListingContent() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => removeFilter("search")}
-                className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
+                className="shrink-0 whitespace-nowrap px-3 py-2 text-xs sm:px-4 sm:text-sm font-medium text-gray-600 hover:text-gray-900 bg-white/80 sm:bg-transparent border border-gray-200 sm:border-transparent hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-1"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 shrink-0" />
                 حذف جستجو
               </button>
             </div>
