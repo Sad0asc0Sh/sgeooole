@@ -14,6 +14,8 @@ interface CartItemProps {
         qty: number;
         discount?: number;
         campaignLabel?: string;
+        /** موجودی لحظه‌ای همین قلم (از بک‌اند)؛ وقتی معلوم باشد دکمه‌ی + روی سقف غیرفعال است. */
+        countInStock?: number;
         isFlashDeal?: boolean;
         flashDealEndTime?: string;
         isSpecialOffer?: boolean;
@@ -131,7 +133,13 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
                     <div className="flex items-center bg-gray-50 rounded-lg border border-gray-100 h-8">
                         <button
                             onClick={onIncrease}
-                            className="w-8 h-full flex items-center justify-center text-kala-600 hover:bg-kala-100 rounded-r-lg transition"
+                            disabled={typeof item.countInStock === "number" && item.qty >= item.countInStock}
+                            title={
+                                typeof item.countInStock === "number" && item.qty >= item.countInStock
+                                    ? "به سقف موجودی رسیده‌اید"
+                                    : undefined
+                            }
+                            className="w-8 h-full flex items-center justify-center text-kala-600 hover:bg-kala-100 rounded-r-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <Plus size={14} />
                         </button>

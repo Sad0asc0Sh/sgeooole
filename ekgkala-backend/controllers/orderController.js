@@ -2,6 +2,7 @@ const Order = require('../models/Order')
 const Cart = require('../models/Cart')
 const SalesEvent = require('../models/SalesEvent')
 const paymentService = require('../utils/paymentService')
+const inventoryService = require('../services/inventoryService')
 const { ROLES, PERMISSIONS } = require('../config/rbac')
 const {
   computeItemPricing,
@@ -200,50 +201,16 @@ const revertSalesEvents = async (orderId) => {
 }
 
 // ============================================
-// Helper for updating product stock and sales count
+// موجودی و شمارنده‌ی فروش — واگذار شده به inventoryService
+// --------------------------------------------
+// قبلاً adjustProductStats همین‌جا با read-modify-save و clamp تا صفر کار
+// می‌کرد: سفارش بزرگ‌تر از موجودی بی‌صدا رد می‌شد (oversell) و دو پرداخت
+// همزمان روی هم می‌نوشتند. حالا:
+//  - موجودی فقط با رزرو/آزادسازی اتمیک inventoryService جابه‌جا می‌شود
+//    (رزرو هنگام ثبت سفارش، آزادسازی هنگام لغو — بر اساس فلگ stockDeducted).
+//  - salesCount جدا و اتمیک در لحظه‌ی پرداخت موفق/برگشت آن تغییر می‌کند
+//    (inventoryService.adjustSalesCount) تا معنای آماری فروش حفظ شود.
 // ============================================
-const adjustProductStats = async (orderItems, isIncrement) => {
-  try {
-    const Product = require('../models/Product')
-    const multiplier = isIncrement ? 1 : -1
-
-    for (const item of orderItems) {
-      if (!item.product) continue
-
-      const product = await Product.findById(item.product)
-      if (!product) continue
-
-      // Update sales count (salesCount)
-      product.salesCount = Math.max(0, (product.salesCount || 0) + (item.quantity * multiplier))
-
-      // Update stock if it's a simple product
-      if (product.productType === 'simple') {
-        product.stock = Math.max(0, (product.stock || 0) - (item.quantity * multiplier))
-      }
-      // Update stock for variable products
-      else if (product.productType === 'variable' && item.variantOptions && item.variantOptions.length > 0) {
-        // Find matching variant based on options
-        const isMatch = (variantOptions, itemOptions) => {
-          if (!variantOptions || !itemOptions) return false
-          if (variantOptions.length !== itemOptions.length) return false
-          return itemOptions.every(io =>
-            variantOptions.some(vo => vo.name === io.name && vo.value === io.value)
-          )
-        }
-
-        const variant = product.variants.find(v => isMatch(v.options, item.variantOptions))
-        if (variant) {
-          variant.stock = Math.max(0, (variant.stock || 0) - (item.quantity * multiplier))
-        }
-      }
-
-      // Save without triggering validations to avoid unrelated schema errors
-      await product.save({ validateBeforeSave: false })
-    }
-  } catch (error) {
-    console.error('Error in adjustProductStats:', error)
-  }
-}
 const sanitizeOrderForCustomer = (order) => {
   if (!order) return order
   const sanitized = { ...order }
@@ -382,6 +349,22 @@ exports.createOrder = async (req, res) => {
       Math.round(serverItemsPrice + (Number(finalShippingPrice) || 0) + (Number(taxPrice) || 0) - effectiveCouponDiscount),
     )
 
+    // رزرو اتمیک موجودی — قلب اصلاح: سفارش فقط وقتی ثبت می‌شود که موجودی
+    // همه‌ی اقلام (محصول ساده و ترکیب دقیق محصول متغیر، با جمع اقلام
+    // تکراری) کافی باشد. کسر شرطیِ MongoDB (stock >= qty) جلوی oversell
+    // و مسابقه‌ی دو خرید همزمان را می‌گیرد؛ اگر یک قلم کم باشد، رزرو
+    // بقیه rollback می‌شود و هیچ سفارشی ثبت نمی‌شود.
+    try {
+      await inventoryService.reserveStock(serverItems)
+    } catch (stockErr) {
+      return res.status(stockErr.statusCode || 409).json({
+        success: false,
+        code: stockErr.code || 'INSUFFICIENT_STOCK',
+        message: stockErr.message || 'موجودی کافی نیست',
+        ...(stockErr.details ? { data: { insufficient: stockErr.details } } : {}),
+      })
+    }
+
     // ایجاد سفارش
     const order = new Order({
       user: userId,
@@ -397,9 +380,17 @@ exports.createOrder = async (req, res) => {
       totalDiscount: Math.round(serverProductSavings + effectiveCouponDiscount),
       couponCode: couponCode ? String(couponCode).toUpperCase() : undefined,
       orderStatus: 'Pending',
+      stockDeducted: true,
     })
 
-    const createdOrder = await order.save()
+    let createdOrder
+    try {
+      createdOrder = await order.save()
+    } catch (saveErr) {
+      // سفارش ثبت نشد => رزرو موجودی نباید بماند
+      await inventoryService.releaseStock(serverItems)
+      throw saveErr
+    }
 
     // If couponCode was used, increment coupon usageCount
     if (couponCode) {
@@ -615,8 +606,37 @@ exports.updateOrderStatus = async (req, res) => {
       })
     }
 
+    const previousStatus = order.orderStatus
+
+    // خروج از لغو یعنی سفارش دوباره به موجودی نیاز دارد: قبل از هر تغییری
+    // رزرو اتمیک انجام می‌شود؛ اگر موجودی دیگر کافی نباشد، تغییر وضعیت
+    // رد می‌شود تا سفارش لغوشده نتواند oversell بسازد.
+    let stockReservedNow = false
+    if (previousStatus === 'Cancelled' && status !== 'Cancelled' && !order.stockDeducted) {
+      try {
+        await inventoryService.reserveStock(order.orderItems)
+        stockReservedNow = true
+      } catch (stockErr) {
+        return res.status(stockErr.statusCode || 409).json({
+          success: false,
+          code: stockErr.code || 'INSUFFICIENT_STOCK',
+          message: stockErr.message || 'موجودی کافی نیست',
+        })
+      }
+    }
+
     const updates = {
       orderStatus: status,
+    }
+
+    if (stockReservedNow) {
+      updates.stockDeducted = true
+    }
+
+    // لغو سفارش: فلگ رزرو در همان آپدیت وضعیت خاموش می‌شود تا آزادسازی
+    // موجودی (بعد از آپدیت) دوباره شمرده نشود.
+    if (status === 'Cancelled' && previousStatus !== 'Cancelled' && order.stockDeducted) {
+      updates.stockDeducted = false
     }
 
     if (status === 'Shipped' && !order.shippedAt) {
@@ -703,28 +723,46 @@ exports.updateOrderStatus = async (req, res) => {
       updates.adminNotes = normalizedAdminNotes
     }
 
-    const updatedOrder = await Order.findByIdAndUpdate(
-      req.params.id,
-      { $set: updates },
-      {
-        new: true,
-        runValidators: false,
-      },
-    )
+    let updatedOrder
+    try {
+      updatedOrder = await Order.findByIdAndUpdate(
+        req.params.id,
+        { $set: updates },
+        {
+          new: true,
+          runValidators: false,
+        },
+      )
+    } catch (updateErr) {
+      // تغییر وضعیت انجام نشد => رزروی که همین حالا گرفته شد نباید بماند
+      if (stockReservedNow) {
+        await inventoryService.releaseStock(order.orderItems)
+      }
+      throw updateErr
+    }
 
-    // NEW LOGIC: Revert stats if Cancelled, or re-apply if uncanceled
-    const previousStatus = order.orderStatus
+    // موجودی و آمار فروش هنگام لغو / خروج از لغو:
+    //  - موجودی: آزادسازی بر اساس فلگ stockDeducted است، نه پرداخت؛ چون
+    //    رزرو هنگام ثبت سفارش انجام شده (حتی سفارش پرداخت‌نشده هم موجودی
+    //    قفل کرده و لغوش باید آن را برگرداند).
+    //  - salesCount و SalesEvent فقط برای فروش قطعی‌شده (پرداخت‌شده/ COD
+    //    قدیمی) برمی‌گردد، دقیقاً مثل قبل.
     if (status === 'Cancelled' && previousStatus !== 'Cancelled') {
-      // Revert if it was a paid order or COD
+      // سفارش‌های قدیمیِ پرداخت‌شده فلگ ندارند ولی موجودی‌شان در سیستم
+      // قبلی هنگام پرداخت کسر شده بود؛ آن‌ها هم باید برگردند. (شرط OR
+      // است و آزادسازی فقط یک بار صدا زده می‌شود.)
+      if (order.stockDeducted || order.isPaid) {
+        await inventoryService.releaseStock(order.orderItems)
+      }
       if (order.isPaid || order.paymentMethod === 'cod') {
-        await adjustProductStats(order.orderItems, false)
+        await inventoryService.adjustSalesCount(order.orderItems, -1)
         // Revert SalesEvents for Bestsellers scoring engine
         await revertSalesEvents(order._id)
       }
     } else if (previousStatus === 'Cancelled' && status !== 'Cancelled') {
       // Re-apply if uncanceled and it's paid or COD
       if (order.isPaid || order.paymentMethod === 'cod') {
-        await adjustProductStats(order.orderItems, true)
+        await inventoryService.adjustSalesCount(order.orderItems, 1)
         // Re-record SalesEvents for Bestsellers scoring engine
         await recordSalesEvents(order.orderItems, order._id)
       }
@@ -881,6 +919,30 @@ exports.payOrder = async (req, res) => {
       })
     }
 
+    // سفارش لغوشده قابل پرداخت نیست (رزرو موجودی‌اش آزاد شده است)
+    if (order.orderStatus === 'Cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'این سفارش لغو شده است و قابل پرداخت نیست',
+      })
+    }
+
+    // سفارش‌های قدیمی (قبل از رزرو هنگام ثبت) هنوز موجودی رزرو نکرده‌اند:
+    // قبل از فرستادن کاربر به درگاه، موجودی را زودهنگام چک می‌کنیم تا
+    // برای کالای ناموجود پول گرفته نشود. تضمین نهایی هنگام تایید پرداخت
+    // با رزرو اتمیک در verifyPayment است.
+    if (!order.stockDeducted) {
+      try {
+        await inventoryService.assertAvailable(order.orderItems)
+      } catch (stockErr) {
+        return res.status(stockErr.statusCode || 409).json({
+          success: false,
+          code: stockErr.code || 'INSUFFICIENT_STOCK',
+          message: stockErr.message || 'موجودی کافی نیست',
+        })
+      }
+    }
+
     // URL بازگشت بعد از پرداخت
     let frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
     // اطمینان از وجود پروتکل
@@ -986,6 +1048,35 @@ exports.verifyPayment = async (req, res) => {
       })
     }
 
+    // سفارش لغوشده (مثلاً توسط ادمین وقتی کاربر در درگاه بوده) نباید با
+    // تایید پرداخت دوباره رزرو/فعال شود.
+    if (order.orderStatus === 'Cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'این سفارش لغو شده است',
+        orderId: order._id,
+      })
+    }
+
+    // سفارش‌های جدید موجودی‌شان هنگام ثبت رزرو شده و این‌جا دوباره کسر
+    // نمی‌شوند. سفارش‌های قدیمیِ بدون رزرو، قبل از تایید نهایی پرداخت
+    // (capture) به‌صورت اتمیک رزرو می‌شوند؛ اگر موجودی کافی نباشد پرداخت
+    // تایید نمی‌شود تا پول برای کالای ناموجود قطعی نشود.
+    let reservedForLegacyOrder = false
+    if (!order.stockDeducted) {
+      try {
+        await inventoryService.reserveStock(order.orderItems)
+        reservedForLegacyOrder = true
+      } catch (stockErr) {
+        return res.status(stockErr.statusCode || 409).json({
+          success: false,
+          code: stockErr.code || 'INSUFFICIENT_STOCK',
+          message: stockErr.message || 'موجودی کافی نیست',
+          orderId: order._id,
+        })
+      }
+    }
+
     // تعیین نوع درگاه
     const gateway = order.paymentGateway || 'zarinpal'
 
@@ -1009,6 +1100,9 @@ exports.verifyPayment = async (req, res) => {
       order.isPaid = true
       order.paidAt = new Date()
       order.orderStatus = 'Processing' // تغییر وضعیت به "در حال پردازش"
+      if (reservedForLegacyOrder) {
+        order.stockDeducted = true
+      }
 
       // ذخیره اطلاعات تایید بر اساس درگاه
       if (gateway === 'zarinpal') {
@@ -1029,8 +1123,9 @@ exports.verifyPayment = async (req, res) => {
 
       await order.save()
 
-      // NEW LOGIC: Adjust stats after successful payment
-      await adjustProductStats(order.orderItems, true)
+      // موجودی قبلاً رزرو شده (هنگام ثبت سفارش یا همین‌جا برای سفارش
+      // قدیمی) و دوباره کسر نمی‌شود؛ فقط شمارنده‌ی فروش قطعی می‌شود.
+      await inventoryService.adjustSalesCount(order.orderItems, 1)
 
       // Record SalesEvents for Bestsellers scoring engine
       await recordSalesEvents(order.orderItems, order._id)
@@ -1063,6 +1158,13 @@ exports.verifyPayment = async (req, res) => {
         },
       })
     } else {
+      // تایید درگاه ناموفق بود: رزروی که برای سفارش قدیمی همین‌جا گرفته
+      // شد آزاد می‌شود تا موجودی بی‌دلیل قفل نماند. (سفارش‌های جدید
+      // رزروشان را نگه می‌دارند چون سفارش هنوز Pending و قابل پرداخت است.)
+      if (reservedForLegacyOrder) {
+        await inventoryService.releaseStock(order.orderItems)
+      }
+
       res.status(400).json({
         success: false,
         message: verifyResult.message || 'تایید پرداخت ناموفق بود',
@@ -1245,6 +1347,19 @@ exports.createOrderForUser = async (req, res) => {
       Math.round(serverAdminItemsPrice + (Number(shippingPrice) || 0) + (Number(taxPrice) || 0)),
     )
 
+    // رزرو اتمیک موجودی — سفارش ادمین هم از همان قانون سفارش مشتری پیروی
+    // می‌کند: بدون موجودی کافی، سفارشی ثبت نمی‌شود.
+    try {
+      await inventoryService.reserveStock(serverAdminItems)
+    } catch (stockErr) {
+      return res.status(stockErr.statusCode || 409).json({
+        success: false,
+        code: stockErr.code || 'INSUFFICIENT_STOCK',
+        message: stockErr.message || 'موجودی کافی نیست',
+        ...(stockErr.details ? { data: { insufficient: stockErr.details } } : {}),
+      })
+    }
+
     // ایجاد سفارش
     const order = new Order({
       user: userId,
@@ -1260,9 +1375,16 @@ exports.createOrderForUser = async (req, res) => {
       orderStatus: 'Pending',
       adminNotes: adminNotes || '',
       isPaid: false, // Default not paid
+      stockDeducted: true,
     })
 
-    const createdOrder = await order.save()
+    let createdOrder
+    try {
+      createdOrder = await order.save()
+    } catch (saveErr) {
+      await inventoryService.releaseStock(serverAdminItems)
+      throw saveErr
+    }
 
     // Audit Log
     const { logAction } = require('../utils/auditLogger')

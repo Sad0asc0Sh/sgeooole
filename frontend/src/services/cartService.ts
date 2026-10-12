@@ -27,6 +27,8 @@ export interface CartItem {
     public_id?: string;
   }>;
   countInStock?: number;
+  // موجودی لحظه‌ای همین قلم از بک‌اند (محصول ساده یا ترکیب انتخاب‌شده)
+  availableStock?: number;
   discount?: number;
 }
 

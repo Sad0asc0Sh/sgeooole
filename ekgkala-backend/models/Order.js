@@ -205,6 +205,14 @@ const orderSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    // موجودی این سفارش هنگام ثبت، به‌صورت اتمیک از انبار رزرو/کسر شده است؟
+    // (سفارش‌های قدیمیِ قبل از این فیلد undefined/false هستند و رزرو آن‌ها
+    // هنگام پرداخت در verifyPayment انجام می‌شود.)
+    stockDeducted: {
+      type: Boolean,
+      default: false,
+    },
     paidAt: {
       type: Date,
     },

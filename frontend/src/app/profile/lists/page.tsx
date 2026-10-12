@@ -7,6 +7,7 @@ import { wishlistService, WishlistItem } from "@/services/wishlistService";
 import { useCart } from "@/hooks/useCart";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { wishlistItemToProduct } from "@/lib/wishlistCard";
+import { initialSelection, toOptions } from "@/lib/variants";
 import { getServerNow } from "@/lib/serverClock";
 
 const ITEMS_PER_PAGE = 15; // 3 rows × 5 columns for desktop
@@ -19,7 +20,7 @@ export default function ListsPage() {
     const [now, setNow] = useState(() => getServerNow());
     const [currentPage, setCurrentPage] = useState(1);
 
-    const { addToCart, updateQuantity, removeFromCart, getItemQuantity } = useCart();
+    const { addToCart, updateQuantity, removeFromCart, getItemQuantity, cartItems } = useCart();
 
     // Fetch wishlist on mount
     useEffect(() => {
@@ -84,9 +85,19 @@ export default function ListsPage() {
     const handleIncrease = async (item: WishlistItem) => {
         const qty = getItemQuantity(item._id);
         if (qty === 0) {
-            await addToCart(wishlistItemToProduct(item, now), 1);
+            const product = wishlistItemToProduct(item, now);
+            // محصول متغیر بدون ترکیب قابل سفارش نیست (موجودی روی ترکیب
+            // است): مثل صفحه‌ی محصول، ترکیب پیش‌فرض (اولین ترکیب موجود)
+            // انتخاب می‌شود تا قلم سبد یک ترکیب مشخص داشته باشد.
+            const variantOptions =
+                product.productType === "variable" && product.variants && product.variants.length > 0
+                    ? toOptions(initialSelection(product.variants))
+                    : undefined;
+            await addToCart(product, 1, variantOptions && variantOptions.length > 0 ? variantOptions : undefined);
         } else {
-            await updateQuantity(item._id, qty + 1);
+            // ادامه‌ی همان قلم سبد با ترکیب خودش (برای محصولات متغیر)
+            const line = cartItems.find((i) => i.id === item._id);
+            await updateQuantity(item._id, qty + 1, line?.variantOptions);
         }
     };
 
@@ -95,10 +106,11 @@ export default function ListsPage() {
      */
     const handleDecrease = async (item: WishlistItem) => {
         const qty = getItemQuantity(item._id);
+        const line = cartItems.find((i) => i.id === item._id);
         if (qty > 1) {
-            await updateQuantity(item._id, qty - 1);
+            await updateQuantity(item._id, qty - 1, line?.variantOptions);
         } else {
-            await removeFromCart(item._id);
+            await removeFromCart(item._id, line?.variantOptions);
         }
     };
 

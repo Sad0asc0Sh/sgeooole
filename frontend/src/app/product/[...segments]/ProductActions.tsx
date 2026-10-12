@@ -71,7 +71,12 @@ export default function ProductActions({ product, variantOptions = [], selectedC
         }
     };
 
+    // سقف موجودی همین محصول/ترکیب انتخاب‌شده (countInStock بعد از اعمال
+    // ترکیب، موجودی همان ترکیب است): دکمه‌ی + روی سقف غیرفعال می‌شود.
+    const atStockCap = product.countInStock > 0 && quantity >= product.countInStock;
+
     const handleIncrement = async () => {
+        if (atStockCap) return;
         try {
             await updateQuantity(product.id, quantity + 1, effectiveVariantOptions);
         } catch (err) {
@@ -155,7 +160,9 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                                 <motion.button
                                     whileTap={{ scale: 0.8 }}
                                     onClick={handleIncrement}
-                                    className="w-11 h-11 flex items-center justify-center text-amber-700 rounded-lg hover:bg-amber-50 transition-colors"
+                                    disabled={atStockCap}
+                                    title={atStockCap ? "به سقف موجودی رسیده‌اید" : undefined}
+                                    className={`w-11 h-11 flex items-center justify-center text-amber-700 rounded-lg transition-colors ${atStockCap ? "opacity-40 cursor-not-allowed" : "hover:bg-amber-50"}`}
                                 >
                                     <Plus size={22} />
                                 </motion.button>
@@ -252,7 +259,9 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                             <motion.button
                                 whileTap={{ scale: 0.8 }}
                                 onClick={handleIncrement}
-                                className="w-10 h-10 flex items-center justify-center text-amber-700 rounded-full hover:bg-amber-50 transition-colors"
+                                disabled={atStockCap}
+                                title={atStockCap ? "به سقف موجودی رسیده‌اید" : undefined}
+                                className={`w-10 h-10 flex items-center justify-center text-amber-700 rounded-full transition-colors ${atStockCap ? "opacity-40 cursor-not-allowed" : "hover:bg-amber-50"}`}
                             >
                                 <Plus size={20} />
                             </motion.button>

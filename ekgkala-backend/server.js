@@ -677,6 +677,10 @@ const connectDB = async () => {
       const { startCartCleanupJob } = require('./jobs/cartCleanupJob')
       startCartCleanupJob()
 
+      // آزادسازی رزرو موجودی سفارش‌های پرداخت‌نشده‌ی قدیمی (لغو خودکار + بازگشت موجودی)
+      const startUnpaidOrderStockReleaseJob = require('./jobs/unpaidOrderStockReleaseJob')
+      startUnpaidOrderStockReleaseJob()
+
       // غیرفعال‌سازی خودکار پیشنهاد لحظه‌ای/شگفت‌انگیزِ منقضی + حذف تخفیف (هر دقیقه)
       const { startPromotionExpiryJob } = require('./jobs/promotionExpiryJob')
       startPromotionExpiryJob()

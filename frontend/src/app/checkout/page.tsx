@@ -671,6 +671,14 @@ export default function CheckoutPage() {
         } catch (err: any) {
             console.error("[CHECKOUT] Error placing order:", err);
             setError(err.message || "خطا در ثبت سفارش");
+            // If the server rejected the order for insufficient stock,
+            // refresh the cart from live data so quantities snap back to
+            // what is actually available before the user retries.
+            if (typeof err?.message === "string" && err.message.includes("موجودی")) {
+                try {
+                    await revalidateCartPrices();
+                } catch { /* keep current cart */ }
+            }
             // If the server rejected the coupon (expired/overused between
             // validation and order creation), drop it locally and refresh
             // prices so the user can retry with one click.

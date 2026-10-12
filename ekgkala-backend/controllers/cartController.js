@@ -4,7 +4,7 @@ const Product = require('../models/Product')
 const Settings = require('../models/Settings')
 const { sendReminderEmail, sendReminderSMS, sendExpiryWarningEmail, sendExpiryWarningSMS } = require('../utils/notificationService')
 
-const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants category'
+const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants category stock'
 
 // Helper function to get cart settings
 async function getCartSettings() {
@@ -38,6 +38,19 @@ const {
   computeItemPricing,
   getActiveSalesCampaignContext,
 } = require('../services/pricingService')
+const inventoryService = require('../services/inventoryService')
+
+// پاسخ استاندارد «موجودی کافی نیست» برای همه‌ی مسیرهای سبد (409) تا
+// فرانت‌اند بتواند سبد را با سرور reconcile کند (کد INSUFFICIENT_STOCK).
+const insufficientStockResponse = (res, { name, requested, available, currentQuantity }) =>
+  res.status(409).json({
+    success: false,
+    code: 'INSUFFICIENT_STOCK',
+    message: `موجودی «${name || 'محصول'}» کافی نیست؛ موجودی فعلی ${available} عدد است`,
+    available,
+    requested,
+    currentQuantity,
+  })
 
 const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => {
   if (!cartId) {
@@ -90,6 +103,9 @@ const buildCartResponse = async (cartId, { updateStoredTotal = false } = {}) => 
         : (pricing.specialOfferEndTime ? new Date(pricing.specialOfferEndTime).toISOString() : undefined),
       quantity: Number(item.quantity || item.qty || 1),
       qty: Number(item.quantity || item.qty || 1),
+      // موجودی لحظه‌ای همین قلم (محصول ساده یا ترکیب انتخاب‌شده) تا فرانت
+      // سقف تعداد را بداند؛ مرجع نهایی همچنان رزرو هنگام ثبت سفارش است.
+      availableStock: inventoryService.availableForCart(product, item.variantOptions),
       totalItemPrice: pricing.finalPrice * (Number(item.quantity || item.qty || 1)),
       image: normalizedImage,
     }
@@ -463,6 +479,8 @@ exports.syncCart = async (req, res) => {
       })
     }
 
+    const stockCapped = []
+
     // همگام‌سازی آیتم‌ها
     for (const incomingItem of items) {
       // اعتبارسنجی محصول
@@ -475,6 +493,20 @@ exports.syncCart = async (req, res) => {
       // پیدا کردن آیتم در سبد موجود
       const incomingVariantOptions = normalizeVariantOptions(incomingItem.variantOptions)
       const incomingVariantKey = getVariantKey(incomingVariantOptions)
+
+      // سقف موجودی: همگام‌سازی هرگز قلمی بالاتر از موجودی انبار نمی‌سازد
+      // (سینک مهمان/لوکال است و رفتار درستش clamp است، نه خطا). قلم
+      // ناموجود اصلاً وارد سبد نمی‌شود.
+      const availableStock = inventoryService.availableForCart(product, incomingVariantOptions)
+      if (availableStock <= 0) {
+        stockCapped.push({
+          product: String(product._id),
+          name: product.name,
+          requested: Number(incomingItem.quantity || 1) || 1,
+          available: 0,
+        })
+        continue
+      }
 
       const existingItemIndex = cart.items.findIndex((item) => {
         if (item.product.toString() !== incomingItem.product) return false
@@ -494,21 +526,41 @@ exports.syncCart = async (req, res) => {
       })
 
       if (existingItemIndex > -1) {
-        // به‌روزرسانی تعداد (حداکثر مقدار)
-        cart.items[existingItemIndex].quantity = Math.max(
+        // به‌روزرسانی تعداد (حداکثر مقدار، با سقف موجودی)
+        const desiredQty = Math.max(
           cart.items[existingItemIndex].quantity,
           incomingItem.quantity || 1
         )
+        const cappedQty = Math.min(desiredQty, availableStock)
+        if (cappedQty < desiredQty) {
+          stockCapped.push({
+            product: String(product._id),
+            name: product.name,
+            requested: desiredQty,
+            available: availableStock,
+          })
+        }
+        cart.items[existingItemIndex].quantity = cappedQty
         cart.items[existingItemIndex].price = product.price
         cart.items[existingItemIndex].variantOptions = incomingVariantOptions
         cart.items[existingItemIndex].variantKey = incomingVariantKey
       } else {
-        // افزودن آیتم جدید
+        // افزودن آیتم جدید (با سقف موجودی)
+        const desiredQty = Number(incomingItem.quantity || 1) || 1
+        const cappedQty = Math.min(desiredQty, availableStock)
+        if (cappedQty < desiredQty) {
+          stockCapped.push({
+            product: String(product._id),
+            name: product.name,
+            requested: desiredQty,
+            available: availableStock,
+          })
+        }
         cart.items.push({
           product: product._id,
           name: product.name,
           price: product.price,
-          quantity: incomingItem.quantity || 1,
+          quantity: cappedQty,
           image: product.images && product.images[0] ?
             (typeof product.images[0] === 'string' ? product.images[0] : product.images[0].url) :
             null,
@@ -547,6 +599,7 @@ exports.syncCart = async (req, res) => {
         totalPrice: pricedCart.totalPrice,
         couponCode: pricedCart.couponCode,
         version: pricedCart.version,
+        ...(stockCapped.length > 0 ? { stockCapped } : {}),
       },
     })
   } catch (error) {
@@ -692,6 +745,29 @@ exports.adjustItemQuantity = async (req, res) => {
     })()
 
     const itemMatch = { product: product._id, ...matchVariant }
+
+    // سقف موجودی برای افزایش تعداد: سبد نباید از موجودی انبار جلو بزند.
+    // (مرجع نهایی همچنان رزرو اتمیک هنگام ثبت سفارش است؛ این‌جا خطای
+    // زودهنگام و دقیق می‌دهیم تا کاربر در همان سبد بفهمد.)
+    if (parsedDelta > 0) {
+      const availableStock = inventoryService.availableForCart(product, normalizedVariantOptions)
+      const cartWithItem = await Cart.findOne(
+        { _id: cartId, items: { $elemMatch: itemMatch } },
+        { items: { $elemMatch: itemMatch } },
+      ).lean()
+      const currentQty = cartWithItem?.items?.[0]
+        ? Number(cartWithItem.items[0].quantity ?? cartWithItem.items[0].qty ?? 0) || 0
+        : 0
+
+      if (currentQty + parsedDelta > availableStock) {
+        return insufficientStockResponse(res, {
+          name: product.name,
+          requested: currentQty + parsedDelta,
+          available: availableStock,
+          currentQuantity: currentQty,
+        })
+      }
+    }
 
     let updatedCart = null
 
@@ -882,6 +958,17 @@ exports.addOrUpdateItem = async (req, res) => {
     }
 
     console.log('[CART] Product found:', product.name)
+
+    // سقف موجودی: ثبت تعداد بالاتر از موجودی انبار در سبد ممکن نیست
+    const availableStock = inventoryService.availableForCart(product, normalizedVariantOptions)
+    if (Number(quantity) > availableStock) {
+      return insufficientStockResponse(res, {
+        name: product.name,
+        requested: Number(quantity),
+        available: availableStock,
+        currentQuantity: 0,
+      })
+    }
 
     // تعیین قیمت محصول
     let finalPrice = product.price

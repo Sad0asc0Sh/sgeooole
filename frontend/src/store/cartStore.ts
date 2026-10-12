@@ -4,6 +4,7 @@ import { authService } from "@/services/authService";
 import { Product, productService } from "@/services/productService";
 import { resolvePricing } from "@/lib/pricing";
 import { findVariant, fromOptions, withSelectedVariant } from "@/lib/variants";
+import { clampQuantity, resolveAvailableStock } from "@/lib/stockLimits";
 import { getServerNow } from "@/lib/serverClock";
 import { settingsService } from "@/services/settingsService";
 import {
@@ -48,6 +49,8 @@ export interface LocalCartItem {
     isSpecialOffer?: boolean;
     specialOfferEndTime?: string;
     campaignLabel?: string;
+    /** عکس لحظه‌ای موجودی همین قلم (محصول/ترکیب) برای سقف تعداد در UI؛ مرجع نهایی بک‌اند است. */
+    countInStock?: number;
     variantOptions?: Array<{
         name: string;
         value: string;
@@ -192,6 +195,10 @@ const transformBackendItems = (backendItems: CartItem[]): LocalCartItem[] => {
             isSpecialOffer: Boolean(rawItem.isSpecialOffer ?? productData?.isSpecialOffer),
             specialOfferEndTime: rawItem.specialOfferEndTime ?? productData?.specialOfferEndTime,
             campaignLabel: rawItem.campaignLabel ?? productData?.campaignLabel,
+            countInStock:
+                typeof rawItem.availableStock === "number" && Number.isFinite(rawItem.availableStock)
+                    ? rawItem.availableStock
+                    : undefined,
         };
     });
 
@@ -310,6 +317,21 @@ const flushDeltaMutation = async (
     } catch (err: any) {
         const status = Number(err?.status ?? err?.response?.status);
         const code = err?.code ?? err?.data?.code ?? err?.response?.data?.code;
+
+        // 409/INSUFFICIENT_STOCK: تعداد از موجودی انبار جلو زده است. تلاش
+        // دوباره فایده ندارد؛ سبد را از سرور تازه می‌کنیم تا تعداد واقعی
+        // (سقف موجودی) نمایش داده شود.
+        if (status === 409 && code === "INSUFFICIENT_STOCK") {
+            try {
+                const refreshed = await cartService.getCart();
+                if (refreshed.success && refreshed.data) {
+                    applyServerCartIfNewer(set, get, refreshed.data);
+                }
+            } catch (reconcileErr: any) {
+                set({ error: reconcileErr?.message || err.message || "Error adjusting cart item" });
+            }
+            return;
+        }
 
         // 409/CART_MIN_QTY is a deterministic conflict (won't succeed on retry as-is). Reconcile instead of retrying.
         if (status === 409 && code === "CART_MIN_QTY") {
@@ -514,6 +536,14 @@ export const useCartStore = create<CartState>((set, get) => ({
                         isSpecialOffer: line.isSpecialOffer,
                         specialOfferEndTime: (line as any).specialOfferEndTime,
                         campaignLabel: line.campaignLabel,
+                        // موجودی تازه‌ی همین ترکیب + سقف تعداد برای سبد مهمان
+                        // (فقط وقتی موجودی مثبت است؛ قلم ناموجود حذف نمی‌شود
+                        // تا کاربر خودش آن را از سبد بردارد)
+                        countInStock: line.countInStock,
+                        qty:
+                            typeof line.countInStock === "number" && line.countInStock > 0
+                                ? clampQuantity(item.qty, line.countInStock)
+                                : item.qty,
                     };
                 } catch {
                     return item;
@@ -552,6 +582,11 @@ export const useCartStore = create<CartState>((set, get) => ({
             if (match) product = withSelectedVariant(product, match);
         }
 
+        // سقف موجودی (همان محصول/ترکیبِ تازه‌خوانده‌شده): تعداد قلم در سبد
+        // از موجودی انبار جلو نمی‌زند. مرجع نهایی بک‌اند است؛ این‌جا فقط
+        // تجربه‌ی کاربری زودهنگام است. موجودی نامعلوم = بدون سقف.
+        const availableStock = resolveAvailableStock(product, variantOptions);
+
         try {
             if (isAuthenticated) {
                 // Optimistic Update
@@ -572,7 +607,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     price: pricing.finalPrice,
                     originalPrice: pricing.basePrice,
                     image: product.images[0] || "/placeholder.svg",
-                    qty: safeQty,
+                    qty: clampQuantity(safeQty, availableStock),
                     discount: pricing.discount,
                     compareAtPrice: product.compareAtPrice,
                     isFlashDeal: product.isFlashDeal,
@@ -580,6 +615,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     isSpecialOffer: product.isSpecialOffer,
                     specialOfferEndTime: (product as any).specialOfferEndTime,
                     campaignLabel: product.campaignLabel,
+                    countInStock: availableStock,
                     variantOptions: variantOptions,
                 };
 
@@ -592,11 +628,14 @@ export const useCartStore = create<CartState>((set, get) => ({
                     return itemVariants.every(v1 => newVariants.some(v2 => v1.name === v2.name && v1.value === v2.value));
                 });
 
+                let deltaToSend = 0;
                 if (existingIndex > -1) {
                     const existing = updatedCart[existingIndex];
+                    const cappedQty = clampQuantity(existing.qty + safeQty, availableStock);
+                    deltaToSend = cappedQty - existing.qty;
                     updatedCart[existingIndex] = {
                         ...existing,
-                        qty: existing.qty + safeQty,
+                        qty: cappedQty,
                         price: pricing.finalPrice,
                         originalPrice: pricing.basePrice,
                         discount: pricing.discount,
@@ -606,13 +645,17 @@ export const useCartStore = create<CartState>((set, get) => ({
                         isSpecialOffer: product.isSpecialOffer,
                         specialOfferEndTime: (product as any).specialOfferEndTime,
                         campaignLabel: product.campaignLabel,
+                        countInStock: availableStock ?? existing.countInStock,
                     };
-                } else {
+                } else if (newItem.qty > 0) {
+                    deltaToSend = newItem.qty;
                     updatedCart.push(newItem);
                 }
                 set({ cartItems: updatedCart });
 
-                enqueueDeltaMutation(set, get, String(product.id), safeQty, variantOptions);
+                if (deltaToSend > 0) {
+                    enqueueDeltaMutation(set, get, String(product.id), deltaToSend, variantOptions);
+                }
             } else {
                 // Guest
                 const currentCart = [...cartItems];
@@ -639,7 +682,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                     const existing = currentCart[existingIndex];
                     currentCart[existingIndex] = {
                         ...existing,
-                        qty: existing.qty + safeQty,
+                        qty: clampQuantity(existing.qty + safeQty, availableStock),
                         price: pricing.finalPrice,
                         originalPrice: pricing.basePrice,
                         discount: pricing.discount,
@@ -649,6 +692,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                         isSpecialOffer: product.isSpecialOffer,
                         specialOfferEndTime: (product as any).specialOfferEndTime,
                         campaignLabel: product.campaignLabel,
+                        countInStock: availableStock ?? existing.countInStock,
                     };
                 } else {
                     const newItem: LocalCartItem = {
@@ -657,7 +701,7 @@ export const useCartStore = create<CartState>((set, get) => ({
                         price: pricing.finalPrice,
                         originalPrice: pricing.basePrice,
                         image: product.images[0] || "/placeholder.svg",
-                        qty: safeQty,
+                        qty: clampQuantity(safeQty, availableStock),
                         discount: pricing.discount,
                         compareAtPrice: product.compareAtPrice,
                         isFlashDeal: product.isFlashDeal,
@@ -665,9 +709,12 @@ export const useCartStore = create<CartState>((set, get) => ({
                         isSpecialOffer: product.isSpecialOffer,
                         specialOfferEndTime: (product as any).specialOfferEndTime,
                         campaignLabel: product.campaignLabel,
+                        countInStock: availableStock,
                         variantOptions: variantOptions,
                     };
-                    currentCart.push(newItem);
+                    if (newItem.qty > 0) {
+                        currentCart.push(newItem);
+                    }
                 }
 
                 saveLocalCart(currentCart, get().cartConfig);
@@ -785,7 +832,16 @@ export const useCartStore = create<CartState>((set, get) => ({
 
         if (!currentItem) return;
 
-        const nextQty = Math.max(1, Number(quantity) || 1);
+        // سقف موجودیِ عکس‌گرفته‌شده روی همین قلم (اگر معلوم باشد): افزایش
+        // از سقف جلو نمی‌زند، ولی یک عکسِ کهنه هرگز تعداد فعلی را به زور
+        // پایین نمی‌کشد — اصلاح کاهشی با سرور/revalidate است و 409 بک‌اند
+        // هم reconcile می‌شود.
+        const requestedQty = Math.max(1, Number(quantity) || 1);
+        const cap = currentItem.countInStock;
+        const nextQty =
+            cap !== undefined && requestedQty > currentItem.qty
+                ? Math.max(currentItem.qty, clampQuantity(requestedQty, cap))
+                : requestedQty;
         const delta = nextQty - currentItem.qty;
         if (delta === 0) return;
 
