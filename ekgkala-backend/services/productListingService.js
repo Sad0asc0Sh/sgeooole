@@ -278,8 +278,17 @@ function pricingStages(campaigns, now) {
   }
   return [
     { $addFields: { [INTERNAL]: { campaign: branches.length ? { $switch: { branches, default: null } } : null } } },
+    // محصول متغیری که «همه‌ی» متغیرهایش excludeFromPromotion=true دارند هیچ مدل مشمولی ندارد:
+    // هیچ پروموشنی (Sale / لحظه‌ای / شگفت‌انگیز) روی آن معنا ندارد. (آینه‌ی areAllVariantsExcluded)
+    // بقیه‌ی محصولات (ساده، متغیرِ دارای حداقل یک مدل مشمول) دقیقاً مثل قبل پردازش می‌شوند.
+    { $addFields: { [`${INTERNAL}.suppressed`]: { $and: [
+      { $eq: ['$productType', 'variable'] },
+      { $gt: [{ $size: { $ifNull: ['$variants', []] } }, 0] },
+      { $not: [{ $anyElementTrue: [{ $map: { input: { $ifNull: ['$variants', []] }, as: 'v', in: { $ne: ['$$v.excludeFromPromotion', true] } } }] }] },
+    ] } } },
+    { $addFields: { [`${INTERNAL}.campaign`]: { $cond: [ref('suppressed'), null, ref('campaign')] } } },
     { $addFields: {
-      [`${INTERNAL}.eligible`]: { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now)] },
+      [`${INTERNAL}.eligible`]: { $and: [{ $not: [ref('suppressed')] }, { $or: [hasCampaign, timedActive('$isFlashDeal', '$flashDealEndTime', now), timedActive('$isSpecialOffer', '$specialOfferEndTime', now)] }] },
       [`${INTERNAL}.variable`]: { $and: [{ $eq: ['$productType', 'variable'] }, { $gt: [{ $size: { $ifNull: ['$variants', []] } }, 0] }] },
     } },
     { $addFields: {
@@ -318,9 +327,13 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
     // اگر کمپینِ اعمال‌شده روی محصول تخفیف زمان‌دار است، فقط با showInFeatured وارد منتخب‌ها می‌شود؛
     // در غیر این صورت شگفت‌انگیز دستیِ فعال (با تایمر) ملاک است.
     effectiveConditions.push({ $expr: { $cond: [
-      { $ne: [ref('campaign'), null] },
-      { $eq: [ref('campaign.featured'), true] },
-      { $and: [{ $eq: ['$isSpecialOffer', true] }, { $gt: [{ $ifNull: ['$specialOfferEndTime', null] }, now] }] },
+      ref('suppressed'),
+      false,
+      { $cond: [
+        { $ne: [ref('campaign'), null] },
+        { $eq: [ref('campaign.featured'), true] },
+        { $and: [{ $eq: ['$isSpecialOffer', true] }, { $gt: [{ $ifNull: ['$specialOfferEndTime', null] }, now] }] },
+      ] },
     ] } })
   }
   if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
@@ -342,10 +355,12 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
     // stale inflated compareAtPrice would let clients derive a phantom 80%+.
     compareAtPrice: { $cond: [{ $gt: [ref('discount'), 0] }, ref('display.compareAtPrice'), '$$REMOVE'] },
     variants: ref('variants'), discount: ref('discount'),
-    campaignLabel: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.name'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'پیشنهاد لحظه‌ای', { $ifNull: ['$campaignLabel', '$$REMOVE'] }] }] },
-    campaignTheme: { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.theme'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'gold-red', { $ifNull: ['$campaignTheme', '$$REMOVE'] }] }] },
-    isSpecialOffer: { $cond: [{ $gt: [ref('campaign.discount'), 0] }, true, '$isSpecialOffer'] },
-    specialOfferEndTime: { $cond: [{ $gt: [ref('campaign.discount'), 0] }, ref('campaign.endDate'), '$specialOfferEndTime'] },
+    campaignLabel: { $cond: [ref('suppressed'), '$$REMOVE', { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.name'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'پیشنهاد لحظه‌ای', { $ifNull: ['$campaignLabel', '$$REMOVE'] }] }] }] },
+    campaignTheme: { $cond: [ref('suppressed'), '$$REMOVE', { $cond: [{ $ne: [ref('campaign'), null] }, ref('campaign.theme'), { $cond: [{ $and: ['$isFlashDeal', { $gt: [ref('discount'), 0] }] }, 'gold-red', { $ifNull: ['$campaignTheme', '$$REMOVE'] }] }] }] },
+    isSpecialOffer: { $cond: [ref('suppressed'), false, { $cond: [{ $gt: [ref('campaign.discount'), 0] }, true, '$isSpecialOffer'] }] },
+    specialOfferEndTime: { $cond: [ref('suppressed'), '$$REMOVE', { $cond: [{ $gt: [ref('campaign.discount'), 0] }, ref('campaign.endDate'), '$specialOfferEndTime'] }] },
+    isFlashDeal: { $cond: [ref('suppressed'), false, '$isFlashDeal'] },
+    flashDealEndTime: { $cond: [ref('suppressed'), '$$REMOVE', '$flashDealEndTime'] },
   } })
   data.push({ $project: { [INTERNAL]: 0 } })
   if (options.projection) data.push({ $project: options.projection })

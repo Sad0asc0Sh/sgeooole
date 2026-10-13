@@ -18,6 +18,7 @@ const {
   isTimerLive,
   getActiveSalesCampaignContext,
   priceVariantsForCard,
+  areAllVariantsExcluded,
   ttlUntil,
 } = require('../services/pricingService')
 const redis = require('../utils/redis')
@@ -157,10 +158,29 @@ exports.getBestsellers = async (req, res) => {
     // و productType همیشه همراه آیتم فرستاده می‌شود تا کارت نماینده‌ی واقعی را
     // نشان دهد. موجودی محصول متغیر هم جمع موجودی مدل‌هاست (مثل pipeline لیست).
     const shapeBestsellerCard = (product, score) => {
-      const activeSale = resolveActiveSale(product, salesContext)
-      const promotionPrice = buildPromotionPrice(product, now, activeSale)
+      // همه‌ی متغیرها از تخفیف مستثنی‌اند: هیچ پروموشنی (Sale / لحظه‌ای / شگفت‌انگیز)
+      // روی این کارت نمی‌نشیند؛ قیمت پایه، بدون درصد، لیبل، تم و تایمر.
+      const promotionSuppressed = areAllVariantsExcluded(product)
+      const activeSale = promotionSuppressed ? null : resolveActiveSale(product, salesContext)
+      const promotionPrice = promotionSuppressed
+        ? {
+          price: resolveBasePrice(product.price, product.compareAtPrice, Number(product.discount) || 0),
+          compareAtPrice: undefined,
+          discount: 0,
+          promotionEndsAt: null,
+        }
+        : buildPromotionPrice(product, now, activeSale)
       trackPromotionEnd(promotionPrice.promotionEndsAt)
-      const badges = buildPromotionBadges(product, now, activeSale)
+      const badges = promotionSuppressed
+        ? {
+          isFlashDeal: false,
+          flashDealEndTime: null,
+          isSpecialOffer: false,
+          specialOfferEndTime: null,
+          campaignLabel: null,
+          campaignTheme: null,
+        }
+        : buildPromotionBadges(product, now, activeSale)
 
       // Extract image URL from images array
       let imageData = null

@@ -188,6 +188,30 @@ export function withSelectedVariant<T extends Product>(
     variant: ProductVariant | undefined | null,
 ): T {
     if (!variant || typeof variant !== "object") return product;
+    // متغیر مستثنی از تخفیف (تیک تخفیف در پنل ادمین خاموش): قیمت پایه‌ی خودش نمایش
+    // داده می‌شود و هیچ اثری از پروموشن محصول (لیبل، تم، تایمر، درصد، قیمت خط‌خورده)
+    // روی آن نمی‌ماند؛ هم برای تخفیف زمان‌دار (Sale) و هم لحظه‌ای/شگفت‌انگیز.
+    if (variant.excludeFromPromotion === true) {
+        const exImages =
+            variant.images && variant.images.length > 0 ? variant.images : product.images;
+        return {
+            ...product,
+            price: num(variant.price, num(product.price)),
+            oldPrice: undefined,
+            compareAtPrice: undefined,
+            discount: 0,
+            isFlashDeal: false,
+            flashDealEndTime: undefined,
+            isSpecialOffer: false,
+            specialOfferEndTime: undefined,
+            campaignLabel: undefined,
+            campaignTheme: undefined,
+            countInStock: num(variant.stock),
+            image: exImages[0] ?? product.image,
+            images: exImages,
+            sku: variant.sku ?? product.sku,
+        };
+    }
     const promotionDead =
         !(num(product.discount) > 0) && !product.isFlashDeal && !product.isSpecialOffer;
     const basePrice = num(variant.oldPrice, NaN);

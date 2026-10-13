@@ -58,6 +58,17 @@ const restoreBasePriceOnObject = (target, storedDiscount = 0) => {
 // داده‌های قدیمی بدون این فیلد => falsy => رفتار قبلی (شامل تخفیف).
 const isVariantExcluded = (variant) => Boolean(variant && variant.excludeFromPromotion === true)
 
+// محصولِ دارای متغیر که «همه‌ی» متغیرهایش از تخفیف مستثنی شده‌اند: هیچ مدلِ مشمولی
+// وجود ندارد، پس هیچ پروموشنی (تخفیف زمان‌دار / لحظه‌ای / شگفت‌انگیز) برای این محصول
+// معنا ندارد و نباید برچسب، تایمر یا درصد تخفیفی روی آن بنشیند.
+// محصول ساده، محصول بدون متغیر و محصولی که حتی یک متغیر مشمول دارد => false (رفتار قبلی).
+// ورودی‌های خراب (null / غیرآبجکت) نادیده گرفته می‌شوند.
+const areAllVariantsExcluded = (product) => {
+  if (!product || !Array.isArray(product.variants)) return false
+  const list = product.variants.filter((v) => v && typeof v === 'object')
+  return list.length > 0 && list.every(isVariantExcluded)
+}
+
 const applyDiscountToObject = (target, discountPct, storedDiscount = 0) => {
   if (!target || !(discountPct > 0)) return target
   if (target.price !== undefined && target.price > 0) {
@@ -384,7 +395,11 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
     if (!promotionEndsAt || d < promotionEndsAt) promotionEndsAt = d
   }
 
-  if (activeSale) {
+  // همه‌ی متغیرها مستثنی‌اند: هیچ پروموشنی (حتی Sale فعال) روی این محصول نمی‌نشیند.
+  // مسیر «بدون پروموشن زنده» پایین‌تر همه‌چیز را به قیمت پایه و بدون لیبل برمی‌گرداند.
+  const suppressed = areAllVariantsExcluded(productObj)
+
+  if (activeSale && !suppressed) {
     productObj.campaignLabel = activeSale.name
     productObj.campaignTheme = activeSale.badgeTheme || 'green-orange'
     if (activeSale.discountPercentage > 0) {
@@ -401,8 +416,9 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
   const flashLive = isTimerLive(productObj.isFlashDeal, productObj.flashDealEndTime, now)
   const specialLive = isTimerLive(productObj.isSpecialOffer, productObj.specialOfferEndTime, now)
 
-  if (!flashLive && !specialLive) {
-    // لحظه‌ای/شگفت‌انگیز غیرفعال (دستی) یا تایمرش تمام شده: تخفیف کاملاً حذف می‌شود
+  if (suppressed || (!flashLive && !specialLive)) {
+    // لحظه‌ای/شگفت‌انگیز غیرفعال (دستی) یا تایمرش تمام شده — یا همه‌ی متغیرها مستثنی‌اند:
+    // تخفیف کاملاً حذف می‌شود
     // (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی) — مثل لیست محصولات.
     productObj.discount = 0
     restoreBasePriceOnObject(productObj, storedDiscount)
@@ -471,6 +487,7 @@ module.exports = {
   getVariantKey,
   findMatchingVariant,
   isVariantExcluded,
+  areAllVariantsExcluded,
   priceVariantsForCard,
   computeItemPricing,
   getActiveSalesCampaignContext,
