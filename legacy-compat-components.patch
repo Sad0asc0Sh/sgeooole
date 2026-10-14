@@ -1,0 +1,96 @@
+diff --git a/frontend/src/app/layout.tsx b/frontend/src/app/layout.tsx
+--- a/frontend/src/app/layout.tsx	2026-10-14 08:27:39.948279144 +0000
++++ b/frontend/src/app/layout.tsx	2026-10-14 08:27:39.975576773 +0000
+@@ -1,6 +1,7 @@
+ import type { Metadata, Viewport } from "next";
+ import { iransans } from "@/lib/fonts";
+ import "./globals.css";
++import "./legacy-compat.generated.css"; // old-browser safety net (all rules are @supports-guarded)
+ import ClientLayout from "@/components/layout/ClientLayout";
+ import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
+ import ThirdPartyScripts from "@/components/ThirdPartyScripts";
+diff --git a/frontend/src/components/cart/CartItem.tsx b/frontend/src/components/cart/CartItem.tsx
+--- a/frontend/src/components/cart/CartItem.tsx	2026-10-14 08:27:39.948218189 +0000
++++ b/frontend/src/components/cart/CartItem.tsx	2026-10-14 08:27:39.970278708 +0000
+@@ -64,7 +64,7 @@
+ 
+     const isFlashBadge = isFlashActive || Boolean(cleanLabel && (cleanLabel.includes("پیشنهاد لحظه‌ای") || cleanLabel.includes("زمان‌دار")));
+     const badgeClass = isFlashBadge
+-        ? "bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm"
++        ? "legacy-grad-timed bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm"
+         : "bg-red-500 text-white";
+ 
+     return (
+diff --git a/frontend/src/components/product/OptimizedProductCard.tsx b/frontend/src/components/product/OptimizedProductCard.tsx
+--- a/frontend/src/components/product/OptimizedProductCard.tsx	2026-10-14 08:27:39.948168266 +0000
++++ b/frontend/src/components/product/OptimizedProductCard.tsx	2026-10-14 08:27:39.965798172 +0000
+@@ -114,10 +114,10 @@
+                         <div className="absolute top-2 left-2 z-20">
+                             <span
+                                 className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"
+-                                    ? "bg-gradient-to-r from-yellow-400 to-red-600"
++                                    ? "legacy-grad-amazing bg-gradient-to-r from-yellow-400 to-red-600"
+                                     : product.campaignTheme === "red-purple"
+-                                        ? "bg-gradient-to-r from-rose-500 to-purple-700"
+-                                        : "bg-gradient-to-r from-lime-500 to-orange-400"
++                                        ? "legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700"
++                                        : "legacy-grad-lime-orange bg-gradient-to-r from-lime-500 to-orange-400"
+                                     }`}
+                             >
+                                 {product.campaignLabel}
+diff --git a/frontend/src/components/product/ProductCard.tsx b/frontend/src/components/product/ProductCard.tsx
+--- a/frontend/src/components/product/ProductCard.tsx	2026-10-14 08:27:39.948136067 +0000
++++ b/frontend/src/components/product/ProductCard.tsx	2026-10-14 08:27:39.961305129 +0000
+@@ -67,23 +67,23 @@
+             type: 'flash',
+             title: 'پیشنهاد لحظه‌ای',
+             color: 'text-orange-600',
+-            borderColor: 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
++            borderColor: 'legacy-grad-timed bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
+             endTime,
+             iconColor: 'text-orange-600',
+         };
+     } else if (promotionKind === 'campaign') {
+         let themeColor = 'text-blue-600';
+-        let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
++        let themeBorder = 'legacy-grad-blue bg-gradient-to-r from-blue-400 to-indigo-500';
+ 
+         if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
+             themeColor = 'text-amber-600';
+-            themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
++            themeBorder = 'legacy-grad-gold bg-gradient-to-r from-amber-400 to-orange-500';
+         } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
+             themeColor = 'text-rose-600';
+-            themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
++            themeBorder = 'legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700';
+         } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
+             themeColor = 'text-lime-600';
+-            themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
++            themeBorder = 'legacy-grad-lime bg-gradient-to-r from-lime-400 to-green-500';
+         }
+ 
+         headerConfig = {
+diff --git a/frontend/src/components/promotion/PromotionBadge.tsx b/frontend/src/components/promotion/PromotionBadge.tsx
+--- a/frontend/src/components/promotion/PromotionBadge.tsx	2026-10-14 08:27:39.948070026 +0000
++++ b/frontend/src/components/promotion/PromotionBadge.tsx	2026-10-14 08:27:39.952754785 +0000
+@@ -6,7 +6,7 @@
+ };
+ 
+ const toneClassNames: Record<PromotionBadgeTone, string> = {
+-  timed: "border-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm",
++  timed: "legacy-grad-timed border-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm",
+   curated: "border-ekg-200 bg-ekg-50 text-ekg-700",
+   limited: "border-red-200 bg-red-50 text-red-600",
+   campaign: "border-blue-100 bg-blue-50 text-blue-700",
+diff --git a/frontend/src/components/promotion/PromotionSection.tsx b/frontend/src/components/promotion/PromotionSection.tsx
+--- a/frontend/src/components/promotion/PromotionSection.tsx	2026-10-14 08:27:39.948095790 +0000
++++ b/frontend/src/components/promotion/PromotionSection.tsx	2026-10-14 08:27:39.957003194 +0000
+@@ -6,7 +6,7 @@
+ 
+ export default function PromotionSection({ children }: PromotionSectionProps) {
+   return (
+-    <section className="border-y border-ekg-100/60 bg-gradient-to-l from-ekg-50/80 via-white to-kala-50/60 py-5 md:py-6">
++    <section className="legacy-grad-section border-y border-ekg-100/60 bg-gradient-to-l from-ekg-50/80 via-white to-kala-50/60 py-5 md:py-6">
+       <div className="mx-auto w-full max-w-screen-2xl px-4">
+         {children}
+       </div>

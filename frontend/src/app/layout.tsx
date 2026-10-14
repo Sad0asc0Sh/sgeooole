@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { iransans } from "@/lib/fonts";
 import "./globals.css";
+import "./legacy-compat.generated.css"; // old-browser safety net (all rules are @supports-guarded)
 import ClientLayout from "@/components/layout/ClientLayout";
 import GoogleAuthProvider from "@/components/providers/GoogleAuthProvider";
 import ThirdPartyScripts from "@/components/ThirdPartyScripts";

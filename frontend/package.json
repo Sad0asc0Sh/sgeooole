@@ -12,6 +12,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "analyze": "ANALYZE=true next build",
+    "legacy:css": "node scripts/gen-legacy-css.mjs",
+    "legacy:audit": "node scripts/audit-legacy-css.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

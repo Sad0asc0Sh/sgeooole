@@ -114,10 +114,10 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                         <div className="absolute top-2 left-2 z-20">
                             <span
                                 className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"
-                                    ? "bg-gradient-to-r from-yellow-400 to-red-600"
+                                    ? "legacy-grad-amazing bg-gradient-to-r from-yellow-400 to-red-600"
                                     : product.campaignTheme === "red-purple"
-                                        ? "bg-gradient-to-r from-rose-500 to-purple-700"
-                                        : "bg-gradient-to-r from-lime-500 to-orange-400"
+                                        ? "legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700"
+                                        : "legacy-grad-lime-orange bg-gradient-to-r from-lime-500 to-orange-400"
                                     }`}
                             >
                                 {product.campaignLabel}

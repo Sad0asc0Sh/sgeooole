@@ -67,23 +67,23 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             type: 'flash',
             title: 'پیشنهاد لحظه‌ای',
             color: 'text-orange-600',
-            borderColor: 'bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
+            borderColor: 'legacy-grad-timed bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
             endTime,
             iconColor: 'text-orange-600',
         };
     } else if (promotionKind === 'campaign') {
         let themeColor = 'text-blue-600';
-        let themeBorder = 'bg-gradient-to-r from-blue-400 to-indigo-500';
+        let themeBorder = 'legacy-grad-blue bg-gradient-to-r from-blue-400 to-indigo-500';
 
         if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
             themeColor = 'text-amber-600';
-            themeBorder = 'bg-gradient-to-r from-amber-400 to-orange-500';
+            themeBorder = 'legacy-grad-gold bg-gradient-to-r from-amber-400 to-orange-500';
         } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
             themeColor = 'text-rose-600';
-            themeBorder = 'bg-gradient-to-r from-rose-500 to-purple-700';
+            themeBorder = 'legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700';
         } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
             themeColor = 'text-lime-600';
-            themeBorder = 'bg-gradient-to-r from-lime-400 to-green-500';
+            themeBorder = 'legacy-grad-lime bg-gradient-to-r from-lime-400 to-green-500';
         }
 
         headerConfig = {
