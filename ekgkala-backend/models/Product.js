@@ -150,6 +150,31 @@ const ProductSchema = new mongoose.Schema(
       min: 0,
     },
 
+    // ============================================
+    // قیمت خرید و تامین از لیست همکاران و خط قرمز فروش (اولویت اول قیمت‌گذاری خودکار)
+    // ============================================
+    costPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    hardFloorPrice: {
+      type: Number,
+      min: 0,
+      default: 0,
+    },
+
+    supplierQuotes: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+
+    pricingMeta: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
     // Discount percentage (0-100)
     discount: {
       type: Number,

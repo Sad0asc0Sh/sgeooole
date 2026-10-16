@@ -17,8 +17,6 @@ const mapSpecifications = (product) => {
   const spec = {}
   const productSpecs = product?.specifications
 
-  // specifications در مدل Product از نوع Mixed است و مدیر آن را به صورت
-  // Key/Value در پنل ادمین ثبت می‌کند (مثلاً: {"رزولوشن": "5MP", "نوع لنز": "ثابت"})
   if (productSpecs && typeof productSpecs === 'object' && !Array.isArray(productSpecs)) {
     for (const [name, value] of Object.entries(productSpecs)) {
       if (value != null && value !== '') spec[String(name)] = String(value)
@@ -30,17 +28,63 @@ const mapSpecifications = (product) => {
 
 const { computeItemPricing } = require('../services/pricingService')
 
-const getPricing = (product, variant, now = new Date()) => {
-  const item = { product, variantOptions: variant?.options || [], price: variant?.price };
-  const pricing = computeItemPricing(item, now);
-  const currentPrice = Math.round(pricing.finalPrice);
+/**
+ * تبدیل آرایه‌ای از اسناد Sale فعال به ساختار campaignContext مورد نیاز computeItemPricing
+ */
+const normalizeCampaignContext = (campaignOrSales) => {
+  if (!campaignOrSales) return null
+  if (campaignOrSales.campaignMap instanceof Map || campaignOrSales.categoryDiscountMap instanceof Map) {
+    return campaignOrSales
+  }
+  if (Array.isArray(campaignOrSales)) {
+    const campaignMap = new Map()
+    const categoryDiscountMap = new Map()
+    for (const sale of campaignOrSales) {
+      if (!sale) continue
+      if (Array.isArray(sale.products)) {
+        for (const pid of sale.products) {
+          const key = String(pid?._id || pid)
+          if (!campaignMap.has(key)) {
+            campaignMap.set(key, {
+              name: sale.name,
+              discount: sale.discountPercentage,
+              theme: sale.badgeTheme,
+              endDate: sale.endDate,
+            })
+          }
+        }
+      }
+      if (Array.isArray(sale.categories)) {
+        for (const cid of sale.categories) {
+          const key = String(cid?._id || cid)
+          if (!categoryDiscountMap.has(key)) {
+            categoryDiscountMap.set(key, {
+              name: sale.name,
+              discount: sale.discountPercentage,
+              theme: sale.badgeTheme,
+              endDate: sale.endDate,
+            })
+          }
+        }
+      }
+    }
+    return { campaignMap, categoryDiscountMap }
+  }
+  return null
+}
 
-  // قیمت خط‌خورده فقط با تخفیف واقعی فعال از مبنای resolved می‌آید؛ compare کهنه‌ی خام هرگز oldPrice نمی‌شود
+const getPricing = (product, variant, now = new Date(), campaignContext = null) => {
+  const item = { product, variantOptions: variant?.options || [], price: variant?.price }
+  const normalizedCtx = normalizeCampaignContext(campaignContext)
+  const pricing = computeItemPricing(item, now, normalizedCtx)
+  const currentPrice = Math.round(pricing.finalPrice)
+
   return {
     currentPrice,
-    oldPrice: (pricing.discount > 0 && Math.round(pricing.basePrice) > currentPrice)
-      ? Math.round(pricing.basePrice)
-      : null,
+    oldPrice:
+      pricing.discount > 0 && Math.round(pricing.basePrice) > currentPrice
+        ? Math.round(pricing.basePrice)
+        : null,
   }
 }
 
@@ -51,11 +95,17 @@ const buildPageUrl = (product) => {
   return `${baseUrl}/product/${productCode}/${slug}`
 }
 
-const mapTorobProduct = (product, variant = null) => {
+const mapTorobProduct = (product, variantOrSales = null, campaignContext = null) => {
+  const isSecondArgSales =
+    Array.isArray(variantOrSales) ||
+    (variantOrSales && (variantOrSales.campaignMap instanceof Map || variantOrSales.categoryDiscountMap instanceof Map))
+  const variant = isSecondArgSales ? null : variantOrSales
+  const effectiveCampaignCtx = isSecondArgSales ? variantOrSales : campaignContext
+
   const isVariable = product?.productType === 'variable'
   const variantId = variant?._id?.toString?.() || variant?._id
   const images = imageUrls(variant?.images).length > 0 ? imageUrls(variant.images) : imageUrls(product?.images)
-  const pricing = getPricing(product, variant)
+  const pricing = getPricing(product, variant, new Date(), effectiveCampaignCtx)
 
   return {
     page_url: buildPageUrl(product),
@@ -76,13 +126,22 @@ const mapTorobProduct = (product, variant = null) => {
   }
 }
 
-const flattenProduct = (product) => {
+const flattenProduct = (product, campaignContext = null) => {
   if (!product || product.isActive !== true || product.excludeFromTorob === true) return []
   const rows = product.productType !== 'variable'
-    ? [mapTorobProduct(product)]
-    : (Array.isArray(product.variants) ? product.variants : []).map((variant) => mapTorobProduct(product, variant))
-  // Torob requires a primary image for every published row.
+    ? [mapTorobProduct(product, null, campaignContext)]
+    : (Array.isArray(product.variants) ? product.variants : []).map((variant) =>
+        mapTorobProduct(product, variant, campaignContext),
+      )
   return rows.filter((row) => row.image_links.length > 0)
 }
 
-module.exports = { buildPageUrl, flattenProduct, getPricing, mapTorobProduct, mapSpecifications, stripHtml }
+module.exports = {
+  buildPageUrl,
+  flattenProduct,
+  getPricing,
+  mapTorobProduct,
+  mapSpecifications,
+  normalizeCampaignContext,
+  stripHtml,
+}

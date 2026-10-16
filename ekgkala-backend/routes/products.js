@@ -2750,4 +2750,128 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
   }
 })
 
+// ============================================
+// POST /api/products/pricing-sync
+// اندپوینت اختصاصی همگام‌سازی خودکار با سامانه قیمت‌گذاری رقابتی (ai-driven-competitive-pricing-system)
+// تضمین خط قرمز اول: قیمت فروش هرگز کمتر یا مساوی قیمت خرید/تامین همکار نباشد
+// + کنترل یکپارچه هر ۳ سیستم تخفیف (پیشنهاد لحظه‌ای، پیشنهاد شگفت‌انگیز، و فرصت‌های زمان‌دار بخش مالی و تخفیف Sale)
+// + بازسازی آنی فید ترب
+// ============================================
+router.post('/pricing-sync', async (req, res) => {
+  try {
+    const expectedSecret = process.env.SGEOOOLE_PRICING_SECRET || process.env.STORE_WEBHOOK_SECRET || ''
+    const incomingSecret = req.headers['x-pricing-secret'] || ''
+    if (expectedSecret && incomingSecret !== expectedSecret) {
+      return res.status(401).json({
+        success: false,
+        message: 'کلید امنیتی همگام‌سازی قیمت (X-Pricing-Secret) نامعتبر است',
+      })
+    }
+
+    const body = req.body || {}
+    const {
+      validatePricingSyncPayload,
+      syncProductTimedSaleMembership,
+    } = require('../services/competitivePricingSyncService')
+    const { rebuildTorobFeed } = require('../jobs/torobFeedCache')
+
+    const query = []
+    if (body.productId && /^[a-fA-F0-9]{24}$/.test(String(body.productId))) {
+      query.push({ _id: body.productId })
+    }
+    if (body.productCode) {
+      query.push({ productCode: String(body.productCode).trim().toUpperCase() })
+    }
+    if (body.sku) {
+      query.push({ sku: String(body.sku).trim() })
+    }
+
+    if (query.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'ارسال یکی از شناسه‌های sku، productCode یا productId الزامی است',
+      })
+    }
+
+    const existingProduct = await Product.findOne({ $or: query }).lean()
+    if (!existingProduct) {
+      return res.status(404).json({
+        success: false,
+        message: 'محصول مورد نظر در فروشگاه sgeooole یافت نشد',
+      })
+    }
+
+    const check = validatePricingSyncPayload(body, existingProduct)
+    if (!check.valid) {
+      return res.status(422).json({
+        success: false,
+        code: check.code || 'INVALID_PRICING',
+        message: check.error,
+      })
+    }
+
+    // ۱) هماهنگ‌سازی عضویت در کمپین زمان‌دار بخش مالی و تخفیف (Sale) و جلوگیری از تداخل 409 CAMPAIGN_CONFLICT
+    const syncedSale = await syncProductTimedSaleMembership(
+      Sale,
+      existingProduct._id,
+      check.timedSaleSpec
+    )
+
+    const unsetFields = {}
+    if (check.updateDoc.compareAtPrice === null) {
+      delete check.updateDoc.compareAtPrice
+      unsetFields.compareAtPrice = ''
+    }
+
+    const updateQuery = {
+      $set: check.updateDoc,
+      $inc: { priceUpdateCount: 1 },
+      ...(Object.keys(unsetFields).length > 0 ? { $unset: unsetFields } : {}),
+    }
+
+    const updated = await Product.findByIdAndUpdate(existingProduct._id, updateQuery, {
+      new: true,
+      runValidators: false,
+    })
+
+    clearCacheByPrefix('/api/products')
+    clearCacheByPrefix('/api/v1/admin/products')
+    clearCacheByPrefix('/api/sales')
+    if (body.rebuildTorobFeed !== false) {
+      try {
+        await rebuildTorobFeed()
+      } catch (feedErr) {
+        console.warn('Warning rebuilding Torob feed after pricing-sync:', feedErr.message)
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'قیمت محصول و سیستم تخفیف با رعایت خط قرمز تامین همکار بروزرسانی شد و فید ترب همگام‌سازی گردید',
+      data: {
+        _id: updated._id,
+        sku: updated.sku,
+        productCode: updated.productCode,
+        price: updated.price,
+        compareAtPrice: updated.compareAtPrice,
+        discount: updated.discount,
+        costPrice: updated.costPrice,
+        hardFloorPrice: updated.hardFloorPrice,
+        finalPrice: check.finalPrice,
+        basePrice: check.basePrice,
+        discountPct: check.discountPct,
+        campaignType: check.campaignType,
+        timedSaleId: syncedSale ? syncedSale._id : null,
+      },
+    })
+  } catch (error) {
+    console.error('Error in POST /api/products/pricing-sync:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'خطا در همگام‌سازی قیمت محصول',
+      error: error.message,
+    })
+  }
+})
+
 module.exports = router
