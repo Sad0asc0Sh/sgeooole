@@ -181,6 +181,7 @@ const PRESETS = {
   blue:        { dir: "to right",        stops: ["blue-400", "indigo-500"],             solid: "blue-400" },
   amazing:     { dir: "to right",        stops: ["yellow-400", "red-600"],              solid: "orange-500" },
   "lime-orange": { dir: "to right",      stops: ["lime-500", "orange-400"],             solid: "lime-500" },
+  "campaign-spring": { dir: "to right", stops: ["lime-400", "green-500"],              solid: "green-500" },
   section:     { dir: "to left",         stops: ["ekg-50@0.8", "white", "kala-50@0.6"], solid: "ekg-50" },
 };
 function stopCss(spec) {

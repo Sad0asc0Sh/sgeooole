@@ -14,6 +14,7 @@ import {
     getNextPromotionExpiry,
 } from "@/lib/promotions/productPromotion";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
+import { campaignStripeClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import styles from "./ProductCard.module.css";
 
@@ -72,19 +73,9 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
             iconColor: 'text-orange-600',
         };
     } else if (promotionKind === 'campaign') {
-        let themeColor = 'text-blue-600';
-        let themeBorder = 'legacy-grad-blue bg-gradient-to-r from-blue-400 to-indigo-500';
-
-        if (product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold') {
-            themeColor = 'text-amber-600';
-            themeBorder = 'legacy-grad-gold bg-gradient-to-r from-amber-400 to-orange-500';
-        } else if (product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red') {
-            themeColor = 'text-rose-600';
-            themeBorder = 'legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700';
-        } else if (product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime') {
-            themeColor = 'text-lime-600';
-            themeBorder = 'legacy-grad-lime bg-gradient-to-r from-lime-400 to-green-500';
-        }
+        // One shared resolver keeps the card stripe in lock-step with the
+        // product-detail badges (lib/campaignTheme.ts is the single source).
+        const { stripe: themeBorder, text: themeColor } = campaignStripeClass(product.campaignTheme);
 
         headerConfig = {
             type: 'campaign',

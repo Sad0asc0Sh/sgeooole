@@ -8,6 +8,7 @@ import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
+import { resolveCampaignThemeVariant } from "@/lib/campaignTheme";
 import type { Product } from "@/types/product";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import styles from "./HomeProductRail.module.css";
@@ -30,10 +31,11 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
   const label = kind === "flash" ? "پیشنهاد لحظه‌ای" : kind === "campaign"
     ? product.campaignLabel || "فروش ویژه" : kind === "amazing" ? "شگفت‌انگیز" : null;
   const campaignTheme = product.campaignTheme || "";
+  const variant = resolveCampaignThemeVariant(campaignTheme);
   const theme = kind === "flash" ? "flash" : kind === "amazing" ? "amazing"
-    : ["gold-red", "gold"].includes(campaignTheme) ? "gold"
-    : ["red-purple", "fire", "red"].includes(campaignTheme) ? "fire"
-    : ["lime-orange", "lime"].includes(campaignTheme) ? "lime" : "blue";
+    : variant === "gold" ? "gold"
+    : variant === "fire" ? "fire"
+    : variant === "spring" ? "lime" : "blue";
 
   return (
     <Link href={buildProductUrl(product)} className={styles.card} data-home-product={product.id}>

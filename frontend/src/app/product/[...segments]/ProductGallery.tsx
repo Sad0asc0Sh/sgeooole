@@ -15,6 +15,7 @@ import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { campaignPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
@@ -273,14 +274,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
                                         {showCampaignBadge && index === 0 && (
                                             <div className="absolute top-4 left-4 z-20">
-                                                <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg ${product.campaignTheme === 'gold-red'
-                                                    ? 'bg-gradient-to-r from-yellow-400 to-red-600'
-                                                    : product.campaignTheme === 'red-purple'
-                                                        ? 'bg-gradient-to-r from-rose-500 to-purple-700'
-                                                        : product.campaignTheme === 'gold'
-                                                            ? 'bg-gradient-to-r from-amber-400 to-yellow-600'
-                                                            : 'bg-gradient-to-r from-lime-500 to-orange-400'
-                                                    }`}>
+                                                <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg ${campaignPillClass(product.campaignTheme)}`}>
                                                     {product.campaignLabel}
                                                 </span>
                                             </div>

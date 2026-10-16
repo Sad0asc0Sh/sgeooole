@@ -60,10 +60,6 @@
     --color-indigo-50: #eef2ff;
     --color-indigo-500: #615fff;
     --color-indigo-600: #4f39f6;
-    --color-lime-400: #9ae600;
-    --color-lime-50: #f7fee7;
-    --color-lime-500: #7ccf00;
-    --color-lime-600: #5ea500;
     --color-lime-700: #497d00;
     --color-orange-400: #ff8904;
     --color-orange-50: #fff7ed;
@@ -144,6 +140,7 @@
   .legacy-grad-blue { background-color: #51a2ff; background-image: linear-gradient(to right, #51a2ff, #615fff); }
   .legacy-grad-amazing { background-color: #ff6900; background-image: linear-gradient(to right, #fdc700, #e7000b); }
   .legacy-grad-lime-orange { background-color: #7ccf00; background-image: linear-gradient(to right, #7ccf00, #ff8904); }
+  .legacy-grad-campaign-spring { background-color: #00c950; background-image: linear-gradient(to right, #9ae600, #00c950); }
   .legacy-grad-section { background-color: #faf9f7; background-image: linear-gradient(to left, rgba(250,249,247,0.8), #ffffff, rgba(255,251,235,0.6)); }
 }
 

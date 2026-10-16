@@ -16,6 +16,7 @@ import ProductSocialActions from "./ProductSocialActions";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
+import { campaignBannerClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import {
     applyChoice,
@@ -319,17 +320,13 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                             if (!endTime) return null;
 
+                            // Theme classes stay in lock-step with the product-card
+                            // stripe (lib/campaignTheme.ts) so the colour chosen in the
+                            // admin «تخفیف‌های زمان‌دار» panel looks identical here.
                             const theme = viewProduct.campaignTheme;
                             let themeClass = 'bg-red-50 text-red-600';
-
-                            if (theme === 'gold-red' || theme === 'gold') {
-                                themeClass = 'bg-amber-50 text-amber-700';
-                            } else if (theme === 'red-purple' || theme === 'fire' || theme === 'red') {
-                                themeClass = 'bg-rose-50 text-rose-700';
-                            } else if (theme === 'lime-orange' || theme === 'lime' || theme === 'green-orange') {
-                                themeClass = 'bg-lime-50 text-lime-700';
-                            } else if (theme) {
-                                themeClass = 'bg-blue-50 text-blue-700';
+                            if (theme) {
+                                themeClass = campaignBannerClass(theme);
                             }
 
                             let label = viewProduct.campaignLabel;
@@ -521,18 +518,12 @@ export default function ProductDetailClient({ product: initialProduct }: Product
 
                         if (!endTime) return null;
 
-                        // Determine theme class based on campaignTheme
+                        // Determine theme class based on campaignTheme —
+                        // same scheme source as the product-card stripe.
                         const theme = viewProduct.campaignTheme;
                         let themeClass = 'bg-red-50 text-red-600'; // Default for Special Offer
-
-                        if (theme === 'gold-red' || theme === 'gold') {
-                            themeClass = 'bg-amber-50 text-amber-700';
-                        } else if (theme === 'red-purple' || theme === 'fire' || theme === 'red') {
-                            themeClass = 'bg-rose-50 text-rose-700';
-                        } else if (theme === 'lime-orange' || theme === 'lime' || theme === 'green-orange') {
-                            themeClass = 'bg-lime-50 text-lime-700';
-                        } else if (theme) {
-                            themeClass = 'bg-blue-50 text-blue-700';
+                        if (theme) {
+                            themeClass = campaignBannerClass(theme);
                         }
 
                         // Determine label - Use campaignLabel if available, otherwise use defaults

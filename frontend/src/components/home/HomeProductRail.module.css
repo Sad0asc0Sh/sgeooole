@@ -94,7 +94,8 @@
 .promotionHeader[data-promotion-theme="amazing"] { --promotion-color: #ef4444; --promotion-stripe: #ef4444; }
 .promotionHeader[data-promotion-theme="gold"] { --promotion-color: #d97706; --promotion-stripe: linear-gradient(to right, #fbbf24, #f97316); }
 .promotionHeader[data-promotion-theme="fire"] { --promotion-color: #e11d48; --promotion-stripe: linear-gradient(to right, #f43f5e, #7e22ce); }
-.promotionHeader[data-promotion-theme="lime"] { --promotion-color: #4d7c0f; --promotion-stripe: linear-gradient(to right, #a3e635, #22c55e); }
+/* «بهاره» stripe — mirrors lib/campaignTheme.ts (lime-400→green-500, hex only). */
+.promotionHeader[data-promotion-theme="lime"] { --promotion-color: #497d00; --promotion-stripe: linear-gradient(to right, #9ae600, #00c950); }
 .promotionStripe { height: 4px; width: 100%; background: var(--promotion-stripe); }
 .promotionLabel { display: block; min-width: 0; padding: 6px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--promotion-color); font-size: 10px; font-weight: 700; line-height: 20px; }
 .stock { position: absolute; bottom: 4px; left: 4px; max-width: calc(100% - 8px); display: flex; align-items: center; gap: 3px; padding: 4px 5px; border-radius: 6px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 700; }
@@ -106,7 +107,7 @@
 .amazing { color: #ef4444; }
 .gold { color: #d97706; }
 .fire { color: #e11d48; }
-.lime { color: #4d7c0f; }
+.lime { color: #497d00; }
 .blue { color: #2563eb; }
 .discountBadge { flex-shrink: 0; padding: 2px 6px; border-radius: 6px; background: #ef394e; color: #fff; font-size: 10px; font-weight: 700; }
 .discountRose { background: #e11d48; }

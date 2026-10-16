@@ -323,6 +323,24 @@
   scrollbar-color: rgba(0, 0, 0, 0.12) transparent !important;
 }
 
+/* --- CAMPAIGN BADGE SCHEMES (single source of truth) ---
+   The «بهاره» scheme puts the exact same lime→green gradient on the
+   product-card stripe and on every product-detail badge (gallery badge,
+   discount %, countdown banner) so the two surfaces always match.
+   Hex stops only — no oklch/color-mix — so old engines render the very
+   same gradient; legacy-grad-lime in legacy-compat.generated.css is the
+   matching fallback for Tailwind gradient classes. */
+.bg-kala-spring-gradient {
+  background-color: #00c950;
+  background-image: linear-gradient(to right, #9ae600, #00c950);
+}
+
+.kala-theme-spring-banner {
+  background-color: #f7fee7;
+  background-image: linear-gradient(to left, #f7fee7, #f7fee7, #f0fdf4);
+  color: #497d00;
+}
+
 /* --- LEGACY BROWSER FALLBACKS (Chrome<108, Safari<15.4, Firefox<110) ---
    100vh fallback first, 100dvh progressive enhancement second.
    backdrop-filter without support falls back to solid background. */

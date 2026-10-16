@@ -156,7 +156,7 @@ function SalesPage() {
       dateRange: [dayjs(sale.startDate), dayjs(sale.endDate)],
       products: sale.products?.map((p) => (typeof p === 'object' ? p._id : p)),
       isActive: sale.isActive,
-      badgeTheme: sale.badgeTheme || 'green-orange',
+      badgeTheme: sale.badgeTheme || 'lime-blue',
       showInFeatured: sale.showInFeatured !== false,
     })
     setModalOpen(true)
@@ -449,14 +449,47 @@ function SalesPage() {
 
           <Form.Item name="badgeTheme" label="رنگ نشان (Badge Color)">
             <Radio.Group>
-              <Radio value="green-orange">
-                <span style={{ color: '#16a34a' }}>●</span> پیش‌فرض (بهاره)
+              <Radio value="lime-blue">
+                <span style={{ color: '#65a30d' }}>●</span> بهاره
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 32,
+                    height: 12,
+                    borderRadius: 6,
+                    marginInlineStart: 8,
+                    verticalAlign: 'middle',
+                    background: 'linear-gradient(to left, #65a30d, #16a34a, #2563eb)',
+                  }}
+                />
               </Radio>
               <Radio value="gold-red">
                 <span style={{ color: '#ca8a04' }}>●</span> طلایی (نوروز/لوکس)
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 32,
+                    height: 12,
+                    borderRadius: 6,
+                    marginInlineStart: 8,
+                    verticalAlign: 'middle',
+                    background: 'linear-gradient(to left, #fbbf24, #f97316)',
+                  }}
+                />
               </Radio>
               <Radio value="red-purple">
                 <span style={{ color: '#dc2626' }}>●</span> آتشین (حراج ویژه)
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 32,
+                    height: 12,
+                    borderRadius: 6,
+                    marginInlineStart: 8,
+                    verticalAlign: 'middle',
+                    background: 'linear-gradient(to left, #f43f5e, #7e22ce)',
+                  }}
+                />
               </Radio>
             </Radio.Group>
           </Form.Item>

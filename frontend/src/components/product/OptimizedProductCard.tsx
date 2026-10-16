@@ -8,6 +8,7 @@ import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
+import { campaignPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import imageStyles from "./ProductImageFrame.module.css";
 
@@ -113,12 +114,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     {product.campaignLabel && hasPromotion && (
                         <div className="absolute top-2 left-2 z-20">
                             <span
-                                className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${product.campaignTheme === "gold-red"
-                                    ? "legacy-grad-amazing bg-gradient-to-r from-yellow-400 to-red-600"
-                                    : product.campaignTheme === "red-purple"
-                                        ? "legacy-grad-fire bg-gradient-to-r from-rose-500 to-purple-700"
-                                        : "legacy-grad-lime-orange bg-gradient-to-r from-lime-500 to-orange-400"
-                                    }`}
+                                className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${campaignPillClass(product.campaignTheme)}`}
                             >
                                 {product.campaignLabel}
                             </span>

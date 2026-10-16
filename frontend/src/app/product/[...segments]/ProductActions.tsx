@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Product } from "@/services/productService";
 import type { ProductVariantOption } from "@/types/product";
+import { campaignPillClass } from "@/lib/campaignTheme";
 import { optionsKey } from "@/lib/variants";
 import { useCart } from "@/hooks/useCart";
 
@@ -36,7 +37,6 @@ export default function ProductActions({ product, variantOptions = [], selectedC
     // compareAtPrice can never inflate it.
     const promotion = resolveProductPromotion(product, now);
     const isFlashDealActive = promotion.isFlashDealActive;
-    const isSpecialOfferActive = promotion.isSpecialOfferActive;
 
     // Any active countdown (flash deal or special offer)
     // A campaign label counts only while its promotion is live; a label alone (stale snapshot
@@ -106,12 +106,17 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                     {product.oldPrice && hasActivePromotion && (
                         <div className="flex items-center gap-3 mb-2">
                             {product.discount > 0 && (
-                                <div className={`text-white text-xs font-bold px-3 py-1 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
-                                    product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                                        product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
-                                            product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
-                                                isFlashDealActive ? 'bg-amber-500' : 'bg-[#ef394e]'
-                                    }`}>
+                                <div
+                                    className={`text-white text-xs font-bold px-3 py-1 rounded-full ${
+                                        product.campaignTheme
+                                            ? campaignPillClass(product.campaignTheme)
+                                            : product.campaignLabel
+                                                ? campaignPillClass('blue')
+                                                : isFlashDealActive
+                                                    ? 'bg-amber-500'
+                                                    : 'bg-[#ef394e]'
+                                    }`}
+                                >
                                     {product.discount.toLocaleString("fa-IR")}٪
                                 </div>
                             )}
@@ -207,12 +212,17 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                 {product.oldPrice && hasActivePromotion && (
                     <div className="flex items-center gap-2 mb-1">
                         {product.discount > 0 && (
-                            <div className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold' ? 'bg-gradient-to-r from-amber-400 to-orange-500' :
-                                product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red' ? 'bg-gradient-to-r from-rose-500 to-purple-700' :
-                                    product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange' ? 'bg-gradient-to-r from-lime-400 to-green-500' :
-                                        product.campaignLabel ? 'bg-gradient-to-r from-blue-400 to-indigo-500' :
-                                            isFlashDealActive ? 'bg-amber-500' : 'bg-[#ef394e]'
-                                }`}>
+                            <div
+                                className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                    product.campaignTheme
+                                        ? campaignPillClass(product.campaignTheme)
+                                        : product.campaignLabel
+                                            ? campaignPillClass('blue')
+                                            : isFlashDealActive
+                                                ? 'bg-amber-500'
+                                                : 'bg-[#ef394e]'
+                                }`}
+                            >
                                 {product.discount.toLocaleString("fa-IR")}٪
                             </div>
                         )}

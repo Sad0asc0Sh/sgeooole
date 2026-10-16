@@ -6,6 +6,7 @@ import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { campaignPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 
 type SimpleGalleryProps = {
@@ -111,15 +112,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                 {/* Campaign Badge */}
                 {showCampaignBadge && (
                     <div className="absolute top-4 left-4 z-20">
-                        <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${
-                            product.campaignTheme === 'gold-red' || product.campaignTheme === 'gold'
-                                ? 'bg-gradient-to-r from-amber-400 to-orange-500'
-                                : product.campaignTheme === 'red-purple' || product.campaignTheme === 'fire' || product.campaignTheme === 'red'
-                                ? 'bg-gradient-to-r from-rose-500 to-purple-700'
-                                : product.campaignTheme === 'lime-orange' || product.campaignTheme === 'lime' || product.campaignTheme === 'green-orange'
-                                ? 'bg-gradient-to-r from-lime-400 to-green-500'
-                                : 'bg-gradient-to-r from-blue-400 to-indigo-500'
-                        }`}>
+                        <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${campaignPillClass(product.campaignTheme)}`}>
                             {product.campaignLabel}
                         </span>
                     </div>
