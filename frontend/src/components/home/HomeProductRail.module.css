@@ -92,7 +92,9 @@
 .promotionHeader { --promotion-color: #2563eb; --promotion-stripe: linear-gradient(to right, #60a5fa, #6366f1); border-bottom: 1px solid #f1f5f9; }
 .promotionHeader[data-promotion-theme="flash"] { --promotion-color: #b45309; --promotion-stripe: #f59e0b; }
 .promotionHeader[data-promotion-theme="amazing"] { --promotion-color: #ef4444; --promotion-stripe: #ef4444; }
-.promotionHeader[data-promotion-theme="gold"] { --promotion-color: #d97706; --promotion-stripe: linear-gradient(to right, #fbbf24, #f97316); }
+/* «نوروزی/لوکس» — champagne → gold → bronze tail, mirrors lib/campaignTheme.ts.
+   Bruised apart from the flash rail (amber→orange→red) on purpose. */
+.promotionHeader[data-promotion-theme="gold"] { --promotion-color: #a65f00; --promotion-stripe: linear-gradient(to right, #fff085, #f0b100 45%, #894b00); }
 .promotionHeader[data-promotion-theme="fire"] { --promotion-color: #e11d48; --promotion-stripe: linear-gradient(to right, #f43f5e, #7e22ce); }
 /* «بهاره» stripe — mirrors lib/campaignTheme.ts (lime-400→green-500, hex only). */
 .promotionHeader[data-promotion-theme="lime"] { --promotion-color: #497d00; --promotion-stripe: linear-gradient(to right, #9ae600, #00c950); }
@@ -105,7 +107,7 @@
 .cardTimer > div > div { gap: 2px; font-size: 10px; letter-spacing: 0; }
 .flash { color: #b45309; }
 .amazing { color: #ef4444; }
-.gold { color: #d97706; }
+.gold { color: #a65f00; }
 .fire { color: #e11d48; }
 .lime { color: #497d00; }
 .blue { color: #2563eb; }

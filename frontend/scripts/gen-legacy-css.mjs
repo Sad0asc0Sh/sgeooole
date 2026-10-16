@@ -175,7 +175,7 @@ out.push(`}`);
 //     Add the class (e.g. "legacy-grad-timed") NEXT TO the existing Tailwind classes.
 const PRESETS = {
   timed:       { dir: "to right",        stops: ["amber-400", "orange-500", "red-600"], solid: "orange-500" },
-  gold:        { dir: "to right",        stops: ["amber-400", "orange-500"],            solid: "amber-400" },
+  gold:        { dir: "to right",        stops: ["yellow-200", "yellow-500", "yellow-800"], solid: "yellow-600" },
   fire:        { dir: "to right",        stops: ["rose-500", "purple-700"],             solid: "rose-500" },
   lime:        { dir: "to right",        stops: ["lime-400", "green-500"],              solid: "lime-400" },
   blue:        { dir: "to right",        stops: ["blue-400", "indigo-500"],             solid: "blue-400" },

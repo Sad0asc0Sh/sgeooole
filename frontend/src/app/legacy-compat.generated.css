@@ -134,7 +134,7 @@
 /* (d) plan-B presets — plain gradients with a solid fallback  [guard = same as (b)] */
 @supports not (background-image: linear-gradient(in oklab, red, red)) {
   .legacy-grad-timed { background-color: #ff6900; background-image: linear-gradient(to right, #ffb900, #ff6900, #e7000b); }
-  .legacy-grad-gold { background-color: #ffb900; background-image: linear-gradient(to right, #ffb900, #ff6900); }
+  .legacy-grad-gold { background-color: #d08700; background-image: linear-gradient(to right, #fff085, #f0b100, #894b00); }
   .legacy-grad-fire { background-color: #ff2056; background-image: linear-gradient(to right, #ff2056, #8200db); }
   .legacy-grad-lime { background-color: #9ae600; background-image: linear-gradient(to right, #9ae600, #00c950); }
   .legacy-grad-blue { background-color: #51a2ff; background-image: linear-gradient(to right, #51a2ff, #615fff); }

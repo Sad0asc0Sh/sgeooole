@@ -41,12 +41,14 @@ const SPRING: Scheme = {
 };
 
 const GOLD: Scheme = {
-  stripe: "legacy-grad-gold bg-gradient-to-r from-amber-400 to-orange-500",
-  stripeFallback: "#f97316",
-  text: "text-amber-600",
-  banner: "bg-amber-50 text-amber-700",
-  pill: "legacy-grad-gold bg-gradient-to-r from-amber-400 to-orange-500",
-  pillStyle: "linear-gradient(to left, #fbbf24, #f97316)",
+  // champagne → gold → deep bronze: keeps clear of the flash deal's
+  // amber→orange→red band so «نوروزی/لوکس» is unmistakable everywhere.
+  stripe: "legacy-grad-gold bg-kala-gold-gradient",
+  stripeFallback: "#f0b100",
+  text: "text-yellow-700",
+  banner: "bg-yellow-50 text-yellow-800",
+  pill: "legacy-grad-gold bg-kala-gold-gradient",
+  pillStyle: "linear-gradient(to right, #fff085, #f0b100 45%, #894b00)",
 };
 
 const FIRE: Scheme = {

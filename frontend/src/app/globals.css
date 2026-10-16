@@ -341,6 +341,16 @@
   color: #497d00;
 }
 
+/* «نوروزی/لوکس» — champagne → pure gold → deep bronze. Deliberately kept
+   out of the amber/orange band that «پیشنهاد لحظه‌ای» owns (amber-400 →
+   orange-500 → red-600) so a scroll never confuses the two; the bronze
+   tail is what makes it read as real gold. Hex-only for old engines,
+   legacy-grad-gold is the matching fallback in legacy-compat. */
+.bg-kala-gold-gradient {
+  background-color: #f0b100;
+  background-image: linear-gradient(to right, #fff085, #f0b100 45%, #894b00);
+}
+
 /* --- LEGACY BROWSER FALLBACKS (Chrome<108, Safari<15.4, Firefox<110) ---
    100vh fallback first, 100dvh progressive enhancement second.
    backdrop-filter without support falls back to solid background. */

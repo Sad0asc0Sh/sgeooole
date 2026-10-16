@@ -464,7 +464,7 @@ function SalesPage() {
                 />
               </Radio>
               <Radio value="gold-red">
-                <span style={{ color: '#ca8a04' }}>●</span> طلایی (نوروز/لوکس)
+                <span style={{ color: '#a65f00' }}>●</span> طلایی (نوروز/لوکس)
                 <span
                   style={{
                     display: 'inline-block',
@@ -473,7 +473,7 @@ function SalesPage() {
                     borderRadius: 6,
                     marginInlineStart: 8,
                     verticalAlign: 'middle',
-                    background: 'linear-gradient(to left, #fbbf24, #f97316)',
+                    background: 'linear-gradient(to left, #fff085, #f0b100, #894b00)',
                   }}
                 />
               </Radio>
