@@ -4,7 +4,7 @@ const Product = require('../models/Product')
 const Settings = require('../models/Settings')
 const { sendReminderEmail, sendReminderSMS, sendExpiryWarningEmail, sendExpiryWarningSMS } = require('../utils/notificationService')
 
-const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants category stock'
+const CART_PRODUCT_FIELDS = 'name price compareAtPrice images discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel productType variants category stock pricingMeta'
 
 // Helper function to get cart settings
 async function getCartSettings() {

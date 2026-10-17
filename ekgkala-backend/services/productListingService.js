@@ -10,6 +10,11 @@ const DATES = new Set(['createdAt', 'updatedAt', 'flashDealEndTime', 'specialOff
 const STRINGS = new Set(['name', 'sku', 'slug', 'productCode', 'productType'])
 const IDS = new Set(['_id', 'brand', 'category'])
 const INTERNAL = '__listing'
+// هم‌راستا با pricingService.managedExactFloorPrice: کف بدون تازه‌سازی معتبر نیست (پیش‌فرض ۱۴ روز)
+const MANAGED_EXACT_FLOOR_MAX_AGE_DAYS = (() => {
+  const raw = Number(process.env.MANAGED_EXACT_FLOOR_MAX_AGE_DAYS)
+  return Number.isFinite(raw) && raw >= 0 ? raw : 14
+})()
 
 class ListingQueryError extends Error {
   constructor(message) {
@@ -280,7 +285,20 @@ function pricingStages(campaigns, now) {
     //  - S4: هر قیمت تخفیف‌خورده‌ای که زیر exactFloorPrice بیفتد دقیقاً به کف برمی‌گردد.
     //  - S5: پس از انقضا (تایمر منقضی یا پایان Sale/پروموشن) نمایش به کف قطعی برمی‌گردد،
     //    نه به سقف معیاری که مبنای تخفیف بود. ورودی بدون pricingMeta => رفتار قبلی.
-    const exactFloor = numeric('$pricingMeta.exactFloorPrice')
+    const exactFloorRaw = numeric('$pricingMeta.exactFloorPrice')
+    // اعتبار کف قطعی: اگر exactFloorPriceAt هست و از ۱۴ روز قدیمی‌تر است (یا نامعتبر)،
+    // مثل نبودِ meta رفتار می‌شود تا نمایش و چک‌اوت هر دو یک قیمت بدهند.
+    const floorFreshnessCutoff = new Date(now.getTime() - MANAGED_EXACT_FLOOR_MAX_AGE_DAYS * 86_400_000)
+    const floorFresh = {
+      $or: [
+        { $eq: [{ $type: '$pricingMeta.exactFloorPriceAt' }, 'missing'] },
+        { $eq: ['$pricingMeta.exactFloorPriceAt', null] },
+        { $gte: ['$pricingMeta.exactFloorPriceAt', floorFreshnessCutoff] },
+      ],
+    }
+    const exactFloor = {
+      $cond: [{ $and: [{ $gt: [exactFloorRaw, 0] }, floorFresh] }, exactFloorRaw, 0],
+    }
     const managedRestore = { $and: [{ $gt: [exactFloor, 0] }, { $gt: [price, exactFloor] }] }
     const expiredRestored = isRoot
       // S5: پس از انقضا نمایش ریشه به کف قطعی برمی‌گردد (نه سقف معیار)؛ legacy اولویت دارد

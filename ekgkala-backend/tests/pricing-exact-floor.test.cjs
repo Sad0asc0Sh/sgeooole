@@ -175,10 +175,14 @@ test('عضویت: کمپین Sale با $setOnInsert.autoManaged=true ساخته 
   const upsert = model.calls.findOneAndUpdate[0]
   assert.equal(upsert.filter.name, 'فروش ویژه هوشمند')
   assert.equal(upsert.filter.discountPercentage, 16)
+  assert.equal(upsert.filter.autoManaged, true)
   assert.equal(upsert.update.$setOnInsert.autoManaged, true)
   assert.equal('autoManaged' in upsert.update.$set, false)
   assert.equal(upsert.update.$set.isActive, true)
   assert.equal(upsert.update.$setOnInsert.includeSubcategories, true)
+  // ۴.۱.۱: endDate فقط هنگام ساخت نوشته می‌شود؛ upsert تکراری نباید تایمر Sale مشترک را جلو ببرد
+  assert.equal('endDate' in upsert.update.$set, false)
+  assert.equal(upsert.update.$setOnInsert.endDate, future)
 })
 
 test('عضویت: خروج محصول از کمپین (کمپین none) سبد خالیِ autoManaged را بلافاصله پاک می‌کند', async () => {
@@ -186,7 +190,7 @@ test('عضویت: خروج محصول از کمپین (کمپین none) سبد �
   const result = await syncProductTimedSaleMembership(model, 'P1', { enabled: false })
   assert.equal(result, null)
   const pull = model.calls.updateMany[0]
-  assert.deepEqual(pull.filter, { products: 'P1', isActive: true })
+  assert.deepEqual(pull.filter, { products: 'P1', isActive: true, autoManaged: true })
   assert.deepEqual(pull.update, { $pull: { products: 'P1' } })
   assert.equal(model.calls.deleteMany.length, 1)
   assert.deepEqual(model.calls.deleteMany[0].filter, {
@@ -194,6 +198,23 @@ test('عضویت: خروج محصول از کمپین (کمپین none) سبد �
     isActive: true,
     products: { $size: 0 },
   })
+})
+
+test('عضویت: حذف از Saleهای ناهمخوان فقط روی autoManaged انجام می‌شود (Sale دستی ادمین محافظت می‌شود)', async () => {
+  const model = makeSaleStub()
+  await syncProductTimedSaleMembership(model, 'P1', {
+    enabled: true,
+    name: 'فروش ویژه هوشمند',
+    discountPercentage: 16,
+    endDate: future,
+    badgeTheme: 'green-orange',
+    showInFeatured: true,
+  })
+  const pull = model.calls.updateMany.find((c) => c.update && c.update.$pull)
+  assert.ok(pull, 'باید یک updateMany از نوع $pull فراخوانی شود')
+  assert.equal(pull.filter.products, 'P1')
+  assert.equal(pull.filter.autoManaged, true)
+  assert.ok(Array.isArray(pull.filter.$or))
 })
 
 // ---------------------------------------------------------------- پاک‌سازی کمپین‌های autoManaged
@@ -323,6 +344,22 @@ test('لیست S4: تخفیف ۲۰٪ روی سقف معیار ۲٪ زیر کف �
   assert.equal(doc.compareAtPrice, 2500000)
   // 2500000×0.8=2000000 < 2100000 => clamp
   assert.equal(doc.price, 2100000)
+})
+
+test('لیست S5 (کف منقضی): exactFloorPrice قدیمی‌تر از ۱۴ روز نادیده گرفته می‌شود', () => {
+  const stale = {
+    ...simpleManaged(),
+    _id: oid(9),
+    name: 'M-stale',
+    pricingMeta: {
+      exactFloorPrice: 2100000,
+      exactFloorPriceAt: new Date(now.getTime() - 15 * 86_400_000),
+    },
+  }
+  const r = run([stale], {}, [])
+  const doc = byName(r, 'M-stale')
+  assert.equal(doc.price, 2500000, 'کف منقضی نباید روی قیمت اثر بگذارد')
+  assert.equal(doc.discount, 0)
 })
 
 test('لیست S5 (پایان Sale بدون تایمر): سقف معیار مانده به کف قطعی برمی‌گردد', () => {

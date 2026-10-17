@@ -67,15 +67,32 @@ const isVariantExcluded = (variant) => Boolean(variant && variant.excludeFromPro
 // نه پایین‌تر. این گارد هرگز قیمت را بالا نمی‌برد؛ فقط از زیرکف‌رفتن جلوگیری می‌کند.
 // ورودی‌های بدون pricingMeta => رفتار قبلی (بدون گارد).
 // ============================================
-const managedExactFloorPrice = (productObj) => {
+// ۴.۱.۱: کف قطعی بدون تازه‌سازی معتبر نیست. پیش‌فرض ۱۴ روز؛ با
+// MANAGED_EXACT_FLOOR_MAX_AGE_DAYS قابل تنظیم است. نبودِ timestamp برای سازگاری با
+// داده‌های قبل از ۴.۱ معتبر حساب می‌شود، ولی timestamp نامعتبر = منقضی (fail-closed).
+const MANAGED_EXACT_FLOOR_MAX_AGE_DAYS = (() => {
+  const raw = Number(process.env.MANAGED_EXACT_FLOOR_MAX_AGE_DAYS)
+  return Number.isFinite(raw) && raw >= 0 ? raw : 14
+})()
+
+const managedExactFloorPrice = (productObj, now = new Date()) => {
   const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
   const exact = Number(meta && meta.exactFloorPrice)
-  return Number.isFinite(exact) && exact > 0 ? exact : 0
+  if (!Number.isFinite(exact) || exact <= 0) return 0
+
+  if (meta && meta.exactFloorPriceAt != null) {
+    const syncedAt = new Date(meta.exactFloorPriceAt)
+    if (Number.isNaN(syncedAt.getTime())) return 0
+    const ageMs = now.getTime() - syncedAt.getTime()
+    const maxAgeMs = MANAGED_EXACT_FLOOR_MAX_AGE_DAYS * 86_400_000
+    if (ageMs > maxAgeMs) return 0
+  }
+  return exact
 }
 
 /** گاهی گارد باید «پس از» اعمال تخفیف/بازگردانی روی شیء (خصوصاً variants) اجرایی شود. */
-const clampToManagedExactFloor = (productObj) => {
-  const exact = managedExactFloorPrice(productObj)
+const clampToManagedExactFloor = (productObj, now = new Date()) => {
+  const exact = managedExactFloorPrice(productObj, now)
   if (!exact) return productObj
   if (productObj.price !== undefined && productObj.price > 0 && productObj.price < exact) {
     productObj.price = exact
@@ -101,8 +118,8 @@ const clampToManagedExactFloor = (productObj) => {
  * نمایش به exactFloorPrice (آینه‌ی دقیق شاخه‌ی expired در pipeline لیست).
  * فقط وقتی price فعلی (بدون تخفیف) بالاتر از exactFloorPrice است اجرا می‌شود.
  */
-const restoreManagedExactFloor = (productObj) => {
-  const exact = managedExactFloorPrice(productObj)
+const restoreManagedExactFloor = (productObj, now = new Date()) => {
+  const exact = managedExactFloorPrice(productObj, now)
   if (!exact) return productObj
   const p = Number(productObj.price) || 0
   if (p > 0 && p > exact) productObj.price = exact
@@ -404,10 +421,35 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
     campaignLabel = null
   }
 
-  const finalPrice =
+  let finalPrice =
     appliedDiscount > 0
       ? Math.max(0, Math.round(basePrice * (1 - appliedDiscount / 100)))
       : basePrice
+
+  // ============================================
+  // ۴.۱.۱ — پیوستگی قیمت پرداختی با قیمت نمایش‌داده‌شده (exactFloorPrice)
+  // --------------------------------------------
+  // برای محصول سادهٔ متصل به مغز قیمت‌گذاری، price ثبت‌شده «سقف معیار» است؛ قیمت
+  // واقعی فروش exactFloorPrice است. پس:
+  //  - بدون پروموشن زنده ⇒ basePrice = finalPrice = exactFloorPrice (نه سقف).
+  //  - با پروموشن زنده ⇒ finalPrice هرگز زیر exactFloorPrice نرود.
+  // محصول بدون pricingMeta دقیقاً رفتار قبلی را حفظ می‌کند.
+  // ============================================
+  const exactFloor = managedExactFloorPrice(product, now)
+  if (!matchingVariant) {
+    if (appliedDiscount <= 0) {
+      if (exactFloor > 0) {
+        basePrice = exactFloor
+        finalPrice = exactFloor
+        campaignLabel = null
+      }
+    } else if (exactFloor > 0 && finalPrice < exactFloor) {
+      finalPrice = exactFloor
+    }
+  } else if (appliedDiscount > 0 && exactFloor > 0 && finalPrice < exactFloor) {
+    // واریانت‌ها قیمت واقعی خودشان را دارند؛ فقط سقف گارد کف (نه بازنویسی قیمت پایه)
+    finalPrice = exactFloor
+  }
 
   return {
     basePrice,
@@ -417,6 +459,7 @@ const computeItemPricing = (item, now = new Date(), campaignContext = null) => {
     flashActive,
     specialActive,
     specialOfferEndTime,
+    exactFloorPrice: exactFloor,
     quantity,
   }
 }
@@ -460,7 +503,7 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
       productObj.specialOfferEndTime = activeSale.endDate
       applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
       // گارد کف قطعی: تخفیف کمپین روی سقف معیار هرگز زیر exactFloorPrice نمی‌رود (S4)
-      clampToManagedExactFloor(productObj)
+      clampToManagedExactFloor(productObj, now)
     }
     track(activeSale.endDate)
     return { promotionEndsAt }
@@ -476,7 +519,7 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
     productObj.discount = 0
     restoreBasePriceOnObject(productObj, storedDiscount)
     // گارد انقضای مغز قیمت‌گذاری: نمایش بازمی‌گردد به exactFloorPrice، نه به سقف معیار (S4/S5)
-    restoreManagedExactFloor(productObj)
+    restoreManagedExactFloor(productObj, now)
     delete productObj.campaignLabel
     delete productObj.campaignTheme
     productObj.isSpecialOffer = false
@@ -486,7 +529,7 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
 
   if (storedDiscount > 0) {
     applyDiscountToObject(productObj, storedDiscount, storedDiscount)
-    clampToManagedExactFloor(productObj)
+    clampToManagedExactFloor(productObj, now)
     if (flashLive) {
       productObj.campaignLabel = FLASH_LABEL
       productObj.campaignTheme = FLASH_THEME

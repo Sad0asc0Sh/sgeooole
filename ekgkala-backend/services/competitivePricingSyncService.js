@@ -215,11 +215,12 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
 const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpec = { enabled: false }) => {
   if (!SaleModel || !productId) return null
 
-  // ۱) اگر کمپین از نوع timed_sale نیست، محصول را از تمام کمپین‌های Sale فعال خارج کن
+  // ۱) اگر کمپین از نوع timed_sale نیست، محصول را فقط از کمپین‌های خودکار (autoManaged)
+  // خارج کن؛ Sale دستی ادمین باید دست‌نخورده بماند (۴.۱.۱).
   if (!timedSaleSpec || !timedSaleSpec.enabled) {
     if (typeof SaleModel.updateMany === 'function') {
       await SaleModel.updateMany(
-        { products: productId, isActive: true },
+        { products: productId, isActive: true, autoManaged: true },
         { $pull: { products: productId } }
       )
     }
@@ -238,11 +239,13 @@ const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpe
       ? timedSaleSpec.endDate
       : new Date(Date.now() + 72 * 3600 * 1000)
 
-  // ۲) حذف محصول از هر کمپین Sale دیگری که مشخصاتش با کمپین فعلی فرق دارد
+  // ۲) حذف محصول از هر کمپین Sale خودکار دیگری که مشخصاتش با کمپین فعلی فرق دارد.
+  // Saleهای دستی ادمین (autoManaged=false) لمس نمی‌شوند.
   if (typeof SaleModel.updateMany === 'function') {
     await SaleModel.updateMany(
       {
         products: productId,
+        autoManaged: true,
         $or: [
           { name: { $ne: name } },
           { discountPercentage: { $ne: discountPercentage } },
@@ -252,23 +255,26 @@ const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpe
     )
   }
 
-  // ۳) یافتن یا ایجاد/بروزرسانی کمپین Sale منطبق در بخش مالی و تخفیف
+  // ۳) یافتن یا ایجاد/بروزرسانی کمپین Sale خودکارِ منطبق در بخش مالی و تخفیف.
+  // ۴.۱.۱: فقط Saleهای autoManaged قابل تطبیق‌اند و endDate فقط هنگام ساخت تنظیم می‌شود؛
+  // نوشتن endDate در $set تاریخ پایان Sale مشترک را با هر محصول جدید جلو می‌برد.
   if (typeof SaleModel.findOneAndUpdate === 'function') {
     const saleDoc = await SaleModel.findOneAndUpdate(
       {
         name,
         discountPercentage,
         isActive: true,
+        autoManaged: true,
       },
       {
         $set: {
           badgeTheme,
           showInFeatured,
-          endDate,
           isActive: true,
         },
         $setOnInsert: {
           startDate: new Date(now.getTime() - 60 * 1000),
+          endDate,
           categories: [],
           includeSubcategories: true,
           autoManaged: true,

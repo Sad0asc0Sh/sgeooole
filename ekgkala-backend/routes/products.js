@@ -1507,6 +1507,25 @@ router.put(
 
       const unsetFields = {}
 
+      // ۴.۱.۱: ویرایش دستی قیمت در پنل ادمین، اعتبار pricingMeta (کف قطعی) را باطل می‌کند.
+      // وگرنه گارد کف قدیمی قیمت دستیِ بالاتر ادمین را به کف قبلی برمی‌گرداند.
+      const manualPriceChanged = (() => {
+        if (!product.pricingMeta) return false
+        const incomingPrice = updates.price
+        if (incomingPrice !== undefined && Number(incomingPrice) !== Number(product.price)) {
+          return true
+        }
+        if (Array.isArray(updates.variants)) {
+          const currentVariants = Array.isArray(product.variants) ? product.variants : []
+          if (currentVariants.length !== updates.variants.length) return true
+          return updates.variants.some((v, i) => {
+            const current = currentVariants[i]
+            return !current || Number(v && v.price) !== Number(current.price)
+          })
+        }
+        return false
+      })()
+
       // اعمال قواعد چرخه‌ی عمر پیشنهاد لحظه‌ای/شگفت‌انگیز:
       // اگر ادمین تیک لحظه‌ای یا شگفت‌انگیز را بردارد، یا تایمر گذشته باشد، تخفیف محصول صفر
       // و فلگ‌ها خاموش می‌شوند و قیمت قدیمیِ تخفیف‌خورده به پایه برمی‌گردد.
@@ -1516,6 +1535,11 @@ router.put(
           success: false,
           message: promoRule.error,
         })
+      }
+
+      if (manualPriceChanged) {
+        delete updates.pricingMeta
+        unsetFields.pricingMeta = ''
       }
 
       // Use findByIdAndUpdate for simple updates to avoid full validation
@@ -2368,9 +2392,17 @@ const handleProductImport = async (req, res) => {
                   }))
                 }
 
+                const csvPriceChanged =
+                  updateFields.price !== undefined &&
+                  Number(updateFields.price) !== Number(existingProduct.price)
                 await Product.updateOne(
                   { _id: existingProduct._id },
-                  { $set: updateFields },
+                  {
+                    $set: updateFields,
+                    ...(csvPriceChanged && existingProduct.pricingMeta
+                      ? { $unset: { pricingMeta: '' } }
+                      : {}),
+                  },
                   { runValidators: false },
                 )
                 totalUpdated++
@@ -2411,9 +2443,17 @@ const handleProductImport = async (req, res) => {
                 }))
               }
 
+              const csvPriceChanged =
+                updateFields.price !== undefined &&
+                Number(updateFields.price) !== Number(existingProduct.price)
               await Product.updateOne(
                 { _id: existingProduct._id },
-                { $set: updateFields },
+                {
+                  $set: updateFields,
+                  ...(csvPriceChanged && existingProduct.pricingMeta
+                    ? { $unset: { pricingMeta: '' } }
+                    : {}),
+                },
                 { runValidators: false },
               )
               totalUpdated++
