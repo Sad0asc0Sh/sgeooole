@@ -14,6 +14,7 @@
     "analyze": "ANALYZE=true next build",
     "legacy:css": "node scripts/gen-legacy-css.mjs",
     "legacy:audit": "node scripts/audit-legacy-css.mjs",
+    "audit:live": "node scripts/audit-live-assets.mjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

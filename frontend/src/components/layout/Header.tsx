@@ -80,7 +80,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             {/* Brand accent line */}
             <div className="h-[2px] w-full bg-gradient-to-l from-kala-600 via-kala-400 to-kala-600" />
             {/* MOBILE HEADER */}
-            <div className="md:hidden mobile-container flex h-16 items-center gap-3">
+            <div data-header-variant="mobile" className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}
                 <Link href="/" onClick={handleHomeClick} className="shrink-0">
                     <Logo />
@@ -113,7 +113,7 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             </div>
 
             {/* DESKTOP HEADER */}
-            <div className="hidden md:block">
+            <div data-header-variant="desktop" className="hidden md:block">
                 <div className="w-full max-w-[1440px] mx-auto">
                     {/* Top Row: Logo - Search - Actions */}
                     <div className="flex items-center h-20 gap-4 px-4 lg:px-6">
