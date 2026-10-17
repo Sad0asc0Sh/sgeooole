@@ -191,6 +191,10 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
         monitoredMarketCeiling: Number(payload.monitoredMarketCeiling || calibrated.calibratedCeiling),
         calibratedCeiling: calibrated.calibratedCeiling,
         exactFloorPrice: calibrated.exactFloorPrice,
+        ...(effectiveHardFloor > 0 ? { hardFloorPrice: Math.round(effectiveHardFloor) } : {}),
+        exactFloorPriceAt: new Date(),
+        needsRefresh: false,
+        syncedAt: new Date(),
         updatedAt: new Date(),
       },
       priceUpdatedAt: new Date(),
@@ -219,6 +223,8 @@ const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpe
         { $pull: { products: productId } }
       )
     }
+    // سبدهای autoManaged که همین خروج سبب خالی‌شدنشان شده، بلافاصله پاک‌سازی می‌شوند (S3)
+    await cleanupEmptyAutoManagedSales(SaleModel)
     return null
   }
 
@@ -265,6 +271,7 @@ const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpe
           startDate: new Date(now.getTime() - 60 * 1000),
           categories: [],
           includeSubcategories: true,
+          autoManaged: true,
         },
         $addToSet: {
           products: productId,
@@ -275,14 +282,46 @@ const syncProductTimedSaleMembership = async (SaleModel, productId, timedSaleSpe
         upsert: true,
       }
     )
+    // کمپین‌های autoManaged دیگری که این انتقال، سبدشان را خالی کرده پاک می‌شوند (S3)
+    await cleanupEmptyAutoManagedSales(SaleModel)
     return saleDoc
   }
 
   return null
 }
 
+/**
+ * پاک‌سازی خودکار کمپین‌های زمان‌دارِ «مغز قیمت‌گذاری» (S3):
+ * هر Sale که با autoManaged=true ساخته شده است پس از پایان endDate غیرفعال و
+ * اگر هنوز هم بدون محصول باشد، حذف می‌شود تا بخش «فرصت‌های زمان‌دار» از
+ * رده کمپین‌های بی‌فرزند تمیز بماند. کمپین‌های دستی ادمین (autoManaged=false)
+ * هرگز لمس نمی‌شوند.
+ */
+const cleanupEmptyAutoManagedSales = async (SaleModel, { now = new Date() } = {}) => {
+  // مدل واقعی mongoose یا هر آبجکت با updateMany/deleteMany پذیرفته می‌شود؛ استاب‌های ناقص نادیده.
+  if (!SaleModel || typeof SaleModel.updateMany !== 'function') return { deactivated: 0, deleted: 0 }
+
+  const deactivatedRes = await SaleModel.updateMany(
+    { autoManaged: true, isActive: true, endDate: { $lte: now } },
+    { $set: { isActive: false } }
+  )
+
+  let deleted = 0
+  if (typeof SaleModel.deleteMany === 'function') {
+    const res = await SaleModel.deleteMany({
+      autoManaged: true,
+      isActive: true,
+      products: { $size: 0 },
+    })
+    deleted = res.deletedCount || 0
+  }
+
+  return { deactivated: deactivatedRes.modifiedCount || 0, deleted }
+}
+
 module.exports = {
   calibrateCeilingForExactFloor,
   validatePricingSyncPayload,
   syncProductTimedSaleMembership,
+  cleanupEmptyAutoManagedSales,
 }

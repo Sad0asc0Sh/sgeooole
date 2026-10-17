@@ -48,6 +48,12 @@ const saleSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // ایجادشده توسط مغز قیمت‌گذاری (ai-driven-competitive-pricing-system)؛
+    // چنین کمپینی پس از خالی‌شدن محصولات به‌طور خودکار پاک/غیرفعال می‌شود
+    autoManaged: {
+      type: Boolean,
+      default: false,
+    },
     // آیا محصولات این تخفیف در بخش «منتخب‌ها»ی صفحه اصلی (با لیبل همین تخفیف) نمایش داده شوند؟
     // پیش‌فرض true است تا رفتار فعلی حفظ شود؛ اسناد قدیمیِ بدون این فیلد هم true حساب می‌شوند.
     showInFeatured: {
@@ -74,5 +80,7 @@ saleSchema.pre('save', function (next) {
 // ایندکس برای جستجوی سریع تخفیف‌های فعال
 saleSchema.index({ isActive: 1, startDate: 1, endDate: 1 })
 saleSchema.index({ categories: 1 })
+// پاک‌سازی خودکار کمپین‌های بی‌کاربرِ مغز قیمت‌گذاری
+saleSchema.index({ autoManaged: 1, isActive: 1, products: 1 })
 
 module.exports = mongoose.model('Sale', saleSchema)

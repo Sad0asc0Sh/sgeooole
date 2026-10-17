@@ -14,6 +14,7 @@
 // ============================================
 
 const { resolveBasePrice, isTimerLive } = require('./pricingService')
+const { cleanupEmptyAutoManagedSales } = require('./competitivePricingSyncService')
 
 const toPlain = (v) => (v && typeof v.toObject === 'function' ? v.toObject() : v)
 
@@ -150,6 +151,9 @@ async function runSaleCleanup(Sale, { now = new Date() } = {}) {
     { isActive: true, endDate: { $lte: now } },
     { $set: { isActive: false } },
   )
+  // کمپین‌های خودکار مغز قیمت‌گذاری (autoManaged): منقضی‌ها غیرفعال و سبدهای خالی حذف می‌شوند؛
+  // کمپین‌های دستی ادمین فقط در همان شاخه‌ی بالا غیرفعال می‌شوند و هرگز حذف نمی‌شوند.
+  await cleanupEmptyAutoManagedSales(Sale, { now })
   return result.modifiedCount || 0
 }
 

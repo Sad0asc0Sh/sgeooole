@@ -251,7 +251,10 @@ function pricingStages(campaigns, now) {
   // هر تغییری در منطق باید در هر دو جا اعمال و با تست همسانی پوشش داده شود.
   // discountExpr برای سطح وariant قابل بازنویسی است تا وariant مستثنی
   // (excludeFromPromotion=true) تخفیف صفر بگیرد؛ ریشه همیشه ref('discount').
-  const priceObject = (source, storedDiscountExpr, discountExpr = ref('discount')) => {
+  // isRoot: بازگردانی «پایان کمپین به کف قطعی» فقط در سطح ریشه معنا دارد — سقف معیار
+  // (price=calibratedCeiling) به‌واسطه همگام‌سازی فقط روی ریشه نوشته می‌شود و قیمت
+  // واریانت‌ها قیمت واقعیِ خودشان است، نه مبنای درصد؛ نباید بالا برده شوند.
+  const priceObject = (source, storedDiscountExpr, discountExpr = ref('discount'), isRoot = false) => {
     const price = numeric(`${source}.price`)
     const compare = numeric(`${source}.compareAtPrice`)
     const storedDiscount = storedDiscountExpr
@@ -271,8 +274,32 @@ function pricingStages(campaigns, now) {
         { $cond: [legacyMatch, compare, price] },
       ],
     }
+    // آینه‌ی داده‌ی مغز قیمت‌گذاری (S4/S5): سقف معیارِ ثبت‌شده (price) فقط مبنای ریاضی
+    // تخفیف درصدی است؛ قیمت واقعیِ فروش exactFloorPrice است. همیشه به ریشه‌ی سند ارجاع
+    // می‌دهیم (در $map هم مثل numeric('$discount') به سند ریشه اشاره می‌کند).
+    //  - S4: هر قیمت تخفیف‌خورده‌ای که زیر exactFloorPrice بیفتد دقیقاً به کف برمی‌گردد.
+    //  - S5: پس از انقضا (تایمر منقضی یا پایان Sale/پروموشن) نمایش به کف قطعی برمی‌گردد،
+    //    نه به سقف معیاری که مبنای تخفیف بود. ورودی بدون pricingMeta => رفتار قبلی.
+    const exactFloor = numeric('$pricingMeta.exactFloorPrice')
+    const managedRestore = { $and: [{ $gt: [exactFloor, 0] }, { $gt: [price, exactFloor] }] }
+    const expiredRestored = isRoot
+      // S5: پس از انقضا نمایش ریشه به کف قطعی برمی‌گردد (نه سقف معیار)؛ legacy اولویت دارد
+      // و بدون pricingMeta دقیقاً رفتار قبلی (base) باقی می‌ماند.
+      ? { $cond: [legacyMatch, base, { $cond: [managedRestore, exactFloor, base] }] }
+      // واریانت: دقیقاً رفتار قبلی شاخه‌ی expired
+      : base
+    const discounted = round({ $subtract: [base, { $divide: [{ $multiply: [base, discountExpr] }, 100] }] })
+    // S4: قیمت تخفیف‌خورده (ریشه و واریانت مشمول) هرگز زیر کف قطعی نمی‌رود
+    const discountedClamped = { $cond: [{ $and: [{ $gt: [exactFloor, 0] }, { $lt: [discounted, exactFloor] }] }, exactFloor, discounted] }
+    const noDiscountPrice = isRoot
+      // S5 ب: بدون تخفیف هم سقف معیار مانده از کمپین پایان‌یافته به کف قطعی برمی‌گردد؛
+      // بدون meta دقیقاً رفتار قبلی (price خام) باقی می‌ماند.
+      ? { $cond: [managedRestore, exactFloor, price] }
+      : price
     return {
-      price: { $cond: [ref('expired'), base, { $cond: [{ $and: [{ $gt: [discountExpr, 0] }, { $gt: [price, 0] }] }, round({ $subtract: [base, { $divide: [{ $multiply: [base, discountExpr] }, 100] }] }), price] }] },
+      price: {
+        $cond: [ref('expired'), expiredRestored, { $cond: [{ $and: [{ $gt: [discountExpr, 0] }, { $gt: [price, 0] }] }, discountedClamped, noDiscountPrice] }],
+      },
       compareAtPrice: { $cond: [{ $or: [ref('expired'), { $gt: [discountExpr, 0] }] }, base, compare] },
     }
   }
@@ -298,10 +325,10 @@ function pricingStages(campaigns, now) {
     } },
     { $addFields: {
       // تخفیف ثبت‌شده‌ی خود محصول برای تشخیص داده‌ی قدیمی؛ داخل $map هم به سند ریشه اشاره می‌کند
-      [`${INTERNAL}.root`]: priceObject('$$ROOT', numeric('$discount')),
+      [`${INTERNAL}.root`]: priceObject('$$ROOT', numeric('$discount'), ref('discount'), true),
       // وariant مستثنی (excludeFromPromotion=true) تخفیف صفر می‌گیرد و با قیمت پایه می‌ماند؛
       // بقیه دقیقاً مثل قبل با تخفیف محصول/کمپین محاسبه می‌شوند. فیلد ناموجود => falsy => شامل تخفیف.
-      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'), { $cond: [{ $eq: ['$$variant.excludeFromPromotion', true] }, 0, ref('discount')] })] } } },
+      [`${INTERNAL}.variants`]: { $map: { input: { $ifNull: ['$variants', []] }, as: 'variant', in: { $mergeObjects: ['$$variant', priceObject('$$variant', numeric('$discount'), { $cond: [{ $eq: ['$$variant.excludeFromPromotion', true] }, 0, ref('discount')] }, false)] } } },
     } },
     { $addFields: {
       [`${INTERNAL}.display`]: { $cond: [ref('variable'), { $reduce: { input: ref('variants'), initialValue: null, in: { $cond: [{ $or: [{ $eq: ['$$value', null] }, { $lt: ['$$this.price', '$$value.price'] }] }, '$$this', '$$value'] } } }, ref('root')] },

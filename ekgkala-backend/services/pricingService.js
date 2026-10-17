@@ -58,6 +58,57 @@ const restoreBasePriceOnObject = (target, storedDiscount = 0) => {
 // داده‌های قدیمی بدون این فیلد => falsy => رفتار قبلی (شامل تخفیف).
 const isVariantExcluded = (variant) => Boolean(variant && variant.excludeFromPromotion === true)
 
+// ============================================
+// گارد کف قطعی مغز قیمت‌گذاری (pricingMeta.exactFloorPrice)
+// --------------------------------------------
+// سقف معیارِ ثبت‌شده (price/compareAtPrice) صرفاً مبنای ریاضی تخفیف درصدی است
+// و قیمت «واقعی» فروش کالا exactFloorPrice است، نه سقف. پس در نمایش/اعمال تخفیف
+// هرچه از exactFloorPrice پایین‌تر برود => به همان دقیق‌ترین کف برگشت می‌دهیم
+// نه پایین‌تر. این گارد هرگز قیمت را بالا نمی‌برد؛ فقط از زیرکف‌رفتن جلوگیری می‌کند.
+// ورودی‌های بدون pricingMeta => رفتار قبلی (بدون گارد).
+// ============================================
+const managedExactFloorPrice = (productObj) => {
+  const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
+  const exact = Number(meta && meta.exactFloorPrice)
+  return Number.isFinite(exact) && exact > 0 ? exact : 0
+}
+
+/** گاهی گارد باید «پس از» اعمال تخفیف/بازگردانی روی شیء (خصوصاً variants) اجرایی شود. */
+const clampToManagedExactFloor = (productObj) => {
+  const exact = managedExactFloorPrice(productObj)
+  if (!exact) return productObj
+  if (productObj.price !== undefined && productObj.price > 0 && productObj.price < exact) {
+    productObj.price = exact
+  }
+  if (Array.isArray(productObj.variants) && productObj.variants.length > 0) {
+    productObj.variants = productObj.variants.map((v) => {
+      if (!v || typeof v !== 'object' || isVariantExcluded(v)) return v
+      const vp = Number(v.price) || 0
+      if (vp > 0 && vp < exact) {
+        v.price = exact
+        // قیمت خط‌خورده‌ای که پایین‌تر از کف قطعی می‌افتد، جعلی است؛ حذفش می‌کنیم
+        if (Number(v.compareAtPrice) || 0) delete v.compareAtPrice
+      }
+      return v
+    })
+  }
+  return productObj
+}
+
+/**
+ * بازگشت به قیمت واقعی پس از انقضای پروموشنِ مغز قیمت‌گذاری:
+ * سقف معیار ثبت‌شده قرار بود صرفاً مبنای percent باشد؛ انقضا یعنی بازگشت
+ * نمایش به exactFloorPrice (آینه‌ی دقیق شاخه‌ی expired در pipeline لیست).
+ * فقط وقتی price فعلی (بدون تخفیف) بالاتر از exactFloorPrice است اجرا می‌شود.
+ */
+const restoreManagedExactFloor = (productObj) => {
+  const exact = managedExactFloorPrice(productObj)
+  if (!exact) return productObj
+  const p = Number(productObj.price) || 0
+  if (p > 0 && p > exact) productObj.price = exact
+  return productObj
+}
+
 // محصولِ دارای متغیر که «همه‌ی» متغیرهایش از تخفیف مستثنی شده‌اند: هیچ مدلِ مشمولی
 // وجود ندارد، پس هیچ پروموشنی (تخفیف زمان‌دار / لحظه‌ای / شگفت‌انگیز) برای این محصول
 // معنا ندارد و نباید برچسب، تایمر یا درصد تخفیفی روی آن بنشیند.
@@ -408,6 +459,8 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
       productObj.isFromActiveSale = true
       productObj.specialOfferEndTime = activeSale.endDate
       applyDiscountToObject(productObj, activeSale.discountPercentage, storedDiscount)
+      // گارد کف قطعی: تخفیف کمپین روی سقف معیار هرگز زیر exactFloorPrice نمی‌رود (S4)
+      clampToManagedExactFloor(productObj)
     }
     track(activeSale.endDate)
     return { promotionEndsAt }
@@ -422,6 +475,8 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
     // (تخفیف ۰، قیمت پایه، بدون لیبل/قیمت خط‌خورده‌ی تخفیفی) — مثل لیست محصولات.
     productObj.discount = 0
     restoreBasePriceOnObject(productObj, storedDiscount)
+    // گارد انقضای مغز قیمت‌گذاری: نمایش بازمی‌گردد به exactFloorPrice، نه به سقف معیار (S4/S5)
+    restoreManagedExactFloor(productObj)
     delete productObj.campaignLabel
     delete productObj.campaignTheme
     productObj.isSpecialOffer = false
@@ -431,6 +486,7 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
 
   if (storedDiscount > 0) {
     applyDiscountToObject(productObj, storedDiscount, storedDiscount)
+    clampToManagedExactFloor(productObj)
     if (flashLive) {
       productObj.campaignLabel = FLASH_LABEL
       productObj.campaignTheme = FLASH_THEME
@@ -498,6 +554,9 @@ module.exports = {
   applyDiscountToObject,
   applyPromotionOverlay,
   restoreBasePriceOnObject,
+  managedExactFloorPrice,
+  clampToManagedExactFloor,
+  restoreManagedExactFloor,
   ttlUntil,
   sanitizeCompareAtPrice,
   sanitizeVariantsCompareAtPrice,

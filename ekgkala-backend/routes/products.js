@@ -2801,12 +2801,45 @@ router.post('/pricing-sync', async (req, res) => {
       })
     }
 
+    // مجرای امن پروب: مغز قیمت‌گذاری پیش از اعمال، با ?dryRun=1 همین اندپوینت را بدون هیچ
+    // نوشتنی در دیتابیس صدا می‌زند تا اعتبار کف سود/قیمت خرید/کمپین را بسنجد. قرارداد پذیرش:
+    // هر پاسخِ HTTP-ok که ok:false یا valid:false دارد به معنای «این payload پذیرفته نمی‌شود».
+    const dryRun = ['1', 'true'].includes(String(req.query.dryRun || '').toLowerCase())
+
     const check = validatePricingSyncPayload(body, existingProduct)
     if (!check.valid) {
+      if (dryRun) {
+        return res.json({
+          success: false,
+          ok: false,
+          valid: false,
+          code: check.code || 'INVALID_PRICING',
+          message: check.error,
+        })
+      }
       return res.status(422).json({
         success: false,
         code: check.code || 'INVALID_PRICING',
         message: check.error,
+      })
+    }
+
+    if (dryRun) {
+      return res.json({
+        success: true,
+        ok: true,
+        valid: true,
+        dryRun: true,
+        message: 'dryRun انجام شد؛ payload قابل پذیرش است و هیچ تغییری اعمال نشد',
+        data: {
+          _id: existingProduct._id,
+          sku: existingProduct.sku,
+          productCode: existingProduct.productCode,
+          finalPrice: check.finalPrice,
+          basePrice: check.basePrice,
+          discountPct: check.discountPct,
+          campaignType: check.campaignType,
+        },
       })
     }
 
