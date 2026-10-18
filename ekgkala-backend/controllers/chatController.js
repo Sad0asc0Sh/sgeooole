@@ -8,6 +8,10 @@ const {
   stripThinkingTags,
 } = require('../utils/groqService');
 const {
+  getActiveSalesCampaignContext,
+  findActiveSaleForProduct,
+} = require('../services/pricingService');
+const {
   searchProducts,
   formatProductContext,
   toCardPayload,
@@ -410,11 +414,13 @@ async function engineToChatPackage(assembled) {
     return null;
   }
   const Product = require('../models/Product');
+  const now = new Date();
+  const campaignContext = await getActiveSalesCampaignContext(now);
   const sections = [];
   for (const item of assembled.items) {
     if (!item || !item.productId) continue;
     const full = await Product.findById(item.productId)
-      .select('name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images guarantee')
+      .select('name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images guarantee pricingMeta isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime')
       .populate('category', 'name slug')
       .populate('brand', 'name')
       .lean();
@@ -422,6 +428,7 @@ async function engineToChatPackage(assembled) {
     const card = toCardPayload(full, {
       recommendedQty: item.qty || 1,
       compatibilityHint: item.why || '',
+      activeSale: findActiveSaleForProduct(full, campaignContext),
     });
     sections.push({
       key: item.role,

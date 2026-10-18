@@ -13,7 +13,11 @@ const Product = require('../models/Product');
 const Category = require('../models/Category');
 const Brand = require('../models/Brand');
 const { WIZARD_DOMAINS } = require('./packDomains');
-const { resolveBasePrice } = require('../services/pricingService');
+const {
+  resolveProductDisplay,
+  getActiveSalesCampaignContext,
+  findActiveSaleForProduct,
+} = require('../services/pricingService');
 
 // نام مستعار سازگاری (تعریف اصلی دامنه‌ها در packDomains.js است)
 const PACK_DOMAINS = WIZARD_DOMAINS;
@@ -98,23 +102,20 @@ function effectivePrice(p) {
   return Number(p.price) || 0;
 }
 
-/** قیمت نهایی فروش — قرارداد مرکزی قیمت: مبنا همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده */
-function finalPriceOf(p) {
-  const raw = effectivePrice(p);
-  const cmp = Number(p.compareAtPrice) || 0;
-  const d = Number(p.discount) || 0;
-  const base = resolveBasePrice(raw, cmp, d);
-  if (d > 0 && d < 100) return Math.round(base * (1 - d / 100));
-  return base;
+/**
+ * قیمت نهایی فروش — ۴.۱.۲: همان لایه‌ی نمایش صفحه‌ی محصول.
+ * فقط تخفیف زنده (تایمر فعال / Sale فعال) اعمال می‌شود و پس از انقضا قیمت به
+ * exactFloorPrice برمی‌گردد؛ نه سقف معیار. این تابع دیگر discount خام را کورکورانه
+ * اعمال نمی‌کند (باگ چت‌بات پس از انقضا: ۹۹۰٬۴۷۶ به‌جای ۸۳۲٬۰۰۰).
+ */
+function finalPriceOf(p, now = new Date()) {
+  return resolveProductDisplay(p, { now }).price;
 }
 
-function oldPriceOf(p, fin) {
-  const raw = effectivePrice(p);
-  const cmp = Number(p.compareAtPrice) || 0;
-  const d = Number(p.discount) || 0;
-  const base = resolveBasePrice(raw, cmp, d);
+function oldPriceOf(p, fin, now = new Date()) {
+  const view = resolveProductDisplay(p, { now });
   // قیمت خط‌خورده فقط با تخفیف واقعی فعال نمایش داده می‌شود؛ compare کهنه‌ی منقضی/بدون تخفیف oldPrice نمی‌سازد
-  if (d > 0 && d < 100 && base > fin) return base;
+  if (view.compareAtPrice && view.compareAtPrice > fin) return view.compareAtPrice;
   return undefined;
 }
 
@@ -215,7 +216,7 @@ async function searchProducts(message, history = []) {
 
   const selectFields = 'name slug productCode sku description productType price compareAtPrice discount '
     + 'priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand '
-    + 'rating numReviews guarantee salesCount updatedAt';
+    + 'rating numReviews guarantee salesCount updatedAt pricingMeta campaignLabel';
 
   // مرحله الف: جستجوی هدفمند با تطابق مستقیم کلمات کلیدی
   let specificHits = [];
@@ -289,6 +290,18 @@ async function searchProducts(message, history = []) {
     .slice(0, MAX_PRODUCTS)
     .map((s) => s.p);
 
+  // ۴.۱.۲: برای پاریتی کامل با صفحه‌ی محصول، Sale فعال هر کارت را هم وصل می‌کنیم
+  // (غیرقابل‌شمارش تا در JSON خروجی/لاگ نشت نکند).
+  try {
+    const campaignContext = await getActiveSalesCampaignContext();
+    for (const p of scored) {
+      const activeSale = findActiveSaleForProduct(p, campaignContext);
+      if (activeSale) Object.defineProperty(p, '__activeSale', { value: activeSale, enumerable: false });
+    }
+  } catch {
+    // شکست در خواندن Sale نباید جست‌وجوی چت را بشکند؛ بدون Sale نمایش می‌دهیم.
+  }
+
   return { keywords, products: scored };
 }
 
@@ -299,7 +312,9 @@ function formatProductContext(products) {
   }
   return products.map((p, i) => {
     const stock = effectiveStock(p);
-    const price = finalPriceOf(p);
+    // ۴.۱.۲: نمایش قیمت با همان قرارداد صفحه‌ی محصول (تایمر زنده + کف قطعی)
+    const view = resolveProductDisplay(p, { activeSale: p.__activeSale || null });
+    const price = view.price;
     const priceFa = Number(price || 0).toLocaleString('fa-IR');
     const stockFa = stock > 0 ? `موجود (${Number(stock).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
     const catName = (p.category && p.category.name) || '—';
@@ -309,7 +324,7 @@ function formatProductContext(products) {
       ? specs.map((s) => `    - ${s.label}: ${s.value}`).join('\n')
       : '    - مشخصات فنی ثبت نشده';
     const desc = p.description ? String(p.description).replace(/\s+/g, ' ').slice(0, 220) : '—';
-    const prevPrice = oldPriceOf(p, price);
+    const prevPrice = view.compareAtPrice && view.compareAtPrice > price ? view.compareAtPrice : undefined;
     const oldPrice = prevPrice
       ? `\n  قیمت قبل تخفیف: ${Number(prevPrice).toLocaleString('fa-IR')} تومان`
       : '';
@@ -320,7 +335,9 @@ function formatProductContext(products) {
 /** پیلود کارت برای فرانت‌اند */
 function toCardPayload(p, extra = {}) {
   const stock = effectiveStock(p);
-  const price = finalPriceOf(p);
+  // ۴.۱.۲: کارت چت/پک هم نباید سقف منقضی یا discount بی‌پشتوانه را نشان دهد
+  const view = resolveProductDisplay(p, { activeSale: extra.activeSale || p.__activeSale || null });
+  const price = view.price;
   const catName = (p.category && p.category.name) || 'عمومی';
   const catSlug = (p.category && (p.category.slug || p.category._id)) || '';
   return {
@@ -329,8 +346,8 @@ function toCardPayload(p, extra = {}) {
     slug: p.slug,
     productCode: p.productCode,
     price,
-    oldPrice: oldPriceOf(p, price),
-    discount: Number(p.discount) || 0,
+    oldPrice: view.compareAtPrice && view.compareAtPrice > price ? view.compareAtPrice : undefined,
+    discount: view.discount,
     image: firstImageUrl(p),
     category: catName,
     categorySlug: String(catSlug),
@@ -346,6 +363,7 @@ function toCardPayload(p, extra = {}) {
     defaultVariantOptions: defaultVariantOptions(p),
     priceUpdatedAt: p.priceUpdatedAt || null,
     priceUpdateCount: Number(p.priceUpdateCount) || 0,
+    campaignLabel: view.campaignLabel || undefined,
     compatibilityHint: extra.compatibilityHint || '',
     recommendedQty: extra.recommendedQty || 1,
   };

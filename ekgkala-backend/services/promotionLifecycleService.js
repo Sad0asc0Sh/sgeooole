@@ -13,7 +13,12 @@
 //   چرخه‌ی عمر خودِ سند Sale (غیرفعال‌شدن خودکار بعد از endDate) در runSaleCleanup است.
 // ============================================
 
-const { resolveBasePrice, isTimerLive } = require('./pricingService')
+const {
+  resolveBasePrice,
+  isTimerLive,
+  managedExactFloorPrice,
+  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
+} = require('./pricingService')
 const { cleanupEmptyAutoManagedSales } = require('./competitivePricingSyncService')
 
 const toPlain = (v) => (v && typeof v.toObject === 'function' ? v.toObject() : v)
@@ -63,12 +68,66 @@ function buildLegacyBaseRestore({ price, compareAtPrice, variants } = {}, stored
   return { set, unset }
 }
 
-/** آپدیت کاملِ غیرفعال‌سازی پیشنهاد لحظه‌ای/شگفت‌انگیز + حذف تخفیف برای یک سند محصول. */
-function buildDeactivationUpdate(product) {
-  const { set, unset } = buildLegacyBaseRestore(product, product && product.discount)
+// ============================================
+// ۴.۱.۲ — بازگرداندن «قیمت ماندگار» دیتابیس به کف قطعی
+// --------------------------------------------
+// پیش از این، انقضای پروموشن فقط فلگ/تخفیف را صفر می‌کرد و price روی «سقف معیار»
+// (مثلاً ۹۹۰٬۴۷۶) می‌ماند؛ مسیرهای محافظت‌شده هنگام خواندن اصلاح می‌کردند، ولی
+// علاقه‌مندی‌ها و چت‌بات قیمت خام را نشان می‌دادند. حالا هنگام غیرفعال‌سازی، خودِ
+// سند هم روی exactFloorPrice تنظیم می‌شود.
+//
+// محافظت‌ها (عمدی):
+//  - محصول timed_sale: price سقف معیار است و تخفیف از سند Sale می‌آید؛ اگر price را
+//    کف کنیم، Sale دوباره روی کف تخفیف می‌دهد (تخفیف دوبل). دست‌نخورده می‌ماند.
+//  - محصول متغیر: قیمت ریشه معنا ندارد و قیمت واقعی در variants است؛ ریشه دست‌نخورده.
+//  - کف قطعی کهنه (> MANAGED_EXACT_FLOOR_MAX_AGE_DAYS) یا timestamp نامعتبر: معتبر نیست.
+//  - محصول بدون pricingMeta: هیچ‌گاه مدیریت نشده؛ دست‌نخورده.
+// ============================================
+function buildManagedRestore(product, now = new Date()) {
+  const plain = toPlain(product)
+  const meta = plain && plain.pricingMeta
+  if (!meta || typeof meta !== 'object') return null
+  // سندهای قدیمی ممکن است productType نداشته باشند؛ وجود variants یعنی قیمت واقعی
+  // در واریانت‌هاست و ریشه نباید دستکاری شود.
+  if (plain.productType === 'variable') return null
+  if (plain.productType !== 'simple' && Array.isArray(plain.variants) && plain.variants.length > 0) return null
+  if (meta.campaignType === 'timed_sale') return null
+
+  const exact = managedExactFloorPrice(plain, now)
+  if (!exact) return null
+  const current = Number(plain.price) || 0
+  if (current <= exact) return null
+
   return {
-    $set: { ...set, isFlashDeal: false, isSpecialOffer: false, discount: 0 },
-    $unset: { ...unset, flashDealEndTime: '', specialOfferEndTime: '' },
+    set: {
+      price: exact,
+      'pricingMeta.needsRefresh': true,
+      'pricingMeta.campaignType': 'none',
+      'pricingMeta.priceRestoredAt': now,
+      'pricingMeta.restoredFromPrice': current,
+    },
+    unset: { compareAtPrice: '' },
+  }
+}
+
+/** آپدیت کاملِ غیرفعال‌سازی پیشنهاد لحظه‌ای/شگفت‌انگیز + حذف تخفیف برای یک سند محصول. */
+function buildDeactivationUpdate(product, { now = new Date() } = {}) {
+  const { set, unset } = buildLegacyBaseRestore(product, product && product.discount)
+  const managed = buildManagedRestore(product, now)
+  return {
+    $set: {
+      ...set,
+      ...(managed ? managed.set : {}),
+      isFlashDeal: false,
+      isSpecialOffer: false,
+      discount: 0,
+    },
+    $unset: {
+      ...unset,
+      ...(managed ? managed.unset : {}),
+      flashDealEndTime: '',
+      specialOfferEndTime: '',
+    },
   }
 }
 
@@ -85,7 +144,10 @@ function planPromotionCleanup(product, now = new Date()) {
 
   if (!flashLive && !specialLive) {
     const hasTrace = Boolean(product.isFlashDeal || product.isSpecialOffer || (Number(product.discount) || 0) > 0)
-    return hasTrace ? buildDeactivationUpdate(product) : null
+    // عقب‌مانده: cron قبلی تخفیف/فلگ‌ها را صفر کرده ولی price روی سقف معیار مانده است.
+    // در این حالت ردّ پروموشن نیست، ولی خودِ pricingMeta مدرک مدیریت موتور است.
+    const hasBacklogCeiling = !hasTrace && buildManagedRestore(product, now) !== null
+    return hasTrace || hasBacklogCeiling ? buildDeactivationUpdate(product, { now }) : null
   }
 
   const $set = {}
@@ -101,16 +163,42 @@ function planPromotionCleanup(product, now = new Date()) {
   return Object.keys($set).length ? { $set, $unset } : null
 }
 
-/** فیلتر کاندیداهای پاک‌سازی: تایمر گذشته، یا تخفیف بدون هیچ پیشنهاد فعال. */
+/**
+ * فیلتر کاندیداهای پاک‌سازی:
+ *  ۱) تایمر گذشته؛
+ *  ۲) تخفیف بدون هیچ پیشنهاد فعال؛
+ *  ۳) عقب‌مانده‌ی موتور: فلگ/تخفیف صفر ولی price بالاتر از کف قطعی (فقط پروموشن مستقیم).
+ *     timed_sale، محصول متغیر و Sale دستی عمداً خارج‌اند (به buildManagedRestore مراجعه کنید).
+ */
 const staleCandidatesFilter = (now = new Date()) => ({
   $or: [
     { isFlashDeal: true, flashDealEndTime: { $ne: null, $lte: now } },
     { isSpecialOffer: true, specialOfferEndTime: { $ne: null, $lte: now } },
     { isFlashDeal: { $ne: true }, isSpecialOffer: { $ne: true }, discount: { $gt: 0 } },
+    {
+      isFlashDeal: { $ne: true },
+      isSpecialOffer: { $ne: true },
+      discount: { $lte: 0 },
+      productType: { $ne: 'variable' },
+      'pricingMeta.exactFloorPrice': { $gt: 0 },
+      'pricingMeta.campaignType': { $in: ['flash', 'featured', null] },
+      // کفِ کهنه (> MAX) در همین فیلتر کنار گذاشته می‌شود؛ وگرنه چون buildManagedRestore
+      // برایش null می‌دهد، تا ابد در batch اول می‌ماند و بقیه‌ی کاندیداها را گرسنه می‌کند.
+      $or: [
+        { 'pricingMeta.exactFloorPriceAt': { $exists: false } },
+        { 'pricingMeta.exactFloorPriceAt': null },
+        {
+          'pricingMeta.exactFloorPriceAt': {
+            $gte: new Date(now.getTime() - MANAGED_EXACT_FLOOR_MAX_AGE_DAYS * 86_400_000),
+          },
+        },
+      ],
+      $expr: { $gt: ['$price', '$pricingMeta.exactFloorPrice'] },
+    },
   ],
 })
 
-const CLEANUP_FIELDS = 'price compareAtPrice variants discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime updatedAt'
+const CLEANUP_FIELDS = 'price compareAtPrice variants discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime productType pricingMeta updatedAt'
 
 /**
  * اجرای پاک‌سازی روی دیتابیس. با updatedAt قفل خوش‌بینانه دارد تا اگر ادمین هم‌زمان
@@ -237,11 +325,30 @@ function applyOwnPromotionRules(updates, unset = {}, current = {}, now = new Dat
       unset.compareAtPrice = ''
     }
   }
+
+  // ۴.۱.۲: اگر ادمین خودش قیمت را عوض نکرده و محصول مدیریت‌شده است، قیمت ماندگار
+  // هم به کف قطعی برگردد تا خواننده‌های خام (چت/علاقه‌مندی) سقف منقضی را نبینند.
+  if (updates.price === undefined) {
+    const merged = { ...(toPlain(current) || {}), ...updates, discount: 0 }
+    const managed = buildManagedRestore(merged, now)
+    if (managed) {
+      Object.assign(updates, {
+        price: managed.set.price,
+        'pricingMeta.needsRefresh': true,
+        'pricingMeta.campaignType': 'none',
+        'pricingMeta.priceRestoredAt': managed.set['pricingMeta.priceRestoredAt'],
+        'pricingMeta.restoredFromPrice': managed.set['pricingMeta.restoredFromPrice'],
+      })
+      delete updates.compareAtPrice
+      unset.compareAtPrice = ''
+    }
+  }
   return { deactivated: true }
 }
 
 module.exports = {
   buildLegacyBaseRestore,
+  buildManagedRestore,
   buildDeactivationUpdate,
   planPromotionCleanup,
   staleCandidatesFilter,

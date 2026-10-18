@@ -75,6 +75,29 @@ const MANAGED_EXACT_FLOOR_MAX_AGE_DAYS = (() => {
   return Number.isFinite(raw) && raw >= 0 ? raw : 14
 })()
 
+// آستانه‌ی هشدار پیش از خاموش‌شدن گارد (پیش‌فرض ۷ روز). فقط برای لاگ/گزارش است و
+// هیچ اثری روی قیمت ندارد؛ همیشه کوچک‌تر از MAX محاسبه می‌شود.
+const MANAGED_EXACT_FLOOR_WARN_AGE_DAYS = (() => {
+  const raw = Number(process.env.MANAGED_EXACT_FLOOR_WARN_AGE_DAYS)
+  const warn = Number.isFinite(raw) && raw >= 0 ? raw : 7
+  return Math.min(warn, MANAGED_EXACT_FLOOR_MAX_AGE_DAYS)
+})()
+
+/** سن کف قطعی به روز؛ null اگر timestamp وجود نداشته باشد. */
+const managedExactFloorAgeDays = (productObj, now = new Date()) => {
+  const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
+  if (!meta || meta.exactFloorPriceAt == null) return null
+  const syncedAt = new Date(meta.exactFloorPriceAt)
+  if (Number.isNaN(syncedAt.getTime())) return null
+  return Math.max(0, (now.getTime() - syncedAt.getTime()) / 86_400_000)
+}
+
+/** آیا کف قطعی معتبر است ولی در آستانه‌ی هشدار کهنه‌شدن قرار گرفته؟ */
+const isManagedExactFloorAging = (productObj, now = new Date()) => {
+  const age = managedExactFloorAgeDays(productObj, now)
+  return age != null && age >= MANAGED_EXACT_FLOOR_WARN_AGE_DAYS && age <= MANAGED_EXACT_FLOOR_MAX_AGE_DAYS
+}
+
 const managedExactFloorPrice = (productObj, now = new Date()) => {
   const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
   const exact = Number(meta && meta.exactFloorPrice)
@@ -547,6 +570,87 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
   return { promotionEndsAt }
 }
 
+// ============================================
+// ۴.۱.۲ — قیمت نمایشی یکسان برای مسیرهای «خام»
+// --------------------------------------------
+// برخی مسیرها (علاقه‌مندی‌ها، چت‌بات، کارت‌های پک) محصول را بدون pipeline لیست
+// می‌خوانند و خودشان قیمت می‌سازند. این هلپر همان لایه‌ی نمایش (زنده‌بودن تایمر،
+// Sale فعال و کف قطعی) را روی یک کپی اعمال می‌کند تا هیچ مسیری سقف منقضی را نشان ندهد.
+// ============================================
+const cloneForPricing = (product) => {
+  if (!product || typeof product !== 'object') return product
+  const clone = { ...product }
+  if (Array.isArray(product.variants)) {
+    clone.variants = product.variants.map((v) => {
+      if (!v || typeof v !== 'object') return v
+      const plain = typeof v.toObject === 'function' ? v.toObject() : { ...v }
+      if (Array.isArray(plain.options)) plain.options = plain.options.map((o) => (o && typeof o === 'object' ? { ...o } : o))
+      return plain
+    })
+  }
+  if (product.pricingMeta && typeof product.pricingMeta === 'object') {
+    clone.pricingMeta = { ...product.pricingMeta }
+  }
+  return clone
+}
+
+/** قیمت نمایشی: برای متغیر، ارزان‌ترین واریانت موجود (سازگار با چت) و برای ساده، price. */
+const displayPriceOf = (view) => {
+  if (view && view.productType === 'variable' && Array.isArray(view.variants) && view.variants.length > 0) {
+    const inStock = view.variants
+      .filter((v) => (Number(v.stock) || 0) > 0)
+      .map((v) => Number(v.price))
+      .filter((n) => Number.isFinite(n) && n > 0)
+    if (inStock.length) return Math.min(...inStock)
+    const all = view.variants.map((v) => Number(v.price)).filter((n) => Number.isFinite(n) && n > 0)
+    if (all.length) return Math.min(...all)
+  }
+  return Number(view && view.price) || 0
+}
+
+/** یک Sale فعال را از context آماده (campaignMap/categoryDiscountMap) برای محصول پیدا می‌کند. */
+const findActiveSaleForProduct = (product, campaignContext) => {
+  if (!product || !campaignContext) return null
+  const raw =
+    (product._id && campaignContext.campaignMap && campaignContext.campaignMap.get(String(product._id))) ||
+    (() => {
+      const catId = product.category && (product.category._id || product.category)
+      return catId && campaignContext.categoryDiscountMap
+        ? campaignContext.categoryDiscountMap.get(String(catId))
+        : null
+    })()
+  if (!raw) return null
+  // context لیست، فیلدها را با نام کوتاه discount/theme نگه می‌دارد؛ لایه‌ی نمایش
+  // نام قراردادی discountPercentage/badgeTheme را می‌خواهد.
+  return {
+    name: raw.name,
+    discountPercentage: Number(raw.discountPercentage ?? raw.discount) || 0,
+    badgeTheme: raw.badgeTheme || raw.theme || 'green-orange',
+    endDate: raw.endDate || null,
+  }
+}
+
+/**
+ * قیمت نمایشی سازگار با صفحه‌ی محصول/لیست برای مسیرهای خام.
+ * @returns {{product: object, price: number, compareAtPrice: number|null, discount: number, campaignLabel: string|null}}
+ */
+const resolveProductDisplay = (product, { now = new Date(), activeSale = null } = {}) => {
+  if (!product || typeof product !== 'object') {
+    return { product, price: 0, compareAtPrice: null, discount: 0, campaignLabel: null }
+  }
+  const view = cloneForPricing(product)
+  applyPromotionOverlay(view, { activeSale, now })
+  const price = displayPriceOf(view)
+  const compare = Number(view.compareAtPrice) || 0
+  return {
+    product: view,
+    price,
+    compareAtPrice: compare > price ? compare : null,
+    discount: Number(view.discount) || 0,
+    campaignLabel: view.campaignLabel || null,
+  }
+}
+
 /** TTL کش (ثانیه) برای پاسخی که پروموشنش در promotionEndsAt تمام می‌شود؛ هرگز بیشتر از baseTtl و کمتر از ۱ نیست. */
 const ttlUntil = (promotionEndsAt, baseTtl, now = new Date()) => {
   if (!promotionEndsAt) return baseTtl
@@ -598,8 +702,16 @@ module.exports = {
   applyPromotionOverlay,
   restoreBasePriceOnObject,
   managedExactFloorPrice,
+  managedExactFloorAgeDays,
+  isManagedExactFloorAging,
+  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
+  MANAGED_EXACT_FLOOR_WARN_AGE_DAYS,
   clampToManagedExactFloor,
   restoreManagedExactFloor,
+  cloneForPricing,
+  displayPriceOf,
+  findActiveSaleForProduct,
+  resolveProductDisplay,
   ttlUntil,
   sanitizeCompareAtPrice,
   sanitizeVariantsCompareAtPrice,

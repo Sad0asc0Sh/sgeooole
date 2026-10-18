@@ -3,6 +3,11 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const {
+  getActiveSalesCampaignContext,
+  findActiveSaleForProduct,
+  resolveProductDisplay,
+} = require('../services/pricingService');
 
 /**
  * Wishlist Routes for Customer Users
@@ -21,7 +26,7 @@ router.get('/', protect, async (req, res) => {
       // productType + variants are required so variable products resolve
       // per-variant pricing on their cards (product-level price/discount is
       // meaningless for them and produces phantom discount badges).
-      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
+      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants pricingMeta',
       match: { isActive: true }, // Only return active products
     });
 
@@ -33,11 +38,26 @@ router.get('/', protect, async (req, res) => {
     }
 
     // Filter out null values (deleted or inactive products)
-    const wishlist = (user.wishlist || []).filter(item => item !== null);
+    const items = (user.wishlist || []).filter(item => item !== null);
+
+    // ۴.۱.۲: همین‌جا همان لایه‌ی نمایش صفحه‌ی محصول اعمال می‌شود تا فرانت حتی اگر
+    // قیمت را خودش بازمحاسبه کند، سقف منقضی/تخفیف مرده نبیند. خروجی سازگار است
+    // (price نهایی، compareAtPrice فقط با تخفیف واقعی، discount صفر پس از انقضا).
+    const now = new Date();
+    const campaignContext = await getActiveSalesCampaignContext(now);
+    const wishlist = items.map((item) => {
+      const plain = typeof item.toObject === 'function' ? item.toObject() : item;
+      const activeSale = findActiveSaleForProduct(plain, campaignContext);
+      const view = resolveProductDisplay(plain, { now, activeSale }).product;
+      // داده‌ی داخلی موتور قیمت‌گذاری به کلاینت نشت نکند؛ فقط قیمت نمایشی لازم است.
+      delete view.pricingMeta;
+      return view;
+    });
 
     res.json({
       success: true,
       data: wishlist,
+      serverNow: now.toISOString(),
     });
   } catch (error) {
     console.error('Error fetching wishlist:', error);

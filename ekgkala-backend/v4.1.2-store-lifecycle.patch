@@ -1,0 +1,1034 @@
+diff --git a/.env.example b/.env.example
+index 6e7f4ab..9e955f8 100644
+--- a/.env.example
++++ b/.env.example
+@@ -74,4 +74,7 @@ TOROB_TOKEN_VERSION=1
+ TOROB_FEED_CACHE_TTL_SECONDS=600
+ 
+ # --- Competitive pricing exact-floor freshness (days) ---
++# پس از این تعداد روز بدون sync ترب، گارد کف قطعی fail-closed خاموش می‌شود.
+ # MANAGED_EXACT_FLOOR_MAX_AGE_DAYS=14
++# از این تعداد روز، job انقضا در لاگ هشدار می‌دهد (باید کوچک‌تر از MAX باشد).
++# MANAGED_EXACT_FLOOR_WARN_AGE_DAYS=7
+diff --git a/controllers/chatController.js b/controllers/chatController.js
+index 3d46d8f..3866b3e 100644
+--- a/controllers/chatController.js
++++ b/controllers/chatController.js
+@@ -7,6 +7,10 @@ const {
+   AIServiceError,
+   stripThinkingTags,
+ } = require('../utils/groqService');
++const {
++  getActiveSalesCampaignContext,
++  findActiveSaleForProduct,
++} = require('../services/pricingService');
+ const {
+   searchProducts,
+   formatProductContext,
+@@ -410,11 +414,13 @@ async function engineToChatPackage(assembled) {
+     return null;
+   }
+   const Product = require('../models/Product');
++  const now = new Date();
++  const campaignContext = await getActiveSalesCampaignContext(now);
+   const sections = [];
+   for (const item of assembled.items) {
+     if (!item || !item.productId) continue;
+     const full = await Product.findById(item.productId)
+-      .select('name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images guarantee')
++      .select('name slug price compareAtPrice discount stock variants productCode sku description category brand properties specifications images guarantee pricingMeta isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime')
+       .populate('category', 'name slug')
+       .populate('brand', 'name')
+       .lean();
+@@ -422,6 +428,7 @@ async function engineToChatPackage(assembled) {
+     const card = toCardPayload(full, {
+       recommendedQty: item.qty || 1,
+       compatibilityHint: item.why || '',
++      activeSale: findActiveSaleForProduct(full, campaignContext),
+     });
+     sections.push({
+       key: item.role,
+diff --git a/jobs/promotionExpiryJob.js b/jobs/promotionExpiryJob.js
+index de40e4d..36efbd0 100644
+--- a/jobs/promotionExpiryJob.js
++++ b/jobs/promotionExpiryJob.js
+@@ -2,6 +2,10 @@ const Product = require('../models/Product')
+ const Sale = require('../models/Sale')
+ const { clearCacheByPrefix } = require('../middleware/cache')
+ const { runPromotionCleanup, runSaleCleanup } = require('../services/promotionLifecycleService')
++const {
++  MANAGED_EXACT_FLOOR_WARN_AGE_DAYS,
++  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
++} = require('../services/pricingService')
+ 
+ /**
+  * غیرفعال‌سازی خودکار تخفیف‌ها بعد از پایان زمانشان (هر ۶۰ ثانیه).
+@@ -17,7 +21,42 @@ const { runPromotionCleanup, runSaleCleanup } = require('../services/promotionLi
+  * کش Redis پرفروش‌ترین‌ها را هم باطل می‌کند تا قیمت/لیبل منقضی در هیچ خروجی‌ای نماند.
+  */
+ const INTERVAL_MS = 60 * 1000
++const FLOOR_WARN_INTERVAL_MS = 60 * 60 * 1000
+ let running = false
++let lastFloorWarnAt = 0
++
++/**
++ * ۴.۱.۲ (N5): هشدار پیش از خاموش‌شدن گارد کف قطعی.
++ * اگر sync ترب بیش از آستانه‌ی هشدار (پیش‌فرض ۷ روز) متوقف شود، کف قدیمی می‌شود و
++ * پس از MANAGED_EXACT_FLOOR_MAX_AGE_DAYS (پیش‌فرض ۱۴ روز) گارد fail-closed خاموش
++ * می‌شود؛ آن‌وقت نمایش به سقف معیار برمی‌گردد. این تابع فقط لاگ هشدار می‌دهد
++ * (یک‌بار در ساعت) تا اپراتور پیش از رسیدن به مرز، sync را تازه کند.
++ */
++const warnAgingManagedFloors = async (now = new Date()) => {
++  if (Date.now() - lastFloorWarnAt < FLOOR_WARN_INTERVAL_MS) return
++  lastFloorWarnAt = Date.now()
++  try {
++    const warnCutoff = new Date(now.getTime() - MANAGED_EXACT_FLOOR_WARN_AGE_DAYS * 86_400_000)
++    const maxCutoff = new Date(now.getTime() - MANAGED_EXACT_FLOOR_MAX_AGE_DAYS * 86_400_000)
++    const [aging, expired] = await Promise.all([
++      Product.countDocuments({
++        'pricingMeta.exactFloorPrice': { $gt: 0 },
++        'pricingMeta.exactFloorPriceAt': { $lte: warnCutoff, $gt: maxCutoff },
++      }),
++      Product.countDocuments({
++        'pricingMeta.exactFloorPrice': { $gt: 0 },
++        'pricingMeta.exactFloorPriceAt': { $lte: maxCutoff },
++      }),
++    ])
++    if (aging > 0 || expired > 0) {
++      console.warn(
++        `[PRICING-FLOOR] ${aging} محصول کف قطعی بین ${MANAGED_EXACT_FLOOR_WARN_AGE_DAYS} تا ${MANAGED_EXACT_FLOOR_MAX_AGE_DAYS} روز است و ${expired} محصول از مرز ${MANAGED_EXACT_FLOOR_MAX_AGE_DAYS} روز گذشته (گارد کف خاموش). sync ترب را اجرا کنید.`,
++      )
++    }
++  } catch (error) {
++    console.error('[PRICING-FLOOR] خطا در شمارش کف‌های کهنه:', error.message)
++  }
++}
+ 
+ const checkExpiredPromotions = async () => {
+   if (running) return
+@@ -26,6 +65,7 @@ const checkExpiredPromotions = async () => {
+     const now = new Date()
+     const { scanned, modified } = await runPromotionCleanup(Product, { now })
+     const deactivatedSales = await runSaleCleanup(Sale, { now })
++    await warnAgingManagedFloors(now)
+ 
+     if (scanned > 0 || deactivatedSales > 0) {
+       // حتی اگر worker دیگری زودتر اعمال کرده باشد، کش همین پروسه هم باید تازه شود
+diff --git a/package.json b/package.json
+index b3d8b58..e06331b 100644
+--- a/package.json
++++ b/package.json
+@@ -16,7 +16,8 @@
+     "migrate:all": "pnpm run migrate:slugs && pnpm run migrate:product-codes",
+     "report:campaign-conflicts": "node scripts/report-campaign-conflicts.js",
+     "report:suspicious-prices": "node scripts/report-suspicious-prices.js",
+-    "test": "node tests/pricing-base.test.cjs && node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js && node tests/product-listing.test.cjs && node tests/product-sorting.test.cjs && node tests/sale-campaign-conflict.test.cjs && node tests/promotion-expiry.test.cjs && node tests/variant-promotion-exclusion.test.cjs && node tests/pricing-exact-floor.test.cjs && node tests/competitive-pricing-sync.test.cjs && node tests/access-control-sort.test.cjs && node tests/cctv-assembly-engine.test.cjs && node tests/cctv-chat-flow.test.cjs && node tests/cctv-e2e-integration.test.cjs && node tests/cctv-integrity-gate.test.cjs && node tests/inventory-stock.test.cjs && node --test tests/managed-floor-checkout.test.cjs",
++    "audit:stale-floors": "node scripts/report-stale-floors.cjs",
++    "test": "node tests/pricing-base.test.cjs && node tests/chat-architecture.test.cjs && node tests/cart-pricing.test.cjs && node tests/torob-api-v3.test.js && node tests/product-listing.test.cjs && node tests/product-sorting.test.cjs && node tests/sale-campaign-conflict.test.cjs && node tests/promotion-expiry.test.cjs && node tests/variant-promotion-exclusion.test.cjs && node tests/pricing-exact-floor.test.cjs && node tests/competitive-pricing-sync.test.cjs && node tests/access-control-sort.test.cjs && node tests/cctv-assembly-engine.test.cjs && node tests/cctv-chat-flow.test.cjs && node tests/cctv-e2e-integration.test.cjs && node tests/cctv-integrity-gate.test.cjs && node tests/inventory-stock.test.cjs && node --test tests/managed-floor-checkout.test.cjs tests/managed-floor-lifecycle.test.cjs tests/pricing-display-parity.test.cjs",
+     "test:torob-acceptance": "node tests/torob-acceptance.js"
+   },
+   "keywords": [
+diff --git a/routes/wishlist.js b/routes/wishlist.js
+index 33bea21..f0566e8 100644
+--- a/routes/wishlist.js
++++ b/routes/wishlist.js
+@@ -3,6 +3,11 @@ const router = express.Router();
+ const { protect } = require('../middleware/auth');
+ const User = require('../models/User');
+ const Product = require('../models/Product');
++const {
++  getActiveSalesCampaignContext,
++  findActiveSaleForProduct,
++  resolveProductDisplay,
++} = require('../services/pricingService');
+ 
+ /**
+  * Wishlist Routes for Customer Users
+@@ -21,7 +26,7 @@ router.get('/', protect, async (req, res) => {
+       // productType + variants are required so variable products resolve
+       // per-variant pricing on their cards (product-level price/discount is
+       // meaningless for them and produces phantom discount badges).
+-      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants',
++      select: 'name slug price compareAtPrice discount images stock countInStock category brand rating isActive isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime campaignLabel campaignTheme productType variants pricingMeta',
+       match: { isActive: true }, // Only return active products
+     });
+ 
+@@ -33,11 +38,26 @@ router.get('/', protect, async (req, res) => {
+     }
+ 
+     // Filter out null values (deleted or inactive products)
+-    const wishlist = (user.wishlist || []).filter(item => item !== null);
++    const items = (user.wishlist || []).filter(item => item !== null);
++
++    // ۴.۱.۲: همین‌جا همان لایه‌ی نمایش صفحه‌ی محصول اعمال می‌شود تا فرانت حتی اگر
++    // قیمت را خودش بازمحاسبه کند، سقف منقضی/تخفیف مرده نبیند. خروجی سازگار است
++    // (price نهایی، compareAtPrice فقط با تخفیف واقعی، discount صفر پس از انقضا).
++    const now = new Date();
++    const campaignContext = await getActiveSalesCampaignContext(now);
++    const wishlist = items.map((item) => {
++      const plain = typeof item.toObject === 'function' ? item.toObject() : item;
++      const activeSale = findActiveSaleForProduct(plain, campaignContext);
++      const view = resolveProductDisplay(plain, { now, activeSale }).product;
++      // داده‌ی داخلی موتور قیمت‌گذاری به کلاینت نشت نکند؛ فقط قیمت نمایشی لازم است.
++      delete view.pricingMeta;
++      return view;
++    });
+ 
+     res.json({
+       success: true,
+       data: wishlist,
++      serverNow: now.toISOString(),
+     });
+   } catch (error) {
+     console.error('Error fetching wishlist:', error);
+diff --git a/scripts/report-stale-floors.cjs b/scripts/report-stale-floors.cjs
+new file mode 100644
+index 0000000..5b84e7a
+--- /dev/null
++++ b/scripts/report-stale-floors.cjs
+@@ -0,0 +1,107 @@
++#!/usr/bin/env node
++/**
++ * ۴.۱.۲ (N5) — گزارش و پاک‌سازی کف‌های قطعی کهنه / عقب‌مانده.
++ *
++ * چرا: بعد از MANAGED_EXACT_FLOOR_MAX_AGE_DAYS (پیش‌فرض ۱۴ روز) بدون sync ترب،
++ * گارد کف قطعی fail-closed خاموش می‌شود و قیمت نمایش به سقف معیار برمی‌گردد.
++ * این اسکریپت پیش از رسیدن به آن مرز هشدار می‌دهد و با --fix عقب‌مانده‌های
++ * قابل‌بازیابی (price > exactFloor و پروموشن مستقیم منقضی) را به کف برمی‌گرداند.
++ *
++ * استفاده:
++ *   node scripts/report-stale-floors.cjs                 # گزارش
++ *   node scripts/report-stale-floors.cjs --json          # خروجی JSON
++ *   node scripts/report-stale-floors.cjs --fix           # اجرای پاک‌سازی عقب‌مانده
++ *   node scripts/report-stale-floors.cjs --fail-on-expired  # خروج ۲ اگر از مرز گذشته باشد
++ *
++ * متغیرهای محیطی (اختیاری):
++ *   MONGODB_URI، MANAGED_EXACT_FLOOR_MAX_AGE_DAYS، MANAGED_EXACT_FLOOR_WARN_AGE_DAYS
++ */
++const path = require('path')
++const mongoose = require('mongoose')
++
++require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
++
++const Product = require('../models/Product')
++const {
++  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
++  MANAGED_EXACT_FLOOR_WARN_AGE_DAYS,
++  managedExactFloorAgeDays,
++} = require('../services/pricingService')
++const { runPromotionCleanup } = require('../services/promotionLifecycleService')
++
++const argv = new Set(process.argv.slice(2))
++const AS_JSON = argv.has('--json')
++const FIX = argv.has('--fix')
++const FAIL_ON_EXPIRED = argv.has('--fail-on-expired')
++
++const maskUri = (uri) => String(uri || '').replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@')
++
++async function main() {
++  const uri = process.env.MONGODB_URI
++  if (!uri) throw new Error('MONGODB_URI تنظیم نشده است (فایل .env یا محیط)')
++
++  await mongoose.connect(uri)
++  const now = new Date()
++  const docs = await Product.find({ 'pricingMeta.exactFloorPrice': { $gt: 0 } })
++    .select('name sku price discount productType isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime pricingMeta updatedAt')
++    .lean()
++
++  const rows = docs.map((p) => {
++    const meta = p.pricingMeta || {}
++    const exact = Math.round(Number(meta.exactFloorPrice) || 0)
++    const price = Math.round(Number(p.price) || 0)
++    const age = managedExactFloorAgeDays(p, now)
++    const hasLivePromo =
++      (p.isFlashDeal === true && (!p.flashDealEndTime || new Date(p.flashDealEndTime) > now)) ||
++      (p.isSpecialOffer === true && (!p.specialOfferEndTime || new Date(p.specialOfferEndTime) > now))
++    let status = 'ok'
++    if (age == null) status = 'no-timestamp'
++    else if (age > MANAGED_EXACT_FLOOR_MAX_AGE_DAYS) status = 'expired'
++    else if (age >= MANAGED_EXACT_FLOOR_WARN_AGE_DAYS) status = 'aging'
++    const directManaged = meta.campaignType == null || meta.campaignType === 'flash' || meta.campaignType === 'featured'
++    if (status === 'ok' && !hasLivePromo && price > exact && meta.campaignType === 'timed_sale') status = 'timed-sale'
++    else if (status === 'ok' && !hasLivePromo && price > exact && p.productType !== 'variable' && directManaged) status = 'backlog'
++    return {
++      id: String(p._id),
++      name: p.name,
++      sku: p.sku,
++      price,
++      exactFloorPrice: exact,
++      ageDays: age == null ? null : Math.round(age * 10) / 10,
++      campaignType: meta.campaignType || null,
++      status,
++    }
++  })
++
++  const counts = rows.reduce((acc, r) => {
++    acc[r.status] = (acc[r.status] || 0) + 1
++    return acc
++  }, {})
++
++  if (AS_JSON) {
++    console.log(JSON.stringify({ now: now.toISOString(), warnDays: MANAGED_EXACT_FLOOR_WARN_AGE_DAYS, maxDays: MANAGED_EXACT_FLOOR_MAX_AGE_DAYS, counts, rows }, null, 2))
++  } else {
++    console.log(`کف قطعی: ${rows.length} محصول | هشدار کهنگی: ${counts.aging || 0} | از مرز گذشته: ${counts.expired || 0} | عقب‌مانده: ${counts.backlog || 0} | بدون timestamp: ${counts['no-timestamp'] || 0}`)
++    const interesting = rows.filter((r) => r.status !== 'ok')
++    for (const r of interesting.slice(0, 50)) {
++      console.log(`  [${r.status}] ${r.sku || r.id} | ${r.name || '-'} | price=${r.price} | floor=${r.exactFloorPrice} | age=${r.ageDays ?? '-'}d | campaign=${r.campaignType || '-'}`)
++    }
++    if (interesting.length > 50) console.log(`  ... و ${interesting.length - 50} ردیف دیگر (با --json کامل ببینید)`)
++  }
++
++  if (FIX) {
++    const result = await runPromotionCleanup(Product, { now, batchSize: 1000 })
++    console.log(`--fix: ${result.scanned} کاندید بررسی شد، ${result.modified} سند اصلاح شد.`)
++  }
++
++  await mongoose.disconnect()
++
++  const expired = counts.expired || 0
++  if (FAIL_ON_EXPIRED && expired > 0) process.exitCode = 2
++}
++
++main().catch(async (error) => {
++  console.error('report-stale-floors failed:', error.message)
++  try { await mongoose.disconnect() } catch { /* ignore */ }
++  process.exitCode = 1
++})
+diff --git a/services/pricingService.js b/services/pricingService.js
+index 442f07c..0c8d537 100644
+--- a/services/pricingService.js
++++ b/services/pricingService.js
+@@ -75,6 +75,29 @@ const MANAGED_EXACT_FLOOR_MAX_AGE_DAYS = (() => {
+   return Number.isFinite(raw) && raw >= 0 ? raw : 14
+ })()
+ 
++// آستانه‌ی هشدار پیش از خاموش‌شدن گارد (پیش‌فرض ۷ روز). فقط برای لاگ/گزارش است و
++// هیچ اثری روی قیمت ندارد؛ همیشه کوچک‌تر از MAX محاسبه می‌شود.
++const MANAGED_EXACT_FLOOR_WARN_AGE_DAYS = (() => {
++  const raw = Number(process.env.MANAGED_EXACT_FLOOR_WARN_AGE_DAYS)
++  const warn = Number.isFinite(raw) && raw >= 0 ? raw : 7
++  return Math.min(warn, MANAGED_EXACT_FLOOR_MAX_AGE_DAYS)
++})()
++
++/** سن کف قطعی به روز؛ null اگر timestamp وجود نداشته باشد. */
++const managedExactFloorAgeDays = (productObj, now = new Date()) => {
++  const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
++  if (!meta || meta.exactFloorPriceAt == null) return null
++  const syncedAt = new Date(meta.exactFloorPriceAt)
++  if (Number.isNaN(syncedAt.getTime())) return null
++  return Math.max(0, (now.getTime() - syncedAt.getTime()) / 86_400_000)
++}
++
++/** آیا کف قطعی معتبر است ولی در آستانه‌ی هشدار کهنه‌شدن قرار گرفته؟ */
++const isManagedExactFloorAging = (productObj, now = new Date()) => {
++  const age = managedExactFloorAgeDays(productObj, now)
++  return age != null && age >= MANAGED_EXACT_FLOOR_WARN_AGE_DAYS && age <= MANAGED_EXACT_FLOOR_MAX_AGE_DAYS
++}
++
+ const managedExactFloorPrice = (productObj, now = new Date()) => {
+   const meta = productObj && typeof productObj === 'object' ? productObj.pricingMeta : null
+   const exact = Number(meta && meta.exactFloorPrice)
+@@ -547,6 +570,87 @@ const applyPromotionOverlay = (productObj, { activeSale = null, now = new Date()
+   return { promotionEndsAt }
+ }
+ 
++// ============================================
++// ۴.۱.۲ — قیمت نمایشی یکسان برای مسیرهای «خام»
++// --------------------------------------------
++// برخی مسیرها (علاقه‌مندی‌ها، چت‌بات، کارت‌های پک) محصول را بدون pipeline لیست
++// می‌خوانند و خودشان قیمت می‌سازند. این هلپر همان لایه‌ی نمایش (زنده‌بودن تایمر،
++// Sale فعال و کف قطعی) را روی یک کپی اعمال می‌کند تا هیچ مسیری سقف منقضی را نشان ندهد.
++// ============================================
++const cloneForPricing = (product) => {
++  if (!product || typeof product !== 'object') return product
++  const clone = { ...product }
++  if (Array.isArray(product.variants)) {
++    clone.variants = product.variants.map((v) => {
++      if (!v || typeof v !== 'object') return v
++      const plain = typeof v.toObject === 'function' ? v.toObject() : { ...v }
++      if (Array.isArray(plain.options)) plain.options = plain.options.map((o) => (o && typeof o === 'object' ? { ...o } : o))
++      return plain
++    })
++  }
++  if (product.pricingMeta && typeof product.pricingMeta === 'object') {
++    clone.pricingMeta = { ...product.pricingMeta }
++  }
++  return clone
++}
++
++/** قیمت نمایشی: برای متغیر، ارزان‌ترین واریانت موجود (سازگار با چت) و برای ساده، price. */
++const displayPriceOf = (view) => {
++  if (view && view.productType === 'variable' && Array.isArray(view.variants) && view.variants.length > 0) {
++    const inStock = view.variants
++      .filter((v) => (Number(v.stock) || 0) > 0)
++      .map((v) => Number(v.price))
++      .filter((n) => Number.isFinite(n) && n > 0)
++    if (inStock.length) return Math.min(...inStock)
++    const all = view.variants.map((v) => Number(v.price)).filter((n) => Number.isFinite(n) && n > 0)
++    if (all.length) return Math.min(...all)
++  }
++  return Number(view && view.price) || 0
++}
++
++/** یک Sale فعال را از context آماده (campaignMap/categoryDiscountMap) برای محصول پیدا می‌کند. */
++const findActiveSaleForProduct = (product, campaignContext) => {
++  if (!product || !campaignContext) return null
++  const raw =
++    (product._id && campaignContext.campaignMap && campaignContext.campaignMap.get(String(product._id))) ||
++    (() => {
++      const catId = product.category && (product.category._id || product.category)
++      return catId && campaignContext.categoryDiscountMap
++        ? campaignContext.categoryDiscountMap.get(String(catId))
++        : null
++    })()
++  if (!raw) return null
++  // context لیست، فیلدها را با نام کوتاه discount/theme نگه می‌دارد؛ لایه‌ی نمایش
++  // نام قراردادی discountPercentage/badgeTheme را می‌خواهد.
++  return {
++    name: raw.name,
++    discountPercentage: Number(raw.discountPercentage ?? raw.discount) || 0,
++    badgeTheme: raw.badgeTheme || raw.theme || 'green-orange',
++    endDate: raw.endDate || null,
++  }
++}
++
++/**
++ * قیمت نمایشی سازگار با صفحه‌ی محصول/لیست برای مسیرهای خام.
++ * @returns {{product: object, price: number, compareAtPrice: number|null, discount: number, campaignLabel: string|null}}
++ */
++const resolveProductDisplay = (product, { now = new Date(), activeSale = null } = {}) => {
++  if (!product || typeof product !== 'object') {
++    return { product, price: 0, compareAtPrice: null, discount: 0, campaignLabel: null }
++  }
++  const view = cloneForPricing(product)
++  applyPromotionOverlay(view, { activeSale, now })
++  const price = displayPriceOf(view)
++  const compare = Number(view.compareAtPrice) || 0
++  return {
++    product: view,
++    price,
++    compareAtPrice: compare > price ? compare : null,
++    discount: Number(view.discount) || 0,
++    campaignLabel: view.campaignLabel || null,
++  }
++}
++
+ /** TTL کش (ثانیه) برای پاسخی که پروموشنش در promotionEndsAt تمام می‌شود؛ هرگز بیشتر از baseTtl و کمتر از ۱ نیست. */
+ const ttlUntil = (promotionEndsAt, baseTtl, now = new Date()) => {
+   if (!promotionEndsAt) return baseTtl
+@@ -598,8 +702,16 @@ module.exports = {
+   applyPromotionOverlay,
+   restoreBasePriceOnObject,
+   managedExactFloorPrice,
++  managedExactFloorAgeDays,
++  isManagedExactFloorAging,
++  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
++  MANAGED_EXACT_FLOOR_WARN_AGE_DAYS,
+   clampToManagedExactFloor,
+   restoreManagedExactFloor,
++  cloneForPricing,
++  displayPriceOf,
++  findActiveSaleForProduct,
++  resolveProductDisplay,
+   ttlUntil,
+   sanitizeCompareAtPrice,
+   sanitizeVariantsCompareAtPrice,
+diff --git a/services/promotionLifecycleService.js b/services/promotionLifecycleService.js
+index 71fecc8..f695f06 100644
+--- a/services/promotionLifecycleService.js
++++ b/services/promotionLifecycleService.js
+@@ -13,7 +13,12 @@
+ //   چرخه‌ی عمر خودِ سند Sale (غیرفعال‌شدن خودکار بعد از endDate) در runSaleCleanup است.
+ // ============================================
+ 
+-const { resolveBasePrice, isTimerLive } = require('./pricingService')
++const {
++  resolveBasePrice,
++  isTimerLive,
++  managedExactFloorPrice,
++  MANAGED_EXACT_FLOOR_MAX_AGE_DAYS,
++} = require('./pricingService')
+ const { cleanupEmptyAutoManagedSales } = require('./competitivePricingSyncService')
+ 
+ const toPlain = (v) => (v && typeof v.toObject === 'function' ? v.toObject() : v)
+@@ -63,12 +68,66 @@ function buildLegacyBaseRestore({ price, compareAtPrice, variants } = {}, stored
+   return { set, unset }
+ }
+ 
++// ============================================
++// ۴.۱.۲ — بازگرداندن «قیمت ماندگار» دیتابیس به کف قطعی
++// --------------------------------------------
++// پیش از این، انقضای پروموشن فقط فلگ/تخفیف را صفر می‌کرد و price روی «سقف معیار»
++// (مثلاً ۹۹۰٬۴۷۶) می‌ماند؛ مسیرهای محافظت‌شده هنگام خواندن اصلاح می‌کردند، ولی
++// علاقه‌مندی‌ها و چت‌بات قیمت خام را نشان می‌دادند. حالا هنگام غیرفعال‌سازی، خودِ
++// سند هم روی exactFloorPrice تنظیم می‌شود.
++//
++// محافظت‌ها (عمدی):
++//  - محصول timed_sale: price سقف معیار است و تخفیف از سند Sale می‌آید؛ اگر price را
++//    کف کنیم، Sale دوباره روی کف تخفیف می‌دهد (تخفیف دوبل). دست‌نخورده می‌ماند.
++//  - محصول متغیر: قیمت ریشه معنا ندارد و قیمت واقعی در variants است؛ ریشه دست‌نخورده.
++//  - کف قطعی کهنه (> MANAGED_EXACT_FLOOR_MAX_AGE_DAYS) یا timestamp نامعتبر: معتبر نیست.
++//  - محصول بدون pricingMeta: هیچ‌گاه مدیریت نشده؛ دست‌نخورده.
++// ============================================
++function buildManagedRestore(product, now = new Date()) {
++  const plain = toPlain(product)
++  const meta = plain && plain.pricingMeta
++  if (!meta || typeof meta !== 'object') return null
++  // سندهای قدیمی ممکن است productType نداشته باشند؛ وجود variants یعنی قیمت واقعی
++  // در واریانت‌هاست و ریشه نباید دستکاری شود.
++  if (plain.productType === 'variable') return null
++  if (plain.productType !== 'simple' && Array.isArray(plain.variants) && plain.variants.length > 0) return null
++  if (meta.campaignType === 'timed_sale') return null
++
++  const exact = managedExactFloorPrice(plain, now)
++  if (!exact) return null
++  const current = Number(plain.price) || 0
++  if (current <= exact) return null
++
++  return {
++    set: {
++      price: exact,
++      'pricingMeta.needsRefresh': true,
++      'pricingMeta.campaignType': 'none',
++      'pricingMeta.priceRestoredAt': now,
++      'pricingMeta.restoredFromPrice': current,
++    },
++    unset: { compareAtPrice: '' },
++  }
++}
++
+ /** آپدیت کاملِ غیرفعال‌سازی پیشنهاد لحظه‌ای/شگفت‌انگیز + حذف تخفیف برای یک سند محصول. */
+-function buildDeactivationUpdate(product) {
++function buildDeactivationUpdate(product, { now = new Date() } = {}) {
+   const { set, unset } = buildLegacyBaseRestore(product, product && product.discount)
++  const managed = buildManagedRestore(product, now)
+   return {
+-    $set: { ...set, isFlashDeal: false, isSpecialOffer: false, discount: 0 },
+-    $unset: { ...unset, flashDealEndTime: '', specialOfferEndTime: '' },
++    $set: {
++      ...set,
++      ...(managed ? managed.set : {}),
++      isFlashDeal: false,
++      isSpecialOffer: false,
++      discount: 0,
++    },
++    $unset: {
++      ...unset,
++      ...(managed ? managed.unset : {}),
++      flashDealEndTime: '',
++      specialOfferEndTime: '',
++    },
+   }
+ }
+ 
+@@ -85,7 +144,10 @@ function planPromotionCleanup(product, now = new Date()) {
+ 
+   if (!flashLive && !specialLive) {
+     const hasTrace = Boolean(product.isFlashDeal || product.isSpecialOffer || (Number(product.discount) || 0) > 0)
+-    return hasTrace ? buildDeactivationUpdate(product) : null
++    // عقب‌مانده: cron قبلی تخفیف/فلگ‌ها را صفر کرده ولی price روی سقف معیار مانده است.
++    // در این حالت ردّ پروموشن نیست، ولی خودِ pricingMeta مدرک مدیریت موتور است.
++    const hasBacklogCeiling = !hasTrace && buildManagedRestore(product, now) !== null
++    return hasTrace || hasBacklogCeiling ? buildDeactivationUpdate(product, { now }) : null
+   }
+ 
+   const $set = {}
+@@ -101,16 +163,42 @@ function planPromotionCleanup(product, now = new Date()) {
+   return Object.keys($set).length ? { $set, $unset } : null
+ }
+ 
+-/** فیلتر کاندیداهای پاک‌سازی: تایمر گذشته، یا تخفیف بدون هیچ پیشنهاد فعال. */
++/**
++ * فیلتر کاندیداهای پاک‌سازی:
++ *  ۱) تایمر گذشته؛
++ *  ۲) تخفیف بدون هیچ پیشنهاد فعال؛
++ *  ۳) عقب‌مانده‌ی موتور: فلگ/تخفیف صفر ولی price بالاتر از کف قطعی (فقط پروموشن مستقیم).
++ *     timed_sale، محصول متغیر و Sale دستی عمداً خارج‌اند (به buildManagedRestore مراجعه کنید).
++ */
+ const staleCandidatesFilter = (now = new Date()) => ({
+   $or: [
+     { isFlashDeal: true, flashDealEndTime: { $ne: null, $lte: now } },
+     { isSpecialOffer: true, specialOfferEndTime: { $ne: null, $lte: now } },
+     { isFlashDeal: { $ne: true }, isSpecialOffer: { $ne: true }, discount: { $gt: 0 } },
++    {
++      isFlashDeal: { $ne: true },
++      isSpecialOffer: { $ne: true },
++      discount: { $lte: 0 },
++      productType: { $ne: 'variable' },
++      'pricingMeta.exactFloorPrice': { $gt: 0 },
++      'pricingMeta.campaignType': { $in: ['flash', 'featured', null] },
++      // کفِ کهنه (> MAX) در همین فیلتر کنار گذاشته می‌شود؛ وگرنه چون buildManagedRestore
++      // برایش null می‌دهد، تا ابد در batch اول می‌ماند و بقیه‌ی کاندیداها را گرسنه می‌کند.
++      $or: [
++        { 'pricingMeta.exactFloorPriceAt': { $exists: false } },
++        { 'pricingMeta.exactFloorPriceAt': null },
++        {
++          'pricingMeta.exactFloorPriceAt': {
++            $gte: new Date(now.getTime() - MANAGED_EXACT_FLOOR_MAX_AGE_DAYS * 86_400_000),
++          },
++        },
++      ],
++      $expr: { $gt: ['$price', '$pricingMeta.exactFloorPrice'] },
++    },
+   ],
+ })
+ 
+-const CLEANUP_FIELDS = 'price compareAtPrice variants discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime updatedAt'
++const CLEANUP_FIELDS = 'price compareAtPrice variants discount isFlashDeal flashDealEndTime isSpecialOffer specialOfferEndTime productType pricingMeta updatedAt'
+ 
+ /**
+  * اجرای پاک‌سازی روی دیتابیس. با updatedAt قفل خوش‌بینانه دارد تا اگر ادمین هم‌زمان
+@@ -237,11 +325,30 @@ function applyOwnPromotionRules(updates, unset = {}, current = {}, now = new Dat
+       unset.compareAtPrice = ''
+     }
+   }
++
++  // ۴.۱.۲: اگر ادمین خودش قیمت را عوض نکرده و محصول مدیریت‌شده است، قیمت ماندگار
++  // هم به کف قطعی برگردد تا خواننده‌های خام (چت/علاقه‌مندی) سقف منقضی را نبینند.
++  if (updates.price === undefined) {
++    const merged = { ...(toPlain(current) || {}), ...updates, discount: 0 }
++    const managed = buildManagedRestore(merged, now)
++    if (managed) {
++      Object.assign(updates, {
++        price: managed.set.price,
++        'pricingMeta.needsRefresh': true,
++        'pricingMeta.campaignType': 'none',
++        'pricingMeta.priceRestoredAt': managed.set['pricingMeta.priceRestoredAt'],
++        'pricingMeta.restoredFromPrice': managed.set['pricingMeta.restoredFromPrice'],
++      })
++      delete updates.compareAtPrice
++      unset.compareAtPrice = ''
++    }
++  }
+   return { deactivated: true }
+ }
+ 
+ module.exports = {
+   buildLegacyBaseRestore,
++  buildManagedRestore,
+   buildDeactivationUpdate,
+   planPromotionCleanup,
+   staleCandidatesFilter,
+diff --git a/tests/managed-floor-lifecycle.test.cjs b/tests/managed-floor-lifecycle.test.cjs
+new file mode 100644
+index 0000000..ff7a1eb
+--- /dev/null
++++ b/tests/managed-floor-lifecycle.test.cjs
+@@ -0,0 +1,155 @@
++// ۴.۱.۲ (بستن N1) — چرخه‌ی عمر باید قیمت ماندگار دیتابیس را هم به کف قطعی برگرداند.
++// چرا مهم است: مسیرهای محافظت‌شده (صفحه محصول/سبد/پرداخت/فید ترب/لیست) قیمت را هنگام
++// خواندن اصلاح می‌کنند؛ ولی علاقه‌مندی‌ها و چت‌بات قیمت خام DB را می‌خوانند. اگر price
++// روی سقف معیار بماند، آن دو مسیر ۹۹۰٬۴۷۶ نشان می‌دهند در حالی که قیمت فروش ۸۳۲٬۰۰۰ است.
++const assert = require('node:assert/strict')
++const test = require('node:test')
++
++const {
++  buildDeactivationUpdate,
++  buildManagedRestore,
++  planPromotionCleanup,
++  staleCandidatesFilter,
++  applyOwnPromotionRules,
++} = require('../services/promotionLifecycleService')
++const { MANAGED_EXACT_FLOOR_MAX_AGE_DAYS } = require('../services/pricingService')
++
++const NOW = new Date('2026-10-17T10:00:00.000Z')
++const FRESH = new Date('2026-10-16T10:00:00.000Z')
++const PAST = new Date('2026-10-10T10:00:00.000Z')
++
++const managed = (extra = {}) => ({
++  _id: 'p1',
++  name: 'کارت مدیریت‌شده',
++  productType: 'simple',
++  price: 990476,
++  compareAtPrice: 990476,
++  discount: 16,
++  isFlashDeal: true,
++  flashDealEndTime: PAST,
++  isSpecialOffer: false,
++  specialOfferEndTime: null,
++  pricingMeta: {
++    exactFloorPrice: 832000,
++    exactFloorPriceAt: FRESH,
++    campaignType: 'flash',
++  },
++  ...extra,
++})
++
++test('انقضای پروموشن مستقیم: price ماندگار = exactFloorPrice و needsRefresh روشن می‌شود', () => {
++  const update = buildDeactivationUpdate(managed(), { now: NOW })
++  assert.equal(update.$set.price, 832000)
++  assert.equal(update.$set.discount, 0)
++  assert.equal(update.$set.isFlashDeal, false)
++  assert.equal(update.$set.isSpecialOffer, false)
++  assert.equal(update.$set['pricingMeta.needsRefresh'], true)
++  assert.equal(update.$set['pricingMeta.campaignType'], 'none')
++  assert.equal(update.$set['pricingMeta.restoredFromPrice'], 990476)
++  assert.equal(update.$unset.compareAtPrice, '')
++  assert.equal(update.$unset.flashDealEndTime, '')
++})
++
++test('عقب‌مانده: discount قبلاً صفر شده ولی price روی سقف مانده (بدون ردّ پروموشن)', () => {
++  const legacyZeroed = managed({
++    discount: 0,
++    isFlashDeal: false,
++    flashDealEndTime: null,
++  })
++  assert.equal(buildManagedRestore(legacyZeroed, NOW).set.price, 832000)
++  const plan = planPromotionCleanup(legacyZeroed, NOW)
++  assert.ok(plan, 'عقب‌مانده باید پاک‌سازی شود، نه رها')
++  assert.equal(plan.$set.price, 832000)
++  assert.equal(plan.$set.discount, 0)
++})
++
++test('محصول timed_sale دست‌نخورده می‌ماند (جلوگیری از تخفیف دوبل Sale روی کف)', () => {
++  const timed = managed({
++    discount: 0,
++    isFlashDeal: false,
++    flashDealEndTime: null,
++    pricingMeta: { exactFloorPrice: 832000, exactFloorPriceAt: FRESH, campaignType: 'timed_sale' },
++  })
++  assert.equal(buildManagedRestore(timed, NOW), null)
++  assert.equal(planPromotionCleanup(timed, NOW), null)
++  const update = buildDeactivationUpdate(timed, { now: NOW })
++  assert.equal(update.$set.price, undefined, 'قیمت timed_sale نباید کف شود')
++})
++
++test('محصول متغیر: قیمت ریشه بازنویسی نمی‌شود؛ فقط فلگ/تخفیف پاک می‌شود', () => {
++  const variable = managed({
++    productType: 'variable',
++    price: 1200000,
++    variants: [{ _id: 'v1', price: 900000, stock: 3 }],
++  })
++  assert.equal(buildManagedRestore(variable, NOW), null)
++  const plan = planPromotionCleanup(variable, NOW)
++  assert.ok(plan, 'فلگ منقضی باید خاموش شود')
++  assert.equal(plan.$set.price, undefined, 'قیمت ریشه‌ی محصول متغیر نباید کف شود')
++  assert.equal(plan.$set.discount, 0)
++})
++
++test('کف قطعی کهنه (بیش از ۱۴ روز) معتبر نیست و قیمت دست نمی‌خورد', () => {
++  const stale = managed({
++    pricingMeta: {
++      exactFloorPrice: 832000,
++      exactFloorPriceAt: new Date(NOW.getTime() - (MANAGED_EXACT_FLOOR_MAX_AGE_DAYS + 1) * 86_400_000),
++      campaignType: 'flash',
++    },
++  })
++  assert.equal(buildManagedRestore(stale, NOW), null)
++  const update = buildDeactivationUpdate(stale, { now: NOW })
++  assert.equal(update.$set.price, undefined)
++  // ولی فلگ/تخفیف مثل قبل پاک می‌شود
++  assert.equal(update.$set.discount, 0)
++})
++
++test('timestamp نامعتبر = fail-closed (قیمت دست نمی‌خورد)', () => {
++  const broken = managed({
++    pricingMeta: { exactFloorPrice: 832000, exactFloorPriceAt: 'not-a-date', campaignType: 'flash' },
++  })
++  assert.equal(buildManagedRestore(broken, NOW), null)
++})
++
++test('محصول بدون pricingMeta: رفتار قبلی حفظ می‌شود (بدون گارد کف)', () => {
++  const plain = {
++    productType: 'simple',
++    price: 1008,
++    compareAtPrice: 1200,
++    discount: 16,
++    isFlashDeal: true,
++    flashDealEndTime: PAST,
++  }
++  const update = buildDeactivationUpdate(plain, { now: NOW })
++  assert.equal(update.$set.price, 1200, 'بازگردانی legacy باید همچنان کار کند')
++  assert.equal(update.$set['pricingMeta.needsRefresh'], undefined)
++})
++
++test('فیلتر کاندیداها: شاخه‌ی عقب‌مانده فقط پروموشن مستقیم را می‌گیرد', () => {
++  const filter = staleCandidatesFilter(NOW)
++  const backlog = filter.$or[3]
++  assert.equal(backlog.productType.$ne, 'variable')
++  assert.deepEqual(backlog['pricingMeta.campaignType'].$in, ['flash', 'featured', null])
++  assert.equal(backlog.$or.length, 3, 'کف کهنه نباید کاندید شود و batch را اشغال کند')
++  assert.deepEqual(backlog.$expr, { $gt: ['$price', '$pricingMeta.exactFloorPrice'] })
++})
++
++test('ویرایش ادمین (برداشتن تیک پروموشن): قیمت ماندگار هم کف می‌شود', () => {
++  const current = managed({ isFlashDeal: true, flashDealEndTime: PAST })
++  const updates = { isFlashDeal: false, flashDealEndTime: null, discount: 0 }
++  const unset = {}
++  const result = applyOwnPromotionRules(updates, unset, current, NOW)
++  assert.equal(result.deactivated, true)
++  assert.equal(updates.price, 832000)
++  assert.equal(updates['pricingMeta.needsRefresh'], true)
++  assert.equal(unset.compareAtPrice, '')
++})
++
++test('ویرایش قیمت دستی ادمین هرگز با کف قدیمی بازنویسی نمی‌شود', () => {
++  const current = managed({ isFlashDeal: true, flashDealEndTime: PAST })
++  const updates = { isFlashDeal: false, flashDealEndTime: null, discount: 0, price: 777000 }
++  const unset = {}
++  applyOwnPromotionRules(updates, unset, current, NOW)
++  assert.equal(updates.price, 777000, 'قیمت صریح ادمین باید حفظ شود')
++  assert.equal(updates['pricingMeta.needsRefresh'], undefined)
++})
+diff --git a/tests/pricing-display-parity.test.cjs b/tests/pricing-display-parity.test.cjs
+new file mode 100644
+index 0000000..a4fb229
+--- /dev/null
++++ b/tests/pricing-display-parity.test.cjs
+@@ -0,0 +1,126 @@
++// ۴.۱.۲ — پاریتی قیمت «همه‌ی» مسیرهای نمایش و پرداخت.
++// این تست همان سناریوی ممیزی N1 را بازتولید می‌کند: پروموشن منقضی، price دیتابیس روی
++// سقف ۹۹۰٬۴۷۶ و exactFloorPrice=۸۳۲٬۰۰۰. صفحه/سبد/پرداخت قبلاً ۸۳۲٬۰۰۰ می‌دادند،
++// ولی چت‌بات و علاقه‌مندی‌ها ۹۹۰٬۴۷۶. حالا هر چهار مسیر باید یک عدد بدهند.
++const assert = require('node:assert/strict')
++const test = require('node:test')
++
++const {
++  resolveProductDisplay,
++  findActiveSaleForProduct,
++  computeItemPricing,
++} = require('../services/pricingService')
++const { finalPriceOf, toCardPayload } = require('../utils/chatRetrieval')
++
++const NOW = new Date('2026-10-17T10:00:00.000Z')
++const FRESH = new Date('2026-10-16T10:00:00.000Z')
++const PAST = new Date('2026-10-10T10:00:00.000Z')
++const FUTURE = new Date('2026-10-20T10:00:00.000Z')
++
++const expiredManaged = () => ({
++  _id: '507f1f77bcf86cd799439011',
++  name: 'کارت مدیریت‌شده',
++  slug: 'card',
++  productCode: 'P-1',
++  productType: 'simple',
++  price: 990476,
++  compareAtPrice: 990476,
++  discount: 16,
++  isFlashDeal: true,
++  flashDealEndTime: PAST,
++  isSpecialOffer: false,
++  specialOfferEndTime: null,
++  stock: 5,
++  images: [],
++  pricingMeta: { exactFloorPrice: 832000, exactFloorPriceAt: FRESH, campaignType: 'flash' },
++})
++
++test('چت‌بات پس از انقضا: ۸۳۲٬۰۰۰ (نه ۹۹۰٬۴۷۶) و discount صفر', () => {
++  const product = expiredManaged()
++  assert.equal(finalPriceOf(product, NOW), 832000)
++  const card = toCardPayload(product)
++  assert.equal(card.price, 832000)
++  assert.equal(card.oldPrice, undefined)
++  assert.equal(card.discount, 0)
++})
++
++test('پاریتی کامل: چت = سبد/پرداخت = صفحه‌ی محصول برای محصول منقضی', () => {
++  const product = expiredManaged()
++  const chat = finalPriceOf(product, NOW)
++  const checkout = computeItemPricing({ product }, NOW).finalPrice
++  const detail = resolveProductDisplay(product, { now: NOW })
++  assert.equal(chat, 832000)
++  assert.equal(checkout, 832000)
++  assert.equal(detail.price, 832000)
++  assert.equal(detail.compareAtPrice, null)
++  assert.equal(detail.discount, 0)
++})
++
++test('Sale فعال در علاقه‌مندی‌ها: درصد Sale اعمال و زیر کف قطعی clamp می‌شود', () => {
++  const product = expiredManaged()
++  product.isFlashDeal = false
++  product.flashDealEndTime = null
++  product.discount = 0
++  const context = {
++    campaignMap: new Map([['507f1f77bcf86cd799439011', { name: 'کمپین پاییزه', discount: 25, theme: 'green-orange', endDate: FUTURE }]]),
++    categoryDiscountMap: new Map(),
++  }
++  const sale = findActiveSaleForProduct(product, context)
++  assert.equal(sale.discountPercentage, 25)
++  const display = resolveProductDisplay(product, { now: NOW, activeSale: sale })
++  assert.equal(display.price, 832000)
++  assert.equal(display.campaignLabel, 'کمپین پاییزه')
++  assert.equal(display.compareAtPrice, 990476)
++})
++
++test('چت با Sale فعال: context متصل‌شده اعمال می‌شود و کارت همان قیمت نمایش را می‌دهد', () => {
++  const product = expiredManaged()
++  product.isFlashDeal = false
++  product.flashDealEndTime = null
++  product.discount = 0
++  Object.defineProperty(product, '__activeSale', {
++    value: { name: 'کمپین پاییزه', discountPercentage: 25, badgeTheme: 'green-orange', endDate: FUTURE },
++    enumerable: false,
++  })
++  const card = toCardPayload(product)
++  assert.equal(card.price, 832000)
++  assert.equal(card.discount, 25)
++  assert.equal(card.oldPrice, 990476)
++  assert.equal(card.campaignLabel, 'کمپین پاییزه')
++})
++
++test('بدون pricingMeta: قیمت خام و رفتار قبلی حفظ می‌شود', () => {
++  const plain = {
++    _id: '507f1f77bcf86cd799439012',
++    name: 'ساده',
++    productType: 'simple',
++    price: 1001,
++    discount: 10,
++    stock: 1,
++    images: [],
++  }
++  assert.equal(finalPriceOf(plain, NOW), 1001)
++  assert.equal(toCardPayload(plain).discount, 0)
++})
++
++test('محصول متغیر منقضی: کارت چت از ارزان‌ترین واریانت موجود استفاده می‌کند', () => {
++  const variable = {
++    _id: '507f1f77bcf86cd799439013',
++    name: 'متغیر',
++    productType: 'variable',
++    price: 1200000,
++    discount: 10,
++    isSpecialOffer: true,
++    specialOfferEndTime: PAST,
++    stock: 2,
++    images: [],
++    pricingMeta: { exactFloorPrice: 832000, exactFloorPriceAt: FRESH, campaignType: 'featured' },
++    variants: [
++      { _id: 'v1', price: 900000, stock: 2, options: [{ name: 'رنگ', value: 'مشکی' }] },
++      { _id: 'v2', price: 800000, stock: 0, options: [{ name: 'رنگ', value: 'سفید' }] },
++    ],
++  }
++  const card = toCardPayload(variable)
++  assert.equal(card.price, 900000, 'ارزان‌ترین واریانت موجود، نه سقف ریشه')
++  assert.equal(card.discount, 0)
++})
+diff --git a/utils/chatRetrieval.js b/utils/chatRetrieval.js
+index 44595cf..bfe899b 100644
+--- a/utils/chatRetrieval.js
++++ b/utils/chatRetrieval.js
+@@ -13,7 +13,11 @@ const Product = require('../models/Product');
+ const Category = require('../models/Category');
+ const Brand = require('../models/Brand');
+ const { WIZARD_DOMAINS } = require('./packDomains');
+-const { resolveBasePrice } = require('../services/pricingService');
++const {
++  resolveProductDisplay,
++  getActiveSalesCampaignContext,
++  findActiveSaleForProduct,
++} = require('../services/pricingService');
+ 
+ // نام مستعار سازگاری (تعریف اصلی دامنه‌ها در packDomains.js است)
+ const PACK_DOMAINS = WIZARD_DOMAINS;
+@@ -98,23 +102,20 @@ function effectivePrice(p) {
+   return Number(p.price) || 0;
+ }
+ 
+-/** قیمت نهایی فروش — قرارداد مرکزی قیمت: مبنا همیشه price است مگر داده‌ی قدیمیِ از قبل تخفیف‌خورده */
+-function finalPriceOf(p) {
+-  const raw = effectivePrice(p);
+-  const cmp = Number(p.compareAtPrice) || 0;
+-  const d = Number(p.discount) || 0;
+-  const base = resolveBasePrice(raw, cmp, d);
+-  if (d > 0 && d < 100) return Math.round(base * (1 - d / 100));
+-  return base;
++/**
++ * قیمت نهایی فروش — ۴.۱.۲: همان لایه‌ی نمایش صفحه‌ی محصول.
++ * فقط تخفیف زنده (تایمر فعال / Sale فعال) اعمال می‌شود و پس از انقضا قیمت به
++ * exactFloorPrice برمی‌گردد؛ نه سقف معیار. این تابع دیگر discount خام را کورکورانه
++ * اعمال نمی‌کند (باگ چت‌بات پس از انقضا: ۹۹۰٬۴۷۶ به‌جای ۸۳۲٬۰۰۰).
++ */
++function finalPriceOf(p, now = new Date()) {
++  return resolveProductDisplay(p, { now }).price;
+ }
+ 
+-function oldPriceOf(p, fin) {
+-  const raw = effectivePrice(p);
+-  const cmp = Number(p.compareAtPrice) || 0;
+-  const d = Number(p.discount) || 0;
+-  const base = resolveBasePrice(raw, cmp, d);
++function oldPriceOf(p, fin, now = new Date()) {
++  const view = resolveProductDisplay(p, { now });
+   // قیمت خط‌خورده فقط با تخفیف واقعی فعال نمایش داده می‌شود؛ compare کهنه‌ی منقضی/بدون تخفیف oldPrice نمی‌سازد
+-  if (d > 0 && d < 100 && base > fin) return base;
++  if (view.compareAtPrice && view.compareAtPrice > fin) return view.compareAtPrice;
+   return undefined;
+ }
+ 
+@@ -215,7 +216,7 @@ async function searchProducts(message, history = []) {
+ 
+   const selectFields = 'name slug productCode sku description productType price compareAtPrice discount '
+     + 'priceUpdatedAt priceUpdateCount stock variants specifications properties images category brand '
+-    + 'rating numReviews guarantee salesCount updatedAt';
++    + 'rating numReviews guarantee salesCount updatedAt pricingMeta campaignLabel';
+ 
+   // مرحله الف: جستجوی هدفمند با تطابق مستقیم کلمات کلیدی
+   let specificHits = [];
+@@ -289,6 +290,18 @@ async function searchProducts(message, history = []) {
+     .slice(0, MAX_PRODUCTS)
+     .map((s) => s.p);
+ 
++  // ۴.۱.۲: برای پاریتی کامل با صفحه‌ی محصول، Sale فعال هر کارت را هم وصل می‌کنیم
++  // (غیرقابل‌شمارش تا در JSON خروجی/لاگ نشت نکند).
++  try {
++    const campaignContext = await getActiveSalesCampaignContext();
++    for (const p of scored) {
++      const activeSale = findActiveSaleForProduct(p, campaignContext);
++      if (activeSale) Object.defineProperty(p, '__activeSale', { value: activeSale, enumerable: false });
++    }
++  } catch {
++    // شکست در خواندن Sale نباید جست‌وجوی چت را بشکند؛ بدون Sale نمایش می‌دهیم.
++  }
++
+   return { keywords, products: scored };
+ }
+ 
+@@ -299,7 +312,9 @@ function formatProductContext(products) {
+   }
+   return products.map((p, i) => {
+     const stock = effectiveStock(p);
+-    const price = finalPriceOf(p);
++    // ۴.۱.۲: نمایش قیمت با همان قرارداد صفحه‌ی محصول (تایمر زنده + کف قطعی)
++    const view = resolveProductDisplay(p, { activeSale: p.__activeSale || null });
++    const price = view.price;
+     const priceFa = Number(price || 0).toLocaleString('fa-IR');
+     const stockFa = stock > 0 ? `موجود (${Number(stock).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
+     const catName = (p.category && p.category.name) || '—';
+@@ -309,7 +324,7 @@ function formatProductContext(products) {
+       ? specs.map((s) => `    - ${s.label}: ${s.value}`).join('\n')
+       : '    - مشخصات فنی ثبت نشده';
+     const desc = p.description ? String(p.description).replace(/\s+/g, ' ').slice(0, 220) : '—';
+-    const prevPrice = oldPriceOf(p, price);
++    const prevPrice = view.compareAtPrice && view.compareAtPrice > price ? view.compareAtPrice : undefined;
+     const oldPrice = prevPrice
+       ? `\n  قیمت قبل تخفیف: ${Number(prevPrice).toLocaleString('fa-IR')} تومان`
+       : '';
+@@ -320,7 +335,9 @@ function formatProductContext(products) {
+ /** پیلود کارت برای فرانت‌اند */
+ function toCardPayload(p, extra = {}) {
+   const stock = effectiveStock(p);
+-  const price = finalPriceOf(p);
++  // ۴.۱.۲: کارت چت/پک هم نباید سقف منقضی یا discount بی‌پشتوانه را نشان دهد
++  const view = resolveProductDisplay(p, { activeSale: extra.activeSale || p.__activeSale || null });
++  const price = view.price;
+   const catName = (p.category && p.category.name) || 'عمومی';
+   const catSlug = (p.category && (p.category.slug || p.category._id)) || '';
+   return {
+@@ -329,8 +346,8 @@ function toCardPayload(p, extra = {}) {
+     slug: p.slug,
+     productCode: p.productCode,
+     price,
+-    oldPrice: oldPriceOf(p, price),
+-    discount: Number(p.discount) || 0,
++    oldPrice: view.compareAtPrice && view.compareAtPrice > price ? view.compareAtPrice : undefined,
++    discount: view.discount,
+     image: firstImageUrl(p),
+     category: catName,
+     categorySlug: String(catSlug),
+@@ -346,6 +363,7 @@ function toCardPayload(p, extra = {}) {
+     defaultVariantOptions: defaultVariantOptions(p),
+     priceUpdatedAt: p.priceUpdatedAt || null,
+     priceUpdateCount: Number(p.priceUpdateCount) || 0,
++    campaignLabel: view.campaignLabel || undefined,
+     compatibilityHint: extra.compatibilityHint || '',
+     recommendedQty: extra.recommendedQty || 1,
+   };
