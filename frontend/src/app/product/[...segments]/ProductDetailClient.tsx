@@ -4,8 +4,8 @@ import { useDisableScrollRestoration } from "@/hooks/useScrollRestoration";
 import { Star, ShieldCheck, Store, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import type { Product, ProductColor } from "@/services/productService";
-import CountdownTimer from "@/components/ui/CountdownTimer";
 import ProductTabs from "@/components/product/ProductTabs";
+import ProductPromotionBanner from "@/components/promotion/ProductPromotionBanner";
 import ProductHeader from "./ProductHeader";
 import ProductGallery from "./ProductGallery";
 import ColorSelector from "./ColorSelector";
@@ -16,7 +16,6 @@ import ProductSocialActions from "./ProductSocialActions";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
-import { campaignBannerClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import {
     applyChoice,
@@ -303,65 +302,10 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                             </div>
                         )}
 
-                        {/* Timer for Special Offers */}
-                        {(() => {
-                            const now = getServerNow();
-                            const flashEndTs = viewProduct.flashDealEndTime ? Date.parse(viewProduct.flashDealEndTime) : NaN;
-                            const specialEndTs = viewProduct.specialOfferEndTime ? Date.parse(viewProduct.specialOfferEndTime) : NaN;
-
-                            const flashActive = Boolean(viewProduct.isFlashDeal && Number.isFinite(flashEndTs) && flashEndTs > now);
-                            const specialActive = Boolean(viewProduct.isSpecialOffer && Number.isFinite(specialEndTs) && specialEndTs > now);
-
-                            const endTime = flashActive
-                                ? viewProduct.flashDealEndTime
-                                : specialActive
-                                    ? viewProduct.specialOfferEndTime
-                                    : undefined;
-
-                            if (!endTime) return null;
-
-                            // Theme classes stay in lock-step with the product-card
-                            // stripe (lib/campaignTheme.ts) so the colour chosen in the
-                            // admin «تخفیف‌های زمان‌دار» panel looks identical here.
-                            const theme = viewProduct.campaignTheme;
-                            let themeClass = 'bg-red-50 text-red-600';
-                            if (theme) {
-                                themeClass = campaignBannerClass(theme);
-                            }
-
-                            let label = viewProduct.campaignLabel;
-                            if (!label) {
-                                if (viewProduct.isSpecialOffer) {
-                                    label = 'پیشنهاد شگفت‌انگیز';
-                                } else if (viewProduct.isFlashDeal) {
-                                    label = 'پیشنهاد لحظه‌ای';
-                                } else {
-                                    label = 'فروش ویژه';
-                                }
-                            }
-
-                            if (!viewProduct.campaignLabel) {
-                                if (flashActive) label = 'پیشنهاد لحظه‌ای';
-                                else if (specialActive) label = 'پیشنهاد شگفت‌انگیز';
-                            }
-
-                            return (
-                                <div className="mb-6">
-                                    <div className={`p-4 rounded-xl flex items-center justify-between ${themeClass}`}>
-                                        <span className="text-base font-bold flex items-center gap-2">
-                                            <Store size={18} />
-                                            {label}
-                                        </span>
-                                        <div className="flex items-center gap-2" dir="ltr">
-                                            <CountdownTimer
-                                                targetDate={endTime}
-                                                className="text-base font-bold"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })()}
+                        {/* Countdown banner — colours shared with the product card
+                            (lib/campaignTheme.ts), so «پیشنهاد لحظه‌ای» keeps its
+                            amber→orange→red gradient on the detail page too. */}
+                        <ProductPromotionBanner product={viewProduct} />
 
                         {/* Wishlist & Share Actions */}
                         <ProductSocialActions product={product} />
@@ -499,67 +443,9 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                         </div>
                     </div>
 
-                    {/* Timer for Special Offers / Flash Deals / Campaign Offers */}
-                    {(() => {
-                        // Helper logic for offer details - Priority: Campaign Label > Flash Deal > Special Offer
-                        // Check if we have an active campaign or time-based offer
-                        const now = getServerNow();
-                        const flashEndTs = viewProduct.flashDealEndTime ? Date.parse(viewProduct.flashDealEndTime) : NaN;
-                        const specialEndTs = viewProduct.specialOfferEndTime ? Date.parse(viewProduct.specialOfferEndTime) : NaN;
-
-                        const flashActive = Boolean(viewProduct.isFlashDeal && Number.isFinite(flashEndTs) && flashEndTs > now);
-                        const specialActive = Boolean(viewProduct.isSpecialOffer && Number.isFinite(specialEndTs) && specialEndTs > now);
-
-                        const endTime = flashActive
-                            ? viewProduct.flashDealEndTime
-                            : specialActive
-                                ? viewProduct.specialOfferEndTime
-                                : undefined;
-
-                        if (!endTime) return null;
-
-                        // Determine theme class based on campaignTheme —
-                        // same scheme source as the product-card stripe.
-                        const theme = viewProduct.campaignTheme;
-                        let themeClass = 'bg-red-50 text-red-600'; // Default for Special Offer
-                        if (theme) {
-                            themeClass = campaignBannerClass(theme);
-                        }
-
-                        // Determine label - Use campaignLabel if available, otherwise use defaults
-                        let label = viewProduct.campaignLabel;
-                        if (!label) {
-                            if (viewProduct.isSpecialOffer) {
-                                label = 'پیشنهاد شگفت‌انگیز';
-                            } else if (viewProduct.isFlashDeal) {
-                                label = 'پیشنهاد لحظه‌ای';
-                            } else {
-                                label = 'فروش ویژه';
-                            }
-                        }
-
-                        if (!viewProduct.campaignLabel) {
-                            if (flashActive) label = 'پیشنهاد لحظه‌ای';
-                            else if (specialActive) label = 'پیشنهاد شگفت‌انگیز';
-                        }
-
-                        return (
-                            <div className="mb-4">
-                                <div className={`p-3 rounded-xl flex items-center justify-between ${themeClass}`}>
-                                    <span className="text-sm font-bold flex items-center gap-2">
-                                        <Store size={16} />
-                                        {label}
-                                    </span>
-                                    <div className="flex items-center gap-2" dir="ltr">
-                                        <CountdownTimer
-                                            targetDate={endTime}
-                                            className="text-sm font-bold"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })()}
+                    {/* Countdown banner — same scheme source as the desktop banner
+                        and the product card. */}
+                    <ProductPromotionBanner product={viewProduct} compact />
 
                     {/* Rating Section */}
                     {product.rating > 0 && (

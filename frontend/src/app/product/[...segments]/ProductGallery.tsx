@@ -15,7 +15,7 @@ import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
-import { campaignPillClass } from "@/lib/campaignTheme";
+import { promotionPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 
@@ -103,11 +103,15 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
     // The badge is shown only while the promotion behind the label is still live
     // (a stale label with an ended countdown must not survive).
+    const promotion = resolveProductPromotion(product, now);
     const showCampaignBadge = Boolean(
         product.campaignLabel &&
         !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive) &&
-        resolveProductPromotion(product, now).kind !== "none"
+        promotion.kind !== "none"
     );
+    // Same scheme as the card badge and the detail banner: a live flash deal
+    // keeps its amber→orange→red gradient instead of a campaign tint.
+    const campaignPill = promotionPillClass(promotion.kind, product.campaignTheme);
 
     // Modal content
     const modalContent = isGalleryOpen ? createPortal(
@@ -274,7 +278,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
                                         {showCampaignBadge && index === 0 && (
                                             <div className="absolute top-4 left-4 z-20">
-                                                <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg ${campaignPillClass(product.campaignTheme)}`}>
+                                                <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg ${campaignPill}`}>
                                                     {product.campaignLabel}
                                                 </span>
                                             </div>

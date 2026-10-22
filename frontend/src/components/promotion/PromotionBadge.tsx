@@ -6,7 +6,9 @@ type PromotionBadgeProps = {
 };
 
 const toneClassNames: Record<PromotionBadgeTone, string> = {
-  timed: "legacy-grad-timed border-transparent bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm",
+  // «پیشنهاد لحظه‌ای» / «زمان‌دار»: the same amber→orange→red gradient the card
+  // stripe, the discount pill and the product-detail banner paint.
+  timed: "border-transparent bg-kala-timed-gradient text-white shadow-sm",
   curated: "border-ekg-200 bg-ekg-50 text-ekg-700",
   limited: "border-red-200 bg-red-50 text-red-600",
   campaign: "border-blue-100 bg-blue-50 text-blue-700",

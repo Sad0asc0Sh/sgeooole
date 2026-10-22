@@ -90,7 +90,7 @@
 .card:hover { border-color: #d97706; }
 .promotionSlot { min-height: 36px; margin: calc(-1 * var(--card-padding)) calc(-1 * var(--card-padding)) 10px; }
 .promotionHeader { --promotion-color: #2563eb; --promotion-stripe: linear-gradient(to right, #60a5fa, #6366f1); border-bottom: 1px solid #f1f5f9; }
-.promotionHeader[data-promotion-theme="flash"] { --promotion-color: #b45309; --promotion-stripe: #f59e0b; }
+.promotionHeader[data-promotion-theme="flash"] { --promotion-color: #b45309; --promotion-stripe: linear-gradient(to right, #ffb900, #ff6900, #e7000b); }
 .promotionHeader[data-promotion-theme="amazing"] { --promotion-color: #ef4444; --promotion-stripe: #ef4444; }
 /* «نوروزی/لوکس» — champagne → gold → bronze tail, mirrors lib/campaignTheme.ts.
    Bruised apart from the flash rail (amber→orange→red) on purpose. */

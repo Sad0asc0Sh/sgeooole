@@ -6,7 +6,7 @@ import { Product } from "@/services/productService";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
-import { campaignPillClass } from "@/lib/campaignTheme";
+import { promotionPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 
 type SimpleGalleryProps = {
@@ -31,11 +31,14 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
         new Date(product.flashDealEndTime).getTime() > now
     );
 
+    const promotion = resolveProductPromotion(product, now);
     const showCampaignBadge = Boolean(
         product.campaignLabel &&
         !(isFlashDealLabel(product.campaignLabel) && !isFlashDealActive) &&
-        resolveProductPromotion(product, now).kind !== "none"
+        promotion.kind !== "none"
     );
+    // Same scheme as the card badge and the detail banner.
+    const campaignPill = promotionPillClass(promotion.kind, product.campaignTheme);
 
     useEffect(() => {
         const id = setInterval(() => setNow(getServerNow()), 1000);
@@ -112,7 +115,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                 {/* Campaign Badge */}
                 {showCampaignBadge && (
                     <div className="absolute top-4 left-4 z-20">
-                        <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${campaignPillClass(product.campaignTheme)}`}>
+                        <span className={`text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm ${campaignPill}`}>
                             {product.campaignLabel}
                         </span>
                     </div>

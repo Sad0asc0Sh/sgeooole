@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
 import { Product } from "@/services/productService";
 import type { ProductVariantOption } from "@/types/product";
-import { campaignPillClass } from "@/lib/campaignTheme";
+import { promotionPillClass } from "@/lib/campaignTheme";
 import { optionsKey } from "@/lib/variants";
 import { useCart } from "@/hooks/useCart";
 
@@ -36,12 +36,15 @@ export default function ProductActions({ product, variantOptions = [], selectedC
     // timer math — an expired snapshot restores the base price and a stale
     // compareAtPrice can never inflate it.
     const promotion = resolveProductPromotion(product, now);
-    const isFlashDealActive = promotion.isFlashDealActive;
 
     // Any active countdown (flash deal or special offer)
     // A campaign label counts only while its promotion is live; a label alone (stale snapshot
     // with an ended countdown) must not keep the discount badge / struck-through price alive.
     const hasActivePromotion = promotion.kind !== "none";
+
+    // Same scheme as the product card and the detail banner: a live flash deal
+    // paints the amber→orange→red gradient here too, not a loose amber/red fill.
+    const discountPillClass = promotionPillClass(promotion.kind, product.campaignTheme);
 
     // Price reversion: the resolver already restores the base price after expiry.
     const displayPrice = promotion.displayPrice;
@@ -107,15 +110,7 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                         <div className="flex items-center gap-3 mb-2">
                             {product.discount > 0 && (
                                 <div
-                                    className={`text-white text-xs font-bold px-3 py-1 rounded-full ${
-                                        product.campaignTheme
-                                            ? campaignPillClass(product.campaignTheme)
-                                            : product.campaignLabel
-                                                ? campaignPillClass('blue')
-                                                : isFlashDealActive
-                                                    ? 'bg-amber-500'
-                                                    : 'bg-[#ef394e]'
-                                    }`}
+                                    className={`text-white text-xs font-bold px-3 py-1 rounded-full ${discountPillClass}`}
                                 >
                                     {product.discount.toLocaleString("fa-IR")}٪
                                 </div>
@@ -213,15 +208,7 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                     <div className="flex items-center gap-2 mb-1">
                         {product.discount > 0 && (
                             <div
-                                className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                    product.campaignTheme
-                                        ? campaignPillClass(product.campaignTheme)
-                                        : product.campaignLabel
-                                            ? campaignPillClass('blue')
-                                            : isFlashDealActive
-                                                ? 'bg-amber-500'
-                                                : 'bg-[#ef394e]'
-                                }`}
+                                className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${discountPillClass}`}
                             >
                                 {product.discount.toLocaleString("fa-IR")}٪
                             </div>

@@ -14,7 +14,7 @@ import {
     getNextPromotionExpiry,
 } from "@/lib/promotions/productPromotion";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
-import { campaignStripeClass } from "@/lib/campaignTheme";
+import { promotionStripeClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import styles from "./ProductCard.module.css";
 
@@ -61,38 +61,24 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
 
     // A single resolver gives the three promotion types a stable precedence.
     // Notably, a plain percentage can no longer create a "شگفت‌انگیز" label.
+    // Colours come from the same scheme the product detail reads
+    // (lib/campaignTheme.ts), so one live promotion is one colour everywhere.
     let headerConfig = null;
 
-    if (promotionKind === 'flash') {
-        headerConfig = {
-            type: 'flash',
-            title: 'پیشنهاد لحظه‌ای',
-            color: 'text-orange-600',
-            borderColor: 'legacy-grad-timed bg-gradient-to-r from-amber-400 via-orange-500 to-red-600',
-            endTime,
-            iconColor: 'text-orange-600',
-        };
-    } else if (promotionKind === 'campaign') {
-        // One shared resolver keeps the card stripe in lock-step with the
-        // product-detail badges (lib/campaignTheme.ts is the single source).
-        const { stripe: themeBorder, text: themeColor } = campaignStripeClass(product.campaignTheme);
+    if (promotionKind !== 'none') {
+        const { stripe, text } = promotionStripeClass(promotionKind, product.campaignTheme);
 
         headerConfig = {
-            type: 'campaign',
-            title: product.campaignLabel || 'فروش ویژه',
-            color: themeColor,
-            borderColor: themeBorder,
+            type: promotionKind,
+            title: promotionKind === 'flash'
+                ? 'پیشنهاد لحظه‌ای'
+                : promotionKind === 'amazing'
+                    ? 'شگفت‌انگیز'
+                    : product.campaignLabel || 'فروش ویژه',
+            color: text,
+            borderColor: stripe,
             endTime,
-            iconColor: themeColor,
-        };
-    } else if (promotionKind === 'amazing') {
-        headerConfig = {
-            type: 'amazing',
-            title: 'شگفت‌انگیز',
-            color: 'text-red-500',
-            borderColor: 'bg-red-500',
-            endTime,
-            iconColor: 'text-red-500',
+            iconColor: text,
         };
     }
 

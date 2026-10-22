@@ -8,7 +8,7 @@ import { Product } from "@/services/productService";
 import { buildProductUrl } from "@/lib/paths";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
-import { campaignPillClass } from "@/lib/campaignTheme";
+import { promotionPillClass } from "@/lib/campaignTheme";
 import { getServerNow } from "@/lib/serverClock";
 import imageStyles from "./ProductImageFrame.module.css";
 
@@ -44,6 +44,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
 
         return {
             hasPromotion: pricing.kind !== "none",
+            promotionKind: pricing.kind,
             effectiveDiscount: pricing.discountPercent,
             displayPrice: pricing.displayPrice,
             originalPrice: pricing.originalPrice,
@@ -54,7 +55,9 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
         };
     }, [product, now, variant]);
 
-    const { hasPromotion, effectiveDiscount, displayPrice, originalPrice, isFrom, isPartial, isOutOfStock, isLowStock } = computedValues;
+    const { hasPromotion, promotionKind, effectiveDiscount, displayPrice, originalPrice, isFrom, isPartial, isOutOfStock, isLowStock } = computedValues;
+    // One scheme for every surface: a live flash deal keeps the card gradient.
+    const campaignPill = promotionPillClass(promotionKind, product.campaignTheme);
 
     // Theme colors based on variant
     const themeClasses = useMemo(() => {
@@ -114,7 +117,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                     {product.campaignLabel && hasPromotion && (
                         <div className="absolute top-2 left-2 z-20">
                             <span
-                                className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${campaignPillClass(product.campaignTheme)}`}
+                                className={`text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm ${campaignPill}`}
                             >
                                 {product.campaignLabel}
                             </span>

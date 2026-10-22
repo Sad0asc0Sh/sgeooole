@@ -63,8 +63,9 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
             : null;
 
     const isFlashBadge = isFlashActive || Boolean(cleanLabel && (cleanLabel.includes("پیشنهاد لحظه‌ای") || cleanLabel.includes("زمان‌دار")));
+    // Same «پیشنهاد لحظه‌ای» gradient as the product card and the detail banner.
     const badgeClass = isFlashBadge
-        ? "legacy-grad-timed bg-gradient-to-r from-amber-400 via-orange-500 to-red-600 text-white shadow-sm"
+        ? "bg-kala-timed-gradient text-white shadow-sm"
         : "bg-red-500 text-white";
 
     return (
