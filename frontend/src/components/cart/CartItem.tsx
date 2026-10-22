@@ -1,5 +1,6 @@
 "use client";
-import { Trash2, Minus, Plus, ShoppingBag } from "lucide-react";
+import { Trash2, Minus, Plus } from "lucide-react";
+import ResilientImage from "@/components/ui/ResilientImage";
 import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { getServerNow } from "@/lib/serverClock";
 
@@ -71,12 +72,20 @@ export default function CartItem({ item, onIncrease, onDecrease }: CartItemProps
     return (
         <div className="bg-white p-3 rounded-2xl shadow-sm flex gap-3">
             {/* Image */}
-            <div className="w-24 h-24 relative bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                {/* Placeholder if image fails or is mock path */}
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                    <ShoppingBag />
-                </div>
-                {/* <Image src={item.image} fill className="object-cover" alt={item.name} /> */}
+            {/* The snapshot's image used to be commented out here, so every cart
+                line fell back to the grey bag placeholder. Render the real
+                thumbnail through the resilient loader, which retries, shows a
+                skeleton and lands on /placeholder.svg for a broken URL. */}
+            <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-50">
+                <ResilientImage
+                    src={item.image || "/placeholder.svg"}
+                    alt={item.name}
+                    fill
+                    sizes="96px"
+                    quality={70}
+                    className="object-cover"
+                    fallbackSrc="/placeholder.svg"
+                />
             </div>
 
             {/* Details */}

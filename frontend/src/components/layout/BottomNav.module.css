@@ -1,0 +1,93 @@
+/**
+ * Cart-state motion for the mobile bottom navigation.
+ *
+ * The cart item is the only nav entry that changes with user data, so its
+ * "a product just landed in the cart" feedback lives here instead of being
+ * duplicated as inline keyframes in globals.css.
+ */
+
+/* Isolated stacking context so the halo below can sit behind the glyph
+   without disappearing under the bar's white background. */
+.cartIcon {
+  isolation: isolate;
+}
+
+/* Springy pop of the cart glyph when the item count grows. */
+.bump {
+  animation: cart-bump 620ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+/* Soft brand halo behind the glyph — sells the "it filled up" moment
+   without adding a second colour to the bar. */
+.bump::before {
+  content: "";
+  position: absolute;
+  inset: -7px;
+  z-index: -1;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(217, 119, 6, 0.3) 0%, rgba(217, 119, 6, 0) 72%);
+  animation: cart-halo 620ms ease-out both;
+  pointer-events: none;
+}
+
+.badgeBump {
+  animation: cart-badge-pop 620ms cubic-bezier(0.22, 1.4, 0.36, 1);
+}
+
+@keyframes cart-bump {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  28% {
+    transform: scale(1.22) rotate(-7deg);
+  }
+  52% {
+    transform: scale(0.94) rotate(3deg);
+  }
+  74% {
+    transform: scale(1.05) rotate(-1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes cart-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes cart-badge-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.25);
+  }
+  72% {
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bump,
+  .bump::before,
+  .badgeBump {
+    animation: none;
+  }
+}

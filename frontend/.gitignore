@@ -30,6 +30,9 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# local design/preview scratch (screenshots rendered with headless Chrome)
+.preview/
+
 # env files (can opt-in for committing if needed)
 .env*
 

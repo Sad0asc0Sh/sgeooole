@@ -53,4 +53,29 @@ describe("CartItem — نمایش گزینه‌های انتخابی", () => {
         fireEvent.click(screen.getAllByRole("button")[0]);
         expect(onIncrease).toHaveBeenCalledTimes(1);
     });
+
+    it("تصویر محصولِ اضافه‌شده را رندر می‌کند (رجگرسیون: قبلاً همیشه placeholder بود)", () => {
+        render(
+            <CartItem
+                item={{ ...baseItem, image: "/uploads/tee-red.jpg" }}
+                onIncrease={jest.fn()}
+                onDecrease={jest.fn()}
+            />,
+        );
+
+        const image = screen.getByRole("img", { name: "تی‌شرت" });
+        expect(image).toHaveAttribute("src", "/uploads/tee-red.jpg");
+    });
+
+    it("برای تصویر خالی، placeholder سایت را می‌گذارد", () => {
+        render(
+            <CartItem
+                item={{ ...baseItem, image: "" }}
+                onIncrease={jest.fn()}
+                onDecrease={jest.fn()}
+            />,
+        );
+
+        expect(screen.getByRole("img", { name: "تی‌شرت" })).toHaveAttribute("src", "/placeholder.svg");
+    });
 });
