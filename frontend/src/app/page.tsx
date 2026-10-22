@@ -161,7 +161,7 @@ export default async function Home() {
   // to the branch-1 landline already published on the site's own /contact
   // page (ContactClient branches) — a real, publicly listed number.
   const contactPhone =
-    (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim() || "05135021720";
+    (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim() || "05135013383";
 
   const structuredData = {
     "@context": "https://schema.org",

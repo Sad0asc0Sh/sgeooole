@@ -13,7 +13,7 @@ const branches = [
         id: 1,
         name: "شعبه ۱",
         address: "پیروزی 75 بین ولایتی 9و11",
-        phones: ["05135021720"],
+        phones: ["05135013383"],
         theme: styles.tBlue,
     },
     {
@@ -139,9 +139,9 @@ export default function ContactPage() {
                         <h2 className={styles.missionTitle}>نیاز به مشاوره دارید؟</h2>
                         <p className={styles.missionSub}>کارشناسان ما آماده پاسخگویی به سوالات شما هستند</p>
                         <div className={styles.actions}>
-                            <a href="tel:05135021720" className={`${styles.btn} ${styles.btnLight}`}>
+                            <a href="tel:05135013383" className={`${styles.btn} ${styles.btnLight}`}>
                                 <Phone size={18} aria-hidden />
-                                <span dir="ltr">051-35021720</span>
+                                <span dir="ltr">051-35013383</span>
                             </a>
                             <a
                                 href="https://wa.me/989154191788"
