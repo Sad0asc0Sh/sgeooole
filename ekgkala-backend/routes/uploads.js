@@ -315,4 +315,31 @@ router.delete(
   }
 );
 
+// ============================================
+// DELETE /api/uploads/banner/:key — حذف تصویر بنر از ParsPack
+// (برای پاک‌سازی فایل‌های یتیم در صورت خطای ذخیره)
+// ============================================
+router.delete(
+  "/banner/:key",
+  protect,
+  checkAnyPermission(PERMISSIONS.BANNER_CREATE, PERMISSIONS.BANNER_UPDATE),
+  async (req, res) => {
+    try {
+      const { key } = req.params;
+      if (!key) {
+        return res.status(400).json({ success: false, message: "شناسه فایل مشخص نشده است" });
+      }
+      await deleteFromParsPack(key);
+      res.json({ success: true, message: "تصویر بنر با موفقیت حذف شد" });
+    } catch (error) {
+      console.error("Error deleting banner image:", error);
+      res.status(500).json({
+        success: false,
+        message: "خطا در حذف تصویر بنر",
+        error: error.message,
+      });
+    }
+  }
+);
+
 module.exports = router;

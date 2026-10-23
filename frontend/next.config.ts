@@ -51,8 +51,9 @@ const baseConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    deviceSizes: [360, 640, 768, 1024, 1280, 1536],
+    deviceSizes: [360, 640, 768, 1024, 1280, 1536, 1920],
     imageSizes: [64, 96, 128, 256, 384],
+    qualities: [60, 75, 80, 90],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     // SECURITY: SVG disabled to prevent XSS attacks
     dangerouslyAllowSVG: false,

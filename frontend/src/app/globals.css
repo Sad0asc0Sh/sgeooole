@@ -675,3 +675,24 @@
   border-bottom-right-radius: 40px;
   box-shadow: 0 10px 30px rgba(28, 25, 23, 0.15);
 }
+/* ---------- Hero banner (art-directed responsive slider) ---------- */
+.hero-swiper,
+.hero-swiper .swiper-wrapper,
+.hero-swiper .swiper-slide {
+  height: 100%;
+}
+
+.hero-swiper .swiper-slide {
+  overflow: hidden;
+}
+
+.hero-swiper img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-swiper .swiper-wrapper {
+    transition-duration: 0ms !important;
+  }
+}

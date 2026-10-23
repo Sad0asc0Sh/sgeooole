@@ -86,13 +86,13 @@ const SkeletonRail = ({ title }: { title: string }) => (
 );
 
 const SkeletonHero = () => (
-  <section className="w-[96%] md:w-[98%] max-w-screen-2xl mx-auto px-2 md:px-4 animate-pulse">
+  <section className="w-full max-w-[1920px] mx-auto animate-pulse">
     <div className="mb-4">
-      <div className="relative w-full aspect-[21/9] md:aspect-[4/1] rounded-2xl overflow-hidden mt-4">
+      <div className="relative w-full aspect-[360/260] md:aspect-[1911/430] overflow-hidden mt-4 md:mt-5 bg-ekg-950">
         <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
       </div>
     </div>
-    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4">
+    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4">
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />

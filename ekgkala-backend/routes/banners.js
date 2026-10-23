@@ -37,7 +37,11 @@ const multer = require('multer')
 const { upload, MAX_UPLOAD_FILE_SIZE_MB } = require('../middleware/upload')
 
 const handleBannerImageUpload = (req, res, next) => {
-  upload.single('image')(req, res, (err) => {
+  // دو تصویر مستقل: image (دسکتاپ) و mobileImage (موبایل)
+  upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'mobileImage', maxCount: 1 },
+  ])(req, res, (err) => {
     if (!err) return next()
 
     if (err instanceof multer.MulterError) {
