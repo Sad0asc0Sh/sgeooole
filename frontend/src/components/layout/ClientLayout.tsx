@@ -10,6 +10,7 @@ import ServicesWidget from "@/components/features/services/ServicesWidget";
 import AuthModalProvider from "@/providers/AuthModalProvider";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
+import { useCartSync } from "@/hooks/useCartSync";
 
 export default function ClientLayout({
     children,
@@ -21,6 +22,10 @@ export default function ClientLayout({
     const { isCurrentRouteReady } = useRouteLoadingState();
     const [isAIOpen, setIsAIOpen] = useState(false);
     const [isServicesOpen, setIsServicesOpen] = useState(false);
+
+    // Re-read the cart whenever the document is resumed (back/forward, bfcache,
+    // tab re-focus) so a returned page never paints a stale cart badge.
+    useCartSync();
 
     const isLoginPage = pathname?.startsWith("/login");
     const isProductPage = pathname?.startsWith("/product/") || isProductPageFromContext;

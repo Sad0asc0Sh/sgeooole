@@ -33,6 +33,18 @@ const buildMutationKey = (productId: string, variantOptions?: Array<{ name: stri
     return `${productId}-${buildVariantKey(variantOptions)}`;
 };
 
+/**
+ * Cheap fingerprint of a cart's lines (id + variant + quantity), used to decide
+ * whether a storage/server snapshot actually differs from what is rendered.
+ * Deliberately ignores prices: those are re-computed by the pricing layer and
+ * must not trigger a "cart changed" render on their own.
+ */
+const cartSignature = (items: LocalCartItem[]): string =>
+    items
+        .map((item) => `${item.id}|${buildVariantKey(item.variantOptions)}|${Number(item.qty) || 0}`)
+        .sort()
+        .join(";");
+
 // Local cart item format (for guest users)
 export interface LocalCartItem {
     id: string; // Product ID
@@ -98,6 +110,17 @@ interface CartState {
      * Safe to call on cart/checkout mount; failures keep the current cart.
      */
     revalidateCartPrices: () => Promise<void>;
+    /**
+     * Re-read the cart from its source of truth when the document is RESUMED
+     * (back/forward, bfcache restore, tab re-focus) instead of freshly mounted.
+     *
+     * Silent by design: no loading flags and no settings fetch, and it never
+     * wipes an in-memory cart when storage is empty/expired. Authenticated
+     * carts merge the server snapshot (pending optimistic deltas included);
+     * guest carts re-read their synchronously-written localStorage snapshot.
+     * Only writes state when the line fingerprint actually changed.
+     */
+    syncCartFromSource: () => Promise<void>;
     addToCart: (product: Product, quantity?: number, variantOptions?: Array<{ name: string; value: string }>) => Promise<void>;
     /**
      * افزودن دسته‌جمعی اقلام پکیج (بدون N درخواست تکراری).
@@ -553,6 +576,40 @@ export const useCartStore = create<CartState>((set, get) => ({
 
         saveLocalCart(refreshed, get().cartConfig);
         set({ cartItems: refreshed });
+    },
+
+    syncCartFromSource: async () => {
+        if (typeof window === "undefined") return;
+
+        // Authenticated: the server is the source of truth. applyServerCartIfNewer
+        // keeps pending optimistic deltas and items the server has not seen yet,
+        // so a resume can never swallow a just-added line.
+        if (authService.isAuthenticated()) {
+            try {
+                const response = await cartService.getCart();
+                if (response.success && response.data) {
+                    applyServerCartIfNewer(set, get, response.data);
+                }
+            } catch {
+                // Offline / backend unreachable: keep whatever is already rendered.
+            }
+            return;
+        }
+
+        const { cartConfig, cartItems, initialized } = get();
+        if (!cartConfig.persistCart) return;
+
+        const stored = getLocalStorageWithExpiry<LocalCartItem[]>(LOCAL_CART_KEY, cartConfig.cartExpirationDays);
+        // A missing/expired snapshot must never erase the in-memory cart.
+        if (stored === null) return;
+
+        if (!initialized) {
+            set({ cartItems: stored, initialized: true });
+            return;
+        }
+
+        if (cartSignature(stored) === cartSignature(cartItems)) return;
+        set({ cartItems: stored });
     },
 
     addToCart: async (product, quantity = 1, variantOptions) => {
