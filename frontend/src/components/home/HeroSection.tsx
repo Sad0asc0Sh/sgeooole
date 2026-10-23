@@ -35,8 +35,10 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const router = useRouter();
 
   const heroContainerClass = "w-full max-w-[1920px] mx-auto";
+  // بنر باید دقیقاً به هدر بچسبد؛ مقدار -mt-px برای پوشاندن درز ۱ پیکسلی
+  // مرز هدر است و ابعاد/نسبت بنر را تغییر نمی‌دهد.
   const heroFrameClass =
-    "relative w-full aspect-[360/260] md:aspect-[1911/430] overflow-hidden bg-ekg-950 mt-4 md:mt-5";
+    "relative w-full aspect-[360/260] md:aspect-[1911/430] overflow-hidden bg-ekg-950 -mt-px";
 
   useEffect(() => {
     if (initialBanners.length > 0) {
