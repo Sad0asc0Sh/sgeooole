@@ -18,6 +18,7 @@ type SwiperSliderProps = {
 type RingSlide = {
   banner: Banner;
   realIndex: number;
+  copy: number;
   ringIndex: number;
   isClone: boolean;
 };
@@ -36,13 +37,19 @@ type RingSlide = {
  *   - یک اسلاید تمام‌عرض (نسبت 1911/430) با همان زمان‌بندی
  *   - فلش‌ها و نقطه‌های سفارشی
  *
- * چرا حلقهٔ دستی؟
+ * چرا حلقهٔ دستی چندنسخه‌ای؟
  *   Swiper 12 در حالت loop با `centeredSlides` و `slidesPerView: 1.1` در RTL
  *   اسلایدها را بازچینش می‌کند و اسلایدهای کنارِ سمت چپ را از دست می‌دهد
- *   (در ۴ اسلاید، فقط پیک سمت راست دیده می‌شد). به همین دلیل یک رینگ
- *   [آخرین اسلاید، ...همهٔ اسلایدها، اولین اسلاید] می‌سازیم، روی اسلاید واقعی
- *   اول شروع می‌کنیم و در لحظهٔ رسیدن به کلون‌ها با speed=0 به اسلاید واقعی
- *   معادل می‌پریم تا حلقه بدون پرش و با هر تعداد اسلاید (۲ به بالا) کار کند.
+ *   (در ۴ اسلاید، فقط پیک سمت راست دیده می‌شد).
+ *
+ *   یک رینگ تک‌کلونی هم مشکل دیگری داشت: در swipe سریع، کاربر به کلون انتهایی
+ *   می‌رسید و چون اسلایدی بعد از آن نبود، «انتهای بنرها» (فضای خالی) دیده
+ *   می‌شد تا پرش بعد از پایان انیمیشن انجام شود. راه‌حل: چند نسخه از کل
+ *   اسلایدها رندر می‌شود (۳ نسخه، برای ۲ اسلاید ۵ نسخه) و همیشه در نسخهٔ
+ *   میانی شروع می‌کنیم. به‌محض اینکه اسلاید فعال از نسخهٔ میانی خارج شد،
+ *   با speed=0 به اسلاید هم‌شکل در نسخهٔ میانی برمی‌گردیم. بنابراین در هر
+ *   لحظه چند اسلاید پشت و جلوی فعال وجود دارد و فضای خالی/انتهای رینگ
+ *   هرگز دیده نمی‌شود؛ حتی در swipeهای پشت‌سرهم و سریع.
  */
 export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null);
@@ -50,93 +57,109 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const jumpingRef = useRef(false);
 
   const slides = useMemo(() => banners.filter(Boolean), [banners]);
+  const slideCount = slides.length;
+  // با ۲ اسلاید، ۵ نسخه تا هنگام swipe سریع هم فضای خالی دیده نشود.
+  const copies = slideCount <= 2 ? 5 : 3;
+  const middleCopy = Math.floor(copies / 2);
+  const middleStart = middleCopy * slideCount;
 
   const ring = useMemo<RingSlide[]>(() => {
-    if (slides.length === 0) return [];
-    if (slides.length === 1) {
-      return [{ banner: slides[0], realIndex: 0, ringIndex: 0, isClone: false }];
+    if (slideCount === 0) return [];
+    if (slideCount === 1) {
+      return [{ banner: slides[0], realIndex: 0, copy: 0, ringIndex: 0, isClone: false }];
     }
 
-    const head: RingSlide = {
-      banner: slides[slides.length - 1],
-      realIndex: slides.length - 1,
-      ringIndex: 0,
-      isClone: true,
-    };
-    const body: RingSlide[] = slides.map((banner, index) => ({
-      banner,
-      realIndex: index,
-      ringIndex: index + 1,
-      isClone: false,
-    }));
-    const tail: RingSlide = {
-      banner: slides[0],
-      realIndex: 0,
-      ringIndex: slides.length + 1,
-      isClone: true,
-    };
-    return [head, ...body, tail];
-  }, [slides]);
+    const items: RingSlide[] = [];
+    for (let copy = 0; copy < copies; copy += 1) {
+      slides.forEach((banner, realIndex) => {
+        items.push({
+          banner,
+          realIndex,
+          copy,
+          ringIndex: copy * slideCount + realIndex,
+          isClone: copy !== middleCopy,
+        });
+      });
+    }
+    return items;
+  }, [slides, slideCount, copies, middleCopy]);
 
-  // بدون loop خود Swiper؛ حلقه را رینگ بالا می‌سازد.
-  const initialSlide = slides.length > 1 ? 1 : 0;
+  // بدون loop خود Swiper؛ حلقه را رینگ چندنسخه‌ای می‌سازد.
+  const initialSlide = slideCount > 1 ? middleStart : 0;
 
   const goTo = useCallback(
     (realIndex: number) => {
       if (!swiper) return;
-      if (slides.length < 2) {
+      if (slideCount < 2) {
         swiper.slideTo(0);
       } else {
-        swiper.slideTo(realIndex + 1);
+        // نزدیک‌ترین نسخه از همان اسلاید واقعی در نسخهٔ فعلی
+        const currentCopy = Math.floor(swiper.activeIndex / slideCount);
+        const target = Math.min(
+          Math.max(currentCopy * slideCount + realIndex, 0),
+          copies * slideCount - 1
+        );
+        swiper.slideTo(target);
       }
       setActiveIndex(realIndex);
     },
-    [swiper, slides.length]
+    [swiper, slideCount, copies]
   );
 
   /**
-   * بعد از هر ترنزیشن، اگر روی کلون سر/ته رینگ هستیم، بی‌درنگ به اسلاید
-   * واقعیِ هم‌شکل می‌پریم. چون تصویر همان تصویر است، کاربر پرش نمی‌بیند.
+   * بعد از هر ترنزیشن، اگر اسلاید فعال از نسخهٔ میانی خارج شده باشد،
+   * بی‌درنگ به اسلاید هم‌شکل در نسخهٔ میانی می‌پریم. چون تصویر همان
+   * تصویر است، کاربر پرش نمی‌بیند؛ اما همیشه چند اسلاید پشت و جلو
+   * وجود دارد و «انتهای بنرها» دیده نمی‌شود.
    */
   const handleTransitionEnd = useCallback(
     (instance: SwiperClass) => {
-      if (slides.length < 2 || jumpingRef.current) return;
-      const count = slides.length;
+      if (slideCount < 2 || jumpingRef.current) return;
       const index = instance.activeIndex;
+      const copy = Math.floor(index / slideCount);
+      if (copy === middleCopy) return;
 
-      if (index === 0) {
-        jumpingRef.current = true;
-        instance.slideTo(count, 0, false);
-        setActiveIndex(count - 1);
-        instance.autoplay?.start();
-        window.setTimeout(() => {
-          jumpingRef.current = false;
-        }, 80);
-      } else if (index === count + 1) {
-        jumpingRef.current = true;
-        instance.slideTo(1, 0, false);
-        setActiveIndex(0);
-        instance.autoplay?.start();
-        window.setTimeout(() => {
-          jumpingRef.current = false;
-        }, 80);
-      }
+      const target = index - (copy - middleCopy) * slideCount;
+      jumpingRef.current = true;
+      instance.slideTo(target, 0, false);
+      setActiveIndex(((index % slideCount) + slideCount) % slideCount);
+      instance.autoplay?.start();
+      window.setTimeout(() => {
+        jumpingRef.current = false;
+      }, 80);
     },
-    [slides.length]
+    [slideCount, middleCopy]
   );
 
   const handleSlideChange = useCallback(
     (instance: SwiperClass) => {
-      if (slides.length < 2) {
+      if (slideCount < 2) {
         setActiveIndex(0);
         return;
       }
-      const count = slides.length;
+      const total = copies * slideCount;
       const index = instance.activeIndex;
-      const realIndex = ((index - 1) % count + count) % count;
+      const realIndex = ((index % slideCount) + slideCount) % slideCount;
+
+      // لبهٔ مطلق رینگ (اولین/آخرین اسلاید کل نسخه‌ها): قبل از اینکه
+      // فضای خالی دیده شود یا swipe بعدی قفل شود، بلافاصله به اسلاید
+      // هم‌شکل در نسخهٔ میانی می‌پریم. تصویر همان تصویر است، پس کاربر
+      // فقط ادامهٔ چرخش را می‌بیند، نه انتهای بنرها.
+      if (index === 0 || index === total - 1) {
+        const target = index === 0 ? middleStart : middleStart + slideCount - 1;
+        jumpingRef.current = true;
+        instance.slideTo(target, 0, false);
+        setActiveIndex(realIndex);
+        instance.autoplay?.start();
+        window.setTimeout(() => {
+          jumpingRef.current = false;
+        }, 80);
+        return;
+      }
+
       setActiveIndex(realIndex);
     },
-    [slides.length]
+    [slideCount, copies, middleStart]
   );
 
   if (slides.length === 0) return null;
@@ -186,14 +209,14 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
         dir="rtl"
         className="hero-swiper h-full w-full"
       >
-        {ring.map(({ banner, realIndex, isClone }) => {
+        {ring.map(({ banner, realIndex, copy, isClone }) => {
           const src = resolveImageUrl(banner.image, "");
           const mobileSrc = resolveImageUrl(banner.mobileImage, "");
           if (!src) return null;
 
           return (
             <SwiperSlide
-              key={`${banner._id}-${isClone ? "clone" : "real"}-${realIndex}`}
+              key={`${banner._id}-${copy}-${realIndex}`}
               className="relative h-full w-full overflow-hidden rounded-lg md:rounded-none"
               aria-hidden={isClone ? "true" : undefined}
             >

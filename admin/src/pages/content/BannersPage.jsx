@@ -1029,7 +1029,7 @@ function BannerGuideModal({ open, onClose }) {
   slidesPerView: 1.1,
   centeredSlides: true,
   spaceBetween: 8,
-  loop: false,             // حلقهٔ دستی: [last, ...slides, first]
+  loop: false,             // رینگ چندنسخه‌ای
   autoplay: { delay: 5000, waitForTransition: true },
   speed: 500,
   height: '180px',
@@ -1037,12 +1037,13 @@ function BannerGuideModal({ open, onClose }) {
   pagination: false,
   navigation: false,
 }
-initialSlide: 1
-ring: [lastSlide, ...slides, firstSlide]
+ring: [all slides] × 3      // برای ۲ اسلاید: × 5
+initialSlide: middleCopyStart
+recenter: transitionEnd + immediate at absolute edge
 desktop: {
   slidesPerView: 1,
   centeredSlides: false,
-  loop: false,             // همان رینگ دستی
+  loop: false,             // همان رینگ چندنسخه‌ای
   autoplay: { delay: 5000, waitForTransition: true },
   speed: 500,
   pagination: true,
