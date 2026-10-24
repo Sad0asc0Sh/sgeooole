@@ -20,12 +20,16 @@ type HeroSectionProps = {
  * ============================================================
  *
  *  Desktop: 1911 × 430  → 22.5013% of width (4.444 : 1)
- *  Mobile : 360  × 260  → 72.2222% of width (1.385 : 1)
+ *  Mobile : 388  × 180  (at a 428px viewport) → fixed 180px height
  *
- *  - دو تصویر مستقل (دسکتاپ/موبایل) با <picture> و source media
- *  - بدون ارتفاع ثابت؛ ارتفاع همیشه از نسبت تصویر می‌آید (بدون CLS)
+ *  مکانیزم موبایل عیناً مانند دیجی‌کالا:
+ *  - اسلاید فعال وسط‌چین با عرض ۱.۱ اسلاید (۳۸۸px در صفحهٔ ۴۲۸px)
+ *  - ۲۰px از هر طرف بیرون می‌ماند، پس ۲۰px از اسلایدهای کنار «پیک» می‌زند
+ *  - فاصلهٔ ۸px، گوشهٔ ۸px، ارتفاع ثابت ۱۸۰px، فاصلهٔ ۸px از بالا و ۱۲px از پایین
+ *  - چرخش خودکار هر ۵ ثانیه (انیمیشن ۵۰۰ms)، لوپ بی‌نهایت، swipe
+ *  - بدون فلش/نقطه در موبایل؛ فلش و نقطه فقط در دسکتاپ
+ *  - دو تصویر مستقل دسکتاپ/موبایل با <picture> و source media
  *  - تصویر اول eager + fetchPriority=high برای LCP
- *  - اسلایدر: autoplay 6s، توقف روی hover، کنترل‌های سفارشی
  * ============================================================
  */
 
@@ -34,11 +38,15 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const [loading, setLoading] = useState(initialBanners.length === 0);
   const router = useRouter();
 
-  const heroContainerClass = "w-full max-w-[1920px] mx-auto";
-  // بنر باید دقیقاً به هدر بچسبد؛ مقدار -mt-px برای پوشاندن درز ۱ پیکسلی
-  // مرز هدر است و ابعاد/نسبت بنر را تغییر نمی‌دهد.
+  // فریم بیرونی: در موبایل تمام‌عرض با ارتفاع ثابت ۱۸۰px و فاصلهٔ ۸px از بالا
+  // و ۱۲px از پایین. حاشیهٔ ۲۰px از دو طرف توسط slidesPerView: 1.1 خود
+  // اسلایدر ساخته می‌شود (نه padding؛ وگرنه عرض اسلاید دوباره کم می‌شود).
   const heroFrameClass =
-    "relative w-full aspect-[360/260] md:aspect-[1911/430] overflow-hidden bg-ekg-950 -mt-px";
+    "relative mt-2 mb-3 h-[180px] md:mb-0 md:h-auto md:aspect-[1911/430] md:-mt-px";
+  // داخل فریم: در موبایل پس‌زمینهٔ صفحه از لای فاصلهٔ ۸px اسلایدها دیده شود،
+  // در دسکتاپ پس‌زمینهٔ تیرهٔ برند.
+  const heroClipClass =
+    "relative h-full w-full overflow-hidden bg-transparent md:rounded-none md:bg-ekg-950";
 
   useEffect(() => {
     if (initialBanners.length > 0) {
@@ -77,13 +85,15 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
 
   if (loading) {
     return (
-      <section className={heroContainerClass} aria-busy="true">
-        <div className="mb-4 animate-pulse">
-          <div className={heroFrameClass}>
-            <div className="absolute inset-0 bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
+      <section className="w-full max-w-[1920px] mx-auto" aria-busy="true">
+        <div className={heroFrameClass}>
+          <div className="mx-5 h-full md:mx-0">
+            <div className={`${heroClipClass} animate-pulse rounded-lg`}>
+              <div className="absolute inset-0 bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
+            </div>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4">
+        <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4 md:pt-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -110,30 +120,36 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
       : null;
 
   return (
-    <section className={heroContainerClass} aria-label="بنرهای اصلی فروشگاه">
+    <section className="w-full max-w-[1920px] mx-auto" aria-label="بنرهای اصلی فروشگاه">
       {/* === Single Banner: SSR picture, no slider overhead === */}
       {mainBanners.length === 1 && firstBanner ? (
         <div className={heroFrameClass}>
-          <HeroBannerLink banner={firstBanner}>
-            <HeroBannerImage
-              src={resolveImageUrl(firstBanner.image, "/placeholder.svg")}
-              mobileSrc={resolveImageUrl(firstBanner.mobileImage, "") || null}
-              alt={firstBanner.alt || firstBanner.title || "بنر اصلی"}
-              width={firstImage?.width}
-              height={firstImage?.height}
-              mobileWidth={firstMobileImage?.width}
-              mobileHeight={firstMobileImage?.height}
-              priority
-              fit={firstBanner.fit === "contain" ? "contain" : "cover"}
-            />
-          </HeroBannerLink>
+          <div className="px-5 md:px-0 h-full">
+            <div className={`${heroClipClass} rounded-lg`}>
+              <HeroBannerLink banner={firstBanner}>
+                <HeroBannerImage
+                  src={resolveImageUrl(firstBanner.image, "/placeholder.svg")}
+                  mobileSrc={resolveImageUrl(firstBanner.mobileImage, "") || null}
+                  alt={firstBanner.alt || firstBanner.title || "بنر اصلی"}
+                  width={firstImage?.width}
+                  height={firstImage?.height}
+                  mobileWidth={firstMobileImage?.width}
+                  mobileHeight={firstMobileImage?.height}
+                  priority
+                  fit={firstBanner.fit === "contain" ? "contain" : "cover"}
+                />
+              </HeroBannerLink>
+            </div>
+          </div>
         </div>
       ) : null}
 
-      {/* === Multiple Banners: art-directed Swiper === */}
+      {/* === Multiple Banners: Digikala-style centered peek carousel === */}
       {mainBanners.length > 1 ? (
         <div className={heroFrameClass}>
-          <SwiperSlider banners={mainBanners} />
+          <div className={heroClipClass}>
+            <SwiperSlider banners={mainBanners} />
+          </div>
         </div>
       ) : null}
 

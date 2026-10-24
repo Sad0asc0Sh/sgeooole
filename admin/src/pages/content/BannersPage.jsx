@@ -41,6 +41,8 @@ import {
   WarningOutlined,
   CloseCircleOutlined,
   ExpandOutlined,
+  BookOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import jalaliday from 'jalaliday'
@@ -69,40 +71,63 @@ const formatPersianDate = (date, includeTime = false) => {
 }
 
 // ============================================================
-// مشخصات بنرها — هم‌راستا با Art Direction فرانت‌اند
+// مشخصات بنرها — هم‌راستا با مکانیزم واقعی فروشگاه
 // ============================================================
-// منبع: مهندسی معکوس بنر اصلی Technolife
-//   دسکتاپ: 1911×430 → 22.5013%  (4.444:1)
-//   موبایل : 360 ×260 → 72.2222%  (1.385:1)
-//   دو تصویر مستقل؛ نه برش تصویر دسکتاپ در موبایل.
+// بنر اصلی، دو تصویر مستقل دارد (Art Direction):
+//   دسکتاپ: 1911 × 430  → نسبت 4.44:1
+//   موبایل: 388  × 180  → در ویوپورت 428px، ارتفاع ثابت 180px
+//           فایل پیشنهادی 780 × 360 (2x) — نسبت 2.16:1
+//
+// مکانیزم موبایل (عیناً مانند دیجی‌کالا):
+//   اسلاید فعال وسط‌چین با عرض ۱.۱ اسلاید؛ ۲۰px از هر طرف بیرون می‌ماند
+//   و ۲۰px از اسلایدهای کنار «پیک» می‌زند. فاصلهٔ ۸px، گوشهٔ ۸px،
+//   ارتفاع ۱۸۰px، چرخش خودکار هر ۵ ثانیه (انیمیشن ۵۰۰ms)، لوپ بی‌نهایت،
+//   swipe؛ بدون فلش و نقطه در موبایل.
 // ============================================================
 
-const buildSpec = (width, height, label) => ({
+const HERO_MOBILE = {
+  viewport: 428,
+  slideWidth: 388,
+  height: 180,
+  sideInset: 20,
+  gap: 8,
+  radius: 8,
+  intervalSeconds: 5,
+  transitionMs: 500,
+  recommendedUpload: '780 × 360',
+  ratioLabel: '2.16 : 1',
+}
+
+const buildSpec = (width, height, label, recommendedLabel) => ({
   width,
   height,
   label,
   sizeLabel: `${width} × ${height}`,
   ratioLabel: `${(width / height).toFixed(2)} : 1`,
   padding: `${((height / width) * 100).toFixed(2)}%`,
+  recommendedLabel: recommendedLabel || `${width} × ${height}`,
 })
 
 const BANNER_POSITIONS = {
   'main-slider': {
     label: 'اسلایدر اصلی',
     icon: '🖼️',
-    description: 'بنر تمام‌عرض بالای صفحه اصلی — دو تصویر مستقل برای دسکتاپ و موبایل',
+    description:
+      'بنر تمام‌عرض بالای صفحه اصلی — موبایل با اسلاید ۳۸۸×۱۸۰، پیک اسلایدهای کنار و چرخش ۵ ثانیه‌ای؛ دسکتاپ ۱۹۱۱×۴۳۰',
     responsive: true,
     desktop: buildSpec(1911, 430, 'دسکتاپ'),
-    mobile: buildSpec(360, 260, 'موبایل'),
-    size: '1911×430 دسکتاپ • 360×260 موبایل',
-    aspectRatio: '4.44:1 دسکتاپ | 1.38:1 موبایل',
-    minSize: 'دسکتاپ ۱۲۰۰×۲۷۰ • موبایل ۳۶۰×۲۶۰',
+    mobile: buildSpec(388, 180, 'موبایل', HERO_MOBILE.recommendedUpload),
+    size: '1911×430 دسکتاپ • 388×180 موبایل (فایل 780×360)',
+    aspectRatio: '4.44:1 دسکتاپ | 2.16:1 موبایل',
+    minSize: 'دسکتاپ ۱۲۰۰×۲۷۰ • موبایل ۳۸۸×۱۸۰',
     previewAspect: '1911 / 430',
     color: 'blue',
     tips: [
-      'برای موبایل یک تصویر جداگانه بسازید؛ نسخهٔ کوچک‌شدهٔ دسکتاپ کافی نیست.',
-      'متن و CTA را در ۸۰٪ مرکزی کادر نگه دارید.',
-      'اولین اسلاید، LCP صفحه است؛ سبک‌ترین تصویر را اول بگذارید.',
+      'برای موبایل همیشه تصویر جدا بسازید؛ نسخهٔ دسکتاپ در موبایل برش می‌خورد.',
+      'اسلاید موبایل ۳۸۸×۱۸۰ است (فایل ۷۸۰×۳۶۰)؛ گوشه‌ها ۸px و ۲۰px از هر طرف حاشیه دارد.',
+      '۲۰px از اسلایدهای قبلی/بعدی در دو لبه دیده می‌شود؛ پیام اصلی را در ۸۰٪ مرکزی نگه دارید.',
+      'اسلایدر هر ۵ ثانیه با انیمیشن ۵۰۰ms عوض می‌شود؛ هر اسلاید فقط یک پیام داشته باشد.',
+      'در موبایل فلش و نقطه نمایش داده نمی‌شود؛ ناوبری با swipe و چرخش خودکار است.',
     ],
   },
   'middle-banner': {
@@ -157,12 +182,12 @@ const getSpec = (position, device = 'desktop') => {
 
 const getTargetWidth = (position, device = 'desktop') => {
   const spec = getSpec(position, device)
-  // برای موبایل، عرض ۲ برابر (Retina) به‌عنوان سقف بهینه‌سازی
-  return device === 'mobile' ? spec.width * 2 : spec.width
+  // موبایل با عرض ۲x (Retina) ذخیره می‌شود؛ بنر اصلی ۳۸۸ → ۷۸۰
+  return device === 'mobile' ? (position === 'main-slider' ? 780 : spec.width * 2) : spec.width
 }
 
 const getMinWidth = (position, device = 'desktop') => {
-  if (device === 'mobile') return 360
+  if (device === 'mobile') return position === 'main-slider' ? HERO_MOBILE.slideWidth : 360
   if (position === 'middle-banner') return 640
   return 900
 }
@@ -171,6 +196,121 @@ const MAX_BANNER_UPLOAD_SIZE_MB = 10
 const MAX_BANNER_UPLOAD_SIZE_BYTES = MAX_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
 const RECOMMENDED_BANNER_UPLOAD_SIZE_MB = 2
 const RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES = RECOMMENDED_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
+
+// ============================================================
+// دستورالعمل بنر اصلی — نسخهٔ موبایل‌محور (جایگزین نسخهٔ فقط‌دسکتاپ)
+// ============================================================
+
+const HERO_MECHANISM_STEPS = [
+  {
+    title: 'یک اسلاید کامل در وسط',
+    desc: `در موبایل، اسلاید فعال ${HERO_MOBILE.slideWidth}px عرض دارد (در صفحهٔ ${HERO_MOBILE.viewport}px) و دقیقاً وسط صفحه می‌نشیند. ${HERO_MOBILE.sideInset}px از هر طرف بیرون می‌ماند.`,
+  },
+  {
+    title: 'پیک‌زدن اسلایدهای کنار',
+    desc: `حدود ${HERO_MOBILE.sideInset}px از اسلاید قبلی و بعدی در دو لبه دیده می‌شود. این «پیک» طبیعی و عمدی است و به کاربر می‌فهماند اسلایدر ادامه دارد.`,
+  },
+  {
+    title: 'ارتفاع ثابت و گوشهٔ گرد',
+    desc: `ارتفاع همهٔ اسلایدهای موبایل ثابت ${HERO_MOBILE.height}px است؛ فاصلهٔ بین اسلایدها ${HERO_MOBILE.gap}px و گوشه‌ها ${HERO_MOBILE.radius}px گرد است.`,
+  },
+  {
+    title: 'چرخش خودکار ۵ ثانیه‌ای',
+    desc: `هر ${HERO_MOBILE.intervalSeconds} ثانیه یک اسلاید جلو می‌رود، انیمیشن ${HERO_MOBILE.transitionMs}ms است، بینهایت لوپ می‌شود و با کشیدن انگشت هم جابه‌جا می‌شود.`,
+  },
+  {
+    title: 'بدون فلش و نقطه در موبایل',
+    desc: 'در موبایل فلش و نقطه (dot) نمایش داده نمی‌شود؛ ناوبری فقط با swipe و چرخش خودکار است. فلش و نقطه فقط در دسکتاپ دیده می‌شوند.',
+  },
+  {
+    title: 'تصویر اول، سریع‌ترین',
+    desc: 'اولین اسلاید با priority و eager بارگذاری می‌شود تا LCP صفحه سریع باشد؛ بقیهٔ اسلایدها lazy هستند.',
+  },
+]
+
+const HERO_MOBILE_RULES = [
+  'برای موبایل یک تصویر مستقل بسازید؛ نسخهٔ کوچک‌شده یا برش‌خوردهٔ دسکتاپ کافی نیست.',
+  'متن، لوگو و CTA را در ۸۰٪ مرکزی تصویر نگه دارید؛ در گوشی‌های ۳۶۰px حدود ۹٪ از هر طرف برش می‌خورد.',
+  'حداقل اندازهٔ متن در فایل ۷۸۰×۳۶۰ حدود ۲۸px باشد تا در موبایل خوانا بماند.',
+  'یک پیام در هر اسلاید؛ تیتر کوتاه (۳ تا ۶ کلمه) و کنتراست بالا.',
+  'پس‌زمینهٔ یکدست یا گرادیان ملایم انتخاب کنید؛ جزئیات ریز پشت متن شلوغی ایجاد می‌کند.',
+  'حجم فایل را زیر ۲ مگابایت نگه دارید و در صورت امکان WebP بفرستید.',
+  'برای GIF، حجم و تعداد فریم را کنترل کنید؛ GIF سنگین LCP موبایل را خراب می‌کند.',
+  'ترتیب اسلایدها را با sortOrder تعیین کنید؛ عدد کمتر = نمایش زودتر.',
+]
+
+const HERO_DESKTOP_RULES = [
+  'نسخهٔ دسکتاپ ۱۹۱۱×۴۳۰ است و تمام‌عرض نمایش داده می‌شود.',
+  'در دسکتاپ فلش‌های قبلی/بعدی و نقطه‌های اسلاید نمایش داده می‌شوند.',
+  'متن مهم را در ۸۰٪ مرکزی کادر و دور از گوشه‌ها قرار دهید.',
+  'همان پیام و رنگ برند را با نسخهٔ موبایل هماهنگ نگه دارید؛ دو کریتیو مکمل باشند، نه دو کمپین جدا.',
+]
+
+const HERO_SPEC_ROWS = [
+  { label: 'ابعاد نمایش (موبایل)', mobile: '388 × 180 px', desktop: '1911 × 430 px' },
+  { label: 'فایل پیشنهادی', mobile: '780 × 360 px (2x)', desktop: '1911 × 430 px' },
+  { label: 'نسبت تصویر', mobile: '2.16 : 1', desktop: '4.44 : 1' },
+  { label: 'ارتفاع', mobile: 'ثابت 180 px', desktop: 'بر اساس عرض (نسبت)' },
+  { label: 'فاصله از لبه‌ها', mobile: '20 px از هر طرف', desktop: 'تمام‌عرض' },
+  { label: 'فاصلهٔ بین اسلایدها', mobile: '8 px', desktop: '0' },
+  { label: 'گردی گوشه', mobile: '8 px', desktop: '0' },
+  { label: 'حاشیهٔ امن محتوا', mobile: '10٪ از هر طرف', desktop: '8٪ از هر طرف' },
+  { label: 'چرخش خودکار', mobile: 'هر 5 ثانیه / انیمیشن 500ms', desktop: 'هر 5 ثانیه / انیمیشن 500ms' },
+  { label: 'کنترل‌ها', mobile: 'Swipe — بدون فلش و نقطه', desktop: 'فلش قبلی/بعدی + نقطه' },
+  { label: 'حجم مجاز', mobile: 'حداکثر 10MB — پیشنهاد زیر 2MB', desktop: 'حداکثر 10MB — پیشنهاد زیر 2MB' },
+  { label: 'فرمت', mobile: 'WebP / JPG / PNG / GIF', desktop: 'WebP / JPG / PNG / GIF' },
+]
+
+const HERO_CHECKLIST = [
+  'تصویر موبایل جداگانه آپلود شده و با تصویر دسکتاپ فرق دارد.',
+  'ابعاد فایل موبایل ۷۸۰×۳۶۰ (یا بزرگ‌تر با همین نسبت) است.',
+  'متن و CTA داخل ۸۰٪ مرکزی تصویر قرار دارد.',
+  'حجم فایل زیر ۲ مگابایت و فرمت WebP/JPG است.',
+  'لینک مقصد درست است و در تب جدید یا همین تب مطابق نیاز باز می‌شود.',
+  'متن جایگزین (Alt) فارسی و توصیفی برای هر دو تصویر نوشته شده.',
+  'ترتیب اسلایدها (sortOrder) درست است و اولین اسلاید سبک‌ترین تصویر را دارد.',
+  'پیش‌نمایش موبایل و دسکتاپ در همین پنل بررسی شده است.',
+  'روی یک گوشی واقعی (۳۶۰px و ۴۲۸px) اسلاید را swipe کرده‌اید و متن بریده نمی‌شود.',
+]
+
+const HERO_TROUBLESHOOTING = [
+  {
+    problem: 'متن یا لوگو در موبایل بریده می‌شود',
+    cause: 'محتوا در لبه‌های تصویر قرار دارد یا نسبت تصویر با کادر هم‌خوان نیست.',
+    fix: 'محتوا را به ۸۰٪ مرکزی منتقل کنید و فایل را با نسبت ۲.۱۶:۱ (۷۸۰×۳۶۰) بسازید.',
+  },
+  {
+    problem: 'تصویر موبایل نمایش داده نمی‌شود',
+    cause: 'فیلد «تصویر موبایل» خالی است و فروشگاه از تصویر دسکتاپ با برش استفاده می‌کند.',
+    fix: 'در فرم ویرایش، تصویر موبایل را آپلود کنید و پیش‌نمایش دستگاه را روی «موبایل» بگذارید.',
+  },
+  {
+    problem: 'اسلایدر خودکار جابه‌جا نمی‌شود',
+    cause: 'فقط یک بنر فعال در موقعیت «اسلایدر اصلی» وجود دارد.',
+    fix: 'حداقل دو بنر فعال با ترتیب مشخص بسازید تا لوپ و چرخش فعال شود.',
+  },
+  {
+    problem: 'تصویر کشیده یا خالی است',
+    cause: 'فایل خراب است یا فرمت پشتیبانی نمی‌شود.',
+    fix: 'فایل را با WebP/JPG سالم دوباره ذخیره و آپلود کنید؛ نسبت ۲.۱۶:۱ را رعایت کنید.',
+  },
+  {
+    problem: 'سرعت بارگذاری صفحه پایین آمده است',
+    cause: 'حجم تصاویر اسلایدر زیاد است یا GIF سنگین استفاده شده.',
+    fix: 'فایل‌ها را زیر ۲ مگابایت بهینه کنید؛ اولین اسلاید را سبک‌ترین تصویر قرار دهید.',
+  },
+]
+
+const HERO_UPLOAD_STEPS = [
+  'تصویر دسکتاپ را در ابعاد ۱۹۱۱×۴۳۰ بسازید (یا حداقل ۱۲۰۰×۲۷۰).',
+  'یک کریتیو مستقل برای موبایل در ابعاد ۷۸۰×۳۶۰ بسازید؛ فقط نسخهٔ دسکتاپ را کوچک نکنید.',
+  'در فرم بنر، هر دو تصویر را آپلود کنید (یا آدرس تصویر را وارد کنید).',
+  'پیش‌نمایش را روی «موبایل» بگذارید و ناحیهٔ امن، ارتفاع ۱۸۰px و پیک اسلایدهای کنار را بررسی کنید.',
+  'متن جایگزین (Alt) فارسی و توصیفی برای هر دو تصویر بنویسید.',
+  'ترتیب نمایش را با sortOrder تعیین کنید (عدد کمتر = زودتر).',
+  'وضعیت را فعال کنید و ذخیره بزنید.',
+  'صفحهٔ اصلی فروشگاه را روی موبایل و دسکتاپ باز کنید و نوبت اسلایدها، لینک و برش تصویر را بررسی کنید.',
+]
 
 const formatBytesAsMb = (bytes) => {
   const value = Number(bytes)
@@ -472,6 +612,594 @@ const beforeUploadBanner = (file) => {
 // ============================================================
 // پیش‌نمایش زندهٔ بنر (دسکتاپ/موبایل)
 // ============================================================
+// ============================================================
+// دموی زندهٔ مکانیزم موبایل — سه اسلاید کنار هم (پیک ۲۰px)
+// ============================================================
+function HeroMobileStrip({ banners = [] }) {
+  const list = (banners || []).filter(Boolean)
+  const active = list[0] || null
+  const prev = list.length > 1 ? list[list.length - 1] : active
+  const next = list.length > 1 ? list[1] : active
+  const sourceOf = (banner) => getImageUrl(banner?.mobileImage) || getImageUrl(banner?.image)
+  const activeSrc = sourceOf(active)
+  const prevSrc = sourceOf(prev)
+  const nextSrc = sourceOf(next)
+  const peekStyle = {
+    flex: '0 0 18px',
+    width: 18,
+    borderRadius: 8,
+    overflow: 'hidden',
+    opacity: 0.55,
+    background: 'linear-gradient(135deg, #fb923c 0%, #c2410c 100%)',
+    boxShadow: 'inset 0 0 0 1px rgba(0,0,0,.06)',
+  }
+
+  return (
+    <div
+      style={{
+        background: '#f2f3f5',
+        borderRadius: 14,
+        padding: '12px 0 9px',
+        overflow: 'hidden',
+        border: '1px solid var(--line)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'center', gap: 8 }}>
+        <div style={peekStyle} aria-hidden="true">
+          {prevSrc ? (
+            <img src={prevSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ) : null}
+        </div>
+
+        <div
+          style={{
+            position: 'relative',
+            flex: '1 1 auto',
+            maxWidth: 322,
+            aspectRatio: '388 / 180',
+            borderRadius: 8,
+            overflow: 'hidden',
+            background: 'linear-gradient(135deg, #f97316 0%, #9a3412 100%)',
+            boxShadow: '0 6px 18px rgba(28,25,23,.16)',
+          }}
+        >
+          {activeSrc ? (
+            <img
+              src={activeSrc}
+              alt={active?.mobileAlt || active?.alt || 'پیش‌نمایش اسلاید موبایل'}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          ) : (
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                color: '#fff',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              <PictureOutlined style={{ fontSize: 22, opacity: 0.85 }} />
+              <span>اسلاید فعال ۳۸۸ × ۱۸۰</span>
+              <span style={{ fontSize: 10.5, opacity: 0.75, fontWeight: 400 }}>
+                اولین بنر فعال، اینجا نمایش داده می‌شود
+              </span>
+            </div>
+          )}
+
+          <div
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              inset: '10%',
+              border: '1px dashed rgba(255,255,255,.55)',
+              borderRadius: 4,
+              pointerEvents: 'none',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 7,
+              right: 7,
+              background: 'rgba(12,10,9,.66)',
+              color: '#fff',
+              fontSize: 9.5,
+              padding: '2px 7px',
+              borderRadius: 999,
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            اسلاید فعال • ۸px گردی
+          </div>
+        </div>
+
+        <div style={peekStyle} aria-hidden="true">
+          {nextSrc ? (
+            <img src={nextSrc} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          ) : null}
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 4,
+          marginTop: 8,
+          padding: '0 12px',
+          fontSize: 10.5,
+          color: 'var(--text-tertiary)',
+        }}
+      >
+        <span>۲۰px پیک از هر طرف</span>
+        <span style={{ color: 'var(--ink-700)', fontWeight: 600 }}>ارتفاع ثابت ۱۸۰px • فاصلهٔ ۸px</span>
+        <span>۴۲۸px viewport</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// پیش‌نمایش موبایل داخل فرم (همان نسبتی که در فروشگاه اجرا می‌شود)
+// ============================================================
+function MobileHeroPreview({ source, fit, usingDesktopFallback, spec }) {
+  const objectFit = fit === 'contain' ? 'contain' : 'cover'
+  const peekStyle = {
+    flex: '0 0 16px',
+    width: 16,
+    borderRadius: 7,
+    overflow: 'hidden',
+    opacity: 0.45,
+    background: '#d6d3d1',
+  }
+
+  return (
+    <div
+      style={{
+        background: '#f2f3f5',
+        borderRadius: 12,
+        padding: '12px 0 9px',
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'center', gap: 7 }}>
+        {['prev', 'active', 'next'].map((slot) => {
+          if (slot !== 'active') {
+            return (
+              <div key={slot} style={peekStyle} aria-hidden="true">
+                {source ? (
+                  <img src={source} alt="" style={{ width: '100%', height: '100%', objectFit, display: 'block' }} />
+                ) : null}
+              </div>
+            )
+          }
+
+          return (
+            <div
+              key={slot}
+              style={{
+                position: 'relative',
+                flex: '1 1 auto',
+                maxWidth: 318,
+                aspectRatio: '388 / 180',
+                borderRadius: 8,
+                overflow: 'hidden',
+                background: 'linear-gradient(135deg, #292524 0%, #0c0a09 100%)',
+                boxShadow: '0 5px 16px rgba(28,25,23,.14)',
+              }}
+            >
+              {source ? (
+                <img
+                  src={source}
+                  alt="پیش‌نمایش بنر موبایل"
+                  style={{ width: '100%', height: '100%', objectFit, objectPosition: 'center', display: 'block' }}
+                />
+              ) : (
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                    color: 'rgba(255,255,255,.65)',
+                  }}
+                >
+                  <PictureOutlined style={{ fontSize: 26 }} />
+                  <span style={{ fontSize: 11 }}>تصویر موبایل را آپلود کنید</span>
+                </div>
+              )}
+
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: '10%',
+                  border: '1px dashed rgba(255,255,255,.42)',
+                  borderRadius: 4,
+                  pointerEvents: 'none',
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 7,
+                  right: 7,
+                  background: 'rgba(0,0,0,.55)',
+                  color: '#fff',
+                  fontSize: 9.5,
+                  padding: '2px 7px',
+                  borderRadius: 999,
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                {spec.label} • <span dir="ltr">{spec.sizeLabel}</span>
+              </div>
+
+              {usingDesktopFallback ? (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 6,
+                    left: 6,
+                    right: 6,
+                    background: 'rgba(180, 83, 9, .94)',
+                    color: '#fff',
+                    fontSize: 9.5,
+                    padding: '4px 6px',
+                    borderRadius: 5,
+                    textAlign: 'center',
+                  }}
+                >
+                  تصویر موبایل تنظیم نشده؛ نسخهٔ دسکتاپ برش می‌خورد.
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 4,
+          marginTop: 8,
+          padding: '0 10px',
+          fontSize: 10,
+          color: 'var(--text-tertiary)',
+        }}
+      >
+        <span>پیک اسلایدهای کنار</span>
+        <span>ارتفاع ثابت ۱۸۰px • فاصلهٔ ۸px</span>
+        <span>عرض ۳۸۸px</span>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// دستورالعمل کامل — مودال مرجع پنل ادمین
+// ============================================================
+function BannerGuideModal({ open, onClose }) {
+  const sectionTitle = {
+    fontSize: 15,
+    fontWeight: 800,
+    color: 'var(--ink-900)',
+    margin: '0 0 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  }
+  const paragraph = {
+    fontSize: 12.5,
+    lineHeight: 2,
+    color: 'var(--ink-700)',
+    margin: '0 0 10px',
+  }
+  const cell = {
+    borderBottom: '1px solid var(--line)',
+    padding: '8px 10px',
+    fontSize: 11.5,
+    color: 'var(--ink-700)',
+    verticalAlign: 'top',
+  }
+  const headCell = {
+    ...cell,
+    background: 'var(--surface-sunken)',
+    fontWeight: 700,
+    color: 'var(--ink-900)',
+    fontSize: 11,
+  }
+
+  return (
+    <Modal
+      open={open}
+      onCancel={onClose}
+      footer={
+        <Space>
+          <Button type="primary" onClick={onClose}>
+            متوجه شدم
+          </Button>
+        </Space>
+      }
+      width={1000}
+      centered
+      destroyOnHidden
+      title={
+        <Space>
+          <BookOutlined style={{ color: 'var(--brand-600)' }} />
+          <span>دستورالعمل کامل بنر اصلی — نسخهٔ موبایل (اندروید)</span>
+        </Space>
+      }
+    >
+      <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingInlineEnd: 6, paddingTop: 4 }}>
+        <Alert
+          type="success"
+          showIcon
+          message="این نسخه جایگزین دستورالعمل قبلی شده است"
+          description="نسخهٔ قبلی فقط دسکتاپ را توضیح می‌داد. از این پس مرجع رسمی، همین دستورالعمل موبایل‌محور است؛ مشخصات دسکتاپ در بخش جداگانه و برای هماهنگی دو کریتیو آمده است."
+        />
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۱. مکانیزم دقیق در موبایل
+        </Divider>
+        <p style={paragraph}>
+          بنر اصلی موبایل با همان الگوی دیجی‌کالا اجرا می‌شود: یک اسلاید کامل در وسط، پیک‌زدن اسلایدهای
+          کنار، چرخش خودکار و بدون فلش/نقطه. این رفتار در فروشگاه به‌صورت زیر پیاده شده است:
+        </p>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {HERO_MECHANISM_STEPS.map((item, index) => (
+            <div
+              key={item.title}
+              style={{
+                display: 'flex',
+                gap: 10,
+                border: '1px solid var(--line)',
+                borderRadius: 10,
+                padding: '9px 11px',
+                background: 'var(--surface-raised)',
+              }}
+            >
+              <span
+                style={{
+                  flex: '0 0 22px',
+                  width: 22,
+                  height: 22,
+                  borderRadius: 999,
+                  background: 'var(--brand-600)',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {index + 1}
+              </span>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-900)' }}>{item.title}</div>
+                <div style={{ fontSize: 11.5, lineHeight: 1.95, color: 'var(--ink-600)', marginTop: 2 }}>
+                  {item.desc}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginTop: 12 }}
+          message="نکتهٔ فنی برای توسعه‌دهنده"
+          description={
+            <div>
+              <div style={{ fontSize: 11.5, lineHeight: 1.9, marginBottom: 8 }}>
+                پیکربندی اسلایدر موبایل در فروشگاه دقیقاً این مقادیر است؛ در دسکتاپ همان
+                کامپوننت با <span dir="ltr">slidesPerView: 1</span> و نسبت{' '}
+                <span dir="ltr">1911/430</span> اجرا می‌شود.
+              </div>
+              <pre
+                dir="ltr"
+                style={{
+                  margin: 0,
+                  padding: '9px 11px',
+                  borderRadius: 8,
+                  background: 'rgba(12, 10, 9, .06)',
+                  fontSize: 10.5,
+                  lineHeight: 1.9,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  overflowX: 'hidden',
+                }}
+              >{`mobile: {
+  slidesPerView: 1.1,
+  centeredSlides: true,
+  spaceBetween: 8,
+  loop: false,             // حلقهٔ دستی: [last, ...slides, first]
+  autoplay: { delay: 5000, waitForTransition: true },
+  speed: 500,
+  height: '180px',
+  borderRadius: '8px',
+  pagination: false,
+  navigation: false,
+}
+initialSlide: 1
+ring: [lastSlide, ...slides, firstSlide]
+desktop: {
+  slidesPerView: 1,
+  centeredSlides: false,
+  loop: false,             // همان رینگ دستی
+  autoplay: { delay: 5000, waitForTransition: true },
+  speed: 500,
+  pagination: true,
+  navigation: true,
+}`}</pre>
+            </div>
+          }
+        />
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۲. مشخصات فنی — موبایل و دسکتاپ
+        </Divider>
+        <div style={{ overflowX: 'auto', border: '1px solid var(--line)', borderRadius: 10 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
+            <thead>
+              <tr>
+                <th style={{ ...headCell, textAlign: 'right' }}>مورد</th>
+                <th style={{ ...headCell, textAlign: 'right' }}>
+                  <MobileOutlined /> موبایل (زیر ۷۶۸px)
+                </th>
+                <th style={{ ...headCell, textAlign: 'right' }}>
+                  <DesktopOutlined /> دسکتاپ (۷۶۸px به بالا)
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {HERO_SPEC_ROWS.map((row) => (
+                <tr key={row.label}>
+                  <td style={{ ...cell, fontWeight: 600, color: 'var(--ink-800)' }}>{row.label}</td>
+                  <td style={cell}>
+                    <bdi>{row.mobile}</bdi>
+                  </td>
+                  <td style={cell}>
+                    <bdi>{row.desktop}</bdi>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۳. Art Direction — دو تصویر مستقل، نه یک برش
+        </Divider>
+        <p style={paragraph}>
+          موبایل و دسکتاپ دو کریتیو جداگانه هستند. فروشگاه در موبایل تصویر{' '}
+          <strong dir="ltr">780 × 360</strong> را در کادر <strong dir="ltr">388 × 180</strong> نمایش
+          می‌دهد و در دسکتاپ تصویر <strong dir="ltr">1911 × 430</strong> را. اگر تصویر موبایل خالی
+          باشد، تصویر دسکتاپ با برش نمایش داده می‌شود و پنل هشدار می‌دهد؛ این حالت فقط برای اضطرار است.
+        </p>
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 10 }}
+          message="دارایی‌های قدیمی ۳۶۰×۲۶۰ بازنشسته شدند"
+          description="فایل‌های ۳۶۰×۲۶۰ (نسبت ۱.۳۸:۱) در کادر جدید ۳۸۸×۱۸۰ به‌شدت برش می‌خورند. برای همهٔ بنرهای فعال، نسخهٔ ۷۸۰×۳۶۰ بسازید و جایگزین کنید."
+        />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10 }}>
+          <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, background: 'var(--surface-raised)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Tag color="purple" style={{ marginInlineEnd: 0 }}>
+                <MobileOutlined /> قوانین موبایل
+              </Tag>
+            </div>
+            <ul style={{ margin: 0, paddingInlineStart: 18, fontSize: 11.5, lineHeight: 2, color: 'var(--ink-700)' }}>
+              {HERO_MOBILE_RULES.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ border: '1px solid var(--line)', borderRadius: 10, padding: 12, background: 'var(--surface-raised)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <Tag color="blue" style={{ marginInlineEnd: 0 }}>
+                <DesktopOutlined /> هماهنگی با دسکتاپ
+              </Tag>
+            </div>
+            <ul style={{ margin: 0, paddingInlineStart: 18, fontSize: 11.5, lineHeight: 2, color: 'var(--ink-700)' }}>
+              {HERO_DESKTOP_RULES.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۴. مراحل ساخت و انتشار
+        </Divider>
+        <ol style={{ margin: 0, paddingInlineStart: 20, fontSize: 12, lineHeight: 2.1, color: 'var(--ink-700)' }}>
+          {HERO_UPLOAD_STEPS.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۵. چک‌لیست قبل از انتشار
+        </Divider>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6 }}>
+          {HERO_CHECKLIST.map((item) => (
+            <div
+              key={item}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 7,
+                fontSize: 11.5,
+                lineHeight: 1.9,
+                color: 'var(--ink-700)',
+                background: 'var(--surface-sunken)',
+                borderRadius: 8,
+                padding: '7px 9px',
+              }}
+            >
+              <CheckCircleOutlined style={{ color: 'var(--ok)', marginTop: 2 }} />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+
+        <Divider orientation="right" style={{ margin: '18px 0 12px', fontSize: 13 }}>
+          ۶. عیب‌یابی
+        </Divider>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {HERO_TROUBLESHOOTING.map((item) => (
+            <div
+              key={item.problem}
+              style={{
+                border: '1px solid var(--line)',
+                borderRadius: 10,
+                padding: '9px 11px',
+                background: 'var(--surface-raised)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--ink-900)' }}>
+                <InfoCircleOutlined style={{ color: 'var(--warn)' }} />
+                {item.problem}
+              </div>
+              <div style={{ fontSize: 11.5, lineHeight: 1.9, color: 'var(--ink-600)', marginTop: 3 }}>
+                <strong style={{ color: 'var(--ink-800)' }}>علت:</strong> {item.cause}
+                <br />
+                <strong style={{ color: 'var(--ink-800)' }}>راه‌حل:</strong> {item.fix}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginTop: 14 }}
+          message="یادآوری"
+          description="پنل ادمین فقط تصویر و لینک را ذخیره می‌کند؛ برش، گردی گوشه و مکانیزم اسلایدر توسط فروشگاه اعمال می‌شود. بنابراین تصویر را دقیقاً با همان نسبت و ناحیهٔ امن بسازید تا نتیجهٔ نهایی همان چیزی باشد که در پیش‌نمایش می‌بینید."
+        />
+      </div>
+    </Modal>
+  )
+}
+
 function BannerPreview({
   position,
   device,
@@ -506,7 +1234,7 @@ function BannerPreview({
         <div>
           <div style={{ fontWeight: 700, color: 'var(--ink-900)', fontSize: 14 }}>پیش‌نمایش زنده</div>
           <div style={{ fontSize: 11.5, color: 'var(--text-tertiary)', marginTop: 2 }}>
-            ناحیهٔ امن و نسبت تصویر، دقیقاً مثل فروشگاه
+            مکانیزم موبایل: اسلاید وسط‌چین با پیک ۲۰px، ارتفاع ۱۸۰px و چرخش ۵ ثانیه‌ای
           </div>
         </div>
         {responsive ? (
@@ -524,10 +1252,18 @@ function BannerPreview({
         )}
       </div>
 
+      {activeDevice === 'mobile' && responsive ? (
+        <MobileHeroPreview
+          source={source}
+          fit={fit}
+          usingDesktopFallback={usingDesktopFallback}
+          spec={spec}
+        />
+      ) : (
       <div
         style={{
           width: '100%',
-          maxWidth: activeDevice === 'mobile' ? 340 : '100%',
+          maxWidth: '100%',
           margin: '0 auto',
           aspectRatio: `${spec.width} / ${spec.height}`,
           background: 'var(--ink-900)',
@@ -629,6 +1365,7 @@ function BannerPreview({
           </div>
         ) : null}
       </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginTop: 14 }}>
         <div style={{ background: 'var(--surface-sunken)', borderRadius: 8, padding: '8px 10px' }}>
@@ -640,8 +1377,12 @@ function BannerPreview({
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-800)', direction: 'ltr' }}>{spec.ratioLabel}</div>
         </div>
         <div style={{ background: 'var(--surface-sunken)', borderRadius: 8, padding: '8px 10px' }}>
-          <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>ارتفاع خودکار</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-800)', direction: 'ltr' }}>{spec.padding}</div>
+          <div style={{ fontSize: 10.5, color: 'var(--text-tertiary)' }}>
+            {activeDevice === 'mobile' && responsive ? 'ارتفاع ثابت' : 'ارتفاع خودکار'}
+          </div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-800)', direction: 'ltr' }}>
+            {activeDevice === 'mobile' && responsive ? '180px' : spec.padding}
+          </div>
         </div>
       </div>
 
@@ -650,6 +1391,11 @@ function BannerPreview({
           {ratioWarning ? <WarningOutlined /> : <CheckCircleOutlined />}
           تصویر فعلی: <span dir="ltr">{meta.width} × {meta.height}</span>
           {ratioWarning ? ' — نسبت با کادر هم‌خوان نیست؛ برش/حاشیه دارد.' : ' — نسبت تصویر مناسب است.'}
+          {activeDevice === 'mobile' && responsive ? (
+            <span style={{ color: 'var(--text-tertiary)' }}>
+              {' '}— فایل پیشنهادی: <span dir="ltr">780 × 360</span>
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -702,7 +1448,7 @@ function BannerUploadCard({
           رها کنید یا کلیک کنید
         </p>
         <p className="ant-upload-hint" style={{ fontSize: 10, margin: 0, color: 'var(--text-tertiary)' }}>
-          {spec.ratioLabel} • JPG/PNG/WEBP/GIF • حداکثر 10MB
+          <bdi>{spec.ratioLabel}</bdi> • پیشنهاد <bdi>{spec.recommendedLabel}</bdi> • JPG/PNG/WEBP/GIF • حداکثر 10MB
         </p>
       </Upload.Dragger>
 
@@ -766,10 +1512,20 @@ function BannersPage() {
   const [selectedPosition, setSelectedPosition] = useState('main-slider')
   const [previewDevice, setPreviewDevice] = useState('desktop')
   const [fit, setFit] = useState('cover')
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const blobUrlsRef = useRef([])
 
   const selectedConfig = getPositionConfig(selectedPosition)
+
+  const mainSliderPreview = useMemo(
+    () =>
+      banners
+        .filter((banner) => banner.position === 'main-slider')
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .slice(0, 3),
+    [banners]
+  )
 
   const makeBlobUrl = (file) => {
     const url = URL.createObjectURL(file)
@@ -834,12 +1590,12 @@ function BannersPage() {
                     src={desktop}
                     alt="بنر دسکتاپ"
                     width={104}
-                    height={48}
+                    height={24}
                     style={{ objectFit: 'cover', borderRadius: 5, display: 'block' }}
                     preview={{ mask: <EyeOutlined /> }}
                   />
                 ) : (
-                  <div style={{ width: 104, height: 48, background: 'var(--surface-inset)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-300)' }}>
+                  <div style={{ width: 104, height: 24, background: 'var(--surface-inset)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-300)' }}>
                     <PictureOutlined />
                   </div>
                 )}
@@ -852,13 +1608,13 @@ function BannersPage() {
                   <Image
                     src={mobile}
                     alt="بنر موبایل"
-                    width={46}
-                    height={34}
+                    width={56}
+                    height={26}
                     style={{ objectFit: 'cover', borderRadius: 5, display: 'block' }}
                     preview={{ mask: <EyeOutlined /> }}
                   />
                 ) : (
-                  <div style={{ width: 46, height: 34, background: 'var(--surface-inset)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-300)', border: '1px dashed var(--line-strong)' }}>
+                  <div style={{ width: 56, height: 26, background: 'var(--surface-inset)', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-300)', border: '1px dashed var(--line-strong)' }}>
                     <MobileOutlined />
                   </div>
                 )}
@@ -1317,7 +2073,7 @@ function BannersPage() {
     <div>
       <PageHeader
         title="مدیریت بنرها"
-        subtitle="بنر اصلی را با دو تصویر مستقل دسکتاپ و موبایل مدیریت کنید"
+        subtitle="بنر اصلی را موبایل‌محور مدیریت کنید؛ دو تصویر مستقل، مکانیزم اسلایدر دیجی‌کالا و پیش‌نمایش زنده"
         actions={
           <>
             <Button icon={<ReloadOutlined />} onClick={() => fetchBanners()}>
@@ -1330,85 +2086,160 @@ function BannersPage() {
         }
       />
 
-      {/* راهنمای مشخصات — خلاصه و کاربردی */}
+      {/* راهنمای بنر اصلی — نسخهٔ اندروید (جایگزین راهنمای قبلی) */}
       <Card
         size="small"
         style={{ marginBottom: 16, background: 'var(--surface-raised)', border: '1px solid var(--line)' }}
         title={
-          <Space>
+          <Space wrap size={6} style={{ minWidth: 0 }}>
             <ExpandOutlined style={{ color: 'var(--brand-600)' }} />
-            <span style={{ fontWeight: 700, fontSize: 14 }}>مشخصات بنر اصلی — Art Direction دسکتاپ و موبایل</span>
+            <span style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'normal', lineHeight: 1.6 }}>
+              راهنمای بنر اصلی — نسخهٔ اندروید (موبایل اول)
+            </span>
+            <Tag color="green" style={{ marginInlineEnd: 0, fontSize: 10 }}>
+              مکانیزم دیجی‌کالا
+            </Tag>
           </Space>
+        }
+        extra={
+          <Button size="small" type="primary" ghost icon={<BookOutlined />} onClick={() => setGuideOpen(true)}>
+            دستورالعمل کامل
+          </Button>
         }
       >
         <Row gutter={[16, 16]}>
-          {['desktop', 'mobile'].map((device) => {
-            const spec = getSpec('main-slider', device)
-            const isMobile = device === 'mobile'
-            return (
-              <Col xs={24} md={12} key={device}>
+          <Col xs={24} lg={14}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Tag color="purple" style={{ marginInlineEnd: 0 }}>
+                <MobileOutlined /> موبایل / اندروید
+              </Tag>
+              <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', direction: 'ltr' }}>
+                viewport 428px
+              </span>
+            </div>
+
+            <HeroMobileStrip banners={mainSliderPreview} />
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))',
+                gap: 8,
+                marginTop: 12,
+              }}
+            >
+              {[
+                { label: 'اسلاید موبایل', value: '388 × 180' },
+                { label: 'فایل پیشنهادی', value: '780 × 360' },
+                { label: 'حاشیه / فاصله', value: '20 / 8 px' },
+                { label: 'چرخش خودکار', value: '5s · 500ms' },
+              ].map((item) => (
                 <div
+                  key={item.label}
                   style={{
-                    border: '1px solid var(--line)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: 14,
                     background: 'var(--surface-sunken)',
-                    height: '100%',
+                    border: '1px solid var(--line)',
+                    borderRadius: 9,
+                    padding: '8px 9px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <Tag color={isMobile ? 'purple' : 'blue'} style={{ marginInlineEnd: 0 }}>
-                      {isMobile ? <MobileOutlined /> : <DesktopOutlined />} {spec.label}
-                    </Tag>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', direction: 'ltr' }}>
-                      {spec.padding} height
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      width: '100%',
-                      maxWidth: isMobile ? 220 : '100%',
-                      margin: '0 auto',
-                      aspectRatio: `${spec.width} / ${spec.height}`,
-                      background: 'linear-gradient(135deg, #292524 0%, #0c0a09 100%)',
-                      borderRadius: 8,
-                      border: '1px solid var(--line-strong)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'rgba(255,255,255,.6)',
-                      fontSize: 10,
-                      direction: 'ltr',
-                    }}
-                  >
-                    {spec.sizeLabel} px
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 11.5 }}>
-                    <span style={{ color: 'var(--text-tertiary)' }}>نسبت تصویر</span>
-                    <strong style={{ color: 'var(--ink-800)', direction: 'ltr' }}>{spec.ratioLabel}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11.5 }}>
-                    <span style={{ color: 'var(--text-tertiary)' }}>حداقل پیشنهادی</span>
-                    <span style={{ color: 'var(--ink-700)', direction: 'ltr' }}>
-                      {isMobile ? '360 × 260' : '1200 × 270'}
-                    </span>
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{item.label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--ink-900)', direction: 'ltr', textAlign: 'right' }}>
+                    {item.value}
                   </div>
                 </div>
-              </Col>
-            )
-          })}
+              ))}
+            </div>
+
+            <ul
+              style={{
+                margin: '12px 0 0',
+                paddingInlineStart: 18,
+                fontSize: 11.5,
+                lineHeight: 2,
+                color: 'var(--ink-700)',
+              }}
+            >
+              {HERO_MOBILE_RULES.slice(0, 3).map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </Col>
+
+          <Col xs={24} lg={10}>
+            <div
+              style={{
+                border: '1px solid var(--line)',
+                borderRadius: 10,
+                padding: 12,
+                background: 'var(--surface-sunken)',
+                height: '100%',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+                <Tag color="blue" style={{ marginInlineEnd: 0 }}>
+                  <DesktopOutlined /> دسکتاپ
+                </Tag>
+                <span style={{ fontSize: 10.5, color: 'var(--text-tertiary)', direction: 'ltr' }}>1911 × 430</span>
+              </div>
+
+              <div
+                style={{
+                  width: '100%',
+                  aspectRatio: '1911 / 430',
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid var(--line-strong)',
+                  background: 'linear-gradient(135deg, #292524 0%, #0c0a09 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'rgba(255,255,255,.62)',
+                  fontSize: 10.5,
+                }}
+              >
+                {getImageUrl(mainSliderPreview[0]?.image) ? (
+                  <img
+                    src={getImageUrl(mainSliderPreview[0]?.image)}
+                    alt="پیش‌نمایش بنر دسکتاپ"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                ) : (
+                  <span dir="ltr">1911 × 430 desktop creative</span>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+                {[
+                  'فلش قبلی/بعدی و نقطه‌های اسلاید در دسکتاپ',
+                  'همان چرخش ۵ ثانیه‌ای و لوپ بینهایت',
+                  'تصویر مستقل از موبایل؛ نه برش نسخهٔ موبایل',
+                  'لوپ، swipe و توقف روی hover',
+                ].map((item) => (
+                  <div
+                    key={item}
+                    style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: 11, color: 'var(--ink-700)', lineHeight: 1.8 }}
+                  >
+                    <CheckCircleOutlined style={{ color: 'var(--ok)', marginTop: 2 }} />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Col>
         </Row>
 
         <Alert
           type="info"
           showIcon
           style={{ marginTop: 14 }}
-          message="قانون طلایی: تصویر موبایل، نسخهٔ جداگانه است"
+          message="قانون طلایی موبایل: تصویر جدا، ناحیهٔ امن ۸۰٪ و ارتفاع ثابت ۱۸۰px"
           description={
-            <div style={{ fontSize: 12, lineHeight: 1.9 }}>
-              در فروشگاه، موبایل تصویر ۳۶۰×۲۶۰ خودش را می‌گیرد و دسکتاپ تصویر ۱۹۱۱×۴۳۰.
-              این کار از برش شدن متن و CTA جلوگیری می‌کند. اگر تصویر موبایل خالی باشد،
-              تصویر دسکتاپ با برش نمایش داده می‌شود و پنل هشدار می‌دهد.
+            <div style={{ fontSize: 12, lineHeight: 1.95 }}>
+              در فروشگاه، موبایل تصویر ۷۸۰×۳۶۰ خودش را در کادر ۳۸۸×۱۸۰ می‌گیرد و دسکتاپ تصویر
+              ۱۹۱۱×۴۳۰. ۲۰px از اسلایدهای کنار دیده می‌شود و اسلایدر هر ۵ ثانیه جابه‌جا می‌شود؛
+              پیام اصلی را در ۸۰٪ مرکزی نگه دارید. اگر تصویر موبایل خالی باشد، تصویر دسکتاپ با
+              برش نمایش داده می‌شود و پنل هشدار می‌دهد.
             </div>
           }
         />
@@ -1599,14 +2430,14 @@ function BannersPage() {
                   showIcon
                   style={{ marginTop: 12 }}
                   message="نسبت تصویر با کادر هم‌خوان نیست"
-                  description={`نسبت فعلی ${((previewDevice === 'mobile' ? mobileMeta : desktopMeta)?.width || 0)}×${((previewDevice === 'mobile' ? mobileMeta : desktopMeta)?.height || 0)} است؛ برای بهترین نتیجه از ${previewSpec.sizeLabel} استفاده کنید.`}
+                  description={`نسبت فعلی ${((previewDevice === 'mobile' ? mobileMeta : desktopMeta)?.width || 0)}×${((previewDevice === 'mobile' ? mobileMeta : desktopMeta)?.height || 0)} است؛ برای بهترین نتیجه از ${previewDevice === 'mobile' ? HERO_MOBILE.recommendedUpload : previewSpec.sizeLabel} استفاده کنید.`}
                 />
               ) : null}
 
               <div style={{ display: 'grid', gap: 12, marginTop: 14 }}>
                 <BannerUploadCard
                   title="تصویر دسکتاپ"
-                  subtitle="برای نمایشگرهای ۷۶۸ پیکسل به بالا"
+                  subtitle="تمام‌عرض برای نمایشگرهای ۷۶۸ پیکسل به بالا"
                   spec={getSpec(selectedPosition, 'desktop')}
                   fileList={desktopFileList}
                   onChange={handleDesktopFileChange}
@@ -1623,7 +2454,7 @@ function BannersPage() {
                 {selectedConfig.responsive ? (
                   <BannerUploadCard
                     title="تصویر موبایل"
-                    subtitle="نسخهٔ مستقل با ترکیب‌بندی موبایل (نه برش دسکتاپ)"
+                    subtitle="کریتیو مستقل موبایل (۳۸۸×۱۸۰ نمایش، فایل ۷۸۰×۳۶۰) — نه برش دسکتاپ"
                     spec={getSpec(selectedPosition, 'mobile')}
                     fileList={mobileFileList}
                     onChange={handleMobileFileChange}
@@ -1655,6 +2486,8 @@ function BannersPage() {
           </Row>
         </Form>
       </Modal>
+
+      <BannerGuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </div>
   )
 }

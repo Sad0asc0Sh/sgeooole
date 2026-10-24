@@ -6,9 +6,11 @@ import { ImageOff } from "lucide-react";
 
 const DESKTOP_WIDTH = 1911;
 const DESKTOP_HEIGHT = 430;
-const MOBILE_WIDTH = 360;
-const MOBILE_HEIGHT = 260;
+// اسلاید موبایل در ویوپورت ۴۲۸px برابر ۳۸۸×۱۸۰ است؛ فایل ۲x یعنی ۷۸۰×۳۶۰.
+const MOBILE_WIDTH = 780;
+const MOBILE_HEIGHT = 360;
 const MOBILE_BREAKPOINT = "(max-width: 767px)";
+const HERO_SIZES = "(max-width: 767px) calc(100vw - 40px), 100vw";
 
 type HeroBannerImageProps = {
   /** تصویر دسکتاپ (اجباری) */
@@ -87,7 +89,7 @@ export default function HeroBannerImage({
         alt,
         width: imageWidth,
         height: imageHeight,
-        sizes: "100vw",
+        sizes: HERO_SIZES,
         quality: 80,
         unoptimized: isAnimatedOrVector(src),
       });
@@ -107,7 +109,7 @@ export default function HeroBannerImage({
         alt,
         width: imageWidth,
         height: imageHeight,
-        sizes: "100vw",
+        sizes: HERO_SIZES,
         quality: 80,
         unoptimized: isAnimatedOrVector(mobileSrc),
       });
@@ -139,7 +141,7 @@ export default function HeroBannerImage({
     <>
       <picture className="absolute inset-0 block h-full w-full">
         {mobileSrcSet ? (
-          <source media={MOBILE_BREAKPOINT} srcSet={mobileSrcSet} sizes="100vw" />
+          <source media={MOBILE_BREAKPOINT} srcSet={mobileSrcSet} sizes={HERO_SIZES} />
         ) : null}
         <img
           {...desktopProps}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, A11y, Keyboard } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper";
@@ -15,24 +15,128 @@ type SwiperSliderProps = {
   banners: Banner[];
 };
 
+type RingSlide = {
+  banner: Banner;
+  realIndex: number;
+  ringIndex: number;
+  isClone: boolean;
+};
+
+/**
+ * اسلایدر بنر اصلی — مکانیزم مشابه دیجی‌کالا
+ *
+ * موبایل (زیر ۷۶۸px):
+ *   - slidesPerView 1.1 و centeredSlides → اسلاید فعال ۳۸۸px در صفحهٔ ۴۲۸px
+ *     (۲۰px از هر طرف بیرون می‌ماند و ۲۰px از اسلایدهای کنار دیده می‌شود)
+ *   - فاصلهٔ ۸px، گوشهٔ ۸px، ارتفاع ثابت ۱۸۰px (از فریم والد)
+ *   - بدون فلش و نقطه؛ فقط swipe + چرخش خودکار ۵ ثانیه‌ای
+ *   - لوپ بی‌نهایت با انیمیشن ۵۰۰ms
+ *
+ * دسکتاپ (۷۶۸px به بالا):
+ *   - یک اسلاید تمام‌عرض (نسبت 1911/430) با همان زمان‌بندی
+ *   - فلش‌ها و نقطه‌های سفارشی
+ *
+ * چرا حلقهٔ دستی؟
+ *   Swiper 12 در حالت loop با `centeredSlides` و `slidesPerView: 1.1` در RTL
+ *   اسلایدها را بازچینش می‌کند و اسلایدهای کنارِ سمت چپ را از دست می‌دهد
+ *   (در ۴ اسلاید، فقط پیک سمت راست دیده می‌شد). به همین دلیل یک رینگ
+ *   [آخرین اسلاید، ...همهٔ اسلایدها، اولین اسلاید] می‌سازیم، روی اسلاید واقعی
+ *   اول شروع می‌کنیم و در لحظهٔ رسیدن به کلون‌ها با speed=0 به اسلاید واقعی
+ *   معادل می‌پریم تا حلقه بدون پرش و با هر تعداد اسلاید (۲ به بالا) کار کند.
+ */
 export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const jumpingRef = useRef(false);
 
   const slides = useMemo(() => banners.filter(Boolean), [banners]);
-  // Swiper's loop mode needs enough slides to build its duplicate ring.
-  // With only two slides it can start on the duplicated last slide, so use
-  // rewind instead (same UX: continuous rotation, correct first slide).
-  const useLoop = slides.length > 2;
+
+  const ring = useMemo<RingSlide[]>(() => {
+    if (slides.length === 0) return [];
+    if (slides.length === 1) {
+      return [{ banner: slides[0], realIndex: 0, ringIndex: 0, isClone: false }];
+    }
+
+    const head: RingSlide = {
+      banner: slides[slides.length - 1],
+      realIndex: slides.length - 1,
+      ringIndex: 0,
+      isClone: true,
+    };
+    const body: RingSlide[] = slides.map((banner, index) => ({
+      banner,
+      realIndex: index,
+      ringIndex: index + 1,
+      isClone: false,
+    }));
+    const tail: RingSlide = {
+      banner: slides[0],
+      realIndex: 0,
+      ringIndex: slides.length + 1,
+      isClone: true,
+    };
+    return [head, ...body, tail];
+  }, [slides]);
+
+  // بدون loop خود Swiper؛ حلقه را رینگ بالا می‌سازد.
+  const initialSlide = slides.length > 1 ? 1 : 0;
 
   const goTo = useCallback(
-    (index: number) => {
+    (realIndex: number) => {
       if (!swiper) return;
-      if (useLoop) swiper.slideToLoop(index);
-      else swiper.slideTo(index);
-      setActiveIndex(index);
+      if (slides.length < 2) {
+        swiper.slideTo(0);
+      } else {
+        swiper.slideTo(realIndex + 1);
+      }
+      setActiveIndex(realIndex);
     },
-    [swiper, useLoop]
+    [swiper, slides.length]
+  );
+
+  /**
+   * بعد از هر ترنزیشن، اگر روی کلون سر/ته رینگ هستیم، بی‌درنگ به اسلاید
+   * واقعیِ هم‌شکل می‌پریم. چون تصویر همان تصویر است، کاربر پرش نمی‌بیند.
+   */
+  const handleTransitionEnd = useCallback(
+    (instance: SwiperClass) => {
+      if (slides.length < 2 || jumpingRef.current) return;
+      const count = slides.length;
+      const index = instance.activeIndex;
+
+      if (index === 0) {
+        jumpingRef.current = true;
+        instance.slideTo(count, 0, false);
+        setActiveIndex(count - 1);
+        instance.autoplay?.start();
+        window.setTimeout(() => {
+          jumpingRef.current = false;
+        }, 80);
+      } else if (index === count + 1) {
+        jumpingRef.current = true;
+        instance.slideTo(1, 0, false);
+        setActiveIndex(0);
+        instance.autoplay?.start();
+        window.setTimeout(() => {
+          jumpingRef.current = false;
+        }, 80);
+      }
+    },
+    [slides.length]
+  );
+
+  const handleSlideChange = useCallback(
+    (instance: SwiperClass) => {
+      if (slides.length < 2) {
+        setActiveIndex(0);
+        return;
+      }
+      const count = slides.length;
+      const index = instance.activeIndex;
+      const realIndex = ((index - 1) % count + count) % count;
+      setActiveIndex(realIndex);
+    },
+    [slides.length]
   );
 
   if (slides.length === 0) return null;
@@ -42,41 +146,58 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       <Swiper
         modules={[Autoplay, A11y, Keyboard]}
         onSwiper={setSwiper}
-        onSlideChange={(instance) => setActiveIndex(instance.realIndex)}
-        initialSlide={0}
-        loop={useLoop}
-        rewind={!useLoop && slides.length > 1}
-        speed={700}
-        slidesPerView={1}
-        spaceBetween={0}
+        onSlideChange={handleSlideChange}
+        onTransitionEnd={handleTransitionEnd}
+        initialSlide={initialSlide}
+        loop={false}
+        rewind={false}
+        speed={500}
+        slidesPerView={1.1}
+        spaceBetween={8}
+        centeredSlides
+        breakpoints={{
+          768: {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            centeredSlides: false,
+          },
+        }}
         autoplay={
           slides.length > 1
             ? {
-                delay: 6000,
+                delay: 5000,
                 disableOnInteraction: false,
                 pauseOnMouseEnter: true,
+                waitForTransition: true,
+                stopOnLastSlide: false,
               }
             : false
         }
         keyboard={{ enabled: true }}
+        grabCursor
         a11y={{
           enabled: true,
           prevSlideMessage: "اسلاید قبلی",
           nextSlideMessage: "اسلاید بعدی",
           firstSlideMessage: "اولین اسلاید",
           lastSlideMessage: "آخرین اسلاید",
+          paginationBulletMessage: "رفتن به اسلاید {{index}}",
         }}
         dir="rtl"
         className="hero-swiper h-full w-full"
       >
-        {slides.map((banner, index) => {
+        {ring.map(({ banner, realIndex, isClone }) => {
           const src = resolveImageUrl(banner.image, "");
           const mobileSrc = resolveImageUrl(banner.mobileImage, "");
           if (!src) return null;
 
           return (
-            <SwiperSlide key={banner._id} className="relative h-full w-full">
-              <HeroBannerLink banner={banner}>
+            <SwiperSlide
+              key={`${banner._id}-${isClone ? "clone" : "real"}-${realIndex}`}
+              className="relative h-full w-full overflow-hidden rounded-lg md:rounded-none"
+              aria-hidden={isClone ? "true" : undefined}
+            >
+              <HeroBannerLink banner={banner} tabIndex={isClone ? -1 : undefined}>
                 <HeroBannerImage
                   src={src}
                   mobileSrc={mobileSrc || null}
@@ -93,7 +214,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                       ? banner.mobileImage.height
                       : undefined
                   }
-                  priority={index === 0}
+                  priority={!isClone && realIndex === 0}
                   fit={banner.fit === "contain" ? "contain" : "cover"}
                 />
               </HeroBannerLink>
@@ -104,12 +225,13 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
 
       {slides.length > 1 ? (
         <>
+          {/* سایهٔ پایین فقط در دسکتاپ؛ در موبایل تصویر باید تمیز بماند */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-24 bg-gradient-to-t from-black/40 via-black/10 to-transparent"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden h-24 bg-gradient-to-t from-black/40 via-black/10 to-transparent md:block"
           />
 
-          <div className="absolute bottom-3 end-3 z-20 flex items-center gap-2 rounded-full bg-black/25 px-3 py-2 backdrop-blur-md md:bottom-5 md:end-6">
+          <div className="absolute bottom-3 end-3 z-20 hidden items-center gap-2 rounded-full bg-black/25 px-3 py-2 backdrop-blur-md md:bottom-5 md:end-6 md:flex">
             {slides.map((banner, index) => (
               <button
                 key={banner._id}

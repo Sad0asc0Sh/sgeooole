@@ -87,12 +87,14 @@ const SkeletonRail = ({ title }: { title: string }) => (
 
 const SkeletonHero = () => (
   <section className="w-full max-w-[1920px] mx-auto animate-pulse">
-    <div className="mb-4">
-      <div className="relative w-full aspect-[360/260] md:aspect-[1911/430] overflow-hidden -mt-px bg-ekg-950">
-        <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+    <div className="relative mt-2 mb-3 h-[180px] md:mb-0 md:h-auto md:aspect-[1911/430]">
+      <div className="mx-5 h-full md:mx-0">
+        <div className="relative h-full w-full overflow-hidden rounded-lg bg-ekg-950 md:rounded-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+        </div>
       </div>
     </div>
-    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4">
+    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4 md:pt-4">
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
       <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />

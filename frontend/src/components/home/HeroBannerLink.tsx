@@ -9,6 +9,8 @@ type HeroBannerLinkProps = {
   banner: Banner;
   children: ReactNode;
   className?: string;
+  /** کلون‌های حلقهٔ اسلایدر از دسترس صفحه‌کلید خارج می‌شوند. */
+  tabIndex?: number;
 };
 
 /**
@@ -19,6 +21,7 @@ export default function HeroBannerLink({
   banner,
   children,
   className = "absolute inset-0 block h-full w-full",
+  tabIndex,
 }: HeroBannerLinkProps) {
   const target = resolveNavigateTarget(banner.link);
   const label = banner.alt || banner.title || "بنر اصلی";
@@ -31,6 +34,7 @@ export default function HeroBannerLink({
         target={banner.openInNewTab ? "_blank" : undefined}
         rel={banner.openInNewTab ? "noopener noreferrer" : undefined}
         aria-label={label}
+        tabIndex={tabIndex}
       >
         {children}
       </Link>
@@ -45,6 +49,7 @@ export default function HeroBannerLink({
         target={banner.openInNewTab ? "_blank" : "_self"}
         rel={banner.openInNewTab ? "noopener noreferrer" : undefined}
         aria-label={label}
+        tabIndex={tabIndex}
       >
         {children}
       </a>
