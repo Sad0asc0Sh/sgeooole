@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import ResilientImage from "@/components/ui/ResilientImage";
 import HeroBannerImage from "./HeroBannerImage";
 import HeroBannerLink from "./HeroBannerLink";
 import SwiperSlider from "./SwiperSlider";
 import { Banner, bannerService } from "@/services/bannerService";
-import { resolveImageUrl, generateBannerBlurPlaceholder } from "@/lib/image";
-import { useRouter } from "next/navigation";
-import { canNavigateToHref, navigateHref } from "@/lib/navigateHref";
+import { resolveImageUrl } from "@/lib/image";
 
 type HeroSectionProps = {
   initialBanners?: Banner[];
@@ -36,7 +33,6 @@ type HeroSectionProps = {
 export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
   const [banners, setBanners] = useState<Banner[]>(initialBanners);
   const [loading, setLoading] = useState(initialBanners.length === 0);
-  const router = useRouter();
 
   // فریم بیرونی: در موبایل تمام‌عرض با ارتفاع ثابت ۱۸۰px و فاصلهٔ ۸px از بالا
   // و ۱۲px از پایین. حاشیهٔ ۲۰px از دو طرف توسط slidesPerView: 1.1 خود
@@ -79,10 +75,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     .filter((b) => b.position === "main-slider")
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-  const middleBanners = banners
-    .filter((b) => b.position === "middle-banner")
-    .slice(0, 3);
-
   if (loading) {
     return (
       <section className="w-full max-w-[1920px] mx-auto" aria-busy="true">
@@ -92,14 +84,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
               <div className="absolute inset-0 bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
             </div>
           </div>
-        </div>
-        <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4 md:pt-4">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gray-200 animate-pulse rounded-xl"
-            />
-          ))}
         </div>
       </section>
     );
@@ -150,56 +134,6 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
           <div className={heroClipClass}>
             <SwiperSlider banners={mainBanners} />
           </div>
-        </div>
-      ) : null}
-
-      {/* Middle banners — unchanged responsive 16:5 layout */}
-      {middleBanners.length > 0 ? (
-        <div className="flex flex-wrap justify-center gap-4 px-2 md:px-4 pt-4 pb-1">
-          {middleBanners.map((banner) => {
-            const imageUrl = resolveImageUrl(banner.image, "/placeholder.svg");
-            const bannerLink = banner.link;
-            const hasLink = canNavigateToHref(bannerLink);
-            const blurPlaceholder = generateBannerBlurPlaceholder(800, 250);
-            const widthClass = "w-full md:w-[31%] xl:w-[32%]";
-
-            return (
-              <div
-                key={banner._id}
-                className={`
-                  relative aspect-[16/5] rounded-xl overflow-hidden bg-ekg-50
-                  shadow-sm hover:shadow-md transition-all duration-300
-                  hover:scale-[1.01] group
-                  ${widthClass}
-                  ${hasLink ? "cursor-pointer" : "cursor-default"}
-                `}
-                onClick={() => hasLink && navigateHref(router, bannerLink)}
-                role={hasLink ? "button" : undefined}
-                tabIndex={hasLink ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (hasLink && (e.key === "Enter" || e.key === " ")) {
-                    navigateHref(router, bannerLink);
-                  }
-                }}
-                aria-label={hasLink ? banner.alt || banner.title || "بنر تبلیغاتی" : undefined}
-              >
-                <div className="absolute inset-0">
-                  <ResilientImage
-                    src={imageUrl}
-                    alt={banner.alt || banner.title || "بنر تبلیغاتی"}
-                    fill
-                    style={{ objectFit: "cover", objectPosition: "center" }}
-                    className="group-hover:brightness-105 transition-all duration-300"
-                    loading="lazy"
-                    placeholder="blur"
-                    blurDataURL={blurPlaceholder}
-                    fallbackSrc="/placeholder.svg"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-              </div>
-            );
-          })}
         </div>
       ) : null}
     </section>

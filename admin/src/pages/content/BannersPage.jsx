@@ -133,7 +133,7 @@ const BANNER_POSITIONS = {
   'middle-banner': {
     label: 'بنر تبلیغاتی میانی',
     icon: '📢',
-    description: 'بنرهای تبلیغاتی زیر بنر اصلی — حداکثر ۳ عدد، چیده‌شده از مرکز',
+    description: 'بنرهای تبلیغاتی زیر بخش «فرصت‌های زمان‌دار» صفحه اصلی — حداکثر ۳ عدد، چیده‌شده از مرکز',
     responsive: false,
     desktop: buildSpec(1280, 400, 'یک تصویر'),
     mobile: buildSpec(1280, 400, 'یک تصویر'),

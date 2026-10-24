@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import HeroSection from "@/components/home/HeroSection";
-import CategoryRail from "@/components/home/CategoryRail";
+import HomeCategoryShowcase from "@/components/home/HomeCategoryShowcase";
+import MiddleBannerRail from "@/components/home/MiddleBannerRail";
 import FlashOfferRail from "@/components/home/FlashOfferRail";
 import SpecialOfferRail from "@/components/home/SpecialOfferRail";
 import ProductRailContainer from "@/components/home/ProductRailContainer";
@@ -74,17 +75,6 @@ async function fetchBanners(): Promise<Banner[]> {
   }
 }
 
-const SkeletonRail = ({ title }: { title: string }) => (
-  <div className="py-4 bg-white border-b border-gray-100 animate-pulse">
-    <div className="h-4 w-32 bg-gray-200 rounded mx-4 mb-4" aria-label={`${title} loading`} />
-    <div className="flex gap-3 px-4 overflow-x-auto">
-      {Array.from({ length: 6 }).map((_, idx) => (
-        <div key={idx} className="w-20 h-20 bg-gray-100 rounded-xl flex-shrink-0" />
-      ))}
-    </div>
-  </div>
-);
-
 const SkeletonHero = () => (
   <section className="w-full max-w-[1920px] mx-auto animate-pulse">
     <div className="relative mt-2 mb-3 h-[180px] md:mb-0 md:h-auto md:aspect-[1911/430]">
@@ -93,11 +83,6 @@ const SkeletonHero = () => (
           <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
         </div>
       </div>
-    </div>
-    <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 px-2 md:px-4 md:pt-4">
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden md:block" />
-      <div className="w-full md:w-[31%] xl:w-[32%] aspect-[16/5] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 rounded-xl hidden xl:block" />
     </div>
   </section>
 );
@@ -234,22 +219,18 @@ export default async function Home() {
         </Suspense>
       </HomeSection>
 
+      <HomeSection variant="discovery">
+        <HomeCategoryShowcase featured={featuredCats} popular={popularCats} />
+      </HomeSection>
+
       <HomeSection variant="promotion">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
           <FlashOfferRail />
         </Suspense>
       </HomeSection>
 
-      <HomeSection variant="discovery">
-        <Suspense fallback={<SkeletonRail title="دسته‌های ویژه" />}>
-          <CategoryRail title="دسته‌های ویژه" variant="circle" data={featuredCats} />
-        </Suspense>
-      </HomeSection>
-
-      <HomeSection variant="discovery">
-        <Suspense fallback={<SkeletonRail title="دسته‌های محبوب" />}>
-          <CategoryRail title="دسته‌های محبوب" variant="card" data={popularCats} />
-        </Suspense>
+      <HomeSection variant="promotion">
+        <MiddleBannerRail initialBanners={banners} />
       </HomeSection>
 
       <HomeSection variant="promotion">

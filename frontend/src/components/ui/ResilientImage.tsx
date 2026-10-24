@@ -61,6 +61,13 @@ export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
   showSkeleton?: boolean;
   skeletonClassName?: string;
   transitionDuration?: number;
+  /**
+   * Optional class for the internal wrapper. Defaults to `contents` so the
+   * image behaves as a direct child of its parent. Pass a positioned class
+   * (e.g. `absolute inset-0`) when `fill` is used inside a positioned box:
+   * Next's fill warning inspects this wrapper, not the grandparent.
+   */
+  wrapperClassName?: string;
 }
 
 /**
@@ -83,6 +90,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       showSkeleton = true,
       skeletonClassName,
       transitionDuration = 300,
+      wrapperClassName,
       onLoad: onLoadProp,
       className,
       style,
@@ -228,7 +236,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     };
 
     return (
-      <span ref={wrapperRef} className="contents">
+      <span ref={wrapperRef} className={wrapperClassName ?? "contents"}>
         {showSkeleton && phase === "skeleton" && (
           <span
             className={skeletonClassName || "absolute inset-0 bg-gray-100 animate-pulse"}

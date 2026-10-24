@@ -1,0 +1,637 @@
+/*
+ * Home category showcase — a warm "category atlas" that replaces the old
+ * middle-banner row directly under the hero. The visual language is built
+ * from three ideas that belong to this store:
+ *   - a catalog/index rhythm (numbered plaques),
+ *   - warm paper + saffron ink (brand palette),
+ *   - a camera-lens motif (concentric rings) as a quiet brand cue.
+ *
+ * Layout contract
+ *   mobile   : one horizontal snap rail of compact vertical plaques
+ *   768px+   : the same rail stretches so 5 items fill the row
+ *   card Q   : at >= 190px each plaque flips to a horizontal editorial card,
+ *              so a crowded rail (7+ categories) never squeezes its label.
+ */
+
+.section {
+  width: 100%;
+  padding: 5px 8px 6px;
+}
+
+@media (min-width: 640px) {
+  .section {
+    padding-inline: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .section {
+    padding-inline: 16px;
+  }
+}
+
+@media (min-width: 768px) {
+  .section {
+    padding-bottom: 8px;
+  }
+}
+
+.shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(231, 228, 222, 0.92);
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(253, 230, 138, 0.24), transparent 52%),
+    linear-gradient(180deg, #fbf9f5 0%, #f7f3ec 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 24px 48px -44px rgba(28, 25, 23, 0.55);
+}
+
+/* Paper grain: dots that fade out before they reach the middle of the card. */
+.shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: radial-gradient(rgba(120, 113, 108, 0.16) 1px, transparent 1px);
+  background-size: 18px 18px;
+  opacity: 0.4;
+  -webkit-mask-image: linear-gradient(to left, #000, transparent 62%);
+  mask-image: linear-gradient(to left, #000, transparent 62%);
+}
+
+/* Hairline of saffron along the top edge. */
+.shell::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 12%;
+  left: 12%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(to left, transparent, rgba(217, 119, 6, 0.45), transparent);
+}
+
+/* Concentric lens rings peeking into the upper-left corner. */
+.rings {
+  position: absolute;
+  z-index: -1;
+  inset-inline-start: -118px;
+  top: -156px;
+  width: 340px;
+  height: 340px;
+  pointer-events: none;
+  border: 1px solid rgba(180, 83, 9, 0.07);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 46px rgba(180, 83, 9, 0.028),
+    0 0 0 92px rgba(180, 83, 9, 0.018);
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  padding: 15px 12px 13px;
+}
+
+@media (min-width: 768px) {
+  .inner {
+    padding: 18px 20px 16px;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heading {
+  min-width: 0;
+}
+
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  color: #b45309;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.6;
+  letter-spacing: 0.2em;
+}
+
+.kicker::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  border-radius: 1px;
+  background: linear-gradient(to left, #d97706, rgba(217, 119, 6, 0));
+}
+
+.title {
+  margin: 5px 0 0;
+  color: #1c1917;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+@media (min-width: 768px) {
+  .title {
+    font-size: 21px;
+  }
+}
+
+.subtitle {
+  display: none;
+  margin: 4px 0 0;
+  color: #78716c;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.8;
+}
+
+@media (min-width: 640px) {
+  .subtitle {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .subtitle {
+    font-size: 12px;
+  }
+}
+
+.allLink {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(212, 208, 200, 0.8);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #44403c;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition:
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+@media (min-width: 768px) {
+  .allLink {
+    padding: 0 14px;
+    font-size: 11px;
+  }
+}
+
+.allLink:hover {
+  border-color: #fcd34d;
+  background: #fff;
+  color: #92400e;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -16px rgba(180, 83, 9, 0.6);
+}
+
+.allLink .allIcon {
+  color: #d97706;
+}
+
+.allLink .allArrow {
+  transition: transform 0.25s ease;
+}
+
+.allLink:hover .allArrow {
+  transform: translateX(-2px);
+}
+
+.rail {
+  display: flex;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 5px 2px 7px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2px;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .rail {
+    gap: 12px;
+    margin-top: 16px;
+  }
+}
+
+.item {
+  flex: 0 0 168px;
+  min-width: 0;
+  scroll-snap-align: start;
+  container-type: inline-size;
+}
+
+@media (min-width: 768px) {
+  .item {
+    flex: 1 1 0;
+    min-width: 168px;
+  }
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  height: 140px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(231, 228, 222, 0.9);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  text-decoration: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 14px 28px -28px rgba(28, 25, 23, 0.5);
+  transition:
+    transform 0.32s cubic-bezier(0.22, 0.7, 0.25, 1),
+    border-color 0.3s ease,
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* Saffron rule that draws itself in on hover. */
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 14px;
+  left: 14px;
+  z-index: 1;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(to left, #fbbf24, #b45309);
+  opacity: 0.8;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.38s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+
+/* Warm light that blooms from the leading corner. */
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(115% 130% at 100% 0%, rgba(253, 230, 138, 0.32), transparent 56%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(252, 211, 77, 0.9);
+  background: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 24px 42px -30px rgba(180, 83, 9, 0.5);
+}
+
+.card:hover::before {
+  transform: scaleX(1);
+}
+
+.card:hover::after {
+  opacity: 1;
+}
+
+.card:focus-visible,
+.allLink:focus-visible,
+.retry:focus-visible {
+  outline: 2px solid #b45309;
+  outline-offset: 2px;
+}
+
+/* The rail clips on both axes, so keep the card's focus ring inside it. */
+.card:focus-visible {
+  outline-offset: -2px;
+}
+
+.cardTop {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.index {
+  color: #c9c4bb;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.25s ease;
+}
+
+.card:hover .index {
+  color: #b45309;
+}
+
+.go {
+  display: grid;
+  place-items: center;
+  width: 23px;
+  height: 23px;
+  border: 1px solid #f3f1ed;
+  border-radius: 999px;
+  background: #faf9f7;
+  color: #a8a29e;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.card:hover .go {
+  border-color: #d97706;
+  background: #d97706;
+  color: #fff;
+  box-shadow: 0 6px 14px -9px rgba(180, 83, 9, 0.9);
+}
+
+.go svg {
+  transition: transform 0.25s ease;
+}
+
+.card:hover .go svg {
+  transform: translateX(-2px);
+}
+
+.thumb {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid rgba(231, 228, 222, 0.9);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fff 28%, #f3f1ed 100%);
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.card:hover .thumb {
+  border-color: rgba(252, 211, 77, 0.9);
+  box-shadow: 0 10px 20px -16px rgba(180, 83, 9, 0.65);
+}
+
+.thumbArt {
+  position: absolute;
+  inset: 2px;
+  transition: transform 0.45s cubic-bezier(0.22, 0.7, 0.25, 1);
+}
+
+.card:hover .thumbArt {
+  transform: scale(1.07);
+}
+
+.thumbImg {
+  object-fit: contain;
+}
+
+.thumbFallback {
+  color: #b45309;
+  opacity: 0.7;
+}
+
+.copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  margin-top: 1px;
+  text-align: center;
+}
+
+.name {
+  display: -webkit-box;
+  min-height: 3.4em;
+  overflow: hidden;
+  color: #3f3a36;
+  font-size: 11.5px;
+  font-weight: 800;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  transition: color 0.25s ease;
+}
+
+.card:hover .name {
+  color: #92400e;
+}
+
+.cta {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  margin-top: 3px;
+  color: #a8a29e;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  transition: color 0.25s ease;
+}
+
+.card:hover .cta {
+  color: #b45309;
+}
+
+.cta svg {
+  transition: transform 0.25s ease;
+}
+
+.card:hover .cta svg {
+  transform: translateX(-2px);
+}
+
+/*
+ * Wide plaques become horizontal editorial cards: image on the leading
+ * edge, label + affordance on the other. This is keyed to the card itself
+ * (not the viewport) so a crowded rail stays legible.
+ */
+@container (min-width: 190px) {
+  .card {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 11px;
+    height: 116px;
+    padding: 13px;
+  }
+
+  .thumb {
+    width: 60px;
+    height: 60px;
+    margin-inline: 0;
+    border-radius: 16px;
+  }
+
+  .copy {
+    flex: 1 1 auto;
+    margin-top: 0;
+    text-align: start;
+  }
+
+  .name {
+    min-height: 0;
+    font-size: 12.5px;
+    line-height: 1.65;
+  }
+
+  .cta {
+    display: inline-flex;
+  }
+}
+
+.skeletonRail {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 5px 2px 7px;
+  overflow: hidden;
+}
+
+.skeletonItem {
+  flex: 0 0 168px;
+  height: 140px;
+  border: 1px solid rgba(231, 228, 222, 0.7);
+  border-radius: 16px;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0.9) 20%, #f1ede6 40%, rgba(255, 255, 255, 0.9) 60%);
+  background-size: 200% 100%;
+  animation: showcaseShimmer 1.6s linear infinite;
+}
+
+@media (min-width: 768px) {
+  .skeletonRail {
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .skeletonItem {
+    flex: 1 1 0;
+    min-width: 168px;
+  }
+}
+
+@keyframes showcaseShimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 104px;
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px dashed rgba(212, 208, 200, 0.95);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #57534e;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.retry {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(252, 211, 77, 0.9);
+  border-radius: 999px;
+  background: #fff;
+  color: #92400e;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.retry:hover:not(:disabled) {
+  border-color: #fbbf24;
+  background: #fffbeb;
+}
+
+.retry:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card::before,
+  .card::after,
+  .index,
+  .go,
+  .go svg,
+  .thumb,
+  .thumbArt,
+  .name,
+  .cta,
+  .cta svg,
+  .allLink,
+  .allLink .allArrow {
+    transition: none;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  .skeletonItem {
+    animation: none;
+  }
+}
