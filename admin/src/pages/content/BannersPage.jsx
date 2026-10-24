@@ -81,7 +81,7 @@ const formatPersianDate = (date, includeTime = false) => {
 // مکانیزم موبایل (عیناً مانند دیجی‌کالا):
 //   اسلاید فعال وسط‌چین با عرض ۱.۱ اسلاید؛ ۲۰px از هر طرف بیرون می‌ماند
 //   و ۲۰px از اسلایدهای کنار «پیک» می‌زند. فاصلهٔ ۸px، گوشهٔ ۸px،
-//   ارتفاع ۱۸۰px، چرخش خودکار هر ۵ ثانیه (انیمیشن ۵۰۰ms)، لوپ بی‌نهایت،
+//   ارتفاع ۱۸۰px، چرخش خودکار هر ۵ ثانیه (انیمیشن ثابت ۷۰۰ms)، لوپ بی‌نهایت،
 //   swipe؛ بدون فلش و نقطه در موبایل.
 // ============================================================
 
@@ -93,7 +93,7 @@ const HERO_MOBILE = {
   gap: 8,
   radius: 8,
   intervalSeconds: 5,
-  transitionMs: 500,
+  transitionMs: 700,
   recommendedUpload: '780 × 360',
   ratioLabel: '2.16 : 1',
 }
@@ -126,7 +126,7 @@ const BANNER_POSITIONS = {
       'برای موبایل همیشه تصویر جدا بسازید؛ نسخهٔ دسکتاپ در موبایل برش می‌خورد.',
       'اسلاید موبایل ۳۸۸×۱۸۰ است (فایل ۷۸۰×۳۶۰)؛ گوشه‌ها ۸px و ۲۰px از هر طرف حاشیه دارد.',
       '۲۰px از اسلایدهای قبلی/بعدی در دو لبه دیده می‌شود؛ پیام اصلی را در ۸۰٪ مرکزی نگه دارید.',
-      'اسلایدر هر ۵ ثانیه با انیمیشن ۵۰۰ms عوض می‌شود؛ هر اسلاید فقط یک پیام داشته باشد.',
+      'اسلایدر هر ۵ ثانیه با انیمیشن ثابت ۷۰۰ms عوض می‌شود؛ هر اسلاید فقط یک پیام داشته باشد.',
       'در موبایل فلش و نقطه نمایش داده نمی‌شود؛ ناوبری با swipe و چرخش خودکار است.',
     ],
   },
@@ -226,6 +226,10 @@ const HERO_MECHANISM_STEPS = [
     title: 'تصویر اول، سریع‌ترین',
     desc: 'اولین اسلاید با priority و eager بارگذاری می‌شود تا LCP صفحه سریع باشد؛ بقیهٔ اسلایدها lazy هستند.',
   },
+  {
+    title: 'قفل ناوبری: یک حرکت در هر ترنزیشن',
+    desc: `تا پایان انیمیشن ${HERO_MOBILE.transitionMs}ms، کلیک بعدی روی فلش/نقطه و swipe بعدی پذیرفته نمی‌شود؛ بنابراین حتی با ۱۰ کلیک سریع، فقط یک اسلاید جابه‌جا می‌شود و سرعت حرکت ثابت می‌ماند. این رفتار بر اساس الگوی ناوبری اسنپ‌شاپ (Keen Slider با loop و انیمیشن ثابت) پیاده شده است.`,
+  },
 ]
 
 const HERO_MOBILE_RULES = [
@@ -255,7 +259,7 @@ const HERO_SPEC_ROWS = [
   { label: 'فاصلهٔ بین اسلایدها', mobile: '8 px', desktop: '0' },
   { label: 'گردی گوشه', mobile: '8 px', desktop: '0' },
   { label: 'حاشیهٔ امن محتوا', mobile: '10٪ از هر طرف', desktop: '8٪ از هر طرف' },
-  { label: 'چرخش خودکار', mobile: 'هر 5 ثانیه / انیمیشن 500ms', desktop: 'هر 5 ثانیه / انیمیشن 500ms' },
+  { label: 'چرخش خودکار', mobile: 'هر 5 ثانیه / انیمیشن 700ms', desktop: 'هر 5 ثانیه / انیمیشن 700ms' },
   { label: 'کنترل‌ها', mobile: 'Swipe — بدون فلش و نقطه', desktop: 'فلش قبلی/بعدی + نقطه' },
   { label: 'حجم مجاز', mobile: 'حداکثر 10MB — پیشنهاد زیر 2MB', desktop: 'حداکثر 10MB — پیشنهاد زیر 2MB' },
   { label: 'فرمت', mobile: 'WebP / JPG / PNG / GIF', desktop: 'WebP / JPG / PNG / GIF' },
@@ -271,6 +275,7 @@ const HERO_CHECKLIST = [
   'ترتیب اسلایدها (sortOrder) درست است و اولین اسلاید سبک‌ترین تصویر را دارد.',
   'پیش‌نمایش موبایل و دسکتاپ در همین پنل بررسی شده است.',
   'روی یک گوشی واقعی (۳۶۰px و ۴۲۸px) اسلاید را swipe کرده‌اید و متن بریده نمی‌شود.',
+  'با چند کلیک سریع روی فلش، فقط یک اسلاید جابه‌جا می‌شود و حرکت بعدی بعد از پایان انیمیشن انجام می‌شود.',
 ]
 
 const HERO_TROUBLESHOOTING = [
@@ -1031,21 +1036,22 @@ function BannerGuideModal({ open, onClose }) {
   spaceBetween: 8,
   loop: false,             // رینگ چندنسخه‌ای
   autoplay: { delay: 5000, waitForTransition: true },
-  speed: 500,
+  speed: 700,              // ثابت برای همهٔ اسلایدها
   height: '180px',
   borderRadius: '8px',
   pagination: false,
   navigation: false,
 }
+navigationLock: 'one slide per transition (700ms)'
 ring: [all slides] × 3      // برای ۲ اسلاید: × 5
 initialSlide: middleCopyStart
-recenter: transitionEnd + immediate at absolute edge
+recenter: on transitionEnd to the middle copy
 desktop: {
   slidesPerView: 1,
   centeredSlides: false,
   loop: false,             // همان رینگ چندنسخه‌ای
   autoplay: { delay: 5000, waitForTransition: true },
-  speed: 500,
+  speed: 700,
   pagination: true,
   navigation: true,
 }`}</pre>
@@ -2098,7 +2104,7 @@ function BannersPage() {
               راهنمای بنر اصلی — نسخهٔ اندروید (موبایل اول)
             </span>
             <Tag color="green" style={{ marginInlineEnd: 0, fontSize: 10 }}>
-              مکانیزم دیجی‌کالا
+              دیجی‌کالا + اسنپ‌شاپ
             </Tag>
           </Space>
         }
@@ -2133,7 +2139,7 @@ function BannersPage() {
                 { label: 'اسلاید موبایل', value: '388 × 180' },
                 { label: 'فایل پیشنهادی', value: '780 × 360' },
                 { label: 'حاشیه / فاصله', value: '20 / 8 px' },
-                { label: 'چرخش خودکار', value: '5s · 500ms' },
+                { label: 'چرخش خودکار', value: '5s · 700ms' },
               ].map((item) => (
                 <div
                   key={item.label}

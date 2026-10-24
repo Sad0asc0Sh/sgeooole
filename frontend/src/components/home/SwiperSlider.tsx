@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, A11y, Keyboard } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper";
@@ -14,6 +14,18 @@ import type { Banner } from "@/services/bannerService";
 type SwiperSliderProps = {
   banners: Banner[];
 };
+
+/**
+ * مدت‌زمان ثابت هر جابه‌جایی (ms). همهٔ اسلایدها — از جمله لحظهٔ برگشت
+ * به ابتدای حلقه — با همین سرعت حرکت می‌کنند؛ هیچ پرش سریع/کوتاهی در
+ * انتها رخ نمی‌دهد.
+ *
+ * مرجع: اسنپ‌شاپ از Keen Slider با `defaultAnimation: { duration: 2000 }`
+ * استفاده می‌کند. برای بنر فشرده‌تر فروشگاه، ۷۰۰ms سرعت یکنواخت و
+ * قابل‌قبولی است و با قفل ناوبری، حداکثر یک اسلاید در هر ۷۰۰ms جابه‌جا
+ * می‌شود (مستقل از تعداد کلیک در ثانیه).
+ */
+const SLIDER_SPEED = 700;
 
 type RingSlide = {
   banner: Banner;
@@ -31,7 +43,7 @@ type RingSlide = {
  *     (۲۰px از هر طرف بیرون می‌ماند و ۲۰px از اسلایدهای کنار دیده می‌شود)
  *   - فاصلهٔ ۸px، گوشهٔ ۸px، ارتفاع ثابت ۱۸۰px (از فریم والد)
  *   - بدون فلش و نقطه؛ فقط swipe + چرخش خودکار ۵ ثانیه‌ای
- *   - لوپ بی‌نهایت با انیمیشن ۵۰۰ms
+ *   - حلقهٔ بینهایت با انیمیشن ثابت ۷۰۰ms و قفل ناوبری (یک اسلاید در هر ترنزیشن)
  *
  * دسکتاپ (۷۶۸px به بالا):
  *   - یک اسلاید تمام‌عرض (نسبت 1911/430) با همان زمان‌بندی
@@ -55,6 +67,53 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const jumpingRef = useRef(false);
+  // قفل ناوبری: تا پایان انیمیشن، کلیک/سوایپ بعدی پذیرفته نمی‌شود.
+  const lockUntilRef = useRef(0);
+  const unlockTimerRef = useRef<number | null>(null);
+
+  const clearUnlockTimer = useCallback(() => {
+    if (unlockTimerRef.current !== null) {
+      window.clearTimeout(unlockTimerRef.current);
+      unlockTimerRef.current = null;
+    }
+  }, []);
+
+  const beginSlideLock = useCallback(
+    (instance: SwiperClass) => {
+      const speed = instance.params.speed ?? SLIDER_SPEED;
+      lockUntilRef.current = Date.now() + speed + 80;
+      instance.allowTouchMove = false;
+      clearUnlockTimer();
+      // اگر به هر دلیلی transitionEnd نرسید، سوایپ را دوباره آزاد کن.
+      unlockTimerRef.current = window.setTimeout(() => {
+        if (!instance.animating) instance.allowTouchMove = true;
+        unlockTimerRef.current = null;
+      }, speed + 150);
+    },
+    [clearUnlockTimer]
+  );
+
+  const releaseSlideLock = useCallback(
+    (instance: SwiperClass) => {
+      clearUnlockTimer();
+      lockUntilRef.current = 0;
+      instance.allowTouchMove = true;
+    },
+    [clearUnlockTimer]
+  );
+
+  const canNavigate = useCallback(() => {
+    if (!swiper) return false;
+    if (swiper.animating) return false;
+    return Date.now() >= lockUntilRef.current;
+  }, [swiper]);
+
+  useEffect(
+    () => () => {
+      clearUnlockTimer();
+    },
+    [clearUnlockTimer]
+  );
 
   const slides = useMemo(() => banners.filter(Boolean), [banners]);
   const slideCount = slides.length;
@@ -89,7 +148,10 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
 
   const goTo = useCallback(
     (realIndex: number) => {
-      if (!swiper) return;
+      if (!swiper || !canNavigate()) return;
+      // قفل را از همین لحظه فعال کن تا کلیک‌های پشت‌سرهم روی نقطه‌ها
+      // هم نتوانند چند اسلاید را در یک حرکت رد کنند.
+      lockUntilRef.current = Date.now() + SLIDER_SPEED + 80;
       if (slideCount < 2) {
         swiper.slideTo(0);
       } else {
@@ -103,7 +165,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       }
       setActiveIndex(realIndex);
     },
-    [swiper, slideCount, copies]
+    [swiper, slideCount, copies, canNavigate]
   );
 
   /**
@@ -114,21 +176,31 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
    */
   const handleTransitionEnd = useCallback(
     (instance: SwiperClass) => {
-      if (slideCount < 2 || jumpingRef.current) return;
+      if (slideCount < 2) return;
+      if (jumpingRef.current) {
+        releaseSlideLock(instance);
+        return;
+      }
+
       const index = instance.activeIndex;
       const copy = Math.floor(index / slideCount);
-      if (copy === middleCopy) return;
+      const realIndex = ((index % slideCount) + slideCount) % slideCount;
 
-      const target = index - (copy - middleCopy) * slideCount;
-      jumpingRef.current = true;
-      instance.slideTo(target, 0, false);
-      setActiveIndex(((index % slideCount) + slideCount) % slideCount);
-      instance.autoplay?.start();
-      window.setTimeout(() => {
-        jumpingRef.current = false;
-      }, 80);
+      if (copy !== middleCopy) {
+        const target = index - (copy - middleCopy) * slideCount;
+        jumpingRef.current = true;
+        instance.slideTo(target, 0, false);
+        setActiveIndex(realIndex);
+        instance.autoplay?.start();
+        window.setTimeout(() => {
+          jumpingRef.current = false;
+        }, 80);
+      }
+
+      // انیمیشن تمام شد؛ ناوبری برای حرکت بعدی آزاد است.
+      releaseSlideLock(instance);
     },
-    [slideCount, middleCopy]
+    [slideCount, middleCopy, releaseSlideLock]
   );
 
   const handleSlideChange = useCallback(
@@ -137,30 +209,29 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
         setActiveIndex(0);
         return;
       }
-      const total = copies * slideCount;
       const index = instance.activeIndex;
       const realIndex = ((index % slideCount) + slideCount) % slideCount;
-
-      // لبهٔ مطلق رینگ (اولین/آخرین اسلاید کل نسخه‌ها): قبل از اینکه
-      // فضای خالی دیده شود یا swipe بعدی قفل شود، بلافاصله به اسلاید
-      // هم‌شکل در نسخهٔ میانی می‌پریم. تصویر همان تصویر است، پس کاربر
-      // فقط ادامهٔ چرخش را می‌بیند، نه انتهای بنرها.
-      if (index === 0 || index === total - 1) {
-        const target = index === 0 ? middleStart : middleStart + slideCount - 1;
-        jumpingRef.current = true;
-        instance.slideTo(target, 0, false);
-        setActiveIndex(realIndex);
-        instance.autoplay?.start();
-        window.setTimeout(() => {
-          jumpingRef.current = false;
-        }, 80);
-        return;
-      }
-
       setActiveIndex(realIndex);
+      // تا پایان همین ترنزیشن، ناوبری/سوایپ بعدی را قفل می‌کنیم.
+      // این همان سقف «یک اسلاید در هر حرکت» است که نمی‌گذارد کلیک‌های
+      // سریع، چند بنر را رد کنند یا به لبهٔ رینگ برسند.
+      beginSlideLock(instance);
     },
-    [slideCount, copies, middleStart]
+    [slideCount, beginSlideLock]
   );
+
+  const handleNext = useCallback(() => {
+    if (!swiper || !canNavigate()) return;
+    // قفل فوری؛ کلیک‌های بعدی تا پایان انیمیشن نادیده گرفته می‌شوند.
+    lockUntilRef.current = Date.now() + SLIDER_SPEED + 80;
+    swiper.slideNext();
+  }, [swiper, canNavigate]);
+
+  const handlePrev = useCallback(() => {
+    if (!swiper || !canNavigate()) return;
+    lockUntilRef.current = Date.now() + SLIDER_SPEED + 80;
+    swiper.slidePrev();
+  }, [swiper, canNavigate]);
 
   if (slides.length === 0) return null;
 
@@ -174,7 +245,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
         initialSlide={initialSlide}
         loop={false}
         rewind={false}
-        speed={500}
+        speed={SLIDER_SPEED}
         slidesPerView={1.1}
         spaceBetween={8}
         centeredSlides
@@ -274,7 +345,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
           <div className="absolute bottom-3 start-3 z-20 hidden items-center gap-2 md:bottom-5 md:start-6 md:flex">
             <button
               type="button"
-              onClick={() => swiper?.slidePrev()}
+              onClick={handlePrev}
               aria-label="اسلاید قبلی"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30"
             >
@@ -282,7 +353,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
             </button>
             <button
               type="button"
-              onClick={() => swiper?.slideNext()}
+              onClick={handleNext}
               aria-label="اسلاید بعدی"
               className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition hover:bg-white/30"
             >
