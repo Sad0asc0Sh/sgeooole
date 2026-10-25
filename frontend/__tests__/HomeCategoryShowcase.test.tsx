@@ -62,17 +62,15 @@ test("renders the curated homepage categories as a carousel", async () => {
 
   mount([camera]);
 
-  expect(screen.getByRole("heading", { name: "دسته‌بندی‌ها" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "دسته‌بندی‌های فروشگاه" })
+  ).toBeInTheDocument();
   expect(await screen.findByText(camera.name)).toBeInTheDocument();
   expect(screen.getByText(dvr.name)).toBeInTheDocument();
   expect(screen.getByText(lock.name)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: lock.name })).toHaveAttribute(
     "href",
     "/products?category=locks&includeChildren=true"
-  );
-  expect(screen.getByRole("link", { name: "همه دسته‌بندی‌ها" })).toHaveAttribute(
-    "href",
-    "/products#category-filters"
   );
 
   await waitFor(() => expect(fetchCategories).toHaveBeenCalledWith());

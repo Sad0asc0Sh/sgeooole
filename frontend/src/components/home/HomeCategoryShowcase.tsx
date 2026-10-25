@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { ChevronLeft, ChevronRight, LayoutGrid, Shapes } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shapes } from "lucide-react";
 import { useResilientImage } from "@/components/ui/ResilientImage";
 import { categoryService, type Category } from "@/services/categoryService";
-import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import styles from "./HomeCategoryShowcase.module.css";
 
 type HomeCategoryShowcaseProps = {
@@ -16,7 +15,7 @@ type HomeCategoryShowcaseProps = {
 
 type CategoryVisual = Category["image"] | Category["icon"] | string | null | undefined;
 
-const SCROLL_STEP_FACTOR = 0.8;
+const SCROLL_STEP_FACTOR = 0.75;
 
 function imageUrl(value: CategoryVisual): string | undefined {
   if (!value) return undefined;
@@ -28,7 +27,7 @@ function categoryHref(category: Category): string {
   return `/products?category=${encodeURIComponent(category.slug || category._id)}&includeChildren=true`;
 }
 
-function CategoryCircleImage({ url, name }: { url: string; name: string }) {
+function CircleImage({ url, name }: { url: string; name: string }) {
   const { src, onError, onLoad, ref, phase } = useResilientImage(url, "/placeholder.png");
   return (
     <img
@@ -43,15 +42,21 @@ function CategoryCircleImage({ url, name }: { url: string; name: string }) {
 }
 
 /**
- * Homepage category carousel.
+ * Homepage category strip — a faithful rebuild of technolife.com's
+ * "CircleCategories" mechanism, inspected live from the target site:
  *
- * Design reverse-engineered from technolife.com's category strip: a white
- * panel with circular, ring-outlined category badges, labels underneath and
- * circular arrow buttons on both edges. Colors and radii follow the site's
- * own saffron/stone palette so the section reads native, not borrowed.
+ *   slide   : fixed-width column (circle + label), snap-aligned, RTL rail
+ *   badge   : outer circle with 2px brand-colored padding → thin ring
+ *   disc    : white circle that SHRINKS 4px on hover → the ring thickens
+ *   hairline: 1px light-tint border circle holding the image
+ *   label   : separate line under the circle (12px mobile / 16px desktop)
+ *   nav     : 32px floating white circle buttons at the strip edges
+ *
+ * The layout sits directly on the page background — no card, no title,
+ * exactly like the reference. Only the palette is localized to the
+ * store's saffron (kala) and warm stone (ekg) tokens.
  */
 export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcaseProps) {
-  const headingId = useId();
   const railRef = useRef<HTMLUListElement>(null);
   const [edge, setEdge] = useState<{ start: boolean; end: boolean }>({ start: true, end: false });
 
@@ -76,6 +81,7 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
   // a failed background refresh must not blank out server-rendered items.
   const showSkeleton = isLoading && items.length === 0;
   const showError = Boolean(error) && items.length === 0;
+  const isScrollable = !showSkeleton && !showError && items.length > 1;
 
   const updateEdges = useCallback(() => {
     const rail = railRef.current;
@@ -106,97 +112,86 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
   }
 
   return (
-    <section
-      className={styles.section}
-      aria-labelledby={headingId}
-      aria-busy={showSkeleton || undefined}
-      data-home-categories="carousel"
-    >
-      <div className={styles.panel}>
-        <header className={styles.header}>
-          <h2 className={styles.title} id={headingId}>
-            دسته‌بندی‌ها
-          </h2>
-          <Link href={CATEGORY_FILTER_HREF} className={styles.allLink}>
-            <LayoutGrid size={14} aria-hidden="true" />
-            <span>همه دسته‌بندی‌ها</span>
-            <ChevronLeft size={14} aria-hidden="true" />
-          </Link>
-        </header>
+    <section className={styles.section} aria-busy={showSkeleton || undefined} data-home-categories="carousel">
+      <h2 className={styles.srTitle}>دسته‌بندی‌های فروشگاه</h2>
 
-        <div className={styles.stage}>
-          <span className={`${styles.fade} ${styles.fadeStart}`} aria-hidden="true" />
-
-          {showSkeleton ? (
-            <div className={styles.skeletonRail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
-              {Array.from({ length: 7 }, (_, index) => (
-                <span key={index} className={styles.skeletonItem} aria-hidden="true">
-                  <span className={styles.skeletonCircle} />
-                  <span className={styles.skeletonLabel} />
-                </span>
-              ))}
-            </div>
-          ) : showError ? (
-            <div className={styles.feedback} role="status">
-              <p>بارگذاری دسته‌بندی‌ها انجام نشد.</p>
-              <button
-                type="button"
-                className={styles.retry}
-                disabled={isValidating}
-                onClick={() => {
-                  void mutate();
-                }}
-              >
-                {isValidating ? "در حال تلاش…" : "تلاش مجدد"}
-              </button>
-            </div>
-          ) : (
-            <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
-              {items.map((category) => {
-                const url = imageUrl(category.image) || imageUrl(category.icon);
-                return (
-                  <li key={category._id || category.slug} className={styles.item}>
-                    <Link href={categoryHref(category)} className={styles.category} data-category-id={category._id}>
-                      <span className={styles.ring}>
-                        {url ? (
-                          <CategoryCircleImage url={url} name={category.name} />
-                        ) : (
-                          <Shapes size={30} strokeWidth={1.6} aria-hidden="true" />
-                        )}
+      <div className={styles.stage}>
+        {showSkeleton ? (
+          <div className={styles.rail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
+            {Array.from({ length: 9 }, (_, index) => (
+              <span key={index} className={styles.skeletonItem} aria-hidden="true">
+                <span className={styles.skeletonBadge} />
+                <span className={styles.skeletonLabel} />
+              </span>
+            ))}
+          </div>
+        ) : showError ? (
+          <div className={styles.feedback} role="status">
+            <p>بارگذاری دسته‌بندی‌ها انجام نشد.</p>
+            <button
+              type="button"
+              className={styles.retry}
+              disabled={isValidating}
+              onClick={() => {
+                void mutate();
+              }}
+            >
+              {isValidating ? "در حال تلاش…" : "تلاش مجدد"}
+            </button>
+          </div>
+        ) : (
+          <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
+            {items.map((category) => {
+              const url = imageUrl(category.image) || imageUrl(category.icon);
+              return (
+                <li key={category._id || category.slug} className={styles.item}>
+                  <Link
+                    href={categoryHref(category)}
+                    className={styles.category}
+                    title={category.name}
+                    data-category-id={category._id}
+                  >
+                    <span className={styles.badge}>
+                      <span className={styles.disc}>
+                        <span className={styles.hairline}>
+                          {url ? (
+                            <CircleImage url={url} name={category.name} />
+                          ) : (
+                            <Shapes className={styles.fallbackIcon} strokeWidth={1.5} aria-hidden="true" />
+                          )}
+                        </span>
                       </span>
-                      <span className={styles.name}>{category.name}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                    </span>
+                    <span className={styles.label}>{category.name}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-          <span className={`${styles.fade} ${styles.fadeEnd}`} aria-hidden="true" />
-
-          {!showSkeleton && !showError && items.length > 3 && (
-            <>
-              <button
-                type="button"
-                className={`${styles.arrow} ${styles.arrowStart}`}
-                onClick={() => scrollRail("prev")}
-                disabled={edge.start}
-                aria-label="دسته‌بندی‌های قبلی"
-              >
-                <ChevronRight size={18} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className={`${styles.arrow} ${styles.arrowEnd}`}
-                onClick={() => scrollRail("next")}
-                disabled={edge.end}
-                aria-label="دسته‌بندی‌های بعدی"
-              >
-                <ChevronLeft size={18} aria-hidden="true" />
-              </button>
-            </>
-          )}
-        </div>
+        {isScrollable && (
+          <>
+            <button
+              type="button"
+              className={`${styles.nav} ${styles.navPrev}`}
+              onClick={() => scrollRail("prev")}
+              disabled={edge.start}
+              aria-label="دسته‌بندی‌های قبلی"
+            >
+              <ChevronRight size={22} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={`${styles.nav} ${styles.navNext}`}
+              onClick={() => scrollRail("next")}
+              disabled={edge.end}
+              aria-label="دسته‌بندی‌های بعدی"
+            >
+              <ChevronLeft size={22} aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
     </section>
   );

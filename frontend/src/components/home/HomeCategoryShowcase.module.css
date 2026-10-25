@@ -1,86 +1,53 @@
 /* ============================================================
-   Homepage category carousel
-   Layout reverse-engineered from technolife.com's category
-   strip (circular ring badges + edge arrows), re-skinned with
-   the store's saffron (kala) and warm stone (ekg) palette.
+   Homepage category strip — mechanism faithfully rebuilt from
+   technolife.com's CircleCategories (values inspected live):
+     slide 96px / 195px, badge 86/128px (2px ring), disc 82/124px
+     (hover 120px), hairline 76/114px (1px), nav 32px circles.
+   Palette localized to saffron (kala) + warm stone (ekg).
    ============================================================ */
 
 .section {
+  position: relative;
   width: 100%;
-  padding: 4px 0 8px;
+  padding: 10px 0 6px;
 }
 
-.panel {
-  position: relative;
-  background: #ffffff;
-  border: 1px solid rgba(231, 228, 222, 0.9); /* ekg-200 */
-  border-radius: 16px;
-  padding: 14px 16px 16px;
-  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -18px rgba(28, 25, 23, 0.18);
-}
-
-/* ---------- header ---------- */
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.title {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #292524; /* ekg-800 */
-  position: relative;
-  padding-inline-start: 12px;
-}
-
-.title::before {
-  content: "";
+/* Screen-reader-only heading — technolife's strip has no visible title */
+.srTitle {
   position: absolute;
-  inset-inline-start: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 16px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #fbbf24, #d97706); /* kala-400 → kala-600 */
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
-
-.allLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: #78716c; /* ekg-500 */
-  transition: color 0.15s ease;
-}
-
-.allLink:hover {
-  color: #d97706; /* kala-600 */
-}
-
-/* ---------- stage / rail ---------- */
 
 .stage {
   position: relative;
+  max-width: 1536px;
+  margin-inline: auto;
+  padding-inline: 12px;
 }
+
+@media (min-width: 768px) {
+  .stage {
+    padding-inline: 24px;
+  }
+}
+
+/* ---------- rail (RTL scroll, fixed-width slides like the reference) ---------- */
 
 .rail {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
   overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 6px 4px 4px;
   margin: 0;
+  padding: 0;
   list-style: none;
 }
 
@@ -90,6 +57,7 @@
 
 .item {
   flex: 0 0 auto;
+  width: 96px;
   scroll-snap-align: start;
 }
 
@@ -97,172 +65,202 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 92px;
-  text-align: center;
+  gap: 12px;
 }
 
-/* The technolife-style circular badge: thin saffron ring, white bed */
-.ring {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 78px;
-  height: 78px;
-  padding: 6px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 2px solid #fcd34d; /* kala-300 */
-  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.16);
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
-}
-
-.ring img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 50%;
-  transition: opacity 0.25s ease;
-}
-
-.ring svg {
-  color: #b45309; /* kala-700 */
-}
-
-.category:hover .ring,
-.category:focus-visible .ring {
-  border-color: #d97706; /* kala-600 */
-  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.14);
-  transform: translateY(-2px);
-}
-
-.name {
-  max-width: 100%;
-  font-size: 12px;
-  line-height: 1.6;
-  font-weight: 500;
-  color: #44403c; /* ekg-700 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: color 0.15s ease;
-}
-
-.category:hover .name,
-.category:focus-visible .name {
-  color: #b45309; /* kala-700 */
-}
-
-/* ---------- edge arrows (desktop) ---------- */
-
-.arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-72%);
-  z-index: 2;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid #e7e4de; /* ekg-200 */
-  color: #57534e; /* ekg-600 */
-  box-shadow: 0 2px 8px rgba(28, 25, 23, 0.1);
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
-}
-
-.arrow:hover:not(:disabled) {
-  color: #d97706; /* kala-600 */
-  border-color: #fcd34d; /* kala-300 */
-}
-
-.arrow:disabled {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* In RTL the visual "previous" side is the right edge */
-.arrowStart {
-  inset-inline-end: 2px;
-}
-
-.arrowEnd {
-  inset-inline-start: 2px;
-}
-
-@media (min-width: 768px) {
-  .arrow {
-    display: inline-flex;
+@media (min-width: 1024px) {
+  .item {
+    width: 195px;
   }
 
   .category {
-    width: 100px;
-  }
-
-  .ring {
-    width: 86px;
-    height: 86px;
+    gap: 20px;
   }
 }
 
-/* ---------- edge fades ---------- */
+/* ---------- concentric badge (technolife's 3-layer circle) ---------- */
 
-.fade {
+/* Layer 1 — outer ring: 2px padding in saffron renders the thin ring */
+.badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 86px;
+  height: 86px;
+  padding: 2px;
+  border-radius: 9999px;
+  background: #fbbf24; /* kala-400 */
+  cursor: pointer;
+}
+
+/* Layer 2 — white disc; shrinks 4px on hover so the ring thickens */
+.disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 82px;
+  height: 82px;
+  border-radius: 9999px;
+  background: #ffffff;
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+/* Layer 3 — hairline ring hugging the image */
+.hairline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 9999px;
+  border: 1px solid #fde68a; /* kala-200 */
+  overflow: hidden;
+}
+
+.hairline img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.25s ease;
+}
+
+.fallbackIcon {
+  width: 34px;
+  height: 34px;
+  color: #b45309; /* kala-700 */
+}
+
+@media (min-width: 1024px) {
+  .badge {
+    width: 128px;
+    height: 128px;
+  }
+
+  .disc {
+    width: 124px;
+    height: 124px;
+  }
+
+  .hairline {
+    width: 114px;
+    height: 114px;
+  }
+
+  .fallbackIcon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .category:hover .disc,
+  .category:focus-visible .disc {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+/* ---------- label ---------- */
+
+.label {
+  max-width: 120px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.7;
+  color: #292524; /* ekg-800 */
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .label {
+    max-width: 180px;
+    font-size: 16px;
+    font-weight: 500;
+  }
+}
+
+/* ---------- floating nav circles (32px, like the reference) ---------- */
+
+.nav {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 36px;
-  pointer-events: none;
-  z-index: 1;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: none;
+  color: #44403c; /* ekg-700 */
+  box-shadow: 0 0 14px -3px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: opacity 0.2s ease, color 0.15s ease;
+}
+
+.nav:hover:not(:disabled) {
+  color: #b45309; /* kala-700 */
+}
+
+.nav:disabled {
   opacity: 0;
-  transition: opacity 0.2s ease;
+  pointer-events: none;
 }
 
-.fadeStart {
-  inset-inline-start: 0;
-  background: linear-gradient(to left, #ffffff 20%, rgba(255, 255, 255, 0));
+/* RTL: "previous" sits at the right edge, "next" at the left edge */
+.navPrev {
+  inset-inline-end: 4px;
 }
 
-.fadeEnd {
-  inset-inline-end: 0;
-  background: linear-gradient(to right, #ffffff 20%, rgba(255, 255, 255, 0));
+.navNext {
+  inset-inline-start: 4px;
 }
 
 /* ---------- skeleton ---------- */
 
-.skeletonRail {
-  display: flex;
-  gap: 6px;
-  padding: 6px 4px 4px;
-}
-
 .skeletonItem {
+  flex: 0 0 auto;
+  width: 96px;
+  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  width: 92px;
+  gap: 12px;
 }
 
-.skeletonCircle {
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
+@media (min-width: 1024px) {
+  .skeletonItem {
+    width: 195px;
+    gap: 20px;
+  }
+}
+
+.skeletonBadge {
+  width: 86px;
+  height: 86px;
+  border-radius: 9999px;
   background: linear-gradient(100deg, #f3f1ed 40%, #faf9f7 50%, #f3f1ed 60%);
   background-size: 200% 100%;
   animation: tlShimmer 1.4s ease-in-out infinite;
 }
 
 .skeletonLabel {
-  width: 64px;
+  width: 60px;
   height: 10px;
   border-radius: 999px;
   background: linear-gradient(100deg, #f3f1ed 40%, #faf9f7 50%, #f3f1ed 60%);
   background-size: 200% 100%;
   animation: tlShimmer 1.4s ease-in-out infinite;
+}
+
+@media (min-width: 1024px) {
+  .skeletonBadge {
+    width: 128px;
+    height: 128px;
+  }
 }
 
 @keyframes tlShimmer {
@@ -278,7 +276,7 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  padding: 26px 0 18px;
+  padding: 34px 0 22px;
   color: #78716c; /* ekg-500 */
   font-size: 13px;
 }
