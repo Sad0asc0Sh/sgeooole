@@ -11,6 +11,8 @@ import {
   Select,
   Upload,
   Checkbox,
+  InputNumber,
+  Switch,
   message,
   Space,
   Spin,
@@ -23,13 +25,232 @@ import {
   EditOutlined,
   DeleteOutlined,
   InboxOutlined,
-  StarFilled,
+  HomeOutlined,
+  UpOutlined,
+  DownOutlined,
+  CloseCircleFilled,
   SettingOutlined,
 } from '@ant-design/icons'
 import { useCategoryStore } from '../../stores'
 import api from '../../api'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
+
+// Flatten the antd tree keeping homepage placement metadata
+const flattenTreeWithMeta = (nodes = [], acc = []) => {
+  nodes.forEach((node) => {
+    acc.push(node)
+    if (node.children && node.children.length > 0) {
+      flattenTreeWithMeta(node.children, acc)
+    }
+  })
+  return acc
+}
+
+// ============================================================
+// Homepage categories manager — replaces the legacy
+// "featured / popular" section with a curated, ordered
+// carousel picker for the storefront homepage.
+// ============================================================
+function HomepageCategoriesCard({ canUpdate }) {
+  const categoriesTree = useCategoryStore((state) => state.categoriesTree)
+  const fetchCategoriesTree = useCategoryStore((state) => state.fetchCategoriesTree)
+  const [selectedId, setSelectedId] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  const allNodes = flattenTreeWithMeta(categoriesTree)
+  const homeNodes = allNodes
+    .filter((n) => n.showOnHomepage)
+    .sort((a, b) => (a.homepageOrder || 0) - (b.homepageOrder || 0))
+  const homeIds = new Set(homeNodes.map((n) => String(n._id || n.key)))
+
+  const markDisabled = (nodes = []) =>
+    nodes.map((n) => ({
+      ...n,
+      disabled: homeIds.has(String(n.key)),
+      children: markDisabled(n.children || []),
+    }))
+
+  const persistOrder = async (list) => {
+    await Promise.all(
+      list.map((node, index) =>
+        api.put(`/categories/${node._id || node.key}`, { homepageOrder: index }),
+      ),
+    )
+  }
+
+  const handleAdd = async () => {
+    if (!selectedId) {
+      message.warning('ابتدا یک دسته‌بندی انتخاب کنید')
+      return
+    }
+    try {
+      setBusy(true)
+      await api.put(`/categories/${selectedId}`, {
+        showOnHomepage: true,
+        homepageOrder: homeNodes.length,
+      })
+      message.success('دسته‌بندی به صفحه اصلی اضافه شد')
+      setSelectedId(null)
+      await fetchCategoriesTree()
+    } catch (error) {
+      message.error(error?.message || 'خطا در افزودن دسته‌بندی به صفحه اصلی')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleRemove = async (node) => {
+    try {
+      setBusy(true)
+      await api.put(`/categories/${node._id || node.key}`, { showOnHomepage: false })
+      const remaining = homeNodes.filter((n) => String(n._id || n.key) !== String(node._id || node.key))
+      await persistOrder(remaining)
+      message.success('دسته‌بندی از صفحه اصلی حذف شد')
+      await fetchCategoriesTree()
+    } catch (error) {
+      message.error(error?.message || 'خطا در حذف دسته‌بندی از صفحه اصلی')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const handleMove = async (node, dir) => {
+    const index = homeNodes.findIndex(
+      (n) => String(n._id || n.key) === String(node._id || node.key),
+    )
+    const target = index + dir
+    if (index < 0 || target < 0 || target >= homeNodes.length) return
+
+    const next = [...homeNodes]
+    const [moved] = next.splice(index, 1)
+    next.splice(target, 0, moved)
+
+    try {
+      setBusy(true)
+      await persistOrder(next)
+      message.success('ترتیب دسته‌بندی‌های صفحه اصلی به‌روزرسانی شد')
+      await fetchCategoriesTree()
+    } catch (error) {
+      message.error(error?.message || 'خطا در تغییر ترتیب')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card
+      title={
+        <Space>
+          <HomeOutlined style={{ color: '#d97706' }} />
+          <span>دسته‌بندی‌های صفحه اصلی</span>
+          <Tag color="gold">{homeNodes.length} دسته</Tag>
+        </Space>
+      }
+      extra={
+        <span style={{ color: '#888', fontSize: 12 }}>
+          دسته‌بندی‌هایی که در کاروسل صفحه اصلی فروشگاه نمایش داده می‌شوند
+        </span>
+      }
+      style={{ marginBottom: 24 }}
+    >
+      {canUpdate && (
+        <Space.Compact style={{ width: '100%', marginBottom: 16, direction: 'rtl' }} size="middle">
+          <TreeSelect
+            treeData={markDisabled(categoriesTree)}
+            value={selectedId}
+            onChange={setSelectedId}
+            placeholder="انتخاب دسته‌بندی برای افزودن به صفحه اصلی..."
+            treeDefaultExpandAll
+            showSearch
+            treeNodeFilterProp="title"
+            style={{ flex: 1, minWidth: 220, textAlign: 'right' }}
+            allowClear
+          />
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleAdd}
+            loading={busy}
+            disabled={!selectedId}
+          >
+            افزودن به صفحه اصلی
+          </Button>
+        </Space.Compact>
+      )}
+
+      {homeNodes.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '24px 0', color: '#999' }}>
+          <HomeOutlined style={{ fontSize: 28, marginBottom: 8, display: 'block' }} />
+          هنوز دسته‌بندی‌ای به صفحه اصلی اضافه نشده است.
+        </div>
+      ) : (
+        <div>
+          {homeNodes.map((node, index) => (
+            <div
+              key={String(node._id || node.key)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                padding: '10px 12px',
+                background: index % 2 === 0 ? '#fafafa' : '#fff',
+                borderRadius: 8,
+                marginBottom: 8,
+                border: '1px solid #f0f0f0',
+              }}
+            >
+              <Space>
+                <Tag color="orange">{index + 1}</Tag>
+                {node.iconUrl && (
+                  <img
+                    src={node.iconUrl}
+                    alt=""
+                    style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 4 }}
+                  />
+                )}
+                <span style={{ fontWeight: 500 }}>{node.title}</span>
+              </Space>
+              {canUpdate && (
+                <Space size="small">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<UpOutlined />}
+                    disabled={index === 0 || busy}
+                    onClick={() => handleMove(node, -1)}
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<DownOutlined />}
+                    disabled={index === homeNodes.length - 1 || busy}
+                    onClick={() => handleMove(node, 1)}
+                  />
+                  <Popconfirm
+                    title="حذف از صفحه اصلی؟"
+                    onConfirm={() => handleRemove(node)}
+                    okText="حذف"
+                    cancelText="انصراف"
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<CloseCircleFilled />}
+                      disabled={busy}
+                    />
+                  </Popconfirm>
+                </Space>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
 
 function CategoriesPage() {
   const { can } = useCan()
@@ -202,8 +423,10 @@ function CategoriesPage() {
       if (values.description) {
         formData.append('description', values.description)
       }
-      formData.append('isFeatured', values.isFeatured || false)
-      formData.append('isPopular', values.isPopular || false)
+      formData.append('showOnHomepage', values.showOnHomepage || false)
+      if (values.homepageOrder !== undefined && values.homepageOrder !== null) {
+        formData.append('homepageOrder', values.homepageOrder)
+      }
 
       const hadIconBefore = Boolean(editingCategory?.iconUrl)
       const hadImageBefore = Boolean(editingCategory?.imageUrl)
@@ -286,8 +509,8 @@ function CategoriesPage() {
       name: node.title,
       parent: node.parent || null,
       description: node.description || '',
-      isFeatured: node.isFeatured || false,
-      isPopular: node.isPopular || false,
+      showOnHomepage: node.showOnHomepage || false,
+      homepageOrder: node.homepageOrder ?? 0,
       icon: node.iconUrl
         ? [
           {
@@ -400,7 +623,11 @@ function CategoriesPage() {
               />
             )}
             <span>{item.title}</span>
-            {item.isPopular && <StarFilled style={{ color: '#f59e0b', fontSize: 14 }} />}
+            {item.showOnHomepage && (
+              <Tag color="gold" style={{ marginInlineStart: 4 }}>
+                <HomeOutlined /> صفحه اصلی
+              </Tag>
+            )}
           </span>
           <Space size="small">
             {canUpdate && (
@@ -496,6 +723,9 @@ function CategoriesPage() {
           </Space>
         )}
       </Card>
+
+      {/* Homepage carousel manager (replaces the legacy featured/popular section) */}
+      <HomepageCategoriesCard canUpdate={canUpdate} />
 
       {/* Modal: Create/Edit Category */}
       <Modal
@@ -598,14 +828,54 @@ function CategoriesPage() {
             </Upload.Dragger>
           </Form.Item>
 
-          {/* 6. Featured */}
-          <Form.Item name="isFeatured" valuePropName="checked">
-            <Checkbox>نمایش در ویژه‌ها (بالای صفحه - دایره‌ای)</Checkbox>
-          </Form.Item>
-
-          {/* 7. Popular */}
-          <Form.Item name="isPopular" valuePropName="checked">
-            <Checkbox>نمایش در محبوب‌ها (پایین - کارتی)</Checkbox>
+          {/* 6. Homepage placement */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              padding: '12px 16px',
+              background: '#fafafa',
+              borderRadius: 8,
+              border: '1px solid #f0f0f0',
+              marginBottom: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <Space direction="vertical" size={2}>
+                <span style={{ fontWeight: 500 }}>
+                  <HomeOutlined style={{ color: '#d97706', marginLeft: 6 }} />
+                  نمایش در صفحه اصلی
+                </span>
+                <span style={{ color: '#888', fontSize: 12 }}>
+                  این دسته‌بندی در کاروسل دسته‌بندی‌های صفحه اصلی فروشگاه نمایش داده می‌شود.
+                </span>
+              </Space>
+            </div>
+            <Space>
+              <Form.Item name="homepageOrder" noStyle>
+                <InputNumber
+                  min={0}
+                  precision={0}
+                  style={{ width: 90 }}
+                  addonAfter="ترتیب"
+                />
+              </Form.Item>
+              <Form.Item name="showOnHomepage" valuePropName="checked" noStyle>
+                <Switch checkedChildren="فعال" unCheckedChildren="غیرفعال" />
+              </Form.Item>
+            </Space>
+          </div>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.showOnHomepage !== cur.showOnHomepage}>
+            {({ getFieldValue }) =>
+              getFieldValue('showOnHomepage') ? (
+                <p style={{ color: '#d97706', fontSize: 12, marginBottom: 16 }}>
+                  ترتیب نمایش در کاروسل صفحه اصلی: عدد کوچک‌تر جلوتر نمایش داده می‌شود. (مدیریت کامل در بخش «دسته‌بندی‌های صفحه اصلی» پایین همین صفحه)
+                </p>
+              ) : null
+            }
           </Form.Item>
 
           <Divider orientation="right">

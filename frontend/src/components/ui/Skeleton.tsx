@@ -91,27 +91,6 @@ export const HeroSkeleton = memo(function HeroSkeleton() {
 });
 
 /**
- * Category Rail Skeleton
- */
-export const CategoryRailSkeleton = memo(function CategoryRailSkeleton() {
-    return (
-        <div className="py-4 bg-white border-b border-gray-100">
-            <div className="px-4 mb-4">
-                <Skeleton className="h-4 w-24 rounded" />
-            </div>
-            <div className="flex gap-3 px-4 overflow-hidden">
-                {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex flex-col items-center gap-2">
-                        <Skeleton className="w-16 h-16 rounded-full" />
-                        <Skeleton className="h-3 w-12 rounded" />
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-});
-
-/**
  * Banner Stack Skeleton for loading states
  */
 export const BannerStackSkeleton = memo(function BannerStackSkeleton() {

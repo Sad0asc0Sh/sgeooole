@@ -289,45 +289,6 @@ const settingsSchema = new mongoose.Schema(
       },
     },
 
-    // Popular Categories Settings
-    popularCategoriesSettings: {
-      trackingEnabled: {
-        type: Boolean,
-        default: true,
-      },
-      displayEnabled: {
-        type: Boolean,
-        default: false,
-      },
-      displayLimit: {
-        type: Number,
-        default: 8,
-        min: 3,
-        max: 20,
-      },
-      periodDays: {
-        type: Number,
-        default: 30,
-        min: 1,
-        max: 90,
-      },
-      minViews: {
-        type: Number,
-        default: 5,
-        min: 1,
-        max: 100,
-      },
-      minTotalViewsForActivation: {
-        type: Number,
-        default: 100,
-        min: 10,
-        max: 10000,
-      },
-      useFallback: {
-        type: Boolean,
-        default: true,
-      },
-    },
     // تنظیمات حمل و نقل و رهگیری
     shippingSettings: {
       couriers: [

@@ -105,8 +105,8 @@ exports.getCategoryTree = async (req, res) => {
           description: cat.description,
           icon: cat.icon,
           image: cat.image,
-          isFeatured: cat.isFeatured,
-          isPopular: cat.isPopular,
+          showOnHomepage: cat.showOnHomepage,
+          homepageOrder: cat.homepageOrder,
           parent: cat.parent,
           slug: cat.slug,
           order: cat.order,
@@ -133,8 +133,8 @@ exports.getCategoryTree = async (req, res) => {
         description: cat.description,
         icon: cat.icon,
         image: cat.image,
-        isFeatured: cat.isFeatured,
-        isPopular: cat.isPopular,
+        showOnHomepage: cat.showOnHomepage,
+        homepageOrder: cat.homepageOrder,
         parent: cat.parent,
         slug: cat.slug,
         order: cat.order,
@@ -209,7 +209,7 @@ exports.getCategoryTree = async (req, res) => {
 // GET /api/categories
 exports.getAllCategories = async (req, res) => {
   try {
-    const { limit = 1000, fields, parent, isFeatured, isPopular } = req.query
+    const { limit = 1000, fields, parent, showOnHomepage } = req.query
 
     const includeOrphans = parseBooleanQueryParam(req.query.includeOrphans)
     const onlyOrphans = parseBooleanQueryParam(req.query.onlyOrphans)
@@ -220,12 +220,8 @@ exports.getAllCategories = async (req, res) => {
       query.parent = parent === 'null' ? null : parent
     }
 
-    if (isFeatured !== undefined) {
-      query.isFeatured = isFeatured === 'true'
-    }
-
-    if (isPopular !== undefined) {
-      query.isPopular = isPopular === 'true'
+    if (showOnHomepage !== undefined) {
+      query.showOnHomepage = showOnHomepage === 'true'
     }
 
     let categoriesQuery = Category.find(query)
@@ -245,7 +241,7 @@ exports.getAllCategories = async (req, res) => {
 
     // For scoped queries (e.g. parent=...), keep the historical behavior: return what Mongo returns.
     // Connectivity filtering is applied only for the "full list" use case (dropdown filters, etc).
-    const isScopedQuery = parent !== undefined || isFeatured !== undefined || isPopular !== undefined
+    const isScopedQuery = parent !== undefined || showOnHomepage !== undefined
 
     if (!isScopedQuery && (onlyOrphans || !includeOrphans)) {
       const minimalActive = await Category.find({ isActive: true }).select('_id parent').lean()
@@ -314,7 +310,7 @@ exports.getOrphanCategories = async (req, res) => {
     const data = await Category.find({ isActive: true, _id: { $in: orphanIds } })
       .sort({ order: 1, name: 1 })
       .limit(limit)
-      .select('name parent slug order isActive isFeatured isPopular')
+      .select('name parent slug order isActive showOnHomepage homepageOrder')
       .lean()
 
     res.json({
@@ -421,11 +417,13 @@ exports.cleanupOrphanCategories = async (req, res) => {
   }
 }
 
-// GET /api/categories/featured
-exports.getFeaturedCategories = async (req, res) => {
+// GET /api/categories/homepage
+// Categories curated for the homepage carousel (managed from the admin panel)
+exports.getHomepageCategories = async (req, res) => {
   try {
-    const categories = await Category.find({ isActive: true, isFeatured: true })
-      .sort({ order: 1, name: 1 })
+    const categories = await Category.find({ isActive: true, showOnHomepage: true })
+      .sort({ homepageOrder: 1, order: 1, name: 1 })
+      .select('name slug image icon description homepageOrder order')
 
     res.json({
       success: true,
@@ -433,93 +431,10 @@ exports.getFeaturedCategories = async (req, res) => {
       count: categories.length,
     })
   } catch (error) {
-    console.error('Error fetching featured categories:', error)
+    console.error('Error fetching homepage categories:', error)
     res.status(500).json({
       success: false,
-      message: 'خطا در دریافت دسته‌بندی‌های ویژه',
-      error: error.message,
-    })
-  }
-}
-
-// GET /api/categories/popular
-exports.getPopularCategories = async (req, res) => {
-  try {
-    // Import models
-    const Settings = require('../models/Settings')
-    const CategoryView = require('../models/CategoryView')
-
-    // Get settings
-    const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
-    const config = settings?.popularCategoriesSettings || {}
-
-    const displayEnabled = config.displayEnabled === true
-    const useFallback = config.useFallback !== false
-    const displayLimit = config.displayLimit || 8
-    const periodDays = config.periodDays || 30
-    const minViews = config.minViews || 5
-    const minTotalViewsForActivation = config.minTotalViewsForActivation || 100
-
-    // Check if we have enough data for analytics
-    let hasEnoughData = false
-    let stats = null
-
-    if (displayEnabled) {
-      try {
-        stats = await CategoryView.getStats(periodDays)
-        hasEnoughData = stats.totalViews >= minTotalViewsForActivation
-      } catch (err) {
-        console.warn('Could not get category view stats:', err.message)
-      }
-    }
-
-    // Use analytics if enabled and has enough data
-    if (displayEnabled && hasEnoughData) {
-      try {
-        const popularCategories = await CategoryView.getPopularCategories({
-          limit: displayLimit,
-          periodDays,
-          minViews
-        })
-
-        return res.json({
-          success: true,
-          data: popularCategories,
-          source: 'analytics',
-          count: popularCategories.length,
-        })
-      } catch (err) {
-        console.warn('Could not get popular categories from analytics, falling back:', err.message)
-      }
-    }
-
-    // Fallback to manual isPopular categories
-    if (useFallback) {
-      const categories = await Category.find({ isActive: true, isPopular: true })
-        .sort({ order: 1, name: 1 })
-        .limit(displayLimit)
-        .select('name slug image icon description order')
-
-      return res.json({
-        success: true,
-        data: categories,
-        source: 'manual',
-        count: categories.length,
-      })
-    }
-
-    // No data available
-    return res.json({
-      success: true,
-      data: [],
-      source: 'none',
-      count: 0,
-    })
-  } catch (error) {
-    console.error('Error fetching popular categories:', error)
-    res.status(500).json({
-      success: false,
-      message: 'خطا در دریافت دسته‌بندی‌های محبوب',
+      message: 'خطا در دریافت دسته‌بندی‌های صفحه اصلی',
       error: error.message,
     })
   }
@@ -604,7 +519,7 @@ exports.getCategoryBySlug = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name, parent, description, isFeatured, isPopular, properties } = req.body
+    const { name, parent, description, showOnHomepage, homepageOrder, properties } = req.body
 
     // DEBUG: Log received files
     console.log('[CREATE_CATEGORY] Received files:', {
@@ -624,8 +539,11 @@ exports.createCategory = async (req, res) => {
       name,
       parent: parent && parent !== 'null' ? parent : null,
       description,
-      isFeatured: isFeatured === 'true' || isFeatured === true,
-      isPopular: isPopular === 'true' || isPopular === true,
+      showOnHomepage: showOnHomepage === 'true' || showOnHomepage === true,
+    }
+
+    if (homepageOrder !== undefined && homepageOrder !== null && homepageOrder !== '') {
+      categoryData.homepageOrder = Number(homepageOrder)
     }
 
     // Handle properties (category-specific attributes/specifications)
@@ -693,8 +611,8 @@ exports.updateCategory = async (req, res) => {
       name,
       parent,
       description,
-      isFeatured,
-      isPopular,
+      showOnHomepage,
+      homepageOrder,
       order,
       isActive,
       removeIcon,
@@ -760,11 +678,11 @@ exports.updateCategory = async (req, res) => {
       category.parent = parent && parent !== 'null' ? parent : null
     }
     if (description !== undefined) category.description = description
-    if (isFeatured !== undefined) {
-      category.isFeatured = isFeatured === 'true' || isFeatured === true
+    if (showOnHomepage !== undefined) {
+      category.showOnHomepage = showOnHomepage === 'true' || showOnHomepage === true
     }
-    if (isPopular !== undefined) {
-      category.isPopular = isPopular === 'true' || isPopular === true
+    if (homepageOrder !== undefined && homepageOrder !== null && homepageOrder !== '') {
+      category.homepageOrder = Number(homepageOrder)
     }
     if (order !== undefined) {
       category.order = Number(order)

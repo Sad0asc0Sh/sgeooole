@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { useHistoryStore } from "@/store/historyStore";
 import { Product } from "@/services/productService";
-import { trackCategoryView } from "@/lib/categoryTracking";
 
 type ProductHistoryTrackerProps = {
     product: Product;
@@ -22,13 +21,6 @@ export default function ProductHistoryTracker({ product }: ProductHistoryTracker
             discount: product.discount,
             finalPrice: product.price,
         });
-
-        // Track category view for analytics
-        // Use the last category in the path (most specific)
-        const categoryId = product.categoryPath?.[product.categoryPath.length - 1]?.id;
-        if (categoryId) {
-            trackCategoryView(categoryId, "related", "view");
-        }
     }, [addToHistory, product]);
 
     return null; // This component doesn't render anything

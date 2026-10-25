@@ -12,8 +12,8 @@ export interface Category {
   description?: string;
   icon?: CategoryImage | null;
   image?: CategoryImage | null;
-  isFeatured: boolean;
-  isPopular: boolean;
+  showOnHomepage: boolean;
+  homepageOrder: number;
   slug: string;
   order: number;
   isActive: boolean;
@@ -40,8 +40,12 @@ export interface SingleCategoryResponse {
 }
 
 export const categoryService = {
-  getHomepage: async (kind: "featured" | "popular"): Promise<Category[]> => {
-    const { data } = await api.get<CategoryResponse>(`/categories/${kind}`);
+  /**
+   * Categories curated for the homepage carousel
+   * (managed from the admin panel via showOnHomepage + homepageOrder)
+   */
+  getHomepage: async (): Promise<Category[]> => {
+    const { data } = await api.get<CategoryResponse>("/categories/homepage");
     if (data.success !== true || !Array.isArray(data.data)) {
       throw new Error("Invalid homepage category response");
     }
@@ -57,30 +61,13 @@ export const categoryService = {
   },
 
   /**
-   * Get popular categories (flat list)
-   */
-  getPopular: async (): Promise<Category[]> => {
-    const { data } = await api.get<CategoryResponse>(`/categories?isPopular=true&_t=${Date.now()}`);
-    return data.data;
-  },
-
-  /**
-   * Get featured categories (flat list)
-   */
-  getFeatured: async (): Promise<Category[]> => {
-    const { data } = await api.get<CategoryResponse>(`/categories?isFeatured=true&_t=${Date.now()}`);
-    return data.data;
-  },
-
-  /**
    * Get all categories (flat list)
    */
   getAll: async (params?: {
     limit?: number;
     fields?: string;
     parent?: string | null;
-    isFeatured?: boolean;
-    isPopular?: boolean;
+    showOnHomepage?: boolean;
   }): Promise<Category[]> => {
     const queryParams = new URLSearchParams();
 
@@ -88,8 +75,7 @@ export const categoryService = {
       if (params.limit) queryParams.set("limit", params.limit.toString());
       if (params.fields) queryParams.set("fields", params.fields);
       if (params.parent !== undefined) queryParams.set("parent", params.parent === null ? "null" : params.parent);
-      if (params.isFeatured !== undefined) queryParams.set("isFeatured", params.isFeatured.toString());
-      if (params.isPopular !== undefined) queryParams.set("isPopular", params.isPopular.toString());
+      if (params.showOnHomepage !== undefined) queryParams.set("showOnHomepage", params.showOnHomepage.toString());
     }
 
     const { data } = await api.get<CategoryResponse>(`/categories?${queryParams.toString()}`);

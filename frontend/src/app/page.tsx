@@ -44,19 +44,19 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
   }
 };
 
-async function fetchHomeCategories(kind: "featured" | "popular"): Promise<Category[] | null> {
+async function fetchHomeCategories(): Promise<Category[] | null> {
   try {
     const json = await fetchJsonWithTimeout<ApiResponse<Category[]> & { success?: boolean }>(
-      `${API_BASE}/categories/${kind}`,
+      `${API_BASE}/categories/homepage`,
       { next: { revalidate } },
       IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
     );
     if (json?.success !== true || !Array.isArray(json.data)) {
-      throw new Error(`Invalid ${kind} categories response`);
+      throw new Error("Invalid homepage categories response");
     }
     return json.data;
   } catch (error) {
-    logBuildFetchWarning(`[home] Failed to fetch ${kind} categories`, error);
+    logBuildFetchWarning("[home] Failed to fetch homepage categories", error);
     return null;
   }
 }
@@ -137,9 +137,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [featuredCats, popularCats, banners] = await Promise.all([
-    fetchHomeCategories("featured"),
-    fetchHomeCategories("popular"),
+  const [homepageCats, banners] = await Promise.all([
+    fetchHomeCategories(),
     fetchBanners(),
   ]);
 
@@ -220,7 +219,7 @@ export default async function Home() {
       </HomeSection>
 
       <HomeSection variant="discovery">
-        <HomeCategoryShowcase featured={featuredCats} popular={popularCats} />
+        <HomeCategoryShowcase categories={homepageCats} />
       </HomeSection>
 
       <HomeSection variant="promotion">

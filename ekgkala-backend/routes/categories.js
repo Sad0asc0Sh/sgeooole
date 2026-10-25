@@ -18,11 +18,8 @@ const categoryUpload = upload.fields([
 // Tree endpoint - short cache for admin panel
 router.get('/tree', cacheMiddleware(CACHE_TTL.SHORT), categoryController.getCategoryTree)
 
-// Featured endpoint - long cache (rarely changes)
-router.get('/featured', cacheMiddleware(CACHE_TTL.LONG), categoryController.getFeaturedCategories)
-
-// Popular endpoint - long cache
-router.get('/popular', cacheMiddleware(CACHE_TTL.LONG), categoryController.getPopularCategories)
+// Homepage carousel endpoint - long cache (managed from admin panel)
+router.get('/homepage', cacheMiddleware(CACHE_TTL.LONG), categoryController.getHomepageCategories)
 
 // ============================================
 // Orphan maintenance endpoints (admin-only)

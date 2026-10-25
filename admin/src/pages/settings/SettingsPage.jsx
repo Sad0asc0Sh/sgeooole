@@ -84,15 +84,6 @@ function SettingsPage() {
           trendingPeriodDays: data.searchSettings?.trendingPeriodDays || 30,
           trackingEnabled: data.searchSettings?.trackingEnabled !== false,
         },
-        popularCategoriesSettings: {
-          trackingEnabled: data.popularCategoriesSettings?.trackingEnabled !== false,
-          displayEnabled: data.popularCategoriesSettings?.displayEnabled || false,
-          displayLimit: data.popularCategoriesSettings?.displayLimit || 8,
-          periodDays: data.popularCategoriesSettings?.periodDays || 30,
-          minViews: data.popularCategoriesSettings?.minViews || 5,
-          minTotalViewsForActivation: data.popularCategoriesSettings?.minTotalViewsForActivation || 100,
-          useFallback: data.popularCategoriesSettings?.useFallback !== false,
-        },
         paymentConfig: {
           activeGateway: data.paymentConfig?.activeGateway || 'zarinpal',
           zarinpal: {
@@ -323,10 +314,6 @@ function SettingsPage() {
 
       if (values.searchSettings) {
         payload.searchSettings = { ...values.searchSettings }
-      }
-
-      if (values.popularCategoriesSettings) {
-        payload.popularCategoriesSettings = { ...values.popularCategoriesSettings }
       }
 
       if (values.socialLinks) {
@@ -1297,168 +1284,6 @@ function SettingsPage() {
             showIcon
           />
 
-          <Divider orientation="left">🏷️ تنظیمات دسته‌بندی‌های محبوب</Divider>
-
-          <Alert
-            message="📊 مدیریت دسته‌بندی‌های محبوب"
-            description={
-              <div>
-                این بخش امکان جمع‌آوری داده از بازدید دسته‌بندی‌ها توسط کاربران را فراهم می‌کند.
-                <br />
-                پس از جمع‌آوری داده کافی، می‌توانید نمایش دسته‌بندی‌های محبوب را بر اساس آمار واقعی فعال کنید.
-              </div>
-            }
-            type="info"
-            showIcon
-            style={{ marginBottom: 24 }}
-          />
-
-          <Form.Item
-            name={['popularCategoriesSettings', 'trackingEnabled']}
-            label="🎯 ردیابی بازدید دسته‌بندی‌ها"
-            valuePropName="checked"
-            extra="اگر فعال باشد، بازدید کاربران از دسته‌بندی‌ها برای تحلیل محبوبیت ثبت می‌شود"
-          >
-            <Switch />
-          </Form.Item>
-
-          <Form.Item
-            name={['popularCategoriesSettings', 'useFallback']}
-            label="🔄 استفاده از Fallback (دسته‌بندی‌های دستی)"
-            valuePropName="checked"
-            extra="اگر فعال باشد، تا زمانی که داده کافی جمع نشده، از دسته‌بندی‌های «محبوب» که به صورت دستی مشخص شده‌اند استفاده می‌شود"
-          >
-            <Switch />
-          </Form.Item>
-
-          <Divider />
-
-          <Form.Item
-            name={['popularCategoriesSettings', 'displayEnabled']}
-            label="⭐ نمایش دسته‌بندی‌های محبوب (بر اساس آمار واقعی)"
-            valuePropName="checked"
-            extra="فقط زمانی فعال کنید که داده کافی از بازدید کاربران جمع‌آوری شده باشد"
-          >
-            <Switch />
-          </Form.Item>
-
-          <Form.Item
-            noStyle
-            shouldUpdate={(prev, curr) =>
-              prev.popularCategoriesSettings?.displayEnabled !== curr.popularCategoriesSettings?.displayEnabled ||
-              prev.popularCategoriesSettings?.trackingEnabled !== curr.popularCategoriesSettings?.trackingEnabled
-            }
-          >
-            {({ getFieldValue }) => {
-              const displayEnabled = getFieldValue(['popularCategoriesSettings', 'displayEnabled'])
-              const trackingEnabled = getFieldValue(['popularCategoriesSettings', 'trackingEnabled'])
-
-              if (!trackingEnabled) {
-                return (
-                  <Alert
-                    message="⚠️ ردیابی غیرفعال است"
-                    description="برای استفاده از دسته‌بندی‌های محبوب واقعی، ابتدا باید ردیابی بازدید را فعال کنید."
-                    type="error"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                  />
-                )
-              }
-
-              if (!displayEnabled) {
-                return (
-                  <Alert
-                    message="✅ در حال جمع‌آوری داده"
-                    description={
-                      <div>
-                        <div>سیستم در حال جمع‌آوری داده‌های بازدید دسته‌بندی‌ها است.</div>
-                        <div style={{ marginTop: 8 }}>
-                          <strong>توصیه:</strong> قبل از فعال‌سازی نمایش واقعی:
-                        </div>
-                        <ul style={{ margin: '8px 0', paddingRight: 20 }}>
-                          <li>حداقل 100+ بازدید دسته‌بندی ثبت شده باشد</li>
-                          <li>حداقل 50+ کاربر فعال داشته باشید</li>
-                          <li>2-4 هفته داده جمع‌آوری کرده باشید</li>
-                        </ul>
-                        <div style={{ marginTop: 8, color: '#0f6b33' }}>
-                          💡 تا آن زمان، از دسته‌بندی‌های «محبوب» که به صورت دستی تعیین کرده‌اید استفاده می‌شود.
-                        </div>
-                      </div>
-                    }
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                  />
-                )
-              }
-
-              return (
-                <>
-                  <Alert
-                    message="🎉 نمایش آمار واقعی فعال است"
-                    description="کاربران اکنون دسته‌بندی‌های محبوب را بر اساس آمار واقعی بازدیدها مشاهده می‌کنند."
-                    type="success"
-                    showIcon
-                    style={{ marginBottom: 24 }}
-                  />
-
-                  <Form.Item
-                    name={['popularCategoriesSettings', 'displayLimit']}
-                    label="تعداد دسته‌بندی‌های محبوب نمایشی"
-                    extra="حداکثر تعداد دسته‌بندی‌های محبوبی که به کاربران نمایش داده می‌شود"
-                    rules={[
-                      { required: true, message: 'این فیلد الزامی است' },
-                      { type: 'number', min: 3, max: 20, message: 'باید بین 3 تا 20 باشد' }
-                    ]}
-                  >
-                    <Slider min={3} max={20} marks={{ 3: '3', 8: '8 (پیشنهادی)', 15: '15', 20: '20' }} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name={['popularCategoriesSettings', 'periodDays']}
-                    label="بازه زمانی محاسبه محبوبیت (روز)"
-                    extra="بازدیدهای این تعداد روز اخیر برای محاسبه محبوب‌ترین‌ها در نظر گرفته می‌شوند"
-                    rules={[
-                      { required: true, message: 'این فیلد الزامی است' },
-                      { type: 'number', min: 1, max: 90, message: 'باید بین 1 تا 90 روز باشد' }
-                    ]}
-                  >
-                    <Slider
-                      min={1}
-                      max={90}
-                      marks={{
-                        7: '7 روز',
-                        14: '14 روز',
-                        30: '30 روز (پیشنهادی)',
-                        60: '60 روز',
-                        90: '90 روز'
-                      }}
-                    />
-                  </Form.Item>
-
-                  <Form.Item
-                    name={['popularCategoriesSettings', 'minViews']}
-                    label="حداقل تعداد بازدید برای محتسب شدن"
-                    extra="دسته‌بندی باید حداقل این تعداد بازدید داشته باشد تا محبوب محسوب شود"
-                    rules={[
-                      { required: true, message: 'این فیلد الزامی است' },
-                      { type: 'number', min: 1, max: 100, message: 'باید بین 1 تا 100 باشد' }
-                    ]}
-                  >
-                    <Slider min={1} max={100} marks={{ 1: '1', 5: '5 (پیشنهادی)', 20: '20', 50: '50', 100: '100' }} />
-                  </Form.Item>
-
-                  <Form.Item
-                    name={['popularCategoriesSettings', 'minTotalViewsForActivation']}
-                    label="حداقل کل بازدیدها برای فعال‌سازی"
-                    extra="حداقل تعداد کل بازدیدهای ثبت شده برای نمایش آمار واقعی"
-                  >
-                    <InputNumber min={10} max={10000} style={{ width: '100%' }} />
-                  </Form.Item>
-                </>
-              )
-            }}
-          </Form.Item>
         </>
       )
     },

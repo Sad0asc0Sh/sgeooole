@@ -1,33 +1,22 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { ArrowLeft, ChevronLeft, LayoutGrid, Shapes } from "lucide-react";
-import ResilientImage from "@/components/ui/ResilientImage";
+import { ChevronLeft, ChevronRight, LayoutGrid, Shapes } from "lucide-react";
+import { useResilientImage } from "@/components/ui/ResilientImage";
 import { categoryService, type Category } from "@/services/categoryService";
-import { trackCategoryClick, trackCategoryView } from "@/lib/categoryTracking";
 import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import styles from "./HomeCategoryShowcase.module.css";
 
 type HomeCategoryShowcaseProps = {
-  /** Server-rendered featured categories; used as SWR fallback data. */
-  featured: Category[] | null;
-  /** Server-rendered popular categories; merged after featured, de-duplicated. */
-  popular: Category[] | null;
+  /** Server-rendered homepage categories; used as SWR fallback data. */
+  categories: Category[] | null;
 };
 
 type CategoryVisual = Category["image"] | Category["icon"] | string | null | undefined;
 
-const MAX_CATEGORIES = 10;
-const FA_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
-
-/** Persian two-digit plaque index, deterministic on server and client. */
-function formatIndex(index: number): string {
-  return String(index + 1)
-    .padStart(2, "0")
-    .replace(/\d/g, (digit) => FA_DIGITS[Number(digit)]);
-}
+const SCROLL_STEP_FACTOR = 0.8;
 
 function imageUrl(value: CategoryVisual): string | undefined {
   if (!value) return undefined;
@@ -39,76 +28,38 @@ function categoryHref(category: Category): string {
   return `/products?category=${encodeURIComponent(category.slug || category._id)}&includeChildren=true`;
 }
 
-function CategoryCard({ category, index }: { category: Category; index: number }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const visual = imageUrl(category.image) || imageUrl(category.icon);
-  const showImage = Boolean(visual) && !imageFailed;
-
+function CategoryCircleImage({ url, name }: { url: string; name: string }) {
+  const { src, onError, onLoad, ref, phase } = useResilientImage(url, "/placeholder.png");
   return (
-    <Link
-      href={categoryHref(category)}
-      className={styles.card}
-      onClick={() => {
-        void trackCategoryClick(category._id, "homepage");
-      }}
-      data-category-id={category._id}
-    >
-      <span className={styles.cardTop} aria-hidden="true">
-        <span className={styles.index}>{formatIndex(index)}</span>
-        <span className={styles.go}>
-          <ArrowLeft size={12} strokeWidth={2.2} />
-        </span>
-      </span>
-
-      <span className={styles.thumb} aria-hidden="true">
-        {showImage ? (
-          <ResilientImage
-            src={visual as string}
-            alt=""
-            fill
-            sizes="60px"
-            quality={75}
-            showSkeleton={false}
-            wrapperClassName={styles.thumbArt}
-            className={styles.thumbImg}
-            fallbackSrc="/placeholder.png"
-            onRetryExhausted={() => setImageFailed(true)}
-          />
-        ) : (
-          <Shapes className={styles.thumbFallback} size={22} strokeWidth={1.7} />
-        )}
-      </span>
-
-      <span className={styles.copy}>
-        <span className={styles.name}>{category.name}</span>
-        <span className={styles.cta} aria-hidden="true">
-          مشاهده محصولات
-          <ChevronLeft size={10} strokeWidth={2.5} />
-        </span>
-      </span>
-    </Link>
+    <img
+      ref={ref}
+      src={src}
+      alt={name}
+      onError={onError}
+      onLoad={onLoad}
+      style={{ opacity: phase === "loaded" || phase === "error" ? 1 : 0 }}
+    />
   );
 }
 
 /**
- * Homepage category showcase.
+ * Homepage category carousel.
  *
- * Replaces the old middle-banner row under the hero: both category feeds
- * (featured + popular) are merged, de-duplicated and shown as one premium
- * "atlas" rail. The middle banners now live below the timed-offers section.
+ * Design reverse-engineered from technolife.com's category strip: a white
+ * panel with circular, ring-outlined category badges, labels underneath and
+ * circular arrow buttons on both edges. Colors and radii follow the site's
+ * own saffron/stone palette so the section reads native, not borrowed.
  */
-export default function HomeCategoryShowcase({
-  featured,
-  popular,
-}: HomeCategoryShowcaseProps) {
+export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcaseProps) {
   const headingId = useId();
-  const viewedIds = useRef(new Set<string>());
+  const railRef = useRef<HTMLUListElement>(null);
+  const [edge, setEdge] = useState<{ start: boolean; end: boolean }>({ start: true, end: false });
 
-  const featuredState = useSWR<Category[]>(
-    "homepage-categories-featured",
-    () => categoryService.getHomepage("featured"),
+  const { data, error, isLoading, isValidating, mutate } = useSWR<Category[]>(
+    "homepage-categories",
+    () => categoryService.getHomepage(),
     {
-      fallbackData: featured ?? undefined,
+      fallbackData: categories ?? undefined,
       revalidateOnMount: true,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
@@ -119,64 +70,38 @@ export default function HomeCategoryShowcase({
     }
   );
 
-  const popularState = useSWR<Category[]>(
-    "homepage-categories-popular",
-    () => categoryService.getHomepage("popular"),
-    {
-      fallbackData: popular ?? undefined,
-      revalidateOnMount: true,
-      revalidateOnFocus: true,
-      revalidateOnReconnect: true,
-      dedupingInterval: 30000,
-      errorRetryCount: 2,
-      errorRetryInterval: 5000,
-      keepPreviousData: true,
-    }
-  );
+  const items = data ?? [];
 
-  const categories = useMemo(() => {
-    const seen = new Set<string>();
-    const merged: Category[] = [];
+  // Only surface loading/error UI when there is nothing to show —
+  // a failed background refresh must not blank out server-rendered items.
+  const showSkeleton = isLoading && items.length === 0;
+  const showError = Boolean(error) && items.length === 0;
 
-    const push = (list: Category[] | undefined) => {
-      list?.forEach((category) => {
-        if (!category) return;
-        // Dedupe on both id and slug: the analytics "popular" feed may return
-        // an aggregate row whose id differs from the category document.
-        const keys = [category._id, category.slug].filter(
-          (key): key is string => Boolean(key)
-        );
-        if (keys.length === 0 || keys.some((key) => seen.has(key))) return;
-        keys.forEach((key) => seen.add(key));
-        merged.push(category);
-      });
-    };
-
-    // Featured first — it is the curated, editorial order.
-    push(featuredState.data);
-    push(popularState.data);
-
-    return merged.slice(0, MAX_CATEGORIES);
-  }, [featuredState.data, popularState.data]);
-
-  const isLoading =
-    categories.length === 0 &&
-    (featuredState.isLoading || popularState.isLoading);
-  const hasError =
-    categories.length === 0 &&
-    Boolean(featuredState.error || popularState.error);
-  const isRetrying = featuredState.isValidating || popularState.isValidating;
+  const updateEdges = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const maxScroll = rail.scrollWidth - rail.clientWidth;
+    // RTL rails: scrollLeft is 0 at the right edge and negative towards the left.
+    const offset = Math.abs(rail.scrollLeft);
+    setEdge({ start: offset <= 1, end: offset >= maxScroll - 1 });
+  }, []);
 
   useEffect(() => {
-    categories.slice(0, 3).forEach((category) => {
-      if (viewedIds.current.has(category._id)) return;
-      viewedIds.current.add(category._id);
-      void trackCategoryView(category._id, "homepage", "view");
-    });
-  }, [categories]);
+    updateEdges();
+    window.addEventListener("resize", updateEdges);
+    return () => window.removeEventListener("resize", updateEdges);
+  }, [updateEdges, items.length]);
+
+  const scrollRail = (direction: "next" | "prev") => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const amount = rail.clientWidth * SCROLL_STEP_FACTOR;
+    // In RTL, moving to the next items means scrolling towards negative left.
+    rail.scrollBy({ left: direction === "next" ? -amount : amount, behavior: "smooth" });
+  };
 
   // A successful, genuinely empty feed should remove the section entirely.
-  if (!isLoading && !hasError && categories.length === 0) {
+  if (!showSkeleton && !showError && items.length === 0) {
     return null;
   }
 
@@ -184,63 +109,92 @@ export default function HomeCategoryShowcase({
     <section
       className={styles.section}
       aria-labelledby={headingId}
-      aria-busy={isLoading || undefined}
-      data-home-categories="showcase"
+      aria-busy={showSkeleton || undefined}
+      data-home-categories="carousel"
     >
-      <div className={styles.shell}>
-        <span className={styles.rings} aria-hidden="true" />
+      <div className={styles.panel}>
+        <header className={styles.header}>
+          <h2 className={styles.title} id={headingId}>
+            دسته‌بندی‌ها
+          </h2>
+          <Link href={CATEGORY_FILTER_HREF} className={styles.allLink}>
+            <LayoutGrid size={14} aria-hidden="true" />
+            <span>همه دسته‌بندی‌ها</span>
+            <ChevronLeft size={14} aria-hidden="true" />
+          </Link>
+        </header>
 
-        <div className={styles.inner}>
-          <header className={styles.header}>
-            <div className={styles.heading}>
-              <p className={styles.kicker}>مسیر خرید</p>
-              <h2 className={styles.title} id={headingId}>
-                دسته‌بندی‌ها
-              </h2>
-              <p className={styles.subtitle}>
-                از میان دسته‌های اصلی، سریع‌تر به انتخاب درست برسید.
-              </p>
-            </div>
+        <div className={styles.stage}>
+          <span className={`${styles.fade} ${styles.fadeStart}`} aria-hidden="true" />
 
-            <Link href={CATEGORY_FILTER_HREF} className={styles.allLink}>
-              <LayoutGrid className={styles.allIcon} size={13} aria-hidden="true" />
-              <span>همه دسته‌بندی‌ها</span>
-              <ChevronLeft className={styles.allArrow} size={13} aria-hidden="true" />
-            </Link>
-          </header>
-
-          {isLoading ? (
-            <div
-              className={styles.skeletonRail}
-              role="status"
-              aria-label="در حال بارگذاری دسته‌بندی‌ها"
-            >
-              {Array.from({ length: 5 }, (_, index) => (
-                <span key={index} className={styles.skeletonItem} aria-hidden="true" />
+          {showSkeleton ? (
+            <div className={styles.skeletonRail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
+              {Array.from({ length: 7 }, (_, index) => (
+                <span key={index} className={styles.skeletonItem} aria-hidden="true">
+                  <span className={styles.skeletonCircle} />
+                  <span className={styles.skeletonLabel} />
+                </span>
               ))}
             </div>
-          ) : hasError ? (
+          ) : showError ? (
             <div className={styles.feedback} role="status">
               <p>بارگذاری دسته‌بندی‌ها انجام نشد.</p>
               <button
                 type="button"
                 className={styles.retry}
-                disabled={isRetrying}
+                disabled={isValidating}
                 onClick={() => {
-                  void Promise.all([featuredState.mutate(), popularState.mutate()]);
+                  void mutate();
                 }}
               >
-                {isRetrying ? "در حال تلاش…" : "تلاش مجدد"}
+                {isValidating ? "در حال تلاش…" : "تلاش مجدد"}
               </button>
             </div>
           ) : (
-            <ul className={styles.rail} aria-label="دسته‌بندی‌های فروشگاه">
-              {categories.map((category, index) => (
-                <li key={category._id || category.slug} className={styles.item}>
-                  <CategoryCard category={category} index={index} />
-                </li>
-              ))}
+            <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
+              {items.map((category) => {
+                const url = imageUrl(category.image) || imageUrl(category.icon);
+                return (
+                  <li key={category._id || category.slug} className={styles.item}>
+                    <Link href={categoryHref(category)} className={styles.category} data-category-id={category._id}>
+                      <span className={styles.ring}>
+                        {url ? (
+                          <CategoryCircleImage url={url} name={category.name} />
+                        ) : (
+                          <Shapes size={30} strokeWidth={1.6} aria-hidden="true" />
+                        )}
+                      </span>
+                      <span className={styles.name}>{category.name}</span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
+          )}
+
+          <span className={`${styles.fade} ${styles.fadeEnd}`} aria-hidden="true" />
+
+          {!showSkeleton && !showError && items.length > 3 && (
+            <>
+              <button
+                type="button"
+                className={`${styles.arrow} ${styles.arrowStart}`}
+                onClick={() => scrollRail("prev")}
+                disabled={edge.start}
+                aria-label="دسته‌بندی‌های قبلی"
+              >
+                <ChevronRight size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className={`${styles.arrow} ${styles.arrowEnd}`}
+                onClick={() => scrollRail("next")}
+                disabled={edge.end}
+                aria-label="دسته‌بندی‌های بعدی"
+              >
+                <ChevronLeft size={18} aria-hidden="true" />
+              </button>
+            </>
           )}
         </div>
       </div>

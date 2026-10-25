@@ -32,14 +32,15 @@ const CategorySchema = new mongoose.Schema(
       default: null,
     },
 
-    isFeatured: {
+    // Homepage carousel placement (replaces the old isFeatured/isPopular flags)
+    showOnHomepage: {
       type: Boolean,
       default: false,
     },
 
-    isPopular: {
-      type: Boolean,
-      default: false,
+    homepageOrder: {
+      type: Number,
+      default: 0,
     },
 
     slug: {
@@ -96,9 +97,8 @@ CategorySchema.index({ parent: 1 })
 CategorySchema.index({ isActive: 1 })
 // Ensure category name is unique per parent (allows same name under different parents)
 CategorySchema.index({ parent: 1, name: 1 }, { unique: true })
-// Indexes for featured and popular category queries (used on homepage)
-CategorySchema.index({ isFeatured: 1, isActive: 1 })
-CategorySchema.index({ isPopular: 1, isActive: 1 })
+// Index for the homepage categories query
+CategorySchema.index({ showOnHomepage: 1, isActive: 1 })
 CategorySchema.index({ slug: 1 })
 CategorySchema.index({ order: 1 })
 

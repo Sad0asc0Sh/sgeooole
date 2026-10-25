@@ -7,19 +7,15 @@ import { categoryService, type Category } from "@/services/categoryService";
 jest.mock("@/services/categoryService", () => ({
   categoryService: { getHomepage: jest.fn() },
 }));
-jest.mock("@/lib/categoryTracking", () => ({
-  trackCategoryView: jest.fn(),
-  trackCategoryClick: jest.fn(),
+jest.mock("@/components/ui/ResilientImage", () => ({
+  useResilientImage: (url: string) => ({
+    src: url,
+    onError: jest.fn(),
+    onLoad: jest.fn(),
+    ref: jest.fn(),
+    phase: "loaded",
+  }),
 }));
-jest.mock("@/components/ui/ResilientImage", () => {
-  const RequireReact = require("react");
-  return {
-    __esModule: true,
-    default: function MockResilientImage({ alt }: { alt?: string }) {
-      return RequireReact.createElement("img", { alt: alt ?? "" });
-    },
-  };
-});
 
 const category = (
   id: string,
@@ -30,26 +26,20 @@ const category = (
   _id: id,
   name,
   slug,
-  isFeatured: true,
-  isPopular: false,
+  showOnHomepage: true,
+  homepageOrder: 0,
   isActive: true,
   order: 0,
   ...overrides,
 });
 
 const camera = category("1", "دوربین مداربسته", "cameras");
-const dvr = category("2", "دستگاه ضبط تصویر", "dvr", {
-  isFeatured: false,
-  isPopular: true,
-});
-const lock = category("3", "قفل و ریموت", "locks", {
-  isFeatured: false,
-  isPopular: true,
-});
+const dvr = category("2", "دستگاه ضبط تصویر", "dvr", { homepageOrder: 1 });
+const lock = category("3", "قفل و ریموت", "locks", { homepageOrder: 2 });
 
 const fetchCategories = jest.mocked(categoryService.getHomepage);
 
-function mount(featured: Category[] | null, popular: Category[] | null) {
+function mount(categories: Category[] | null) {
   return render(
     <SWRConfig
       value={{
@@ -58,7 +48,7 @@ function mount(featured: Category[] | null, popular: Category[] | null) {
         errorRetryCount: 0,
       }}
     >
-      <HomeCategoryShowcase featured={featured} popular={popular} />
+      <HomeCategoryShowcase categories={categories} />
     </SWRConfig>
   );
 }
@@ -67,18 +57,15 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-test("shows the server categories and merges popular ones without duplicates", async () => {
-  fetchCategories.mockImplementation((kind) =>
-    Promise.resolve(kind === "featured" ? [camera] : [camera, dvr, lock])
-  );
+test("renders the curated homepage categories as a carousel", async () => {
+  fetchCategories.mockResolvedValue([camera, dvr, lock]);
 
-  mount([camera], [camera, dvr, lock]);
+  mount([camera]);
 
   expect(screen.getByRole("heading", { name: "دسته‌بندی‌ها" })).toBeInTheDocument();
-  expect(screen.getByText(camera.name)).toBeInTheDocument();
+  expect(await screen.findByText(camera.name)).toBeInTheDocument();
   expect(screen.getByText(dvr.name)).toBeInTheDocument();
   expect(screen.getByText(lock.name)).toBeInTheDocument();
-  expect(screen.getAllByText(camera.name)).toHaveLength(1);
   expect(screen.getByRole("link", { name: lock.name })).toHaveAttribute(
     "href",
     "/products?category=locks&includeChildren=true"
@@ -88,15 +75,13 @@ test("shows the server categories and merges popular ones without duplicates", a
     "/products#category-filters"
   );
 
-  await waitFor(() => expect(fetchCategories).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(fetchCategories).toHaveBeenCalledWith());
 });
 
 test("recovers categories in the browser after a failed server fetch", async () => {
-  fetchCategories.mockImplementation((kind) =>
-    Promise.resolve(kind === "featured" ? [camera] : [dvr])
-  );
+  fetchCategories.mockResolvedValue([camera, dvr]);
 
-  mount(null, null);
+  mount(null);
 
   expect(
     screen.getByRole("status", { name: "در حال بارگذاری دسته‌بندی‌ها" })
@@ -104,16 +89,14 @@ test("recovers categories in the browser after a failed server fetch", async () 
 
   expect(await screen.findByText(camera.name)).toBeInTheDocument();
   expect(screen.getByText(dvr.name)).toBeInTheDocument();
-  expect(fetchCategories).toHaveBeenCalledWith("featured");
-  expect(fetchCategories).toHaveBeenCalledWith("popular");
 });
 
 test("keeps valid server categories when the background refresh fails", async () => {
   fetchCategories.mockRejectedValue(new Error("offline"));
 
-  mount([camera], [lock]);
+  mount([camera, lock]);
 
-  await waitFor(() => expect(fetchCategories).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(fetchCategories).toHaveBeenCalled());
 
   expect(screen.getByText(camera.name)).toBeInTheDocument();
   expect(screen.getByText(lock.name)).toBeInTheDocument();
@@ -125,12 +108,9 @@ test("keeps valid server categories when the background refresh fails", async ()
 test("shows an actionable error rather than disappearing, and supports retry", async () => {
   fetchCategories
     .mockRejectedValueOnce(new Error("offline"))
-    .mockRejectedValueOnce(new Error("offline"))
-    .mockImplementation((kind) =>
-      Promise.resolve(kind === "featured" ? [camera] : [lock])
-    );
+    .mockResolvedValue([camera, lock]);
 
-  mount(null, null);
+  mount(null);
 
   fireEvent.click(await screen.findByRole("button", { name: "تلاش مجدد" }));
 
@@ -141,7 +121,7 @@ test("shows an actionable error rather than disappearing, and supports retry", a
 test("hides only a successfully empty category feed", async () => {
   fetchCategories.mockResolvedValue([]);
 
-  const { container } = mount(null, null);
+  const { container } = mount(null);
 
   await waitFor(() => expect(container).toBeEmptyDOMElement());
 });
@@ -149,7 +129,7 @@ test("hides only a successfully empty category feed", async () => {
 test("shows a loading state while recovery is pending", () => {
   fetchCategories.mockReturnValue(new Promise(() => {}));
 
-  mount(null, null);
+  mount(null);
 
   expect(
     screen.getByRole("status", { name: "در حال بارگذاری دسته‌بندی‌ها" })
