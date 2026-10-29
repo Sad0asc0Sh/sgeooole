@@ -85,9 +85,9 @@ export default function BrandsStrip() {
       <div className="mx-auto w-full max-w-screen-2xl md:px-4 lg:px-6">
         {/* Header: mobile keeps the compact title, desktop adds a subtitle */}
         <div className="md:mb-8">
-          <SectionTitle className="md:px-0 md:mb-2">برندهای همکار</SectionTitle>
+          <SectionTitle className="md:px-0 md:mb-2">برندهای منتخب</SectionTitle>
           <p className="hidden md:block text-sm lg:text-base text-ekg-500">
-            محصولات اصل و با گارانتی معتبر از برترین برندهای تجهیزات امنیتی
+            عرضه مستقیم محصولات اصیل با گارانتی معتبر از برترین برندهای دنیای تکنولوژی و دیجیتال
           </p>
         </div>
 

@@ -1,12 +1,12 @@
 "use client";
 import { SERVICES } from "@/lib/mock/homeData";
-import { Truck, PenTool, MapPin } from "lucide-react";
+import { Truck, ShieldCheck, MapPin } from "lucide-react";
 
 export default function ServicesGrid() {
     const getIcon = (id: number) => {
         const iconClassName = "w-6 h-6 lg:w-7 lg:h-7 text-kala-500";
         switch (id) {
-            case 1: return <PenTool className={iconClassName} />;
+            case 1: return <ShieldCheck className={iconClassName} />;
             case 2: return <Truck className={iconClassName} />;
             case 3: return <MapPin className={iconClassName} />;
             default: return null;
@@ -19,11 +19,11 @@ export default function ServicesGrid() {
                 {/* Header: compact on mobile, title + subtitle on desktop */}
                 <header className="mb-4 md:mb-8">
                     <h3 className="relative inline-block text-ekg-900 font-bold text-lg md:text-xl lg:text-2xl z-10 px-1">
-                        خدمات اختصاصی ای‌کا‌جی کالا
+                        خدمات و مزایای خرید از ای‌کا‌جی کالا
                         <span className="hidden md:block absolute bottom-1 left-0 w-full h-2.5 bg-kala-400/40 -z-10 -skew-x-12 rounded-sm" />
                     </h3>
                     <p className="hidden md:block mt-2 text-sm lg:text-base text-ekg-500">
-                        از مشاوره و طراحی تا نصب و تحویل، همه‌چیز را به ما بسپارید.
+                        تجربه‌ای مطمئن، سریع و بی‌واسطه در خرید آنلاین انواع کالای تکنولوژی با پشتیبانی واقعی.
                     </p>
                 </header>
 

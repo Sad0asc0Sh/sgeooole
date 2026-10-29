@@ -88,15 +88,10 @@ const SkeletonHero = () => (
 );
 
 export async function generateMetadata(): Promise<Metadata> {
-  // Phase 2 SEO #14: title/description focused on the store's core category
-  // (CCTV), matching the brand-keyword strategy from earlier phases.
-  const title = "فروشگاه دوربین مداربسته | ای کا جی کالا (ekgkala)";
+  const title = "فروشگاه اینترنتی ای کا جی کالا (ekgkala) | خرید آنلاین کالای تکنولوژی و دیجیتال";
   const description =
-    "ای کا جی کالا (ekgkala)؛ فروشگاه تخصصی دوربین مداربسته، دستگاه DVR و NVR و تجهیزات امنیتی با گارانتی معتبر، قیمت مناسب و ارسال سریع به سراسر کشور.";
+    "ای کا جی کالا (ekgkala)؛ مرجع خرید آنلاین طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند با تضمین اصالت کالا، قیمت رقابتی و ارسال سریع از مشهد به سراسر کشور.";
   const canonicalUrl = SITE_URL ? `${SITE_URL}/` : "/";
-  // Brand OG image: prefer the explicit env override; otherwise point at the
-  // /opengraph-image route (opengraph-image.tsx). Emitted explicitly because
-  // the live homepage was observed without any og:image / twitter:image meta.
   const ogImageUrl =
     process.env.NEXT_PUBLIC_OG_IMAGE ||
     (SITE_URL ? `${SITE_URL}/opengraph-image` : "/opengraph-image");
@@ -108,10 +103,10 @@ export async function generateMetadata(): Promise<Metadata> {
       "ekgkala",
       "ای‌کا‌جی‌کالا",
       "EKG KALA",
-      "فروشگاه دوربین مداربسته",
-      "دوربین مداربسته",
-      "قیمت دوربین مداربسته",
-      "دستگاه DVR",
+      "فروشگاه اینترنتی ای کا جی کالا",
+      "خرید آنلاین کالای تکنولوژی",
+      "فروشگاه کالای دیجیتال مشهد",
+      "خرید اینترنتی کالای هوشمند",
     ],
     alternates: {
       canonical: canonicalUrl,
@@ -159,7 +154,7 @@ export default async function Home() {
         url: SITE_URL,
         logo: `${SITE_URL}/logo.png`,
         description:
-          "ای کا جی کالا (ekgkala)؛ فروشگاه تخصصی دوربین مداربسته، دستگاه DVR و NVR و تجهیزات امنیتی با گارانتی معتبر و ارسال سریع.",
+          "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی جامع عرضه طیف گسترده کالاهای تکنولوژی، دیجیتال و هوشمند با ضمانت اصالت، شبکه تأمین معتبر و ارسال سریع به سراسر کشور.",
         ...(contactPhone
           ? {
               contactPoint: {
@@ -210,7 +205,7 @@ export default async function Home() {
       />
       {/* Brand H1 for SEO: visually hidden, keeps the visual design untouched */}
       <h1 className="sr-only">
-        فروشگاه دوربین مداربسته | ای کا جی کالا (ekgkala)
+        فروشگاه اینترنتی ای کا جی کالا (ekgkala) | خرید آنلاین کالای تکنولوژی و دیجیتال
       </h1>
       <HomeSection variant="hero">
         <Suspense fallback={<SkeletonHero />}>

@@ -5,7 +5,7 @@ const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").
 
 const title = "درباره ای کا جی کالا | ekgkala";
 const description =
-  "با فروشگاه اینترنتی ای کا جی کالا (ekgkala) آشنا شوید؛ سه شعبه فعال، تیم تخصصی تعمیرات و نمایندگی برندهای معتبر در خراسان بزرگ.";
+  "با داستان شکل‌گیری فروشگاه اینترنتی ای کا جی کالا (ekgkala) از سال ۱۳۹۶ بر پایه امنیت و آرامش، سه پایگاه فعال مشهد و شبکه تأمین گسترده کالای تکنولوژی آشنا شوید.";
 
 export const metadata: Metadata = {
   title,

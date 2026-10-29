@@ -4,17 +4,15 @@ import {
     BadgeCheck,
     Building2,
     CalendarDays,
-    Car,
     ChevronLeft,
-    Cog,
-    KeyRound,
-    RadioTower,
+    Headphones,
+    Layers,
+    Network,
     ShieldCheck,
     Smile,
     Store,
+    Truck,
     Users,
-    Video,
-    Wrench,
     type LucideIcon,
 } from "lucide-react";
 import styles from "./About.module.css";
@@ -27,39 +25,39 @@ import styles from "./About.module.css";
  * legacy browser support.
  */
 
-const brands: { name: string; description: string; Icon: LucideIcon }[] = [
+const pillars: { name: string; description: string; Icon: LucideIcon }[] = [
     {
-        name: "Dahua",
-        description: "نمایندگی انحصاری محصولات با گارانتی معتبر ماد طلایی (Maad Talayi)",
-        Icon: Video,
+        name: "تنوع بی‌مرز کالای تکنولوژی",
+        description: "عرضه طیف گسترده‌ای از محصولات دیجیتال، الکترونیک و تجهیزات هوشمند بدون محدودیت کالایی",
+        Icon: Layers,
     },
     {
-        name: "Sailgis",
-        description: "نمایندگی رسمی سیستم‌های نظارتی",
-        Icon: RadioTower,
+        name: "شبکه تأمین‌کنندگان معتبر مشهد",
+        description: "همکاری مستمر با تأمین‌کنندگان خوش‌نام و واردکنندگان اصلی برای قیمت‌گذاری شفاف و رقابتی",
+        Icon: Network,
     },
     {
-        name: "Suzuki",
-        description: "نمایندگی رسمی محصولات",
-        Icon: Cog,
+        name: "تضمین ۱۰۰٪ اصالت و سلامت کالا",
+        description: "کنترل کیفی دقیق پیش از ارسال به همراه گارانتی معتبر و تعهد کامل به اصالت محصولات",
+        Icon: BadgeCheck,
     },
     {
-        name: "Vekra & Mover",
-        description: "نماینده برتر جک‌های پارکینگی",
-        Icon: Car,
+        name: "ارسال سریع و ایمن به سراسر کشور",
+        description: "تحویل سریع سفارش‌ها در سطح شهر مشهد و بسته‌بندی استاندارد برای ارسال به تمامی استان‌ها",
+        Icon: Truck,
     },
     {
-        name: "HSP",
-        description: "نماینده انحصاری ریموت‌های کنترل تردد",
-        Icon: KeyRound,
+        name: "پشتیبانی واقعی و آرامش خاطر",
+        description: "همراهی گام‌به‌گام کارشناسان از لحظه ثبت سفارش تا تحویل نهایی و خدمات پس از فروش",
+        Icon: Headphones,
     },
 ];
 
 const stats: { number: string; label: string; Icon: LucideIcon }[] = [
-    { number: "۱۳۹۶", label: "سال شروع فعالیت", Icon: CalendarDays },
-    { number: "۳", label: "شعبه فعال", Icon: Store },
-    { number: "۵+", label: "نمایندگی رسمی", Icon: BadgeCheck },
-    { number: "۱۰۰۰+", label: "مشتری راضی", Icon: Smile },
+    { number: "۱۳۹۶", label: "سال آغاز فعالیت", Icon: CalendarDays },
+    { number: "۳", label: "پایگاه فعال در مشهد", Icon: Store },
+    { number: "۱۰۰٪", label: "تضمین اصالت کالا", Icon: BadgeCheck },
+    { number: "۱۰۰۰+", label: "همراه و مشتری راضی", Icon: Smile },
 ];
 
 export default function AboutPage() {
@@ -83,9 +81,9 @@ export default function AboutPage() {
                         <Building2 size={36} aria-hidden />
                     </div>
                     <span className={styles.heroBadge}>از سال ۱۳۹۶ در کنار شما</span>
-                    <h1 className={styles.heroTitle}>شرکت ای‌کا‌جی کالا</h1>
+                    <h1 className={styles.heroTitle}>فروشگاه اینترنتی ای‌کا‌جی کالا</h1>
                     <p className={styles.heroText}>
-                        پیشرو در ارائه سیستم‌های حفاظتی و امنیتی در استان خراسان
+                        مرجعی اصیل برای خرید آنلاین کالای تکنولوژی؛ شکل‌گرفته بر پایه امنیت، اعتماد و آرامش خاطر
                     </p>
                 </div>
             </section>
@@ -104,21 +102,21 @@ export default function AboutPage() {
                     ))}
                 </ul>
 
-                {/* Introduction + Technical team (side by side on desktop) */}
+                {/* Introduction + Customer Commitment (side by side on desktop) */}
                 <div className={`${styles.split} ${styles.reveal} ${styles.d2}`}>
                     <section className={styles.card}>
                         <div className={`${styles.cardHead} ${styles.headBlue}`}>
                             <div className={`${styles.cardHeadIcon} ${styles.iconBlue}`}>
                                 <ShieldCheck size={22} aria-hidden />
                             </div>
-                            <h2 className={styles.cardTitle}>معرفی شرکت</h2>
+                            <h2 className={styles.cardTitle}>داستان شکل‌گیری و گسترش ما</h2>
                         </div>
                         <div className={styles.cardBody}>
                             <p className={styles.paragraph}>
-                                با افتخار، شرکت <span className={styles.hlAmber}>ای‌کا‌جی کالا</span> به عنوان یکی از پیشگامان در زمینه ارائه و نصب سیستم‌های دوربین مداربسته و حفاظتی-امنیتی، از سال <span className={styles.strong}>۱۳۹۶</span> فعالیت خود را در شهر مشهد آغاز نموده است. در طول این سال‌ها، با تکیه بر تخصص، تعهد و ارائه محصولات با کیفیت، موفق به جلب رضایت و اعتماد گسترده مشتریان عزیز شده‌ایم.
+                                مجموعه <span className={styles.hlAmber}>ای‌کا‌جی کالا</span> فعالیت خود را از سال <span className={styles.strong}>۱۳۹۶</span> در کلان‌شهر مشهد با دغدغه و رسالت اصلیِ ایجاد <span className={styles.strong}>امنیت و آرامش خاطر</span> برای خانواده‌ها و کسب‌وکارها آغاز نمود. صداقت در عرضه، احترام به اعتماد خریداران و تعهد بی‌قیدوشرط به اصالت کالا، سنگ‌بنای هویت این مجموعه را شکل داد.
                             </p>
                             <p className={styles.paragraph}>
-                                این مجموعه با گسترش فعالیت‌های خود، هم اکنون دارای <span className={styles.hlAmber}>سه شعبه فعال</span> در سراسر کلان‌شهر مشهد می‌باشد تا دسترسی و ارائه خدمات به شما عزیزان با سهولت و سرعت بیشتری انجام پذیرد. رمز موفقیت ما در بازار رقابتی امروز، ارائه قیمت‌های بی‌واسطه و منصفانه در کنار حفظ بالاترین سطح کیفی محصولات و خدمات بوده است.
+                                امروز با پشتوانه سال‌ها تجربه، اعتماد مشتریان وفادار و فعالیت <span className={styles.hlAmber}>سه پایگاه حضوری در مشهد</span>، ای‌کا‌جی کالا به یک فروشگاه اینترنتی جامع و پویا برای عرضه <span className={styles.strong}>طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند</span> تبدیل شده است تا با همکاری شبکه‌ای از تأمین‌کنندگان معتبر در سراسر مشهد، بهترین محصولات روز را با قیمت منصفانه و بدون واسطه به دست خریداران سراسر کشور برساند.
                             </p>
                         </div>
                     </section>
@@ -126,32 +124,32 @@ export default function AboutPage() {
                     <section className={styles.card}>
                         <div className={`${styles.cardHead} ${styles.headGreen}`}>
                             <div className={`${styles.cardHeadIcon} ${styles.iconGreen}`}>
-                                <Wrench size={22} aria-hidden />
+                                <Headphones size={22} aria-hidden />
                             </div>
-                            <h2 className={styles.cardTitle}>تیم تخصصی تعمیرات</h2>
+                            <h2 className={styles.cardTitle}>تعهد به اصالت و پشتیبانی واقعی</h2>
                         </div>
                         <div className={styles.cardBody}>
                             <p className={styles.paragraph}>
-                                علاوه بر فروش و نصب، این شرکت دارای یکی از <span className={styles.hlGreen}>مجرب‌ترین و ماهرترین تیم‌های فنی</span> در حوزه تعمیرات تخصصی انواع سیستم‌های حفاظتی و امنیتی می‌باشد. این تیم متخصص، آماده ارائه خدمات پشتیبانی و رفع هرگونه مشکل در <span className={styles.strong}>کوتاه‌ترین زمان ممکن</span> است.
+                                ما باور داریم خرید آنلاین زمانی ارزشمند است که با <span className={styles.hlGreen}>آرامش خیال کامل</span> همراه باشد. به همین دلیل در ای‌کا‌جی کالا، نظارت دقیق بر سلامت فیزیکی کالاها، شفافیت در مشخصات، گارانتی معتبر و پاسخگویی مستمر کارشناسان در <span className={styles.strong}>تمامی مراحل پیش و پس از خرید</span> در اولویت قرار دارد.
                             </p>
                         </div>
                     </section>
                 </div>
 
-                {/* Brands */}
+                {/* Core Values & Ecosystem */}
                 <section className={`${styles.card} ${styles.reveal} ${styles.d3}`}>
                     <div className={`${styles.cardHead} ${styles.headAmber}`}>
                         <div className={`${styles.cardHeadIcon} ${styles.iconAmber}`}>
                             <Award size={22} aria-hidden />
                         </div>
-                        <h2 className={styles.cardTitle}>افتخارات و نمایندگی‌ها</h2>
+                        <h2 className={styles.cardTitle}>ارکان اصالت و شبکه تأمین ای‌کا‌جی کالا</h2>
                     </div>
                     <div className={styles.cardBody}>
                         <p className={styles.brandLead}>
-                            ما با افتخار اعلام می‌داریم که به عنوان نماینده رسمی برندهای معتبر بین‌المللی در استان <span className={styles.hlAmber}>خراسان بزرگ</span> فعالیت می‌کنیم:
+                            چشم‌انداز ما ساختن اکوسیستمی گسترده و قابل اعتماد میان خریداران سراسر ایران و برترین تأمین‌کنندگان کالای تکنولوژی در <span className={styles.hlAmber}>مشهد و خراسان بزرگ</span> است:
                         </p>
                         <ul className={styles.brandGrid}>
-                            {brands.map(({ name, description, Icon }) => (
+                            {pillars.map(({ name, description, Icon }) => (
                                 <li key={name}>
                                     <div className={styles.brand}>
                                         <div className={styles.brandIcon}>
@@ -174,16 +172,16 @@ export default function AboutPage() {
                         <Users size={28} aria-hidden />
                     </div>
                     <p className={styles.missionText}>
-                        ما در <strong>ای‌کا‌جی کالا</strong>، امنیت و آرامش شما را اولویت اصلی خود می‌دانیم و همواره در تلاشیم تا با ارائه راهکارهای نوین و خدماتی متمایز، بهترین تجربه را برای شما به ارمغان آوریم.
+                        ما در <strong>ای‌کا‌جی کالا</strong>، امنیت خرید، اصالت کالا و آرامش خاطر شما را سرمایه اصلی خود می‌دانیم و همواره در تلاشیم تا تجربه‌ای استاندارد، متنوع و ماندگار از خرید آنلاین دنیای تکنولوژی را رقم بزنیم.
                     </p>
                 </section>
 
                 {/* Contact CTA */}
                 <section className={styles.cta}>
                     <div>
-                        <h2 className={styles.ctaTitle}>آماده همکاری با شما هستیم</h2>
+                        <h2 className={styles.ctaTitle}>آماده همراهی و همکاری با شما هستیم</h2>
                         <p className={styles.ctaText}>
-                            برای مشاوره رایگان و کسب اطلاعات بیشتر با ما تماس بگیرید
+                            برای راهنمایی خرید یا همکاری در تأمین و عرضه کالا با ما در ارتباط باشید
                         </p>
                     </div>
                     <div className={styles.ctaActions}>

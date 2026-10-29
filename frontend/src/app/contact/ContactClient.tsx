@@ -53,9 +53,9 @@ export default function ContactPage() {
                         <Building2 size={36} aria-hidden />
                     </div>
                     <h1 className={shared.heroTitle}>ای‌کا‌جی کالا</h1>
-                    <p className={shared.heroText}>فروش و پخش انواع سیستم‌های حفاظتی امنیتی</p>
+                    <p className={shared.heroText}>پشتیبانی مشتریان، مراکز تحویل حضوری و همکاری با تأمین‌کنندگان</p>
                     <span className={shared.heroBadge} style={{ marginTop: 18, marginBottom: 0 }}>
-                        مشهد · ۳ شعبه فعال
+                        مشهد · ۳ پایگاه فعال
                     </span>
                 </div>
             </section>
@@ -70,7 +70,7 @@ export default function ContactPage() {
                                     <div className={styles.badge}>{branch.id}</div>
                                     <div>
                                         <h2 className={styles.branchTitle}>{branch.name}</h2>
-                                        <p className={styles.branchSub}>گروه مهندسی کیان</p>
+                                        <p className={styles.branchSub}>پایگاه تحویل و خدمات مشتریان</p>
                                     </div>
                                 </div>
 
@@ -136,8 +136,8 @@ export default function ContactPage() {
                         <div className={shared.missionIcon}>
                             <MessageCircle size={28} aria-hidden />
                         </div>
-                        <h2 className={styles.missionTitle}>نیاز به مشاوره دارید؟</h2>
-                        <p className={styles.missionSub}>کارشناسان ما آماده پاسخگویی به سوالات شما هستند</p>
+                        <h2 className={styles.missionTitle}>نیاز به راهنمایی یا همکاری دارید؟</h2>
+                        <p className={styles.missionSub}>کارشناسان پشتیبانی و واحد تأمین کالا آماده پاسخگویی به شما هستند</p>
                         <div className={styles.actions}>
                             <a href="tel:05135013383" className={`${styles.btn} ${styles.btnLight}`}>
                                 <Phone size={18} aria-hidden />

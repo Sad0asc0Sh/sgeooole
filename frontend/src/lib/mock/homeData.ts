@@ -11,31 +11,31 @@ export const BRANDS = [
 export const SERVICES = [
     {
         id: 1,
-        title: "نصب در محل",
-        description: "اعزام تکنسین های مجرب جهت نصب و راه اندازی",
-        tag: "فعلا ویژه مشهد",
+        title: "تضمین اصالت و سلامت کالا",
+        description: "تأمین مستقیم کالاهای اصیل از شبکه تأمین‌کنندگان معتبر با کنترل کیفی دقیق و گارانتی معتبر",
+        tag: "اصالت ۱۰۰٪",
     },
     {
         id: 2,
-        title: "تعمیرات با پیک",
-        description: "دریافت دستگاه معیوب درب منزل و تحویل پس از تعمیر",
-        tag: "فعلا ویژه مشهد",
+        title: "ارسال سریع و ایمن",
+        description: "تحویل سریع سفارش‌ها در سطح شهر مشهد و ارسال استاندارد به تمامی نقاط ایران",
+        tag: "سراسر کشور",
     },
     {
         id: 3,
-        title: "تحویل حضوری",
-        description: "امکان مراجعه حضوری به ۳ شعبه فعال جهت دریافت کالا",
-        tag: "فعلا ویژه مشهد",
+        title: "پایگاه‌های حضوری در مشهد",
+        description: "امکان تحویل حضوری سفارش‌ها و دسترسی مستقیم به ۳ مرکز فعال در سطح کلان‌شهر مشهد",
+        tag: "۳ پایگاه فعال",
     },
 ];
 
 export const CATEGORIES = [
-    { id: 1, name: "دوربین مداربسته", image: "/placeholder-cat.png" },
-    { id: 2, name: "دزدگیر اماکن", image: "/placeholder-cat.png" },
+    { id: 1, name: "کالای دیجیتال", image: "/placeholder-cat.png" },
+    { id: 2, name: "گجت‌های هوشمند", image: "/placeholder-cat.png" },
     { id: 3, name: "تجهیزات شبکه", image: "/placeholder-cat.png" },
     { id: 4, name: "خانه هوشمند", image: "/placeholder-cat.png" },
     { id: 5, name: "لوازم جانبی", image: "/placeholder-cat.png" },
-    { id: 6, name: "کابل و اتصالات", image: "/placeholder-cat.png" },
+    { id: 6, name: "تجهیزات الکترونیک", image: "/placeholder-cat.png" },
 ];
 
 export const PRODUCTS = [

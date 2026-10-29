@@ -116,11 +116,11 @@ export default function BlogPage() {
                     transition={{ delay: 0.5 }}
                     className="text-gray-600 text-lg leading-relaxed mb-8 px-4"
                 >
-                    ما در حال آماده‌سازی مقالات جذاب و مفید درباره
-                    <span className="text-kala-600 font-semibold"> خانه‌هوشمند</span>،
-                    <span className="text-kala-600 font-semibold"> امنیت</span> و
-                    <span className="text-kala-600 font-semibold"> حفاظت </span>
-                    هستیم. به زودی می‌توانید از محتوای ارزشمند ما بهره‌مند شوید.
+                    ما در حال آماده‌سازی مجله و بلاگ اختصاصی ای‌کا‌جی کالا درباره جدیدترین‌های
+                    <span className="text-kala-600 font-semibold"> دنیای تکنولوژی</span>،
+                    <span className="text-kala-600 font-semibold"> کالای دیجیتال</span> و
+                    <span className="text-kala-600 font-semibold"> سبک زندگی هوشمند </span>
+                    هستیم. به زودی با مقالات کاربردی و خواندنی در کنار شما خواهیم بود.
                 </motion.p>
 
                 {/* Feature Pills */}
@@ -130,7 +130,7 @@ export default function BlogPage() {
                     transition={{ delay: 0.6 }}
                     className="flex flex-wrap justify-center gap-3 mb-10"
                 >
-                    {["مقالات امنیتی", "اشنایی با دنیای یکپارچه", "نکات حفاظتی", "راهنمای خرید"].map(
+                    {["تازه‌های تکنولوژی", "بررسی کالای دیجیتال", "زندگی هوشمند", "نکات کاربردی خرید"].map(
                         (item, index) => (
                             <motion.span
                                 key={item}

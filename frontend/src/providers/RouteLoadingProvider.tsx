@@ -26,8 +26,8 @@ const RouteLoadingContext = createContext<RouteLoadingContextValue | null>(null)
  * useSearchParams() at the top of THIS provider, which wraps the ENTIRE app
  * (<ClientLayout>{children}</ClientLayout> inside one <Suspense> in the root
  * layout). During static prerendering that single hook forced every route
- * (/, /products, /guides/*, /glossary/*, /compare/*) to bail out to
- * client-side rendering — the SSR HTML was an empty shell (0 links, 0 h1).
+ * (/, /products, /blog, /about, /contact) to bail out to client-side
+ * rendering — the SSR HTML was an empty shell (0 links, 0 h1).
  *
  * Fix: usePathname() does NOT suspend during prerender, so the pathname part
  * of the route key stays in the shell. Only the search-params suffix is read

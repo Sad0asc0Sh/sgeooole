@@ -15,7 +15,6 @@
     --color-amber-600: #e17100;
     --color-amber-700: #bb4d00;
     --color-amber-800: #973c00;
-    --color-amber-900: #7b3306;
     --color-amber-950: #461901;
     --color-blue-100: #dbeafe;
     --color-blue-200: #bedbff;
@@ -154,14 +153,12 @@
 .bg-black\/60{background-color:rgba(0,0,0,0.6)}
 .bg-blue-100\/30{background-color:rgba(219,234,254,0.3)}
 .bg-blue-50\/50{background-color:rgba(239,246,255,0.5)}
-.bg-blue-50\/60{background-color:rgba(239,246,255,0.6)}
 .bg-ekg-100\/60{background-color:rgba(243,241,237,0.6)}
 .bg-ekg-100\/70{background-color:rgba(243,241,237,0.7)}
 .bg-ekg-100\/80{background-color:rgba(243,241,237,0.8)}
 .bg-ekg-50\/50{background-color:rgba(250,249,247,0.5)}
 .bg-ekg-800\/60{background-color:rgba(41,37,36,0.6)}
 .bg-ekg-950\/60{background-color:rgba(12,10,9,0.6)}
-.bg-emerald-50\/60{background-color:rgba(236,253,245,0.6)}
 .bg-gray-100\/80{background-color:rgba(243,244,246,0.8)}
 .bg-gray-200\/70{background-color:rgba(229,231,235,0.7)}
 .bg-gray-50\/50{background-color:rgba(249,250,251,0.5)}

@@ -49,12 +49,12 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
     || Object.keys(params).some((key) => key.startsWith("prop_"));
   const indexable = !hasFilters;
 
-  let title = "همه محصولات | فروشگاه";
-  let description = "مشاهده و خرید تمامی محصولات فروشگاه";
+  let title = "همه محصولات | فروشگاه اینترنتی ای کا جی کالا";
+  let description = "مشاهده و خرید آنلاین تمامی محصولات تکنولوژی، دیجیتال و هوشمند در فروشگاه اینترنتی ای کا جی کالا";
 
   if (category) {
     title = `محصولات ${humanizeSlug(category)} | فروشگاه`;
-    description = `مشاهده محصولات دسته‌بندی ${humanizeSlug(category)}`;
+    description = `مشاهده و خرید محصولات دسته‌بندی ${humanizeSlug(category)}`;
   } else if (brand) {
     title = `محصولات ${humanizeSlug(brand)} | فروشگاه`;
     description = `مشاهده تمام محصولات برند ${humanizeSlug(brand)}`;
@@ -108,8 +108,8 @@ export default async function ProductListingPage({
           </h1>
           <p className="mt-2 text-sm leading-7 text-gray-500">
             {category
-              ? `مشاهده و مقایسه محصولات دسته‌بندی ${humanizeSlug(category)} در فروشگاه ای کا جی کالا؛ با فیلترهای قیمت، برند و موجودی، انتخاب را دقیق‌تر کنید.`
-              : "مشاهده و مقایسه همه محصولات فروشگاه ای کا جی کالا؛ از دوربین مداربسته و دستگاه ضبط تا تجهیزات جانبی، با قیمت به‌روز و گارانتی معتبر."}
+              ? `مشاهده و خرید محصولات دسته‌بندی ${humanizeSlug(category)} در فروشگاه ای کا جی کالا؛ با فیلترهای قیمت، برند و موجودی، انتخابی مطمئن و دقیق داشته باشید.`
+              : "مشاهده و خرید آنلاین طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند در فروشگاه اینترنتی ای کا جی کالا؛ با تضمین اصالت، قیمت به‌روز و گارانتی معتبر."}
           </p>
         </div>
       )}

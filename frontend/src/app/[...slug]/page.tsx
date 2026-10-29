@@ -22,6 +22,10 @@ const API_BASE = (
   process.env.INTERNAL_API_URL || "http://localhost:5000/api"
 ).replace(/\/$/, "");
 
+// Retired programmatic SEO prefixes — always serve a hard 404 (never fail-open
+// into `/products?category=...` redirects or trigger unnecessary backend lookups).
+const RETIRED_ROOT_SEGMENTS = new Set(["compare", "glossary", "guides"]);
+
 /**
  * Phase 1 SEO (soft-404 fix): resolve a catch-all slug to a product, a real
  * category, or unknown. Unknown slugs must 404 — previously they were
@@ -56,6 +60,10 @@ const fetchCategorySlugs = cache(async (): Promise<Set<string> | null> => {
 const resolveCatchAll = cache(
   async (segments: string[]): Promise<CatchAllResolution> => {
     const slug = segments[segments.length - 1];
+    if (RETIRED_ROOT_SEGMENTS.has((segments[0] || "").toLowerCase())) {
+      return { kind: "unknown", slug };
+    }
+
     let product: (Product & { isActive?: boolean }) | null = null;
     try {
       product = await fetchProductBySlug(slug);

@@ -17,11 +17,10 @@ import {
     ChevronDown,
     ChevronLeft,
     Truck,
-    Wrench,
+    Layers,
     ShieldCheck,
     CreditCard,
     MessageCircle,
-    Headphones,
     Award,
     Sparkles,
 } from "lucide-react";
@@ -33,7 +32,7 @@ import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import styles from "./Footer.module.css";
 
 // Verified Enamad trust seal — kept static outside the component to avoid re-creation on render
-const ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' rel='noopener noreferrer' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی ای‌کا‌جی کالا' onload="this.parentElement.style.backgroundColor='#ffffff';this.style.opacity='1';" onerror="this.style.opacity='0';" style='cursor:pointer;width:62px;height:62px;object-fit:contain;opacity:0;transition:opacity 0.2s ease;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
+const ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' rel='noopener noreferrer' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی ای‌کا‌جی کالا' onload="this.parentElement.style.backgroundColor='#ffffff';this.style.opacity='1';" onerror="this.style.opacity='0';" style='cursor:pointer;width:58px;height:58px;object-fit:contain;opacity:0;transition:opacity 0.2s ease;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
 
 interface StoreInfo {
     storeName?: string;
@@ -59,55 +58,45 @@ interface NavColumn {
 }
 
 const DEFAULT_CATEGORY_LINKS: NavLinkItem[] = [
-    {
-        href: `/products?category=${encodeURIComponent("دوربین-مداربسته-ipانالوگبیسیم")}&includeChildren=true`,
-        label: "دوربین مداربسته IP و آنالوگ",
-    },
-    {
-        href: `/products?category=${encodeURIComponent("دستگاه-ضبط-تصویر-dvrnvr")}&includeChildren=true`,
-        label: "دستگاه ضبط تصویر DVR و NVR",
-    },
-    {
-        href: `/products?category=${encodeURIComponent("تجهیزات-شبکه-مخصوص-cctv")}&includeChildren=true`,
-        label: "تجهیزات شبکه و سوئیچ PoE",
-    },
-    { href: "/products", label: "مشاهده همه محصولات" },
-    { href: CATEGORY_FILTER_HREF, label: "فیلتر هوشمند دسته‌بندی‌ها" },
+    { href: "/products", label: "مشاهده همه کالاهای فروشگاه" },
+    { href: CATEGORY_FILTER_HREF, label: "مرور دسته‌بندی‌های کالا" },
+    { href: "/products?sort=newest", label: "جدیدترین محصولات تکنولوژی" },
+    { href: "/products?sort=popular", label: "پرفروش‌ترین کالاها" },
+    { href: "/products?onSale=true", label: "پیشنهادهای ویژه و تخفیف‌دار" },
 ];
 
-const OFFICIAL_PARTNERS = [
+const BRAND_PILLARS = [
     {
-        brand: "Dahua",
-        role: "نمایندگی انحصاری با گارانتی ماد طلایی",
+        title: "اصالت ۱۰۰٪ کالاها",
+        subtitle: "کنترل سلامت فیزیکی و گارانتی معتبر",
         href: "/about",
+        icon: "shield",
     },
     {
-        brand: "Sailgis",
-        role: "نمایندگی رسمی سیستم‌های نظارتی",
-        href: "/about",
+        title: "شبکه تأمین گسترده مشهد",
+        subtitle: "همکاری مستقیم با تأمین‌کنندگان منتخب",
+        href: "/contact",
+        icon: "layers",
     },
     {
-        brand: "Suzuki",
-        role: "نمایندگی رسمی محصولات حفاظتی",
-        href: "/about",
+        title: "تنوع بی‌مرز تکنولوژی",
+        subtitle: "عرضه انواع کالای دیجیتال و هوشمند",
+        href: "/products",
+        icon: "sparkles",
     },
     {
-        brand: "Vekra & Mover",
-        role: "نماینده برتر جک‌های پارکینگی",
-        href: "/about",
-    },
-    {
-        brand: "HSP",
-        role: "نماینده انحصاری ریموت و کنترل تردد",
-        href: "/about",
+        title: "تحویل سریع و مطمئن",
+        subtitle: "ارسال روزانه مشهد و سراسر کشور",
+        href: "/faq",
+        icon: "truck",
     },
 ] as const;
 
 const DEFAULT_BRANCH_PHONES = [
     { label: "شعبه ۱ (پیروزی)", display: "051-35013383", tel: "05135013383" },
     { label: "شعبه ۲ (سبحان)", display: "051-37136355", tel: "05137136355" },
-    { label: "خط ویژه فروش", display: "051-37136356", tel: "05137136356" },
-    { label: "شعبه ۳ و مشاوره", display: "09154191788", tel: "09154191788" },
+    { label: "واحد فروش و تأمین", display: "051-37136356", tel: "05137136356" },
+    { label: "شعبه ۳ و پشتیبانی", display: "09154191788", tel: "09154191788" },
 ] as const;
 
 function Footer() {
@@ -173,8 +162,8 @@ function Footer() {
         }));
         return [
             ...dynamicItems,
-            { href: "/products", label: "مشاهده همه محصولات" },
-            { href: CATEGORY_FILTER_HREF, label: "فیلتر هوشمند دسته‌بندی‌ها" },
+            { href: "/products", label: "مشاهده همه کالاها" },
+            { href: CATEGORY_FILTER_HREF, label: "همه دسته‌بندی‌های فروشگاه" },
         ];
     }, [categoryTree]);
 
@@ -182,50 +171,8 @@ function Footer() {
         () => [
             {
                 id: "categories",
-                title: "دسته‌بندی محصولات",
+                title: "ویترین محصولات",
                 links: categoryLinks,
-            },
-            {
-                id: "guides",
-                title: "راهنمای خرید و مقایسه",
-                links: [
-                    {
-                        href: "/guides/راهنمای-خرید-دوربین-مداربسته",
-                        label: "راهنمای خرید دوربین مداربسته",
-                    },
-                    {
-                        href: "/guides/بهترین-دوربین-مداربسته-برای-خانه",
-                        label: "بهترین دوربین مداربسته خانگی",
-                    },
-                    {
-                        href: "/guides/راهنمای-خرید-dvr",
-                        label: "راهنمای تخصصی خرید DVR",
-                    },
-                    {
-                        href: "/compare/داهوا-در-برابر-هایک-ویژن",
-                        label: "مقایسه داهوا و هایک‌ویژن",
-                    },
-                    {
-                        href: "/compare/دوربین-دام-در-برابر-بولت",
-                        label: "تفاوت دوربین دام و بولت",
-                    },
-                    {
-                        href: "/guides",
-                        label: "همه راهنماهای خرید",
-                    },
-                ],
-            },
-            {
-                id: "knowledge",
-                title: "دانشنامه و مجله امنیت",
-                links: [
-                    { href: "/blog", label: "مجله تخصصی ای‌کا‌جی کالا" },
-                    { href: "/glossary", label: "واژه‌نامه تجهیزات امنیتی" },
-                    { href: "/glossary/dvr-چیست", label: "دستگاه DVR چیست؟" },
-                    { href: "/glossary/nvr-چیست", label: "دستگاه NVR چیست؟" },
-                    { href: "/glossary/poe-چیست", label: "فناوری PoE در شبکه چیست؟" },
-                    { href: "/glossary/دوربین-ptz-چیست", label: "دوربین چرخشی PTZ چیست؟" },
-                ],
             },
             {
                 id: "customers",
@@ -243,9 +190,9 @@ function Footer() {
                 title: "با ای‌کا‌جی کالا",
                 links: [
                     { href: "/about", label: "درباره ما و داستان شکل‌گیری" },
-                    { href: "/contact", label: "تماس با ما و نشانی ۳ شعبه" },
-                    { href: "/about", label: "افتخارات و نمایندگی‌های رسمی" },
-                    { href: "/compare", label: "مقایسه تخصصی تجهیزات" },
+                    { href: "/blog", label: "مجله و بلاگ تکنولوژی" },
+                    { href: "/contact", label: "مراکز و پایگاه‌های مشهد" },
+                    { href: "/contact", label: "همکاری با تأمین‌کنندگان کالا" },
                     { href: "/terms", label: "قوانین و مقررات فروشگاه" },
                 ],
             },
@@ -276,6 +223,8 @@ function Footer() {
             DEFAULT_BRANCH_PHONES[3],
         ];
     }, [storeInfo.storePhone]);
+
+    const primaryPhone = phoneItems[0];
 
     const handleNewsletterSubmit = useCallback(
         async (e: React.FormEvent) => {
@@ -320,61 +269,66 @@ function Footer() {
     const resolvedStoreName = (storeInfo.storeName || "").trim() || "ای‌کا‌جی کالا";
     const resolvedAddress =
         (storeInfo.storeAddress || "").trim() ||
-        "مشهد — ۳ شعبه فعال: بلوار پیروزی ۷۵، میدان صاحب‌الزمان (پاساژ سبحان) و خین‌عرب";
+        "مشهد — ۳ پایگاه فعال: بلوار پیروزی ۷۵، میدان صاحب‌الزمان (پاساژ سبحان) و خین‌عرب";
+
+    const brandTaglineText =
+        "مرجع خرید آنلاین کالای تکنولوژی و دیجیتال؛ گسترش‌یافته بر پایه امنیت، اصالت و آرامش خاطر";
 
     return (
         <footer className={styles.footerRoot} dir="rtl" aria-label="پاورقی سایت ای‌کا‌جی کالا">
-            {/* ─── PRE-FOOTER: 4-Pillar Trust Strip + Expandable SEO Brand Story ─── */}
+            {/* ─── PRE-FOOTER: 4-Pillar Trust Strip + Expandable Brand & Marketplace Story ─── */}
             <div className={styles.preFooter}>
                 <ul className={styles.trustGrid} aria-label="مزایای خرید از ای‌کا‌جی کالا">
                     <li className={styles.trustCard}>
                         <div className={`${styles.trustIconBox} ${styles.trustIconAmber}`} aria-hidden>
-                            <Truck size={20} />
+                            <Layers size={19} />
                         </div>
                         <div className={styles.trustTextWrap}>
-                            <p className={styles.trustTitle}>ارسال سریع به سراسر کشور</p>
-                            <p className={styles.trustDesc}>تحویل همان‌روز در مشهد و ارسال امن سراسری</p>
-                        </div>
-                    </li>
-
-                    <li className={styles.trustCard}>
-                        <div className={`${styles.trustIconBox} ${styles.trustIconBlue}`} aria-hidden>
-                            <Wrench size={20} />
-                        </div>
-                        <div className={styles.trustTextWrap}>
-                            <p className={styles.trustTitle}>تیم تخصصی نصب و تعمیرات</p>
-                            <p className={styles.trustDesc}>مشاوره مهندسی، اجرا و تعمیرات سخت‌افزاری</p>
+                            <p className={styles.trustTitle}>تنوع گسترده کالای تکنولوژی</p>
+                            <p className={styles.trustDesc}>عرضه انواع محصولات دیجیتال، الکترونیک و هوشمند</p>
                         </div>
                     </li>
 
                     <li className={styles.trustCard}>
                         <div className={`${styles.trustIconBox} ${styles.trustIconEmerald}`} aria-hidden>
-                            <ShieldCheck size={20} />
+                            <ShieldCheck size={19} />
                         </div>
                         <div className={styles.trustTextWrap}>
-                            <p className={styles.trustTitle}>ضمانت اصالت و گارانتی معتبر</p>
-                            <p className={styles.trustDesc}>نماینده رسمی برندهای برتر در خراسان بزرگ</p>
+                            <p className={styles.trustTitle}>تضمین اصالت و سلامت کالا</p>
+                            <p className={styles.trustDesc}>کنترل کیفی دقیق، اصالت ۱۰۰٪ و گارانتی معتبر</p>
+                        </div>
+                    </li>
+
+                    <li className={styles.trustCard}>
+                        <div className={`${styles.trustIconBox} ${styles.trustIconBlue}`} aria-hidden>
+                            <Truck size={19} />
+                        </div>
+                        <div className={styles.trustTextWrap}>
+                            <p className={styles.trustTitle}>ارسال سریع به سراسر کشور</p>
+                            <p className={styles.trustDesc}>تحویل فوری در مشهد و ارسال ایمن به تمام شهرها</p>
                         </div>
                     </li>
 
                     <li className={styles.trustCard}>
                         <div className={`${styles.trustIconBox} ${styles.trustIconStone}`} aria-hidden>
-                            <CreditCard size={20} />
+                            <CreditCard size={19} />
                         </div>
                         <div className={styles.trustTextWrap}>
                             <p className={styles.trustTitle}>پرداخت امن و تحویل حضوری</p>
-                            <p className={styles.trustDesc}>درگاه زرین‌پال و سداد + ۳ شعبه فعال مشهد</p>
+                            <p className={styles.trustDesc}>درگاه زرین‌پال و سداد + ۳ پایگاه فعال در مشهد</p>
                         </div>
                     </li>
                 </ul>
 
                 <article className={styles.seoArticle}>
                     <div className={styles.seoHeaderRow}>
-                        <span className={styles.seoBadge}>معرفی تخصصی</span>
+                        <div className={styles.seoTitleGroup}>
+                            <span className={styles.seoBadge}>اصالت، امنیت و آرامش</span>
+                            <h2 className={styles.seoHeading}>
+                                فروشگاه اینترنتی ای‌کا‌جی کالا (EKG KALA)؛ تجربه‌ای مطمئن در خرید آنلاین دنیای تکنولوژی
+                            </h2>
+                        </div>
                     </div>
-                    <h2 className={styles.seoHeading}>
-                        فروشگاه اینترنتی ای‌کا‌جی کالا (EKG KALA)؛ مرجع تخصصی دوربین مداربسته و تجهیزات امنیتی
-                    </h2>
 
                     <div
                         id="footer-seo-story"
@@ -383,48 +337,38 @@ function Footer() {
                         }`}
                     >
                         <p className={styles.seoParagraph}>
-                            مجموعه <strong>ای‌کا‌جی کالا</strong> فعالیت تخصصی خود را از سال ۱۳۹۶ در کلان‌شهر مشهد با هدف
-                            تأمین بی‌واسطه، طراحی و اجرای استاندارد سیستم‌های نظارت تصویری و حفاظتی آغاز کرد. امروز با
-                            پشتوانه <strong>۳ شعبه حضوری فعال</strong> و دپارتمان تخصصی تعمیرات سخت‌افزار، امکان خرید
-                            مطمئن{" "}
+                            فروشگاه اینترنتی <strong>ای‌کا‌جی کالا (EKG KALA)</strong> مسیر خود را از سال{" "}
+                            <strong>۱۳۹۶</strong> در کلان‌شهر مشهد با تکیه بر ارزش‌های بنیادین{" "}
+                            <strong>امنیت، اعتماد و آرامش خاطر مشتریان</strong> آغاز کرد. پشتوانه‌ای که با تعهد به
+                            اصالت کالا و صداقت در خدمات شکل گرفت، امروز به یک پلتفرم جامع خرید آنلاین برای{" "}
                             <Link href="/products" className={styles.seoInlineLink}>
-                                انواع دوربین مداربسته و تجهیزات امنیتی
+                                طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، لوازم الکترونیک و تجهیزات هوشمند
                             </Link>{" "}
-                            با قیمت رقابتی و گارانتی معتبر شرکتی برای خریداران خانگی، سازمانی و همکاران سراسر کشور فراهم
-                            شده است.
+                            تبدیل شده است تا خانواده‌ها و کسب‌وکارها در سراسر ایران بدون هیچ محدودیتی به سبدی متنوع از
+                            محصولات استاندارد و منتخب دسترسی داشته باشند.
                         </p>
 
                         <h3 className={styles.seoSubheading}>
-                            انتخاب هوشمندانه با راهنمای خرید و نمایندگی رسمی برندهای معتبر
+                            شبکه تأمین گسترده در سراسر مشهد، تنوع بی‌مرز کالاها و قیمت رقابتی
                         </h3>
                         <p className={styles.seoParagraph}>
-                            ای‌کا‌جی کالا به عنوان نماینده رسمی برند <strong>Dahua</strong> (با گارانتی ماد طلایی)،{" "}
-                            <strong>Sailgis</strong>، <strong>Suzuki</strong>، <strong>Vekra &amp; Mover</strong> و{" "}
-                            <strong>HSP</strong> در استان خراسان بزرگ، زنجیره کاملی از دوربین‌های تحت شبکه (IP) و
-                            آنالوگ HD، دستگاه‌های ضبط DVR و NVR، سوئیچ‌های شبکه PoE، جک‌های پارکینگی و سیستم‌های کنترل
-                            تردد را عرضه می‌کند. پیش از ثبت سفارش می‌توانید از{" "}
-                            <Link
-                                href="/guides/راهنمای-خرید-دوربین-مداربسته"
-                                className={styles.seoInlineLink}
-                            >
-                                راهنمای جامع خرید دوربین مداربسته
-                            </Link>
-                            ،{" "}
-                            <Link
-                                href="/compare/داهوا-در-برابر-هایک-ویژن"
-                                className={styles.seoInlineLink}
-                            >
-                                مقایسه تخصصی داهوا و هایک‌ویژن
+                            رویکرد ما در ای‌کا‌جی کالا، ایجاد پلی مستقیم و قابل اعتماد میان خریداران سراسر کشور و{" "}
+                            <strong>شبکه‌ای از تأمین‌کنندگان معتبر، واردکنندگان اصلی و بازرگانان خوش‌نام در سراسر مشهد</strong>{" "}
+                            است. این هم‌افزایی در زنجیره تأمین، امکان عرضه بی‌واسطه، گسترش پیوسته{" "}
+                            <Link href={CATEGORY_FILTER_HREF} className={styles.seoInlineLink}>
+                                دسته‌بندی‌های متنوع کالا
                             </Link>{" "}
-                            و{" "}
-                            <Link href="/glossary" className={styles.seoInlineLink}>
-                                دانشنامه اصطلاحات نظارت تصویری
-                            </Link>{" "}
-                            استفاده کنید یا با کارشناسان فنی ما در{" "}
+                            و قیمت‌گذاری منصفانه را فراهم ساخته است. تمامی سفارش‌ها پیش از ارسال از نظر سلامت و اصالت
+                            بررسی شده و از طریق درگاه‌های رسمی بانکی (زرین‌پال و سداد)، با تحویل سریع روزانه در مشهد
+                            (یا دریافت از{" "}
                             <Link href="/contact" className={styles.seoInlineLink}>
-                                شعب سه‌گانه مشهد
+                                سه پایگاه فعال مشهد
+                            </Link>
+                            ) و ارسال ایمن به تمامی استان‌های کشور به دست شما می‌رسد. همچنین در{" "}
+                            <Link href="/blog" className={styles.seoInlineLink}>
+                                مجله و بلاگ ای‌کا‌جی کالا
                             </Link>{" "}
-                            مشاوره رایگان دریافت نمایید.
+                            تازه‌ترین روایت‌ها و دانستنی‌های دنیای فناوری را دنبال کنید.
                         </p>
 
                         {!isSeoExpanded && <div className={styles.seoFadeMask} aria-hidden />}
@@ -440,7 +384,7 @@ function Footer() {
                         >
                             <span>{isSeoExpanded ? "بستن توضیحات" : "مشاهده بیشتر"}</span>
                             <ChevronDown
-                                size={15}
+                                size={14}
                                 className={isSeoExpanded ? styles.seoToggleIconOpen : undefined}
                                 aria-hidden
                             />
@@ -449,13 +393,13 @@ function Footer() {
                 </article>
             </div>
 
-            {/* ─── FLOATING ARCHITECTURAL FOOTER ISLAND ─── */}
+            {/* ─── FLOATING WIDESCREEN ARCHITECTURAL FOOTER ISLAND ─── */}
             <div className={styles.islandOuter}>
                 <div className={styles.island}>
                     <div className={styles.crownBar} aria-hidden />
 
                     <div className={styles.islandInner}>
-                        {/* ─── TIER 1: Brand Lockup + Inline Back-to-Top ─── */}
+                        {/* ─── ROW 1: Brand Lockup + Quick Support Phone + Back-to-Top ─── */}
                         <div className={styles.tierTop}>
                             <div className={styles.brandActionRow}>
                                 <div className={styles.brandCluster}>
@@ -480,23 +424,35 @@ function Footer() {
                                             <p className={styles.brandTitle}>{resolvedStoreName}</p>
                                             <span className={styles.brandSinceBadge}>از سال ۱۳۹۶</span>
                                         </div>
-                                        <p className={styles.brandTagline}>
-                                            هدف ما ارتقای امنیت و آرامش شما با اصالت کالا و پشتیبانی مهندسی است
-                                        </p>
+                                        <p className={styles.brandTagline}>{brandTaglineText}</p>
                                     </div>
                                 </div>
 
-                                <button
-                                    type="button"
-                                    onClick={scrollToTop}
-                                    className={styles.backToTopBtn}
-                                    aria-label="بازگشت به بالا"
-                                >
-                                    <span>بازگشت به بالا</span>
-                                    <span className={styles.backToTopIconCircle} aria-hidden>
-                                        <ChevronUp size={15} />
-                                    </span>
-                                </button>
+                                <div className={styles.topActionsCluster}>
+                                    <a
+                                        href={`tel:${primaryPhone.tel}`}
+                                        className={styles.quickCallPill}
+                                        aria-label={`تماس سریع با پشتیبانی ${primaryPhone.display}`}
+                                    >
+                                        <Phone size={15} aria-hidden />
+                                        <span className={styles.quickCallLabel}>پشتیبانی سریع:</span>
+                                        <span className={styles.quickCallNum} dir="ltr">
+                                            {primaryPhone.display}
+                                        </span>
+                                    </a>
+
+                                    <button
+                                        type="button"
+                                        onClick={scrollToTop}
+                                        className={styles.backToTopBtn}
+                                        aria-label="بازگشت به بالا"
+                                    >
+                                        <span>بازگشت به بالا</span>
+                                        <span className={styles.backToTopIconCircle} aria-hidden>
+                                            <ChevronUp size={14} />
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className={styles.brandMetaMobile}>
@@ -504,161 +460,254 @@ function Footer() {
                                     <p className={styles.brandTitle}>{resolvedStoreName}</p>
                                     <span className={styles.brandSinceBadge}>از سال ۱۳۹۶</span>
                                 </div>
-                                <p className={styles.brandTagline}>
-                                    هدف ما ارتقای امنیت و آرامش شما با اصالت کالا و پشتیبانی مهندسی است
-                                </p>
+                                <p className={styles.brandTagline}>{brandTaglineText}</p>
                             </div>
                         </div>
 
-                        {/* ─── TIER 2: 5-Column Structured Navigation (Mobile Accordions / Desktop Grid) ─── */}
-                        <nav className={styles.tierNav} aria-label="لینک‌های دسترسی پاورقی">
-                            <div className={styles.navGrid}>
-                                {navColumns.map((col) => {
-                                    const isOpen = activeAccordion === col.id;
-                                    const panelId = `footer-nav-panel-${col.id}`;
-                                    return (
-                                        <div key={col.id} className={styles.navSection}>
-                                            <h3 className={styles.navHeading}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleAccordion(col.id)}
-                                                    className={styles.navToggle}
-                                                    aria-expanded={isOpen}
-                                                    aria-controls={panelId}
-                                                >
-                                                    <span className={styles.navTitleCluster}>
-                                                        <span className={styles.navAccentBar} aria-hidden />
-                                                        <span>{col.title}</span>
-                                                    </span>
-                                                    <span
-                                                        className={`${styles.navChevron} ${
-                                                            isOpen ? styles.navChevronOpen : ""
-                                                        }`}
-                                                        aria-hidden
+                        {/* ─── ROW 2: UNIFIED WIDESCREEN BODY (3 Nav Columns + 2 Equal-Height Action Cards) ─── */}
+                        <div className={styles.tierMain}>
+                            {/* Zone A: 3 Structured Navigation Columns */}
+                            <nav className={styles.navZone} aria-label="لینک‌های دسترسی پاورقی">
+                                <div className={styles.navGrid}>
+                                    {navColumns.map((col) => {
+                                        const isOpen = activeAccordion === col.id;
+                                        const panelId = `footer-nav-panel-${col.id}`;
+                                        return (
+                                            <div key={col.id} className={styles.navSection}>
+                                                <h3 className={styles.navHeading}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleAccordion(col.id)}
+                                                        className={styles.navToggle}
+                                                        aria-expanded={isOpen}
+                                                        aria-controls={panelId}
                                                     >
-                                                        <ChevronDown size={16} />
-                                                    </span>
-                                                </button>
-                                            </h3>
+                                                        <span className={styles.navTitleCluster}>
+                                                            <span className={styles.navAccentBar} aria-hidden />
+                                                            <span>{col.title}</span>
+                                                        </span>
+                                                        <span
+                                                            className={`${styles.navChevron} ${
+                                                                isOpen ? styles.navChevronOpen : ""
+                                                            }`}
+                                                            aria-hidden
+                                                        >
+                                                            <ChevronDown size={15} />
+                                                        </span>
+                                                    </button>
+                                                </h3>
 
-                                            <ul
-                                                id={panelId}
-                                                className={`${styles.navList} ${
-                                                    isOpen ? styles.navListExpanded : styles.navListCollapsed
-                                                }`}
-                                            >
-                                                {col.links.map((link) => (
-                                                    <li key={`${col.id}-${link.href}-${link.label}`} className={styles.navItem}>
-                                                        <Link href={link.href} className={styles.navLink}>
-                                                            {link.label}
-                                                        </Link>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </nav>
+                                                <ul
+                                                    id={panelId}
+                                                    className={`${styles.navList} ${
+                                                        isOpen ? styles.navListExpanded : styles.navListCollapsed
+                                                    }`}
+                                                >
+                                                    {col.links.map((link) => (
+                                                        <li
+                                                            key={`${col.id}-${link.href}-${link.label}`}
+                                                            className={styles.navItem}
+                                                        >
+                                                            <Link href={link.href} className={styles.navLink}>
+                                                                {link.label}
+                                                            </Link>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
 
-                        {/* ─── TIER 3: Contact Hub + Direct Consultation/Social + Newsletter ─── */}
-                        <div className={styles.tierHub}>
-                            <div className={styles.hubGrid}>
-                                {/* Card 1: Contact & Mashhad Branches */}
-                                <div className={styles.hubCard}>
-                                    <div className={styles.hubCardHeader}>
-                                        <span className={styles.hubCardIcon} aria-hidden>
-                                            <Phone size={18} />
+                                <div className={styles.supplierBanner}>
+                                    <div className={styles.supplierBannerMain}>
+                                        <span className={styles.supplierBannerIcon} aria-hidden>
+                                            <Layers size={16} />
                                         </span>
-                                        <div>
-                                            <h3 className={styles.hubCardTitle}>مرکز تماس و شعب حضوری</h3>
-                                            <p className={styles.hubCardSub}>پاسخگویی مستقیم کارشناسان فروش و فنی</p>
+                                        <div className={styles.supplierBannerText}>
+                                            <p className={styles.supplierBannerTitle}>
+                                                شبکه تأمین‌کنندگان معتبر سراسر مشهد
+                                            </p>
+                                            <p className={styles.supplierBannerSub}>
+                                                پذیرش تأمین‌کنندگان و بازرگانان انواع کالای تکنولوژی و دیجیتال
+                                            </p>
                                         </div>
                                     </div>
+                                    <Link href="/contact" className={styles.supplierBannerCta}>
+                                        <span>درخواست همکاری</span>
+                                        <ChevronLeft size={14} aria-hidden />
+                                    </Link>
+                                </div>
+                            </nav>
 
-                                    <div className={styles.phoneGrid}>
-                                        {phoneItems.map((phone) => (
-                                            <a
-                                                key={`${phone.label}-${phone.tel}`}
-                                                href={`tel:${phone.tel}`}
-                                                className={styles.phoneChip}
-                                            >
-                                                <span className={styles.phoneBranchLabel}>{phone.label}</span>
-                                                <span className={styles.phoneNumber} dir="ltr">
-                                                    {phone.display}
+                            {/* Zone B: 2 Equal-Height Action Cards (Contact Hub + Newsletter & Online Channels) */}
+                            <div className={styles.hubZone}>
+                                {/* Card 1: Contact & Mashhad Hubs */}
+                                <div className={styles.hubCard}>
+                                    <div className={styles.hubCardTop}>
+                                        <div className={styles.hubCardHeader}>
+                                            <span className={styles.hubCardIcon} aria-hidden>
+                                                <Phone size={17} />
+                                            </span>
+                                            <div>
+                                                <h3 className={styles.hubCardTitle}>مرکز تماس و پایگاه‌های مشهد</h3>
+                                                <p className={styles.hubCardSub}>
+                                                    پشتیبانی مشتریان، فروش و هماهنگی تأمین کالا
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.phoneGrid}>
+                                            {phoneItems.map((phone) => (
+                                                <a
+                                                    key={`${phone.label}-${phone.tel}`}
+                                                    href={`tel:${phone.tel}`}
+                                                    className={styles.phoneChip}
+                                                >
+                                                    <span className={styles.phoneBranchLabel}>{phone.label}</span>
+                                                    <span className={styles.phoneNumber} dir="ltr">
+                                                        {phone.display}
+                                                    </span>
+                                                </a>
+                                            ))}
+                                        </div>
+
+                                        <ul className={styles.contactMetaList}>
+                                            <li className={styles.contactMetaItem}>
+                                                <Clock size={14} aria-hidden />
+                                                <span>
+                                                    شنبه تا چهارشنبه ۹ صبح تا ۹ شب | پنج‌شنبه ۹ صبح تا ۲ عصر
                                                 </span>
-                                            </a>
-                                        ))}
+                                            </li>
+                                            <li className={styles.contactMetaItem}>
+                                                <MapPin size={14} aria-hidden />
+                                                <span>{resolvedAddress}</span>
+                                            </li>
+                                        </ul>
                                     </div>
 
-                                    <ul className={styles.contactMetaList}>
-                                        <li className={styles.contactMetaItem}>
-                                            <Clock size={15} aria-hidden />
-                                            <span>
-                                                شنبه تا چهارشنبه ۹ صبح تا ۹ شب | پنج‌شنبه ۹ صبح تا ۲ عصر
-                                            </span>
-                                        </li>
-                                        <li className={styles.contactMetaItem}>
-                                            <MapPin size={15} aria-hidden />
-                                            <span>{resolvedAddress}</span>
-                                        </li>
-                                        {storeInfo.storeEmail && (
-                                            <li className={styles.contactMetaItem}>
-                                                <Mail size={15} aria-hidden />
+                                    <div className={styles.hubCardBottom}>
+                                        <div className={styles.contactFooterRow}>
+                                            <Link href="/contact" className={styles.branchesLink}>
+                                                <span>مشاهده نشانی دقیق و مسیریابی شعب</span>
+                                                <ChevronLeft size={14} aria-hidden />
+                                            </Link>
+
+                                            {storeInfo.storeEmail && (
                                                 <a
                                                     href={`mailto:${storeInfo.storeEmail}`}
-                                                    className={styles.navLink}
+                                                    className={styles.emailLink}
                                                     dir="ltr"
                                                 >
                                                     {storeInfo.storeEmail}
                                                 </a>
-                                            </li>
-                                        )}
-                                    </ul>
-
-                                    <Link href="/contact" className={styles.branchesLink}>
-                                        <span>مشاهده آدرس دقیق و مسیریابی شعب</span>
-                                        <ChevronLeft size={15} aria-hidden />
-                                    </Link>
-                                </div>
-
-                                {/* Card 2: Direct Engineering Consultation & Socials */}
-                                <div className={styles.hubCard}>
-                                    <div className={styles.hubCardHeader}>
-                                        <span className={styles.hubCardIcon} aria-hidden>
-                                            <Headphones size={18} />
-                                        </span>
-                                        <div>
-                                            <h3 className={styles.hubCardTitle}>مشاوره رایگان و ارتباط سریع</h3>
-                                            <p className={styles.hubCardSub}>راهنمایی انتخاب دوربین، نصب و تعمیرات</p>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className={styles.consultActions}>
-                                        <a
-                                            href="https://wa.me/989154191788"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={styles.whatsappBtn}
-                                        >
-                                            <MessageCircle size={18} aria-hidden />
-                                            <span>مشاوره مستقیم در واتساپ</span>
-                                        </a>
-
-                                        <Link href={supportHref} className={styles.supportBtn}>
-                                            <Sparkles size={16} aria-hidden />
-                                            <span>
-                                                {isAuthenticated
-                                                    ? "ارسال تیکت به واحد پشتیبانی"
-                                                    : "ارتباط با دپارتمان فروش و تعمیرات"}
+                                {/* Card 2: Newsletter + Direct Online Support & Socials */}
+                                <div className={styles.hubCard}>
+                                    <div className={styles.hubCardTop}>
+                                        <div className={styles.hubCardHeader}>
+                                            <span className={styles.hubCardIcon} aria-hidden>
+                                                <Mail size={17} />
                                             </span>
-                                        </Link>
+                                            <div>
+                                                <h3 className={styles.hubCardTitle}>خبرنامه و ارتباط مستقیم آنلاین</h3>
+                                                <p className={styles.hubCardSub}>
+                                                    اطلاع از جشنواره‌های فروش، تخفیف‌ها و محصولات جدید
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <p className={styles.newsletterDesc}>
+                                            با ثبت ایمیل خود، زودتر از دیگران از پیشنهادهای ویژه و کالاهای جدید دنیای
+                                            تکنولوژی در ای‌کا‌جی کالا مطلع شوید.
+                                        </p>
+
+                                        {newsletterStatus === "success" ? (
+                                            <div className={styles.newsletterSuccess} role="status">
+                                                <CheckCircle size={16} aria-hidden />
+                                                <span>{newsletterMessage}</span>
+                                            </div>
+                                        ) : (
+                                            <form
+                                                onSubmit={handleNewsletterSubmit}
+                                                noValidate
+                                                aria-label="فرم عضویت در خبرنامه"
+                                            >
+                                                <div className={styles.newsletterForm}>
+                                                    <input
+                                                        type="email"
+                                                        value={email}
+                                                        onChange={(e) => {
+                                                            setEmail(e.target.value);
+                                                            if (newsletterStatus === "error") {
+                                                                setNewsletterStatus("idle");
+                                                            }
+                                                        }}
+                                                        placeholder="example@email.com"
+                                                        aria-label="آدرس ایمیل برای عضویت در خبرنامه"
+                                                        className={`${styles.newsletterInput} ${
+                                                            newsletterStatus === "error"
+                                                                ? styles.newsletterInputError
+                                                                : ""
+                                                        }`}
+                                                        dir="ltr"
+                                                        disabled={isSubmitting}
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        disabled={isSubmitting || !email.trim()}
+                                                        className={styles.newsletterSubmit}
+                                                    >
+                                                        {isSubmitting ? (
+                                                            <Loader2 size={15} className="animate-spin" />
+                                                        ) : (
+                                                            <>
+                                                                <Mail size={14} aria-hidden />
+                                                                <span>ثبت عضویت</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+
+                                                {newsletterStatus === "error" && (
+                                                    <div className={styles.newsletterError} role="alert">
+                                                        <AlertCircle size={13} aria-hidden />
+                                                        <span>{newsletterMessage}</span>
+                                                    </div>
+                                                )}
+                                            </form>
+                                        )}
                                     </div>
 
-                                    {hasConfiguredSocials && (
-                                        <div className={styles.socialBlock}>
-                                            <p className={styles.socialLabel}>ای‌کا‌جی کالا در شبکه‌های اجتماعی:</p>
+                                    <div className={styles.hubCardBottom}>
+                                        <div className={styles.consultActions}>
+                                            <a
+                                                href="https://wa.me/989154191788"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={styles.whatsappBtn}
+                                            >
+                                                <MessageCircle size={16} aria-hidden />
+                                                <span>گفت‌وگو در واتساپ</span>
+                                            </a>
+
+                                            <Link href={supportHref} className={styles.supportBtn}>
+                                                <Sparkles size={15} aria-hidden />
+                                                <span>
+                                                    {isAuthenticated
+                                                        ? "ارسال تیکت پشتیبانی"
+                                                        : "ارتباط با پشتیبانی و فروش"}
+                                                </span>
+                                            </Link>
+                                        </div>
+
+                                        {hasConfiguredSocials && (
                                             <div className={styles.socialRow}>
+                                                <span className={styles.socialLabelInline}>شبکه‌های اجتماعی:</span>
                                                 {storeInfo.socialLinks?.telegram && (
                                                     <a
                                                         href={storeInfo.socialLinks.telegram}
@@ -667,7 +716,7 @@ function Footer() {
                                                         className={`${styles.socialPill} ${styles.socialPillTelegram}`}
                                                         title="تلگرام"
                                                     >
-                                                        <Send size={15} aria-hidden />
+                                                        <Send size={13} aria-hidden />
                                                         <span>تلگرام</span>
                                                     </a>
                                                 )}
@@ -679,7 +728,7 @@ function Footer() {
                                                         className={`${styles.socialPill} ${styles.socialPillInstagram}`}
                                                         title="اینستاگرام"
                                                     >
-                                                        <Instagram size={15} aria-hidden />
+                                                        <Instagram size={13} aria-hidden />
                                                         <span>اینستاگرام</span>
                                                     </a>
                                                 )}
@@ -691,106 +740,43 @@ function Footer() {
                                                         className={`${styles.socialPill} ${styles.socialPillAparat}`}
                                                         title="آپارات"
                                                     >
-                                                        <Video size={15} aria-hidden />
+                                                        <Video size={13} aria-hidden />
                                                         <span>آپارات</span>
                                                     </a>
                                                 )}
                                             </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Card 3: Newsletter Subscription */}
-                                <div className={`${styles.hubCard} ${styles.hubCardSpanTablet}`}>
-                                    <div className={styles.hubCardHeader}>
-                                        <span className={styles.hubCardIcon} aria-hidden>
-                                            <Mail size={18} />
-                                        </span>
-                                        <div>
-                                            <h3 className={styles.hubCardTitle}>عضویت در خبرنامه ای‌کا‌جی کالا</h3>
-                                            <p className={styles.hubCardSub}>اطلاع از جشنواره‌ها و قیمت‌های همکاری</p>
-                                        </div>
+                                        )}
                                     </div>
-
-                                    <p className={styles.newsletterDesc}>
-                                        ایمیل خود را ثبت کنید تا از تخفیف‌های ویژه، موجودی جدیدترین تجهیزات نظارتی و
-                                        راهنماهای فنی باخبر شوید.
-                                    </p>
-
-                                    {newsletterStatus === "success" ? (
-                                        <div className={styles.newsletterSuccess} role="status">
-                                            <CheckCircle size={17} aria-hidden />
-                                            <span>{newsletterMessage}</span>
-                                        </div>
-                                    ) : (
-                                        <form
-                                            onSubmit={handleNewsletterSubmit}
-                                            noValidate
-                                            aria-label="فرم عضویت در خبرنامه"
-                                        >
-                                            <div className={styles.newsletterForm}>
-                                                <input
-                                                    type="email"
-                                                    value={email}
-                                                    onChange={(e) => {
-                                                        setEmail(e.target.value);
-                                                        if (newsletterStatus === "error") {
-                                                            setNewsletterStatus("idle");
-                                                        }
-                                                    }}
-                                                    placeholder="example@email.com"
-                                                    aria-label="آدرس ایمیل برای عضویت در خبرنامه"
-                                                    className={`${styles.newsletterInput} ${
-                                                        newsletterStatus === "error"
-                                                            ? styles.newsletterInputError
-                                                            : ""
-                                                    }`}
-                                                    dir="ltr"
-                                                    disabled={isSubmitting}
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmitting || !email.trim()}
-                                                    className={styles.newsletterSubmit}
-                                                >
-                                                    {isSubmitting ? (
-                                                        <Loader2 size={16} className="animate-spin" />
-                                                    ) : (
-                                                        <>
-                                                            <Mail size={15} aria-hidden />
-                                                            <span>ثبت ایمیل</span>
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </div>
-
-                                            {newsletterStatus === "error" && (
-                                                <div className={styles.newsletterError} role="alert">
-                                                    <AlertCircle size={14} aria-hidden />
-                                                    <span>{newsletterMessage}</span>
-                                                </div>
-                                            )}
-                                        </form>
-                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* ─── TIER 4: Official Dealerships Showcase + Trust & Security Seals ─── */}
+                        {/* ─── ROW 3: Brand & Multi-Supplier Ecosystem Pillars + White Trust Seals ─── */}
                         <div className={styles.tierCredentials}>
                             <div>
                                 <p className={styles.partnerTitle}>
-                                    <Award size={17} aria-hidden />
-                                    <span>نمایندگی رسمی برندهای معتبر در استان خراسان بزرگ</span>
+                                    <Award size={16} aria-hidden />
+                                    <span>ارکان اصالت، کیفیت و شبکه تأمین ای‌کا‌جی کالا</span>
                                 </p>
                                 <ul className={styles.partnerGrid}>
-                                    {OFFICIAL_PARTNERS.map((partner) => (
-                                        <li key={partner.brand}>
-                                            <Link href={partner.href} className={styles.partnerPill}>
-                                                <span className={styles.partnerBrand} dir="ltr">
-                                                    {partner.brand}
+                                    {BRAND_PILLARS.map((pillar) => (
+                                        <li key={pillar.title}>
+                                            <Link href={pillar.href} className={styles.partnerPill}>
+                                                <span className={styles.partnerPillMain}>
+                                                    <span className={styles.partnerPillIcon} aria-hidden>
+                                                        {pillar.icon === "shield" && <ShieldCheck size={16} />}
+                                                        {pillar.icon === "layers" && <Layers size={16} />}
+                                                        {pillar.icon === "sparkles" && <Sparkles size={16} />}
+                                                        {pillar.icon === "truck" && <Truck size={16} />}
+                                                    </span>
+                                                    <span className={styles.partnerPillBody}>
+                                                        <span className={styles.partnerBrand}>{pillar.title}</span>
+                                                        <span className={styles.partnerRole}>{pillar.subtitle}</span>
+                                                    </span>
                                                 </span>
-                                                <span className={styles.partnerRole}>{partner.role}</span>
+                                                <span className={styles.partnerPillArrow} aria-hidden>
+                                                    <ChevronLeft size={14} />
+                                                </span>
                                             </Link>
                                         </li>
                                     ))}
@@ -804,7 +790,7 @@ function Footer() {
                                     <div className={styles.sealCard}>
                                         <div className={styles.enamadFallback} aria-hidden>
                                             <span className={`${styles.sealBadgeIcon} ${styles.sealBadgeAmber}`}>
-                                                <Award size={18} />
+                                                <Award size={16} />
                                             </span>
                                             <p className={styles.sealCaption}>اینماد</p>
                                             <p className={styles.sealSub}>نماد اعتماد</p>
@@ -818,28 +804,28 @@ function Footer() {
                                     {/* Shaparak Payment Security Card */}
                                     <Link href="/faq" className={styles.sealCard} title="پرداخت امن زرین‌پال و سداد">
                                         <span className={`${styles.sealBadgeIcon} ${styles.sealBadgeBlue}`} aria-hidden>
-                                            <CreditCard size={18} />
+                                            <CreditCard size={16} />
                                         </span>
                                         <p className={styles.sealCaption}>پرداخت امن</p>
                                         <p className={styles.sealSub}>زرین‌پال و سداد</p>
                                     </Link>
 
-                                    {/* Official Warranty Card */}
-                                    <Link href="/about" className={styles.sealCard} title="ضمانت اصالت و گارانتی شرکتی">
+                                    {/* Authenticity & Quality Guarantee Card */}
+                                    <Link href="/about" className={styles.sealCard} title="تضمین اصالت و سلامت کالا">
                                         <span
                                             className={`${styles.sealBadgeIcon} ${styles.sealBadgeEmerald}`}
                                             aria-hidden
                                         >
-                                            <ShieldCheck size={18} />
+                                            <ShieldCheck size={16} />
                                         </span>
                                         <p className={styles.sealCaption}>اصالت کالا</p>
-                                        <p className={styles.sealSub}>گارانتی معتبر</p>
+                                        <p className={styles.sealSub}>تضمین سلامت</p>
                                     </Link>
                                 </div>
                             </div>
                         </div>
 
-                        {/* ─── TIER 5: Copyright & Credits Bar ─── */}
+                        {/* ─── ROW 4: Copyright & Quick Links Bar ─── */}
                         <div className={styles.tierBottom}>
                             <p className={styles.copyrightText}>
                                 © ۱۳۹۶–۱۴۰۵ تمامی حقوق مادی و معنوی این وب‌سایت متعلق به فروشگاه اینترنتی{" "}
@@ -847,14 +833,17 @@ function Footer() {
                             </p>
 
                             <div className={styles.bottomMetaLeft}>
-                                <Link href="/terms" className={styles.bottomMiniLink}>
-                                    قوانین و مقررات
+                                <Link href="/contact" className={styles.bottomMiniLink}>
+                                    همکاری با تأمین‌کنندگان
+                                </Link>
+                                <Link href="/blog" className={styles.bottomMiniLink}>
+                                    بلاگ تکنولوژی
                                 </Link>
                                 <Link href="/faq" className={styles.bottomMiniLink}>
                                     سوالات متداول
                                 </Link>
-                                <Link href="/contact" className={styles.bottomMiniLink}>
-                                    شعب مشهد
+                                <Link href="/terms" className={styles.bottomMiniLink}>
+                                    قوانین و مقررات
                                 </Link>
                                 <p className={styles.devCredit}>
                                     طراحی و توسعه: <span className={styles.devName}>sadraSh</span>

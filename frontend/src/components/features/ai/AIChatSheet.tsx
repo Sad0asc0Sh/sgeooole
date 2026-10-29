@@ -233,8 +233,8 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
 
     const suggestions: SuggestionItem[] = [
         { icon: Box, label: "پیگیری سفارش", prompt: "سفارش من کجاست؟" },
-        { icon: Wrench, label: "خدمات نصب", prompt: "شرایط نصب در محل چیست؟" },
-        { icon: ShoppingBag, label: "راهنمای خرید", prompt: "بهترین دوربین مداربسته برای منزل کدام است؟" },
+        { icon: Wrench, label: "ارسال و تحویل", prompt: "شرایط و زمان ارسال سفارش‌ها چگونه است؟" },
+        { icon: ShoppingBag, label: "پیشنهاد خرید", prompt: "جدیدترین و پرفروش‌ترین محصولات فروشگاه کدام‌اند؟" },
         { icon: Phone, label: "پشتیبانی", prompt: "شماره تماس پشتیبانی چند است؟" },
     ];
 

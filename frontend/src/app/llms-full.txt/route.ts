@@ -1,119 +1,48 @@
 /**
- * /llms-full.txt — the full text of the site's editorial content
- * (guides, glossary, comparisons) plus the store FAQ and a citable
- * store-facts block, in one machine-readable file, generated from the
- * validated programmatic content layer.
- *
- * Lets an AI agent get everything in a single request instead of crawling.
+ * /llms-full.txt — comprehensive machine-readable overview of EKG KALA
+ * (ای کا جی کالا), its brand heritage, multi-supplier technology retail
+ * model, shopping guarantees, and complete store FAQs in a single file.
  */
 
-import {
-  guides,
-  glossaryTerms,
-  comparisons,
-  type ContentBlock,
-} from "@/content/programmatic";
 import { defaultFAQs } from "@/app/faq/defaultFaqs";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
-
-function renderBlock(block: ContentBlock): string {
-  switch (block.type) {
-    case "paragraph":
-      return block.text;
-    case "list":
-      return block.items.map((item) => `- ${item}`).join("\n");
-    case "table": {
-      const header = `| ${block.headers.join(" | ")} |`;
-      const divider = `| ${block.headers.map(() => "---").join(" | ")} |`;
-      const rows = block.rows.map((row) => `| ${row.join(" | ")} |`).join("\n");
-      return `${header}\n${divider}\n${rows}`;
-    }
-    case "callout":
-      return `> ${block.text}`;
-  }
-}
+const LAST_UPDATED = "2026-10-29";
 
 function buildBody(): string {
-  // Freshness signal: the newest editorial update across the content layer.
-  const lastUpdated = [...guides, ...glossaryTerms, ...comparisons]
-    .map((entry) => entry.updatedAt)
-    .filter(Boolean)
-    .sort()
-    .at(-1);
-
   const parts: string[] = [
-    `# ekgkala (ای کا جی کالا) — محتوای کامل راهنماها، واژه‌نامه و مقایسه‌ها`,
+    `# ekgkala (ای کا جی کالا) — مرجع جامع اطلاعات فروشگاه و خدمات مشتریان`,
     ``,
-    `> این فایل نسخه متنی کامل محتوای تحریریه‌ای سایت برای دستیارهای هوش مصنوعی است.`,
+    `> این فایل نسخه متنی کامل معرفی فروشگاه اینترنتی ای کا جی کالا، ارکان خدمات و پرسش‌های متداول خرید برای دستیارهای هوش مصنوعی است.`,
     `> وب‌سایت: ${SITE_URL}`,
-    ...(lastUpdated ? [`> آخرین به‌روزرسانی محتوای تحریریه‌ای: ${lastUpdated}`] : []),
+    `> آخرین به‌روزرسانی محتوای تحریریه‌ای: ${LAST_UPDATED}`,
     ``,
     `---`,
     ``,
     `# درباره ای کا جی کالا`,
     ``,
-    `ای کا جی کالا (ekgkala) فروشگاه اینترنتی تخصصی تجهیزات نظارت تصویری و امنیتی در ایران است که از سال ۱۳۹۶ در مشهد فعالیت می‌کند و سه شعبه فعال دارد. پرداخت از طریق درگاه‌های امن زرین‌پال و سداد انجام می‌شود؛ سفارش‌های مشهد معمولاً همان روز کاری و شهرستان‌ها ۵ تا ۷ روز کاری تحویل می‌شوند. قیمت و موجودی زنده فقط روی صفحات محصول (${SITE_URL}/products) معتبر است.`,
+    `ای کا جی کالا (ekgkala / EKG KALA) فروشگاه اینترنتی جامع عرضه طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و تجهیزات هوشمند در ایران است. این مجموعه فعالیت خود را از سال ۱۳۹۶ در کلان‌شهر مشهد با تکیه بر اصل «امنیت، اعتماد و آرامش خاطر» آغاز کرد و با توسعه مستمر سبد کالایی و همکاری با شبکه تأمین‌کنندگان معتبر در سراسر مشهد، تجربه‌ای بی‌مرز، اصیل و مطمئن از خرید آنلاین را برای خانواده‌ها و کسب‌وکارها در سراسر ایران فراهم کرده است.`,
+    ``,
+    `## ارزش‌ها و مزایای خرید از ای کا جی کالا`,
+    ``,
+    `- تنوع گسترده محصولات تکنولوژی و دیجیتال بدون محدودیت کالایی (${SITE_URL}/products)`,
+    `- تضمین اصالت و سلامت فیزیکی کالا پیش از ارسال به همراه گارانتی معتبر`,
+    `- تأمین مستقیم از شبکه تأمین‌کنندگان خوش‌نام در مشهد با قیمت‌گذاری شفاف و رقابتی`,
+    `- سه پایگاه فعال در سطح شهر مشهد برای پشتیبانی و ارتباط مستقیم (${SITE_URL}/contact)`,
+    `- پرداخت ایمن از طریق درگاه‌های بانکی زرین‌پال و سداد`,
+    `- تحویل سریع روزانه در مشهد و ارسال امن به سراسر کشور`,
+    `- مجله و بلاگ تکنولوژی جهت بررسی فناوری‌های روز (${SITE_URL}/blog)`,
+    ``,
+    `قیمت و موجودی زنده محصولات فقط روی صفحات محصول (${SITE_URL}/products) معتبر است.`,
     ``,
     `---`,
     ``,
+    `# سوالات متداول فروشگاه`,
+    ``,
+    `${SITE_URL}/faq`,
+    ``,
   ];
 
-  parts.push(`# راهنمای خرید`, ``);
-  for (const guide of guides) {
-    parts.push(`## ${guide.h1}`, ``, `${SITE_URL}/guides/${guide.slug}`, ``, guide.intro, ``);
-    for (const section of guide.sections) {
-      parts.push(`### ${section.heading}`, ``);
-      for (const block of section.blocks) parts.push(renderBlock(block), ``);
-    }
-    parts.push(`### سوالات متداول`, ``);
-    for (const faq of guide.faqs) {
-      parts.push(`**${faq.question}**`, ``, faq.answer, ``);
-    }
-    parts.push(`---`, ``);
-  }
-
-  parts.push(`# واژه‌نامه دوربین مداربسته`, ``);
-  for (const term of glossaryTerms) {
-    parts.push(`## ${term.term}`, ``, `${SITE_URL}/glossary/${term.slug}`, ``, term.definition, ``);
-    for (const block of term.body) parts.push(renderBlock(block), ``);
-    if (term.examples.length > 0) {
-      parts.push(`**مثال:**`, ``);
-      for (const example of term.examples) parts.push(`- ${example}`);
-      parts.push(``);
-    }
-    if (term.faqs && term.faqs.length > 0) {
-      parts.push(`**سوالات متداول:**`, ``);
-      for (const faq of term.faqs) parts.push(`- ${faq.question}: ${faq.answer}`);
-      parts.push(``);
-    }
-    parts.push(`---`, ``);
-  }
-
-  parts.push(`# مقایسه‌ها`, ``);
-  for (const comparison of comparisons) {
-    parts.push(`## ${comparison.h1}`, ``, `${SITE_URL}/compare/${comparison.slug}`, ``, comparison.intro, ``);
-    parts.push(`### ${comparison.sideA.name}`, ``, comparison.sideA.summary, ``);
-    parts.push(`نقاط قوت: ${comparison.sideA.strengths.join("؛ ")}`, ``);
-    parts.push(`نقاط ضعف: ${comparison.sideA.weaknesses.join("؛ ")}`, ``);
-    parts.push(`### ${comparison.sideB.name}`, ``, comparison.sideB.summary, ``);
-    parts.push(`نقاط قوت: ${comparison.sideB.strengths.join("؛ ")}`, ``);
-    parts.push(`نقاط ضعف: ${comparison.sideB.weaknesses.join("؛ ")}`, ``);
-    const { headers, rows } = comparison.table;
-    parts.push(`| ${headers.join(" | ")} |`, `| ${headers.map(() => "---").join(" | ")} |`);
-    for (const row of rows) parts.push(`| ${row.join(" | ")} |`);
-    parts.push(``, `**جمع‌بندی:** ${comparison.verdict}`, ``);
-    parts.push(`### سوالات متداول`, ``);
-    for (const faq of comparison.faqs) {
-      parts.push(`**${faq.question}**`, ``, faq.answer, ``);
-    }
-    parts.push(`---`, ``);
-  }
-
-  // Store FAQ — the same default set rendered on /faq (ordering, payment,
-  // shipping, returns). Included so an agent can answer store-policy
-  // questions from this single file, without a second fetch.
-  parts.push(`# سوالات متداول فروشگاه`, ``, `${SITE_URL}/faq`, ``);
   for (const faq of defaultFAQs) {
     parts.push(`**${faq.question}**`, ``, faq.answer, ``);
   }

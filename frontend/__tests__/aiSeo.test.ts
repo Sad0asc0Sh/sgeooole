@@ -7,15 +7,14 @@
  *   and training bots (GPTBot, ClaudeBot, anthropic-ai, Google-Extended)
  *   are all explicitly allowed, each with the private paths disallowed
  * - robots.ts must BLOCK the training-only CCBot crawler
- * - /llms.txt carries a definition block + when-to-use guidance,
- *   /llms-full.txt also embeds the store FAQ, and /home.md serves the
- *   Markdown homepage used by content negotiation
+ * - /llms.txt carries a broad brand definition block + when-to-use guidance,
+ *   /llms-full.txt embeds store overview + the store FAQ, and /home.md serves
+ *   the Markdown homepage used by content negotiation
  */
 import robots from "@/app/robots";
 import { GET as llmsTxtGet, buildLlmsTxtBody } from "@/app/llms.txt/route";
 import { GET as llmsFullTxtGet, buildLlmsFullTxtBody } from "@/app/llms-full.txt/route";
 import { GET as homeMdGet, buildHomeMarkdownBody } from "@/app/home.md/route";
-import { guides, glossaryTerms, comparisons } from "@/content/programmatic";
 import { defaultFAQs } from "@/app/faq/defaultFaqs";
 
 const AI_CITE_BOTS = [
@@ -92,13 +91,17 @@ describe("robots.txt AI crawler policy", () => {
 });
 
 describe("/llms.txt route", () => {
-  test("GET handler exists and body is markdown with brand and key sections", () => {
+  test("GET handler exists and body is markdown with broad technology brand and key sections", () => {
     expect(typeof llmsTxtGet).toBe("function");
     const text = buildLlmsTxtBody();
     expect(text).toContain("ekgkala");
     expect(text).toContain("ای کا جی کالا");
-    for (const path of ["/guides", "/glossary", "/compare", "/products", "/llms-full.txt"]) {
+    expect(text).toContain("تکنولوژی");
+    for (const path of ["/products", "/categories", "/blog", "/faq", "/llms-full.txt"]) {
       expect(text).toContain(path);
+    }
+    for (const removedPath of ["/compare", "/glossary", "/guides"]) {
+      expect(text).not.toContain(removedPath);
     }
   });
 
@@ -111,43 +114,35 @@ describe("/llms.txt route", () => {
 });
 
 describe("/llms-full.txt route", () => {
-  test("body contains all programmatic content", () => {
+  test("body embeds the broad store overview, FAQ, and freshness line without legacy compare/glossary routes", () => {
     expect(typeof llmsFullTxtGet).toBe("function");
     const text = buildLlmsFullTxtBody();
-    expect(text.length).toBeGreaterThan(10000);
-    for (const guide of guides) expect(text).toContain(guide.h1);
-    for (const term of glossaryTerms) expect(text).toContain(term.term);
-    for (const comparison of comparisons) expect(text).toContain(comparison.h1);
-  });
-
-  test("body embeds the store FAQ and a freshness line", () => {
-    const text = buildLlmsFullTxtBody();
+    expect(text).toContain("درباره ای کا جی کالا");
+    expect(text).toContain("تکنولوژی");
     for (const faq of defaultFAQs) expect(text).toContain(faq.question);
     expect(text).toContain("آخرین به‌روزرسانی محتوای تحریریه‌ای");
+    for (const removedPath of ["/compare", "/glossary", "/guides"]) {
+      expect(text).not.toContain(removedPath);
+    }
   });
 });
 
 describe("/home.md route (Markdown homepage)", () => {
-  test("body is Markdown with brand definition and discovery links", () => {
+  test("body is Markdown with broad technology brand definition and discovery links", () => {
     expect(typeof homeMdGet).toBe("function");
     const text = buildHomeMarkdownBody();
     expect(text).toContain("# ای کا جی کالا");
-    expect(text).toContain("فروشگاه اینترنتی تخصصی تجهیزات نظارت تصویری");
-    for (const path of ["/guides", "/faq", "/llms.txt", "/llms-full.txt", "/sitemap.xml"]) {
+    expect(text).toContain("فروشگاه اینترنتی جامع");
+    for (const path of ["/products", "/blog", "/faq", "/llms.txt", "/llms-full.txt", "/sitemap.xml"]) {
       expect(text).toContain(path);
+    }
+    for (const removedPath of ["/compare", "/glossary", "/guides"]) {
+      expect(text).not.toContain(removedPath);
     }
   });
 });
 
 describe("soft-404 status guard", () => {
-  // A loading.tsx above a page starts streaming the response with HTTP 200
-  // before the page can call notFound(), and the status can then never
-  // become 404 (Next.js docs: loading file convention → Status Codes).
-  // That is exactly how every unknown URL became a soft-404 while still
-  // rendering the 404 page. Guard the two boundaries that mask a
-  // notFound(): the root segment (catch-all, guides, glossary, compare)
-  // and the PDP segment. /products keeps its loading.tsx on purpose —
-  // that route never calls notFound().
   const fs = require("fs");
   const path = require("path");
   const appDir = path.join(process.cwd(), "src", "app");
