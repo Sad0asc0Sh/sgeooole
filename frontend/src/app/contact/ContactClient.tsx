@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, ChevronLeft, Clock, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Building2, ChevronLeft, Clock, Headphones, MapPin, MessageCircle, Phone } from "lucide-react";
 import shared from "../about/About.module.css";
 import styles from "./Contact.module.css";
 
@@ -143,15 +143,13 @@ export default function ContactPage() {
                                 <Phone size={18} aria-hidden />
                                 <span dir="ltr">051-35013383</span>
                             </a>
-                            <a
-                                href="https://wa.me/989154191788"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`${styles.btn} ${styles.btnGreen}`}
+                            <Link
+                                href="/profile/tickets"
+                                className={`${styles.btn} ${styles.btnSupport}`}
                             >
-                                <MessageCircle size={18} aria-hidden />
-                                <span>واتساپ</span>
-                            </a>
+                                <Headphones size={18} aria-hidden />
+                                <span>پشتیبانی آنلاین سایت</span>
+                            </Link>
                         </div>
                     </section>
                 </div>

@@ -107,7 +107,9 @@ describe("Footer architectural widescreen & brand positioning", () => {
         expect(allHrefs.some((h) => h.startsWith("/compare"))).toBe(false);
         expect(allHrefs.some((h) => h.startsWith("/glossary"))).toBe(false);
         expect(allHrefs.some((h) => h.startsWith("/guides"))).toBe(false);
+        expect(allHrefs.some((h) => h.includes("wa.me") || h.includes("whatsapp"))).toBe(false);
         expect(allHrefs.some((h) => h === "/blog")).toBe(true);
+        expect(allHrefs.some((h) => h === "/profile/tickets")).toBe(true);
     });
 
     it("adapts customer links for authenticated users and renders live categories from API", async () => {

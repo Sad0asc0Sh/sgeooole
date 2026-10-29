@@ -20,7 +20,7 @@ import {
     Layers,
     ShieldCheck,
     CreditCard,
-    MessageCircle,
+    Headphones,
     Award,
     Sparkles,
 } from "lucide-react";
@@ -685,23 +685,18 @@ function Footer() {
 
                                     <div className={styles.hubCardBottom}>
                                         <div className={styles.consultActions}>
-                                            <a
-                                                href="https://wa.me/989154191788"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className={styles.whatsappBtn}
+                                            <Link
+                                                href="/profile/tickets"
+                                                className={styles.supportOnlineBtn}
+                                                aria-label="گفت‌وگو با پشتیبانی آنلاین سایت"
                                             >
-                                                <MessageCircle size={16} aria-hidden />
-                                                <span>گفت‌وگو در واتساپ</span>
-                                            </a>
+                                                <Headphones size={16} aria-hidden />
+                                                <span>گفت‌وگو با پشتیبانی سایت</span>
+                                            </Link>
 
-                                            <Link href={supportHref} className={styles.supportBtn}>
+                                            <Link href="/contact" className={styles.supportBtn}>
                                                 <Sparkles size={15} aria-hidden />
-                                                <span>
-                                                    {isAuthenticated
-                                                        ? "ارسال تیکت پشتیبانی"
-                                                        : "ارتباط با پشتیبانی و فروش"}
-                                                </span>
+                                                <span>ارتباط با واحد فروش و شعب</span>
                                             </Link>
                                         </div>
 
