@@ -306,14 +306,15 @@ async function searchProducts(message, history = []) {
 }
 
 /** متن grounding برای تزریق به system prompt — تنها منبع حقیقت LLM */
-function formatProductContext(products) {
+function formatProductContext(products, now = new Date()) {
   if (!products || products.length === 0) {
     return 'هیچ محصول مرتبطی در دیتابیس فروشگاه یافت نشد. باید صادقانه بگویی موجود نیست و پیشنهاد جایگزین کلی بدهی، بدون اختراع نام/قیمت/موجودی.';
   }
   return products.map((p, i) => {
     const stock = effectiveStock(p);
     // ۴.۱.۲: نمایش قیمت با همان قرارداد صفحه‌ی محصول (تایمر زنده + کف قطعی)
-    const view = resolveProductDisplay(p, { activeSale: p.__activeSale || null });
+    // `now` از بیرون تزریق می‌شود تا همه‌ی مسیرها یک ساعت واحد داشته باشند.
+    const view = resolveProductDisplay(p, { now, activeSale: p.__activeSale || null });
     const price = view.price;
     const priceFa = Number(price || 0).toLocaleString('fa-IR');
     const stockFa = stock > 0 ? `موجود (${Number(stock).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
@@ -335,8 +336,12 @@ function formatProductContext(products) {
 /** پیلود کارت برای فرانت‌اند */
 function toCardPayload(p, extra = {}) {
   const stock = effectiveStock(p);
-  // ۴.۱.۲: کارت چت/پک هم نباید سقف منقضی یا discount بی‌پشتوانه را نشان دهد
-  const view = resolveProductDisplay(p, { activeSale: extra.activeSale || p.__activeSale || null });
+  // ۴.۱.۲: کارت چت/پک هم نباید سقف منقضی یا discount بی‌پشتوانه را نشان دهد.
+  // ساعت درخواست تزریق می‌شود (extra.now) تا «تازگی کف قطعی» با همان ساعتی
+  // سنجیده شود که finalPriceOf استفاده می‌کند؛ وگرنه کارت و صفحه‌ی محصول
+  // می‌توانند برای یک محصول دو قیمت متفاوت بدهند (باگ پاریتی).
+  const now = extra.now instanceof Date ? extra.now : new Date();
+  const view = resolveProductDisplay(p, { now, activeSale: extra.activeSale || p.__activeSale || null });
   const price = view.price;
   const catName = (p.category && p.category.name) || 'عمومی';
   const catSlug = (p.category && (p.category.slug || p.category._id)) || '';

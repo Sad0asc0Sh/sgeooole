@@ -693,10 +693,10 @@ export const productService = {
         appendPropertyFilters(queryParams, params.properties);
       }
 
-      // Listing cards must reflect promotion edits promptly. The backend treats
-      // this flag as an explicit no-store request, so no unique timestamp cache
-      // entries are created for each refresh.
-      queryParams.set("nocache", "true");
+      // توجه: عمداً `nocache=true` فرستاده نمی‌شود.
+      // کش سمت سرور با clearCacheByPrefix('/api/products') در هر ویرایش
+      // محصول/کمپین و با ttlUntil(nearest, 300, now) برای انقضای پروموشن‌ها
+      // دقیق مدیریت می‌شود؛ دور زدن آن فقط سرعت فیلترینگ را چند برابر کم می‌کرد.
 
       const response = await api.get(`/products?${queryParams.toString()}`);
 

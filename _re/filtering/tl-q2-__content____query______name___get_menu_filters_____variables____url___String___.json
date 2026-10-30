@@ -1,0 +1,1512 @@
+{
+  "page_filters": [
+    {
+      "title": "فیلتر براساس قیمت",
+      "price_range": {
+        "min": 0,
+        "max": 676806000
+      },
+      "items": null
+    },
+    {
+      "title": "برندها",
+      "price_range": null,
+      "items": [
+        {
+          "name": "بلک بری",
+          "code": "09",
+          "enName": "Blackberry"
+        },
+        {
+          "name": "کاترپیلار",
+          "code": "10",
+          "enName": "Caterpillar"
+        },
+        {
+          "name": "جی ال ایکس",
+          "code": "11",
+          "enName": "GLX"
+        },
+        {
+          "name": "ارد",
+          "code": "14",
+          "enName": "Orod"
+        },
+        {
+          "name": "شیائومی",
+          "code": "15",
+          "enName": "Xiaomi"
+        },
+        {
+          "name": "ایسوس",
+          "code": "19",
+          "enName": "ASUS"
+        },
+        {
+          "name": "اپل",
+          "code": "20",
+          "enName": "Apple"
+        },
+        {
+          "name": "آنر",
+          "code": "21",
+          "enName": "Honor"
+        },
+        {
+          "name": "اچ تی سی",
+          "code": "22",
+          "enName": "HTC"
+        },
+        {
+          "name": "هوآوی",
+          "code": "23",
+          "enName": "Huawei"
+        },
+        {
+          "name": "ال جی",
+          "code": "24",
+          "enName": "LG"
+        },
+        {
+          "name": "نوکیا",
+          "code": "25",
+          "enName": "Nokia"
+        },
+        {
+          "name": "سامسونگ",
+          "code": "26",
+          "enName": "Samsung"
+        },
+        {
+          "name": "سونی",
+          "code": "28",
+          "enName": "Sony"
+        },
+        {
+          "name": "بلو",
+          "code": "29",
+          "enName": "BLUE"
+        },
+        {
+          "name": "موتورولا",
+          "code": "30",
+          "enName": "Motorola"
+        },
+        {
+          "name": "وان پلاس",
+          "code": "39",
+          "enName": "OnePlus"
+        },
+        {
+          "name": "گوگل",
+          "code": "40",
+          "enName": "Google"
+        },
+        {
+          "name": "جی پلاس",
+          "code": "41",
+          "enName": "GPlus"
+        },
+        {
+          "name": "اسمارت",
+          "code": "42",
+          "enName": "Smart"
+        },
+        {
+          "name": "لاوا",
+          "code": "49",
+          "enName": "Lava"
+        },
+        {
+          "name": "تی سی ال",
+          "code": "51",
+          "enName": "TCL"
+        },
+        {
+          "name": "انرجایزر",
+          "code": "66",
+          "enName": "Energizer"
+        },
+        {
+          "name": "ریلمی",
+          "code": "69",
+          "enName": "Realme"
+        },
+        {
+          "name": "اوپو",
+          "code": "80",
+          "enName": "Oppo"
+        },
+        {
+          "name": "پوکو",
+          "code": "81",
+          "enName": "Poco"
+        },
+        {
+          "name": "اینفینیکس",
+          "code": "90",
+          "enName": "Infinix"
+        },
+        {
+          "name": "تِکنو",
+          "code": "93",
+          "enName": "Techno"
+        },
+        {
+          "name": "الفون",
+          "code": "94",
+          "enName": "Elephone"
+        },
+        {
+          "name": "جیونی",
+          "code": "127",
+          "enName": "Gionee"
+        },
+        {
+          "name": "بلک ویو",
+          "code": "128",
+          "enName": "Blackview"
+        },
+        {
+          "name": "دوجی",
+          "code": "129",
+          "enName": "Doogee"
+        },
+        {
+          "name": "هایسنس",
+          "code": "153",
+          "enName": "Hisense"
+        },
+        {
+          "name": "آلکاتل",
+          "code": "194",
+          "enName": "Alcatel"
+        },
+        {
+          "name": "ویوو",
+          "code": "201",
+          "enName": "VIVO"
+        },
+        {
+          "name": "ناتینگ",
+          "code": "231",
+          "enName": "Nothing"
+        },
+        {
+          "name": "جنرال لوکس",
+          "code": "270",
+          "enName": "General luxe"
+        },
+        {
+          "name": "داکس",
+          "code": "273",
+          "enName": "DOX"
+        },
+        {
+          "name": "کاجیتل",
+          "code": "321",
+          "enName": "KGTEL"
+        },
+        {
+          "name": "سیکو",
+          "code": "329",
+          "enName": "Siccoo"
+        },
+        {
+          "name": "اینوی",
+          "code": "345",
+          "enName": "Inoi"
+        },
+        {
+          "name": "راگ گیر",
+          "code": "350",
+          "enName": "RugGear"
+        },
+        {
+          "name": "ویکو",
+          "code": "391",
+          "enName": "Wiko"
+        },
+        {
+          "name": "رنسو",
+          "code": "530",
+          "enName": "Renso"
+        },
+        {
+          "name": "تی سی اچ",
+          "code": "546",
+          "enName": "TCH"
+        },
+        {
+          "name": "داریا",
+          "code": "568",
+          "enName": "Daria"
+        },
+        {
+          "name": "بلوم پلاس",
+          "code": "592",
+          "enName": "Bloom Plus"
+        },
+        {
+          "name": "تکنو (Tecno)",
+          "code": "593",
+          "enName": "tecno-mobile"
+        },
+        {
+          "name": "وکال",
+          "code": "751",
+          "enName": "Vocal"
+        },
+        {
+          "name": "بلک شارک",
+          "code": "753",
+          "enName": "Black Shark"
+        },
+        {
+          "name": "اوتل",
+          "code": "804",
+          "enName": "Otel"
+        },
+        {
+          "name": "کینگ اسپک",
+          "code": "810",
+          "enName": "KingSpec"
+        },
+        {
+          "name": "بلووم",
+          "code": "868",
+          "enName": "Bloom"
+        },
+        {
+          "name": "هانوفر",
+          "code": "1002",
+          "enName": "Hanofer"
+        },
+        {
+          "name": "اچ ام دی",
+          "code": "1286",
+          "enName": "HMD"
+        },
+        {
+          "name": "ردتون",
+          "code": "1313",
+          "enName": "Red Tone"
+        },
+        {
+          "name": "موبودو",
+          "code": "1338",
+          "enName": "mobodo"
+        },
+        {
+          "name": "ژیواکو",
+          "code": "1456",
+          "enName": "Zhivaco"
+        },
+        {
+          "name": "میدسل",
+          "code": "4786",
+          "enName": "Middcell"
+        },
+        {
+          "name": "سایفر",
+          "code": "5792",
+          "enName": "Cypher"
+        },
+        {
+          "name": "یولفون",
+          "code": "5984",
+          "enName": "Ulefone"
+        },
+        {
+          "name": "نمو",
+          "code": "6201",
+          "enName": "Nemo"
+        },
+        {
+          "name": "ژوبیتر",
+          "code": "6536",
+          "enName": "Jubiter"
+        },
+        {
+          "name": "کامتل",
+          "code": "7103",
+          "enName": "Comtel"
+        },
+        {
+          "name": "تی موبایل",
+          "code": "7342",
+          "enName": "Tmobile"
+        },
+        {
+          "name": "الویا",
+          "code": "7343",
+          "enName": "ELEVIA"
+        }
+      ]
+    },
+    {
+      "title": "تعداد هسته پردازشگر",
+      "price_range": null,
+      "items": [
+        {
+          "name": "کمتر از دو هسته",
+          "code": "452",
+          "enName": null
+        },
+        {
+          "name": "دو هسته",
+          "code": "453",
+          "enName": null
+        },
+        {
+          "name": "چهار هسته",
+          "code": "454",
+          "enName": null
+        },
+        {
+          "name": "شش هسته",
+          "code": "455",
+          "enName": null
+        },
+        {
+          "name": "هشت هسته",
+          "code": "456",
+          "enName": null
+        },
+        {
+          "name": "ده هسته",
+          "code": "457",
+          "enName": null
+        },
+        {
+          "name": "نه هسته",
+          "code": "458",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "قلم",
+      "price_range": null,
+      "items": [
+        {
+          "name": "دارد",
+          "code": "474",
+          "enName": null
+        },
+        {
+          "name": "ندارد",
+          "code": "475",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "رده بندی",
+      "price_range": null,
+      "items": [
+        {
+          "name": "پرچمدار",
+          "code": "476",
+          "enName": null
+        },
+        {
+          "name": "قاتل پرچمدار",
+          "code": "477",
+          "enName": null
+        },
+        {
+          "name": "میان رده",
+          "code": "478",
+          "enName": null
+        },
+        {
+          "name": "اقتصادی",
+          "code": "479",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "تاشو",
+      "price_range": null,
+      "items": [
+        {
+          "name": "هست",
+          "code": "480",
+          "enName": null
+        },
+        {
+          "name": "نیست",
+          "code": "481",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "سیستم عامل",
+      "price_range": null,
+      "items": [
+        {
+          "name": "Android",
+          "code": "482",
+          "enName": null
+        },
+        {
+          "name": "iOS",
+          "code": "483",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "حافظه داخلی (Storage)",
+      "price_range": null,
+      "items": [
+        {
+          "name": "8 گیگابایت",
+          "code": "179",
+          "enName": null
+        },
+        {
+          "name": "16 گیگابایت",
+          "code": "180",
+          "enName": null
+        },
+        {
+          "name": "32 گیگابایت",
+          "code": "181",
+          "enName": null
+        },
+        {
+          "name": "64 گیگابایت",
+          "code": "182",
+          "enName": null
+        },
+        {
+          "name": "128 گیگابایت",
+          "code": "183",
+          "enName": null
+        },
+        {
+          "name": "256 گیگابایت",
+          "code": "184",
+          "enName": null
+        },
+        {
+          "name": "512 گیگابایت",
+          "code": "185",
+          "enName": null
+        },
+        {
+          "name": "1 ترابایت",
+          "code": "186",
+          "enName": null
+        },
+        {
+          "name": " کمتر از 150 مگابایت",
+          "code": "187",
+          "enName": null
+        },
+        {
+          "name": "2 ترابایت",
+          "code": "188",
+          "enName": null
+        },
+        {
+          "name": "۴ مگابایت",
+          "code": "189",
+          "enName": null
+        },
+        {
+          "name": "32 مگابایات",
+          "code": "166395",
+          "enName": null
+        },
+        {
+          "name": "24 مگابایت",
+          "code": "166396",
+          "enName": null
+        },
+        {
+          "name": "128 مگابایت",
+          "code": "166793",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "حافظه RAM",
+      "price_range": null,
+      "items": [
+        {
+          "name": "تا 2 گیگابایت",
+          "code": "190",
+          "enName": null
+        },
+        {
+          "name": "2 گیگابایت",
+          "code": "191",
+          "enName": null
+        },
+        {
+          "name": "3 گیگابایت",
+          "code": "192",
+          "enName": null
+        },
+        {
+          "name": "4 گیگابایت",
+          "code": "193",
+          "enName": null
+        },
+        {
+          "name": "6 گیگابایت",
+          "code": "194",
+          "enName": null
+        },
+        {
+          "name": "8 گیگابایت",
+          "code": "195",
+          "enName": null
+        },
+        {
+          "name": "10 گیگابایت",
+          "code": "196",
+          "enName": null
+        },
+        {
+          "name": "12 گیگابایت",
+          "code": "197",
+          "enName": null
+        },
+        {
+          "name": "16 گیگابایت",
+          "code": "198",
+          "enName": null
+        },
+        {
+          "name": "16 مگابایت",
+          "code": "199",
+          "enName": null
+        },
+        {
+          "name": "1 گیگابایت",
+          "code": "200",
+          "enName": null
+        },
+        {
+          "name": "20 گیگابایت",
+          "code": "201",
+          "enName": null
+        },
+        {
+          "name": "32 مگابایت",
+          "code": "202",
+          "enName": null
+        },
+        {
+          "name": " کمتر از 150 مگابایت",
+          "code": "203",
+          "enName": null
+        },
+        {
+          "name": "۴ مگابایت",
+          "code": "204",
+          "enName": null
+        },
+        {
+          "name": "128 مگابایت",
+          "code": "166794",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "سایز صفحه نمایش",
+      "price_range": null,
+      "items": [
+        {
+          "name": "تا 2.9 اینچ",
+          "code": "8581",
+          "enName": null
+        },
+        {
+          "name": "از 3 تا 4 اینچ",
+          "code": "8582",
+          "enName": null
+        },
+        {
+          "name": "از 4.1 تا 5 اینچ",
+          "code": "8583",
+          "enName": null
+        },
+        {
+          "name": "از 5.1 تا 6 اینچ",
+          "code": "8584",
+          "enName": null
+        },
+        {
+          "name": "بیش از 6 اینچ",
+          "code": "8585",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "دوربین جلو",
+      "price_range": null,
+      "items": [
+        {
+          "name": "تا 5 مگاپیکسل",
+          "code": "1531",
+          "enName": null
+        },
+        {
+          "name": "از 5.1 تا 8 مگاپیکسل",
+          "code": "1532",
+          "enName": null
+        },
+        {
+          "name": "از 8.1 تا 12 مگاپیکسل",
+          "code": "1533",
+          "enName": null
+        },
+        {
+          "name": "از 12.1 تا 16 مگاپیکسل",
+          "code": "1534",
+          "enName": null
+        },
+        {
+          "name": "از 16.1 تا 20 مگاپیکسل",
+          "code": "1535",
+          "enName": null
+        },
+        {
+          "name": "بیش از 20 مگاپیکسل",
+          "code": "1536",
+          "enName": null
+        },
+        {
+          "name": "ندارد",
+          "code": "1537",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "کیفیت دوربین اصلی",
+      "price_range": null,
+      "items": [
+        {
+          "name": "12 مگاپیکسل",
+          "code": "1547",
+          "enName": null
+        },
+        {
+          "name": "48 مگاپیکسل",
+          "code": "1548",
+          "enName": null
+        },
+        {
+          "name": "108 مگاپیکسل",
+          "code": "1549",
+          "enName": null
+        },
+        {
+          "name": "50 مگاپیکسل",
+          "code": "1550",
+          "enName": null
+        },
+        {
+          "name": "64 مگاپیکسل",
+          "code": "1551",
+          "enName": null
+        },
+        {
+          "name": "200 مگاپیکسل",
+          "code": "1552",
+          "enName": null
+        },
+        {
+          "name": "13 مگاپیکسل",
+          "code": "1553",
+          "enName": null
+        },
+        {
+          "name": "8 مگاپیکسل",
+          "code": "1554",
+          "enName": null
+        },
+        {
+          "name": "5 مگاپیکسل",
+          "code": "1555",
+          "enName": null
+        },
+        {
+          "name": "32 مگاپیکسل",
+          "code": "1556",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "کیفیت دوربین سلفی",
+      "price_range": null,
+      "items": [
+        {
+          "name": "2 مگاپیکسل",
+          "code": "1557",
+          "enName": null
+        },
+        {
+          "name": "5 مگاپیکسل",
+          "code": "1558",
+          "enName": null
+        },
+        {
+          "name": "8 مگاپیکسل",
+          "code": "1559",
+          "enName": null
+        },
+        {
+          "name": "12 مگاپیکسل",
+          "code": "1560",
+          "enName": null
+        },
+        {
+          "name": "16 مگاپیکسل",
+          "code": "1561",
+          "enName": null
+        },
+        {
+          "name": "13 مگاپیکسل",
+          "code": "1562",
+          "enName": null
+        },
+        {
+          "name": "20 مگاپیکسل",
+          "code": "1563",
+          "enName": null
+        },
+        {
+          "name": "32 مگاپیکسل",
+          "code": "1564",
+          "enName": null
+        },
+        {
+          "name": "48 مگاپیکسل",
+          "code": "1565",
+          "enName": null
+        },
+        {
+          "name": "50 مگاپیکسل",
+          "code": "1566",
+          "enName": null
+        },
+        {
+          "name": "10 مگاپیکسل",
+          "code": "1567",
+          "enName": null
+        },
+        {
+          "name": "18 مگاپیکسل",
+          "code": "1568",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "شبکه اینترنت",
+      "price_range": null,
+      "items": [
+        {
+          "name": "5G",
+          "code": "64",
+          "enName": null
+        },
+        {
+          "name": "4.5G",
+          "code": "65",
+          "enName": null
+        },
+        {
+          "name": "4G",
+          "code": "66",
+          "enName": null
+        },
+        {
+          "name": "3G",
+          "code": "67",
+          "enName": null
+        },
+        {
+          "name": "2G",
+          "code": "68",
+          "enName": null
+        },
+        {
+          "name": "5.5G",
+          "code": "166405",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "مناسب برای",
+      "price_range": null,
+      "items": [
+        {
+          "name": "گیمینگ",
+          "code": "3",
+          "enName": null
+        },
+        {
+          "name": "دانش آموز",
+          "code": "4",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "ضد آب",
+      "price_range": null,
+      "items": [
+        {
+          "name": "هست",
+          "code": "5",
+          "enName": null
+        },
+        {
+          "name": "نیست",
+          "code": "6",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "سری آیفون",
+      "price_range": null,
+      "items": [
+        {
+          "name": "13 Pro Max",
+          "code": "15",
+          "enName": null
+        },
+        {
+          "name": "13 Pro",
+          "code": "16",
+          "enName": null
+        },
+        {
+          "name": "13",
+          "code": "17",
+          "enName": null
+        },
+        {
+          "name": "14",
+          "code": "18",
+          "enName": null
+        },
+        {
+          "name": "14 Pro",
+          "code": "19",
+          "enName": null
+        },
+        {
+          "name": "14 Pro Max",
+          "code": "20",
+          "enName": null
+        },
+        {
+          "name": "15",
+          "code": "21",
+          "enName": null
+        },
+        {
+          "name": "15 Pro",
+          "code": "22",
+          "enName": null
+        },
+        {
+          "name": "15 Plus",
+          "code": "23",
+          "enName": null
+        },
+        {
+          "name": "15 Pro Max",
+          "code": "24",
+          "enName": null
+        },
+        {
+          "name": "12",
+          "code": "25",
+          "enName": null
+        },
+        {
+          "name": "12 Pro",
+          "code": "26",
+          "enName": null
+        },
+        {
+          "name": "12 Pro Max",
+          "code": "27",
+          "enName": null
+        },
+        {
+          "name": "14 Plus",
+          "code": "28",
+          "enName": null
+        },
+        {
+          "name": "11",
+          "code": "29",
+          "enName": null
+        },
+        {
+          "name": "11 Pro",
+          "code": "30",
+          "enName": null
+        },
+        {
+          "name": "11 Pro Max",
+          "code": "31",
+          "enName": null
+        },
+        {
+          "name": "13 Mini",
+          "code": "32",
+          "enName": null
+        },
+        {
+          "name": "12 Mini",
+          "code": "33",
+          "enName": null
+        },
+        {
+          "name": "16",
+          "code": "34",
+          "enName": null
+        },
+        {
+          "name": "16 Plus",
+          "code": "35",
+          "enName": null
+        },
+        {
+          "name": "16 Pro",
+          "code": "36",
+          "enName": null
+        },
+        {
+          "name": "16 Pro Max",
+          "code": "37",
+          "enName": null
+        },
+        {
+          "name": "16e",
+          "code": "38",
+          "enName": null
+        },
+        {
+          "name": "Air",
+          "code": "39",
+          "enName": null
+        },
+        {
+          "name": "17",
+          "code": "40",
+          "enName": null
+        },
+        {
+          "name": "17 Pro",
+          "code": "41",
+          "enName": null
+        },
+        {
+          "name": "17 Pro Max",
+          "code": "42",
+          "enName": null
+        },
+        {
+          "name": "18 Pro Max",
+          "code": "166340",
+          "enName": null
+        },
+        {
+          "name": "18 Pro",
+          "code": "166341",
+          "enName": null
+        },
+        {
+          "name": "18",
+          "code": "166342",
+          "enName": null
+        },
+        {
+          "name": "Dou",
+          "code": "166726",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "سری سامسونگ",
+      "price_range": null,
+      "items": [
+        {
+          "name": "S",
+          "code": "44",
+          "enName": null
+        },
+        {
+          "name": "A",
+          "code": "45",
+          "enName": null
+        },
+        {
+          "name": "Z",
+          "code": "46",
+          "enName": null
+        },
+        {
+          "name": "M",
+          "code": "47",
+          "enName": null
+        },
+        {
+          "name": "F",
+          "code": "48",
+          "enName": null
+        },
+        {
+          "name": "S25",
+          "code": "49",
+          "enName": null
+        },
+        {
+          "name": "S26",
+          "code": "50",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "سری شیائومی",
+      "price_range": null,
+      "items": [
+        {
+          "name": "ردمی",
+          "code": "51",
+          "enName": null
+        },
+        {
+          "name": "بلک شارک",
+          "code": "52",
+          "enName": null
+        },
+        {
+          "name": "ردمی نوت 14",
+          "code": "54",
+          "enName": null
+        },
+        {
+          "name": "ردمی نوت 15",
+          "code": "55",
+          "enName": null
+        },
+        {
+          "name": "ردمی نوت 17",
+          "code": "166774",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "ریجن",
+      "price_range": null,
+      "items": [
+        {
+          "name": "گلوبال ",
+          "code": "56",
+          "enName": null
+        },
+        {
+          "name": "چین ",
+          "code": "57",
+          "enName": null
+        },
+        {
+          "name": "اندونزی",
+          "code": "58",
+          "enName": null
+        },
+        {
+          "name": "هند",
+          "code": "59",
+          "enName": null
+        },
+        {
+          "name": "ویتنام",
+          "code": "166502",
+          "enName": null
+        },
+        {
+          "name": "فنلاند",
+          "code": "166503",
+          "enName": null
+        },
+        {
+          "name": "کره",
+          "code": "166504",
+          "enName": null
+        },
+        {
+          "name": "مالزی",
+          "code": "166654",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "همراه با شارژر",
+      "price_range": null,
+      "items": [
+        {
+          "name": "باندل",
+          "code": "166506",
+          "enName": null
+        },
+        {
+          "name": "داخل جعبه گوشی",
+          "code": "166507",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "ظرفیت باتری",
+      "price_range": null,
+      "items": [
+        {
+          "name": "کمتر از 2500 میلی‌آمپرساعت",
+          "code": "433",
+          "enName": null
+        },
+        {
+          "name": "از 2500 تا 2999 میلی‌آمپرساعت",
+          "code": "434",
+          "enName": null
+        },
+        {
+          "name": "از 3000 تا 3499 میلی‌آمپرساعت",
+          "code": "435",
+          "enName": null
+        },
+        {
+          "name": "از 3500 تا 3999 میلی‌آمپرساعت",
+          "code": "436",
+          "enName": null
+        },
+        {
+          "name": "از 4000 تا 4999 میلی‌آمپرساعت",
+          "code": "437",
+          "enName": null
+        },
+        {
+          "name": "از 5000 تا 6000 میلی‌آمپرساعت",
+          "code": "438",
+          "enName": null
+        },
+        {
+          "name": "بیش از 6000 میلی‌آمپرساعت",
+          "code": "439",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "شارژ سریع",
+      "price_range": null,
+      "items": [
+        {
+          "name": "دارد",
+          "code": "444",
+          "enName": null
+        },
+        {
+          "name": "ندارد",
+          "code": "445",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "شارژ بی‌ سیم",
+      "price_range": null,
+      "items": [
+        {
+          "name": "دارد",
+          "code": "446",
+          "enName": null
+        },
+        {
+          "name": "ندارد",
+          "code": "447",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "شارژ معکوس",
+      "price_range": null,
+      "items": [
+        {
+          "name": "دارد",
+          "code": "448",
+          "enName": null
+        },
+        {
+          "name": "ندارد",
+          "code": "449",
+          "enName": null
+        }
+      ]
+    },
+    {
+      "title": "رنگ ها",
+      "price_range": null,
+      "items": [
+        {
+          "name": "صورتی روشن",
+          "code": "#f2c5c9",
+          "enName": null
+        },
+        {
+          "name": "مشکی تیتانیوم ",
+          "code": "#383838",
+          "enName": null
+        },
+        {
+          "name": "خاکستری",
+          "code": "#8f8f8f",
+          "enName": null
+        },
+        {
+          "name": "مشکی قرمز",
+          "code": "#720b0b",
+          "enName": null
+        },
+        {
+          "name": "سفید",
+          "code": "#ffffff",
+          "enName": null
+        },
+        {
+          "name": "طلایی",
+          "code": "#d4a54c",
+          "enName": null
+        },
+        {
+          "name": "آبی اسمانی",
+          "code": "#e0ffff",
+          "enName": null
+        },
+        {
+          "name": "سبز",
+          "code": "#22a148",
+          "enName": null
+        },
+        {
+          "name": "بنفش روشن",
+          "code": "#9932cc",
+          "enName": null
+        },
+        {
+          "name": "طوسی",
+          "code": "#c4c7ce",
+          "enName": null
+        },
+        {
+          "name": "تیتانیومی",
+          "code": "#6b636b",
+          "enName": null
+        },
+        {
+          "name": "زرد لیمویی",
+          "code": "#f6f436",
+          "enName": null
+        },
+        {
+          "name": "خاکستری روشن",
+          "code": "#cecece",
+          "enName": null
+        },
+        {
+          "name": "جت‌بلک تیتانیوم",
+          "code": "#1b1b1a",
+          "enName": null
+        },
+        {
+          "name": "صحرایی تیتانیوم",
+          "code": "#e6c794",
+          "enName": null
+        },
+        {
+          "name": "نارنجی",
+          "code": "#ffa600",
+          "enName": null
+        },
+        {
+          "name": "مشکی خاکستری",
+          "code": "#393939",
+          "enName": null
+        },
+        {
+          "name": "آبی",
+          "code": "#3479bf",
+          "enName": null
+        },
+        {
+          "name": "سبز روشن",
+          "code": "#7fff00",
+          "enName": null
+        },
+        {
+          "name": "آبی فیروزه ای",
+          "code": "#00ffff",
+          "enName": null
+        },
+        {
+          "name": "زرد",
+          "code": "#ffee59",
+          "enName": null
+        },
+        {
+          "name": "سفید - قرمز",
+          "code": "#e32c2c",
+          "enName": null
+        },
+        {
+          "name": "قهوه ای",
+          "code": "#9c591f",
+          "enName": null
+        },
+        {
+          "name": "مشکی آبی",
+          "code": "#53a8bc",
+          "enName": null
+        },
+        {
+          "name": "سفیدنقره‌ای تیتانیوم",
+          "code": "#d5d4d4",
+          "enName": null
+        },
+        {
+          "name": "آبی یخی",
+          "code": "#a7dae8",
+          "enName": null
+        },
+        {
+          "name": "آجری",
+          "code": "#c47020",
+          "enName": null
+        },
+        {
+          "name": "خاکستری تیره",
+          "code": "#1f1d1f",
+          "enName": null
+        },
+        {
+          "name": "سبز تیره",
+          "code": "#0c4214",
+          "enName": null
+        },
+        {
+          "name": "سرمه ای",
+          "code": "#00009c",
+          "enName": null
+        },
+        {
+          "name": "آبی تیره",
+          "code": "#253873",
+          "enName": null
+        },
+        {
+          "name": "بنفش",
+          "code": "#b030b0",
+          "enName": null
+        },
+        {
+          "name": "شرابی ",
+          "code": "#5d4143",
+          "enName": null
+        },
+        {
+          "name": "صورتی",
+          "code": "#e05ce0",
+          "enName": null
+        },
+        {
+          "name": "مشکی",
+          "code": "#1a1a1a",
+          "enName": null
+        },
+        {
+          "name": "قرمز",
+          "code": "#e03131",
+          "enName": null
+        },
+        {
+          "name": "طلایی صحرایی",
+          "code": "#d6c345",
+          "enName": null
+        },
+        {
+          "name": "نقرآبی تیتانیوم",
+          "code": "#d4d8e3",
+          "enName": null
+        },
+        {
+          "name": "آبی روشن",
+          "code": "#74c1f6",
+          "enName": null
+        },
+        {
+          "name": "چند رنگ",
+          "code": "#d10f0f",
+          "enName": null
+        },
+        {
+          "name": "نقره ای",
+          "code": "#cfcfcf",
+          "enName": null
+        },
+        {
+          "name": "بژ صحرایی",
+          "code": "#c7bfbf",
+          "enName": null
+        },
+        {
+          "name": "خاکستری تیتانیوم ",
+          "code": "#64635f",
+          "enName": null
+        }
+      ]
+    }
+  ],
+  "show_compare": true,
+  "landing_carousel": null,
+  "landing_carousel_title": null,
+  "content": {
+    "meta_title": "خرید گوشی - لیست قیمت گوشی مدل جدید امروز 9 آبان",
+    "page_title": null,
+    "meta_keywords": "گوشی موبایل",
+    "meta_description": "مشاهده آخرین لیست قیمت گوشی‌ های موبایل از برندهای مختلف - بررسی، مشخصات و مقایسه انواع تلفن همراه در تکنولایف با گارانتی معتبر و ارسال مطمئن",
+    "description": "<h1>گوشی موبایل و تلفن همراه</h1>\n\n<p>قیمت گوشی یکی از فاکتورهای تعیین&zwnj;کننده در انتخاب و خرید گوشی در کنار چندین فاکتور دیگر است. اگر در فکر انتخاب یک گوشی جدید هستید، قیمت موبایل، برند گوشی، ظرفیت آن، کیفیت دوربین، همینطوری کارایی که از تلفن همراه خود انتظار دارید، از عواملی هستند که در خرید موبایل باید در نظر بگیرید و پس از آن اقدام به خرید نمایید.</p>\n\n<h2>برترین برندهای گوشی موبایل در بازار</h2>\n\n<p>خرید گوشی همواره خریدی لذت بخش و صد البته تقریبا می&zwnj;توان گفت پرچالش به حساب می&zwnj;آید. در تکنولایف می&zwnj;توانید روی لیست بلندبالایی از انواع گوشی موبایل هوشمند و دکمه&zwnj;ای از برندهای متنوع حساب باز کنید. خوشبختانه تنوع موجودی و مدل&zwnj;های معرفی شده گوشی آنقدر بالا است که نیازی نیست حتما بودجه خود را به اندازه گران قیمت&zwnj;ترین گوشی&zwnj;های بازار افزایش دهید، بلکه می&zwnj;توانید به سراغ خرید انواع گوشی قاتل پرچمدار، میان رده و اقتصادی و ارزان قیمت هم بروید.</p>\n\n<h3>گوشی سامسونگ</h3>\n\n<p>اگر قصد خرید موبایل جدید دارید، احتمال این که انتخاب اول شما <a href=\"https://www.technolife.com/category/mobile/mobile-phone/brand-samsung\" rel=\"noopener noreferrer\" target=\"_blank\">گوشی سامسونگ</a> باشد خیلی زیاد است. انواع گوشی در این برند با قیمت&zwnj;های متنوع و رده&zwnj;بندی&zwnj;های گوناگون به&zwnj;فروش می&zwnj;رسند. شما می&zwnj;توانید از گوشی با قیمت مناسب، که در دسته اقتصادی و ارزان قرار می&zwnj;گیرند، تا گوشی تلفن همراه پرچمدار و گران قیمت که برای کارهایی مانند گیمینگ و عکاسی فوق&zwnj;العاده&zwnj;اند مانند خانواده بالارده&nbsp;گلکسی اس 26&nbsp;را در میان گوشی های سامسونگ پیدا و انتخاب کنید.</p>\n\n<h3>گوشی ایفون</h3>\n\n<p>گوشی های اپل همواره در لیست بهترین گوشی در بازار قرار دارند و خیلی&zwnj;ها همیشه دنبال انتخاب تلفن همراه خود از میان گوشی&zwnj;های اپل هستند. اپل از آن برندهاست که فقط گوشی&zwnj;های پرچمدار تولید کرده و شما نمی&zwnj;توانید گوشی ارزانی در میان انواع گوشی این برند پیدا کنید. پس معمولا کسانی که گوشی غیراندرویدی و گران&zwnj;قیمت اپل را دوست دارند به سراغ <a href=\"https://www.technolife.com/category/mobile/mobile-phone/brand-apple\" rel=\"noopener noreferrer\" target=\"_blank\">خرید گوشی آیفون</a> می&zwnj;روند.</p>\n\n<h3>گوشی شیائومی</h3>\n\n<p>فروش موبایل شیائومی این روزها خیلی زیاد و داغ است. یکی از دلایلش شاید این باشد که گوشی&zwnj;های این برند تنوع بسیار بالایی داشته و اگر بخواهیم قیمت گوشی امروز را چک کنیم، می&zwnj;بینیم که نسبت به خیلی از برندها خوش قیمت&zwnj;تر هستند. برای مثال، گوشی پرچمدار شیائومی با قیمت مناسب&zwnj;تری نسبت به پرچمدارهای اپل و سامسونگ به فروش می&zwnj;رسند. البته نباید تنها دلیل پرفروش بودن این برند را <a href=\"https://www.technolife.com/category/mobile/mobile-phone/brand-xiaomi\" rel=\"noopener noreferrer\" target=\"_blank\">قیمت گوشی شیائومی</a> بدانیم. شیائومی با تنوع گسترده&zwnj;ای که در تولید گوشی ارزان، گوشی میانرده، قاتل پرچمدار، پرچمدار و همینطور گوشی&zwnj;های&nbsp;مخصوص عکاسی یا گیمینگ تولید کرده، توانسته طرفداران زیادی برای خود فراهم کند.</p>\n\n<h3>گوشی نوکیا</h3>\n\n<p>حتی با روی کار آمدن گوشی های هوشمند هم از محبوبیت گوشی نوکیا کاسته نشد. قیمت گوشی ساده اگرچه بالاتر از چند سال پیش رفته، اما به&zwnj;خاطر باتری بادوام، بدنه محکم و مقاوم و شکل ظاهری ساده انواع <a href=\"https://www.technolife.com/category/mobile/mobile-phone/brand-nokia\" rel=\"noopener noreferrer\" target=\"_blank\">گوشی نوکیا</a>، این گوشی ها برای کسانی&zwnj;که گوشی هوشمند دوست ندارند یا یک گوشی ساده هم می&zwnj;خواهند در کنار گوشی های جدید به دست بگیرند، انتخابی مناسب هستند.</p>\n\n<h2>انواع رده بندی گوشی</h2>\n\n<p>برای خرید بهترین گوشی با توجه به بودجه&zwnj;ای که در اختیار دارید، لازم است علاوه بر قیمت روزانه موبایل، از انتظاراتی که از گوشی دارید هم اطلاع داشته باشید. رده&zwnj;های گوشی&zwnj;ها در بازار، طبق چیزی است که در ادامه مشاهده می&zwnj;کنید:</p>\n\n<p>&bull;&nbsp;&nbsp;&nbsp;گوشی اقتصادی یا ارزان قیمت: این گوشی&zwnj;ها از آن دست گوشی موبایل هستند که قیمتی پایین داشته و برای استفاده روزانه هستند و نباید از دوربین، پردازنده و عملکرد گوشی انتظار خاصی داشته باشید. بنابراین کسانی&zwnj;که سراغ خرید گوشی موبایل ارزان می&zwnj;روند، گوشی&zwnj;های ساده&zwnj;ای می&zwnj;خواهند.</p>\n\n<p>&bull;&nbsp;&nbsp;&nbsp;گوشی میان رده: گوشی&zwnj;هایی که در دسته میان&zwnj;رده قرار می&zwnj;گیرند، دسته گسترده&zwnj;ای هستند. گوشی&zwnj;های این رده بعضی&zwnj;ها کارآیی ساده&zwnj;ای دارند و برخی نیز پردازنده قوی&zwnj; دارند و به&zwnj;عنوان <a href=\"https://www.technolife.com/category/mobile/mobile-phone/type-gaming\" rel=\"noopener noreferrer\" target=\"_blank\">گوشی گیمینگ</a> یا گوشی مناسب عکاسی نیز می&zwnj;توانید روی آن&zwnj;ها حساب کنید. این گوشی ها به&zwnj;خاطر بازه قیمتی گسترده&zwnj;ای که شامل می&zwnj;شوند، در سبد خرید خیلی از کاربران قرار می&zwnj;گیرند. گوشی&zwnj;های سری a سامسونگ در دسته گوشی&zwnj;های میان رده جای می&zwnj;گیرند.&nbsp;</p>\n\n<p>&bull;&nbsp;&nbsp;&nbsp;گوشی قاتل پرچمدار: گوشی&zwnj;های قاتل پرچمدار گوشی&zwnj;های قوی هستند که معمولا افرادی که نمی&zwnj;توانند گوشی&zwnj;های ممتاز برند مورد نظر خود را خریداری کنند، سراغ گوشی&zwnj;های قاتل پرچمدار می&zwnj;روند. این گوشی&zwnj;ها، خیلی از امتیازات گوشی&zwnj;های پرچمدار را دارند.&nbsp;</p>\n\n<p>&bull;&nbsp;&nbsp;&nbsp;گوشی پرچمدار: گوشی پرچمدار گران&zwnj;ترین گوشی&zwnj;های هر برند هستند. برای مثال، گوشی سری s سامسونگ در این دسته جای می&zwnj;گیرند. اکثر برندهای سازنده گوشی، مدل&zwnj;هایی از گوشی پرچمدار را نیز دارند. این گوشیها، به قوی&zwnj;ترین پردازنده، قوی&zwnj;ترین لنز دوربین، بهترین بدنه از نظر دوام، و بهترین باتری&zwnj;ها مجهز هستند. بنابراین اگر برای خرید موبایل جدید هیچ محدودیتی از نظر بودجه ندارید، حتما سراغ پرچمدارها بروید.</p>\n\n<h2>قیمت گوشی</h2>\n\n<p>با توجه به قیمت گوشی، انتخاب و خرید گوشی جدید براساس انتظارات و کارهایی که از گوشی جدید خود می&zwnj;خواهید بسیار منطقی و ضروری است. شما می&zwnj;توانید قیمت گوشی در مدل&zwnj;های مختلف را در فروشگاه تکنولایف ببینید، با هم مقایسه کنید و به سبد خرید خود بیفزایید.</p>\n\n<h2>خرید گوشی از تکنولایف</h2>\n\n<p>خرید گوشی جزو ضروری&zwnj;ترین خریدهای زندگی ماست. این روزها همه افراد، از کودکان گرفته تا سالمندان، به گوشی نیاز دارند و با آنلاین شدن بخش گسترده&zwnj;ای از خدمات، داشتن گوشی به یک ضرورت تبدیل شده است. شما می&zwnj;توانید با استفاده از <a href=\"https://www.technolife.com/landings/download-app\" target=\"_blank\">اپلیکیشن تکنولایف</a>، مدل گوشی موردنیاز خود را با بهترین قیمت، به&zwnj;صورت نقدی یا اقساطی خریداری کنید.</p>\n",
+    "name": "گوشی موبایل",
+    "image": "menu_picture801.png",
+    "canonical": "/category/mobile/mobile-phone",
+    "base_url": "/category/mobile/mobile-phone",
+    "no_index": false
+  }
+}

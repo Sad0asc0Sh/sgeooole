@@ -1,0 +1,128 @@
+[
+  {
+    "id": "request-1",
+    "url": {
+      "url": "https://www.torob.com/browse/",
+      "origin": "https://www.torob.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 490,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-2",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/1/api.js",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-3",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/dist/checkbox.js",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-4",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/methods?site_key=1cgwl7woc3&domain=www.torob.com",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [
+        "site_key",
+        "domain"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-5",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/3/api.js?combined=true&site_key=1cgwl7woc3",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [
+        "combined",
+        "site_key"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-6",
+    "url": {
+      "url": "https://bowman.arcaptcha.ir/6yeVQ5kQkw6inw",
+      "origin": "https://bowman.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-7",
+    "url": {
+      "url": "https://bowman.arcaptcha.ir/rVLkzcM8",
+      "origin": "https://bowman.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-8",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/dist/checkbox.style.css",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-9",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/dist/4ffbad4ceb7ddf576790.svg",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-10",
+    "url": {
+      "url": "https://widget.arcaptcha.ir/dist/59b4e723c688f6cce206.woff",
+      "origin": "https://widget.arcaptcha.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  }
+]

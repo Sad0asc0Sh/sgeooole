@@ -10,6 +10,14 @@ type ProductListingReadinessInput = {
   hasError: boolean;
 };
 
+/**
+ * سیاست نمایش لیست محصولات (بدون پرش صفحه).
+ *
+ * قاعده‌ی طلایی: اگر داده‌ای وجود دارد، هرگز آن را با اسکلتون جایگزین نکن.
+ *   - اسکلتون کامل فقط در بارگذاری اولیه (بدون داده و بدون خطا)
+ *   - وقتی داده هست و درخواست جدید در جریان است ⇒ `showUpdating`
+ *     (گرید قبلی می‌ماند و فقط یک لایه‌ی نرم/اسپینر کوچک اضافه می‌شود)
+ */
 export function getProductListingReadiness({
   hasData,
   isValidating,
@@ -20,7 +28,8 @@ export function getProductListingReadiness({
 
   return {
     isReady,
-    showSkeleton: !isReady && !hasError,
+    showSkeleton: !hasData && !hasError,
+    showUpdating: hasData && isValidating && !hasError,
     showError: hasError,
   };
 }

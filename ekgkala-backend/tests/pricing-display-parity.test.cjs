@@ -38,7 +38,10 @@ const expiredManaged = () => ({
 test('چت‌بات پس از انقضا: ۸۳۲٬۰۰۰ (نه ۹۹۰٬۴۷۶) و discount صفر', () => {
   const product = expiredManaged()
   assert.equal(finalPriceOf(product, NOW), 832000)
-  const card = toCardPayload(product)
+  // ساعت درخواست تزریق می‌شود تا «تازگی کف قطعی» با همان ساعتی سنجیده شود که
+  // finalPriceOf استفاده می‌کند (پیش‌تر toCardPayload با ساعت دیوار کار می‌کرد
+  // و همین تست را به یک time-bomb وابسته به تاریخ اجرا تبدیل می‌کرد).
+  const card = toCardPayload(product, { now: NOW })
   assert.equal(card.price, 832000)
   assert.equal(card.oldPrice, undefined)
   assert.equal(card.discount, 0)
@@ -82,7 +85,7 @@ test('چت با Sale فعال: context متصل‌شده اعمال می‌شو�
     value: { name: 'کمپین پاییزه', discountPercentage: 25, badgeTheme: 'green-orange', endDate: FUTURE },
     enumerable: false,
   })
-  const card = toCardPayload(product)
+  const card = toCardPayload(product, { now: NOW })
   assert.equal(card.price, 832000)
   assert.equal(card.discount, 25)
   assert.equal(card.oldPrice, 990476)

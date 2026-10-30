@@ -1,0 +1,17 @@
+[
+  {
+    "position": 1,
+    "name": "تکنولایف",
+    "url": "/"
+  },
+  {
+    "position": 2,
+    "name": "گوشی موبایل و تجهیزات",
+    "url": "/category/mobile"
+  },
+  {
+    "position": 3,
+    "name": "گوشی موبایل",
+    "url": "/category/mobile/mobile-phone"
+  }
+]

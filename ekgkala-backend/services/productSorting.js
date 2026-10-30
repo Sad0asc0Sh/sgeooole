@@ -5,7 +5,10 @@ const numeric = (input) => ({ $max: [0, { $convert: { input, to: 'double', onNul
 const ALIASES = new Map(Object.entries({
   bestseller: 'popularity',
   bestSellers: 'popularity',
-  bestSelling: 'popularity',
+  // «پرفروش‌ترین» یک حالت مستقل است و نباید به popularity (که اول بر اساس
+  // بازدید/امتیاز مرتب می‌کند) نگاشت شود؛ وگرنه کاربر هرگز مرتب‌سازی
+  // واقعی بر اساس تعداد فروش نمی‌گیرد.
+  bestSelling: 'bestSelling',
   popularity: 'popularity',
   mostVisited: 'popularity',
   flash: 'discount',
@@ -14,13 +17,13 @@ const ALIASES = new Map(Object.entries({
   createdAt: 'oldest',
   price: 'priceAsc',
   '-price': 'priceDesc',
-  '-salesCount': 'popularity',
+  '-salesCount': 'bestSelling',
   '-views': 'popularity',
   '-rating': 'rating',
   '-discount': 'discount',
 }))
 
-const MODES = new Set(['relevance', 'newest', 'oldest', 'priceAsc', 'priceDesc', 'popularity', 'discount', 'rating'])
+const MODES = new Set(['relevance', 'newest', 'oldest', 'priceAsc', 'priceDesc', 'popularity', 'bestSelling', 'discount', 'rating'])
 
 function resolveSort(raw, { search }) {
   const requested = raw || (search ? 'relevance' : 'newest')
@@ -53,10 +56,10 @@ function buildSort(options, legacyFields) {
       sort.createdAt = -1
       break
     case 'bestSelling':
+      // فقط تعداد فروش (با tiebreaker تازگی) — نه بازدید/امتیاز.
       sort[metric('salesCount')] = -1
       sort.createdAt = -1
       break
-    case 'bestSelling':
     case 'popularity':
       sort[metric('views')] = -1
       sort[metric('rating')] = -1

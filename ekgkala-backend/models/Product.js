@@ -24,6 +24,8 @@ const variantSchema = new mongoose.Schema(
     },
 
     // گزینه‌های این متغیر (مثل: [{name: 'رنگ', value: 'آبی'}, {name: 'سایز', value: 'L'}])
+    // normLabel/normValue: نسخه‌ی نرمال‌شده برای فیلترینگ دقیق (فاز ۲).
+    // اختیاری‌اند تا داده‌های قدیمی بدون مهاجرت معتبر بمانند.
     options: [
       {
         name: {
@@ -36,6 +38,8 @@ const variantSchema = new mongoose.Schema(
           required: true,
           trim: true,
         },
+        normLabel: { type: String, trim: true },
+        normValue: { type: String, trim: true },
       },
     ],
 
@@ -332,10 +336,16 @@ const ProductSchema = new mongoose.Schema(
     // Smart Filter Properties (e.g., Resolution: 4K, Weight: 500g)
     // Used for filtering products in a category
     // ============================================
+    // normLabel/normValue: کلید نرمال‌شده‌ی برچسب و باکت استاندارد مقدار.
+    // تطبیق کوئری هم از همان نرمال‌ساز عبور می‌کند تا mismatch صفر-نتیجه
+    // بین گزینه‌ی تعریف‌شده‌ی ادمین و مقدار ذخیره‌شده رخ ندهد.
     properties: [
       {
         label: { type: String, required: true, trim: true },
         value: { type: String, required: true, trim: true },
+        normLabel: { type: String, trim: true },
+        normValue: { type: String, trim: true },
+        bucket: { type: String, trim: true },
       }
     ],
   },
@@ -374,6 +384,17 @@ ProductSchema.index({ category: 1, salesCount: -1 })
 ProductSchema.index({ isActive: 1, createdAt: -1 })
 // Index for Smart Filter Properties (category-based specs filtering)
 ProductSchema.index({ 'properties.label': 1, 'properties.value': 1 })
+// ------------------------------------------------------------------
+// ایندکس‌های ترکیبی موتور فستینگ (فاز ۳.۳)
+// ------------------------------------------------------------------
+// پرتکرارترین مسیر کوئری: فقط کالاهای فعالِ یک دسته، سپس فیلتر برند.
+ProductSchema.index({ isActive: 1, category: 1, brand: 1 })
+// فیلتر ویژگی‌ها هم‌زمان با دسته (مقدار خام — سازگار با داده‌ی قدیمی).
+ProductSchema.index({ isActive: 1, category: 1, 'properties.label': 1, 'properties.value': 1 })
+// همان مسیر برای مقادیر نرمال‌شده (داده‌ی جدید و تطبیق باکت‌شده).
+ProductSchema.index({ isActive: 1, category: 1, 'properties.normLabel': 1, 'properties.normValue': 1 })
+// فیلترینگ آگاه از متغیر روی گزینه‌های متغیرها (رنگ/گارانتی/ظرفیت).
+ProductSchema.index({ 'variants.options.normLabel': 1, 'variants.options.normValue': 1 })
 
 // ============================================
 // Pre-save Hook: Generate slug and productCode

@@ -81,14 +81,15 @@ it("sort selection preserves filters, resets page, and presents only the core 6 
   expect(params.get("inStock")).toBe("true");
   expect(params.has("page")).toBe(false);
 
-  // Verify only the clean 5 sort options exist (bestSelling is removed)
+  // Verify the six core sort options exist, including a real «پرفروش‌ترین»
+  // (bestSelling is no longer aliased to popularity)
   const sortGroup = screen.getByLabelText("مرتب‌سازی محصولات");
   expect(within(sortGroup).getByRole("button", { name: /جدیدترین/ })).toBeInTheDocument();
   expect(within(sortGroup).getByRole("button", { name: /ارزان‌ترین/ })).toBeInTheDocument();
   expect(within(sortGroup).getByRole("button", { name: /گران‌ترین/ })).toBeInTheDocument();
+  expect(within(sortGroup).getByRole("button", { name: /پرفروش‌ترین/ })).toBeInTheDocument();
   expect(within(sortGroup).getByRole("button", { name: /محبوب‌ترین/ })).toBeInTheDocument();
   expect(within(sortGroup).getByRole("button", { name: /بیشترین تخفیف/ })).toBeInTheDocument();
-  expect(within(sortGroup).queryByRole("button", { name: /پرفروش‌ترین/ })).toBeNull();
   expect(within(sortGroup).queryByRole("button", { name: /مرتبط‌ترین/ })).toBeNull();
   expect(within(sortGroup).queryByRole("button", { name: /قدیمی‌ترین/ })).toBeNull();
   expect(within(sortGroup).queryByRole("button", { name: /نام/ })).toBeNull();

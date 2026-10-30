@@ -1,0 +1,22 @@
+{
+  "browser": {
+    "mode": "launch",
+    "executable_path": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+    "headless": true
+  },
+  "environment": {
+    "viewport": { "width": 1440, "height": 900, "device_scale_factor": 1 },
+    "locale": "fa-IR",
+    "timezone": "Asia/Tehran",
+    "color_scheme": "light",
+    "reduced_motion": "reduce",
+    "service_workers": "block"
+  },
+  "start_url": { "url": "https://api.torob.com/v4/base-product/search/?page=0&size=24&q=%D8%AF%D9%88%D8%B1%D8%A8%DB%8C%D9%86%20%D9%85%D8%AF%D8%A7%D8%B1%D8%A8%D8%B3%D8%AA%D9%87&source=next_desktop" },
+  "actions": [{ "step_id": "settle", "action": "wait_for_timeout", "duration_ms": 4000 }],
+  "capture": {
+    "at_end": ["url", "dom"],
+    "events": ["network", "console", "page-errors"],
+    "network": { "response_body": true, "header_values": false, "request_body": false }
+  }
+}

@@ -9,10 +9,10 @@ describe("getProductListingReadiness", () => {
         isStale: false,
         hasError: false,
       }),
-    ).toEqual({ isReady: true, showSkeleton: false, showError: false });
+    ).toEqual({ isReady: true, showSkeleton: false, showUpdating: false, showError: false });
   });
 
-  it("keeps cached data behind a skeleton while it is stale and revalidating", () => {
+  it("keeps previous data visible while revalidating instead of flashing a skeleton", () => {
     expect(
       getProductListingReadiness({
         hasData: true,
@@ -20,7 +20,7 @@ describe("getProductListingReadiness", () => {
         isStale: true,
         hasError: false,
       }),
-    ).toEqual({ isReady: false, showSkeleton: true, showError: false });
+    ).toEqual({ isReady: false, showSkeleton: false, showUpdating: true, showError: false });
   });
 
   it("uses a skeleton for an initial request with no cached data", () => {
@@ -31,7 +31,7 @@ describe("getProductListingReadiness", () => {
         isStale: false,
         hasError: false,
       }),
-    ).toEqual({ isReady: false, showSkeleton: true, showError: false });
+    ).toEqual({ isReady: false, showSkeleton: true, showUpdating: false, showError: false });
   });
 
   it("does not display stale content as ready after a failed revalidation", () => {
@@ -42,6 +42,6 @@ describe("getProductListingReadiness", () => {
         isStale: true,
         hasError: true,
       }),
-    ).toEqual({ isReady: false, showSkeleton: false, showError: true });
+    ).toEqual({ isReady: false, showSkeleton: false, showUpdating: false, showError: true });
   });
 });

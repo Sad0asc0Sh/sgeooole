@@ -2,9 +2,34 @@ import { normalizeProductSort } from "@/lib/productSorting";
 
 export type ProductFilterProperties = Record<string, string | string[]>;
 
+export type ProductFilterFacetValue = {
+  value: string;
+  count: number;
+  isSelected?: boolean;
+};
+
+export type ProductFilterFacetProperty = {
+  name: string;
+  unit?: string;
+  /** از قواعد دسته‌بندی آمده است (ترتیب نمایش پایدار) */
+  isConfigured?: boolean;
+  /** در دسته‌بندی پین شده است (فیلتر سریع) */
+  isPinned?: boolean;
+  values: ProductFilterFacetValue[];
+};
+
+export type ProductFilterFacetCategory = {
+  id?: string;
+  slug: string;
+  name: string;
+  count: number;
+  parent?: string | null;
+};
+
 export type ProductFilterFacets = {
   brands: Array<{ id: string; slug: string; name: string; count: number }>;
-  properties: Array<{ name: string; values: Array<{ value: string; count: number }> }>;
+  properties: ProductFilterFacetProperty[];
+  categories?: ProductFilterFacetCategory[];
 };
 
 export function parsePriceInput(value: string): number | undefined {

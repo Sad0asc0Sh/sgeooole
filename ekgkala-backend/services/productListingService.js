@@ -1,5 +1,16 @@
 const mongoose = require('mongoose')
 const { resolveSort, buildSort, sortStages } = require('./productSorting')
+const {
+  mergeCategoryRules,
+  filterableRules,
+  buildPropertyCriteria,
+  propertyMatchConditions,
+  needsVariantCoupling,
+  variantCouplingStages,
+  facetBaseStages,
+  propertyFacetBranchWithCounts,
+  rankAndFormatPropertyFacets,
+} = require('./listingFacets')
 
 const MAX_PAGE = 100000
 const MAX_LIMIT = 100
@@ -96,6 +107,9 @@ function parseListingQuery(query = {}) {
     // بخش «منتخب‌ها»ی صفحه اصلی: شگفت‌انگیزهای دستی + محصولات تخفیف‌های زمان‌داری که showInFeatured دارند
     featured: query.featured === undefined ? false : boolean(query.featured, 'featured'),
     includeChildren: query.includeChildren === undefined ? false : boolean(query.includeChildren, 'includeChildren'),
+    // facets=false → بدون فست؛ شرط ویژگی‌ها در همان $match اول می‌نشیند و
+    // کوئری کاملاً ایندکس‌پذیر می‌شود (برای پنل ادمین و APIهای مصرفی).
+    facets: query.facets === undefined ? true : boolean(query.facets, 'facets'),
     projection: parseProjection(query.fields),
     conditions: [],
     priceConditions: [],
@@ -176,7 +190,10 @@ function parseListingQuery(query = {}) {
     if (match) addProperty(match[1], value)
   }
   if (options.properties.size > 30) throw new ListingQueryError('At most 30 properties are allowed')
-  for (const [label, values] of options.properties) options.conditions.push({ properties: { $elemMatch: { label, value: { $in: values } } } })
+  // توجه: تطبیق ویژگی‌ها عمداً اینجا ساخته نمی‌شود. تطبیق آگاه از متغیر
+  // (کوپل با موجودی/قیمت همان متغیر) بعد از مرحله‌ی قیمت‌گذاری و در
+  // buildListingPipeline اجرا می‌شود. اینجا فقط «ابر-مجموعه‌ی» ایندکس‌پذیر
+  // اضافه می‌شود تا اسناد بی‌ربط همان اول حذف شوند.
   if (query.search !== undefined) {
     options.search = text(query.search, 'search')
     const regex = { $regex: searchPattern(options.search), $options: 'i' }
@@ -193,26 +210,64 @@ function parseListingQuery(query = {}) {
 // Explicit ObjectId casting matters: Mongoose does NOT cast aggregation matches.
 async function resolveListingContext(options, { Category, Brand, Sale }, now) {
   const conditions = [...options.conditions]
-  const descendants = new Map()
-  const categoryIds = async (id) => {
+  const graphs = new Map()
+  // یک کوئری واحد و کش‌شده برای: خود دسته، همه‌ی زیرشاخه‌ها و همه‌ی والدها.
+  // (به‌جای چند رفت‌وبرگشت جداگانه — هم سریع‌تر است و هم قواعد ارث‌بری را
+  // در همان مسیر فراهم می‌کند.)
+  const categoryGraph = async (id) => {
     const key = String(id)
-    if (!descendants.has(key)) {
-      descendants.set(key, Category.aggregate([
+    if (!graphs.has(key)) {
+      graphs.set(key, Category.aggregate([
         { $match: { _id: objectId(key) } },
         { $graphLookup: { from: Category.collection.name, startWith: '$_id', connectFromField: '_id', connectToField: 'parent', as: 'descendants', maxDepth: 20 } },
-        { $project: { ids: '$descendants._id' } },
-      ]).then((rows) => [objectId(key), ...(rows[0]?.ids || [])]))
+        { $graphLookup: { from: Category.collection.name, startWith: '$parent', connectFromField: 'parent', connectToField: '_id', as: 'ancestors', maxDepth: 10 } },
+        { $project: {
+          ids: { $concatArrays: [['$_id'], '$descendants._id'] },
+          selfProperties: '$properties',
+          ancestorProperties: '$ancestors.properties',
+          descendantProperties: '$descendants.properties',
+        } },
+      ]).then((rows) => rows[0] || {
+        ids: [objectId(key)],
+        selfProperties: [],
+        ancestorProperties: [],
+        descendantProperties: [],
+      }))
     }
-    return descendants.get(key)
+    return graphs.get(key)
   }
+  // مجموعه‌ی شناسه‌ها همیشه شامل خود دسته است، حتی اگر لایه‌ی داده فقط
+  // زیرشاخه‌ها را برگرداند. ترتیب: خود دسته اول.
+  const withSelf = (id, ids) => [...new Set([String(id), ...(ids || []).map(String)])]
+    .map((value) => objectId(value) || value)
+  const categoryIds = async (id) => withSelf(id, (await categoryGraph(id)).ids)
+  let categoryRules = []
+  let brandMatch = null
   if (options.category) {
     const id = objectId(options.category)
-    const category = await Category.findOne(id ? { $or: [{ slug: options.category }, { _id: id }] } : { slug: options.category }).select('_id').lean()
-    conditions.push({ category: { $in: category ? options.includeChildren ? await categoryIds(category._id) : [category._id] : [] } })
+    const category = await Category.findOne(id ? { $or: [{ slug: options.category }, { _id: id }] } : { slug: options.category })
+      .select('_id').lean()
+    if (category) {
+      const graph = await categoryGraph(category._id)
+      const ids = options.includeChildren ? withSelf(category._id, graph.ids) : [category._id]
+      conditions.push({ category: { $in: ids } })
+      // ترتیب ادغام: خودِ دسته (نزدیک‌ترین) → والدها → زیرشاخه‌ها.
+      // نزدیک‌ترین سطح برای unit/order برنده است و گزینه‌ها اجتماع می‌شوند.
+      const chain = [{ properties: graph.selfProperties }]
+      for (const properties of graph.ancestorProperties || []) chain.push({ properties })
+      if (options.includeChildren) {
+        for (const properties of graph.descendantProperties || []) chain.push({ properties })
+      }
+      categoryRules = mergeCategoryRules(chain)
+    } else {
+      conditions.push({ category: { $in: [] } })
+    }
   }
   if (options.brands.length) {
     const brands = await Brand.find({ slug: { $in: options.brands } }).select('_id').lean()
-    conditions.push({ brand: { $in: [...brands.map((b) => b._id), ...options.brands.map(objectId).filter(Boolean)] } })
+    // برند عمداً وارد `conditions` نمی‌شود: فست برند Disjunctive است و باید
+    // بتواند سایر برندها را هم نشان دهد.
+    brandMatch = { brand: { $in: [...brands.map((b) => b._id), ...options.brands.map(objectId).filter(Boolean)] } }
   }
   const campaigns = []
   if (!options.skipDiscount) {
@@ -233,7 +288,7 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
     }
     conditions.push({ $or: featuredOr })
   }
-  return { conditions, campaigns }
+  return { conditions, brandMatch, campaigns, categoryRules }
 }
 
 const literal = (value) => ({ $literal: value })
@@ -360,11 +415,47 @@ function pricingStages(campaigns, now) {
   ]
 }
 
-function buildListingPipeline(options, { conditions = options.conditions, campaigns = [] } = {}, now = new Date()) {
-  const stages = conditions.length ? [{ $match: { $and: conditions } }] : []
+function buildListingPipeline(options, {
+  conditions = options.conditions,
+  brandMatch = null,
+  campaigns = [],
+  categoryRules = [],
+  criteria = null,
+} = {}, now = new Date()) {
+  const propertyCriteria = criteria || buildPropertyCriteria(options.properties, categoryRules)
+  const includeFacets = options.facets !== false
+  // شرط‌های ویژگی با `$elemMatch` استاندارد (ایندکس‌پذیر، بدون $expr/$map)
+  const criteriaConditions = propertyMatchConditions(propertyCriteria)
+  // کوپل متغیر فقط وقتی لازم است: inStock/بازه‌ی قیمت، یا بیش از یک معیار
+  // (که باید «یک متغیر واحد» همه را برآورده کند).
+  const coupling = needsVariantCoupling(propertyCriteria, options)
+
+  // مرحله‌ی اول فقط شرط‌های «قطعی» را می‌گیرد تا از ایندکس استفاده شود.
+  //
+  // در حالت فست‌دار، شرط ویژگی‌ها عمداً اینجا push نمی‌شود: فست‌های Disjunctive
+  // باید بتوانند مقدارهای «خواهر» را هم بشمارند.
+  // اما با `facets=false` هیچ فست‌ای لازم نیست، پس همه‌ی شرط‌های ویژگی در
+  // همان اولین $match می‌نشینند و کوئری کاملاً ایندکس‌پذیر می‌شود.
+  const firstMatch = [...conditions]
+  if (!includeFacets) firstMatch.push(...criteriaConditions)
+  const stages = firstMatch.length ? [{ $match: { $and: firstMatch } }] : []
   if (options.skipDiscount) {
-    stages.push({ $addFields: { [INTERNAL]: { price: numeric('$price'), stock: numeric('$stock'), onSale: { $gt: [numeric('$compareAtPrice'), numeric('$price')] } } } })
+    stages.push({ $addFields: { [INTERNAL]: {
+      price: numeric('$price'),
+      stock: numeric('$stock'),
+      onSale: { $gt: [numeric('$compareAtPrice'), numeric('$price')] },
+      variants: { $ifNull: ['$variants', []] },
+    } } })
   } else stages.push(...pricingStages(campaigns, now))
+  // کوپل آگاه از متغیر باید بعد از قیمت‌گذاری اجرا شود تا قیمت هر متغیر
+  // و بازه‌ی قیمت روی قیمت واقعی همان متغیر سنجیده شود.
+  if (coupling) {
+    stages.push(...variantCouplingStages(propertyCriteria, {
+      inStock: options.inStock,
+      minPrice: options.minPrice,
+      maxPrice: options.maxPrice,
+    }))
+  }
   const effectiveConditions = []
   if (options.inStock) effectiveConditions.push({ [`${INTERNAL}.stock`]: { $gt: 0 } })
   if (options.onSale) effectiveConditions.push({ [`${INTERNAL}.onSale`]: true })
@@ -382,8 +473,16 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
     ] } })
   }
   if (effectiveConditions.length) stages.push({ $match: { $and: effectiveConditions } })
+
+  // شرط‌های مشترک «قطعی» که در همه‌ی شاخه‌ها اعمال می‌شوند
+  const definite = []
+  if (brandMatch) definite.push(brandMatch)
+  definite.push(...criteriaConditions)
+  if (coupling) definite.push({ [`${INTERNAL}.variantOk`]: true })
   const priceMatch = options.priceConditions.length ? [{ $match: { $and: options.priceConditions } }] : []
-  const data = [...priceMatch, ...sortStages(options, searchPattern)]
+  const definiteMatches = definite.length ? [{ $match: { $and: definite } }] : []
+
+  const data = [...definiteMatches, ...priceMatch, ...sortStages(options, searchPattern)]
   if (options.featured && !options.skipDiscount) {
     // «منتخب‌ها»: ترتیب کاملاً رندم؛ زمان فعال‌سازی نباید از ترتیب کارت‌ها قابل حدس باشد.
     data.push(
@@ -409,24 +508,131 @@ function buildListingPipeline(options, { conditions = options.conditions, campai
   } })
   data.push({ $project: { [INTERNAL]: 0 } })
   if (options.projection) data.push({ $project: options.projection })
-  stages.push({ $facet: {
+
+  // ---- شاخه‌های فست ----
+  const facetBranches = {
     data,
-    total: [...priceMatch, { $count: 'count' }],
+    total: [...definiteMatches, ...priceMatch, { $count: 'count' }],
     priceRange: [{ $group: { _id: null, min: { $min: ref('price') }, max: { $max: ref('price') } } }],
-  } })
+  }
+  if (includeFacets) {
+    // فست برند: برند اعمال نمی‌شود (Disjunctive) تا سایر برندها هم دیده شوند
+    facetBranches.brands = [
+      ...facetBaseStages({ priceMatch: options.priceConditions }),
+      ...(criteriaConditions.length ? [{ $match: { $and: criteriaConditions } }] : []),
+      { $match: { brand: { $ne: null } } },
+      { $group: { _id: '$brand', count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 100 },
+    ]
+    // فست زیردسته‌ها: تعداد محصولات منطبق در هر دسته (Phase 3.2.1)
+    facetBranches.categories = [
+      ...definiteMatches,
+      ...priceMatch,
+      { $match: { category: { $ne: null } } },
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: 100 },
+    ]
+    propertyCriteria.forEach((criterion, index) => {
+      facetBranches[`prop_${index}`] = propertyFacetBranchWithCounts(criterion, index, {
+        criteria: propertyCriteria,
+        brandMatch,
+        priceMatch: options.priceConditions,
+      })
+    })
+  }
+
+  stages.push({ $facet: facetBranches })
   return stages
+}
+
+async function buildFacets({ raw, criteria, context, options, models }) {
+  // --- برندها: نگاشت ObjectId به slug/name (بدون $lookup در aggregation) ---
+  const brandRows = Array.isArray(raw?.brands) ? raw.brands : []
+  let brands = []
+  if (brandRows.length && typeof models?.Brand?.find === 'function') {
+    const docs = await models.Brand.find({ _id: { $in: brandRows.map((row) => row._id) } })
+      .select('_id name slug').lean()
+    const byId = new Map(docs.map((doc) => [String(doc._id), doc]))
+    brands = brandRows
+      .map((row) => {
+        const doc = byId.get(String(row._id))
+        return doc ? { id: String(doc._id), slug: doc.slug, name: doc.name, count: row.count } : null
+      })
+      .filter(Boolean)
+  }
+
+  // --- زیردسته‌ها: تعداد محصول منطبق در هر دسته (Phase 3.2.1) ---
+  const categoryRows = Array.isArray(raw?.categories) ? raw.categories : []
+  let categories = []
+  if (categoryRows.length && typeof models?.Category?.find === 'function') {
+    const docs = await models.Category.find({ _id: { $in: categoryRows.map((row) => row._id) } })
+      .select('_id name slug parent').lean()
+    const byId = new Map(docs.map((doc) => [String(doc._id), doc]))
+    categories = categoryRows
+      .map((row) => {
+        const doc = byId.get(String(row._id))
+        return doc ? {
+          id: String(doc._id),
+          slug: doc.slug,
+          name: doc.name,
+          parent: doc.parent ? String(doc.parent) : null,
+          count: row.count,
+        } : null
+      })
+      .filter(Boolean)
+  }
+
+  // --- ویژگی‌ها: از شاخه‌ی prop_i به باکت‌های هر برچسب ---
+  // `_id` کلید مقایسه‌ای است (برای ادغام مقدارهای هم‌ارز) و `displayValue`
+  // رشته‌ی خام با نیم‌فاصله‌ی حفظ‌شده است (برای نمایش در UI).
+  const bucketsByLabel = new Map()
+  criteria.forEach((criterion, index) => {
+    const rows = Array.isArray(raw?.[`prop_${index}`]) ? raw[`prop_${index}`] : []
+    bucketsByLabel.set(
+      criterion.label,
+      rows
+        .filter((row) => row._id !== null && row._id !== undefined && row._id !== '')
+        .map((row) => ({
+          key: row._id,
+          value: row.displayValue || row._id,
+          bucket: row.displayValue || row._id,
+          count: row.count,
+        })),
+    )
+  })
+  // ویژگی‌های تعریف‌شده در دسته حتی بدون محصول هم در سایدبار دیده شوند
+  for (const rule of filterableRules(context.categoryRules)) {
+    if (!bucketsByLabel.has(rule.name)) bucketsByLabel.set(rule.name, [])
+  }
+
+  const properties = rankAndFormatPropertyFacets({
+    bucketsByLabel,
+    rules: context.categoryRules,
+    selected: options.properties,
+  })
+
+  return { brands, categories, properties }
 }
 
 async function listProducts(query, models, now = new Date()) {
   const options = parseListingQuery(query)
   const context = await resolveListingContext(options, models, now)
-  const [result] = await models.Product.aggregate(buildListingPipeline(options, context, now)).allowDiskUse(true)
+  const criteria = buildPropertyCriteria(options.properties, context.categoryRules)
+  const [result] = await models.Product.aggregate(
+    buildListingPipeline(options, { ...context, criteria }, now),
+  ).allowDiskUse(true)
   const total = result?.total[0]?.count || 0
+  // آخرین مرحله‌ی pipeline یک $facet است، پس شاخه‌ها در سطح بالای سند
+  // خروجی قرار می‌گیرند (data/total/priceRange/brands/categories/prop_i).
+  const facets = await buildFacets({ raw: result, criteria, context, options, models })
   return {
     success: true,
     data: result?.data || [],
     pagination: { currentPage: options.page, itemsPerPage: options.limit, totalItems: total, totalPages: Math.ceil(total / options.limit) || 1 },
     priceRange: { min: result?.priceRange[0]?.min ?? 0, max: result?.priceRange[0]?.max ?? 0 },
+    facets,
   }
 }
 

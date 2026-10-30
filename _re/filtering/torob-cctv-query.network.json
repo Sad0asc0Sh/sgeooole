@@ -1,0 +1,19 @@
+[
+  {
+    "id": "request-1",
+    "url": {
+      "url": "https://api.torob.com/v4/base-product/search/?page=0&size=24&q=%D8%AF%D9%88%D8%B1%D8%A8%DB%8C%D9%86%20%D9%85%D8%AF%D8%A7%D8%B1%D8%A8%D8%B3%D8%AA%D9%87&source=next_desktop",
+      "origin": "https://api.torob.com",
+      "query_parameter_names": [
+        "page",
+        "size",
+        "q",
+        "source"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  }
+]

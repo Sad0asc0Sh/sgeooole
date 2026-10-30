@@ -116,7 +116,9 @@ export function useProductListing(query: ProductListingQuery) {
       revalidateOnReconnect: true,
       refreshInterval: 0,
       dedupingInterval: PRODUCT_LISTING_CACHE_POLICY.staleTime,
-      keepPreviousData: false,
+      // هنگام تغییر فیلتر/صفحه، داده‌ی قبلی حفظ می‌شود تا گرید محصولات
+      // پاک نشود و کاربر پرش صفحه (layout shift) نبیند — رفتار ترب/تکنولایف.
+      keepPreviousData: true,
       onSuccess: () => {
         const completedAt = Date.now();
         listingCacheTimestamps.set(cacheKey, completedAt);

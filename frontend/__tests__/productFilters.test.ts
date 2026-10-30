@@ -12,7 +12,9 @@ describe("normalizeProductSort", () => {
     expect(normalizeProductSort("bestseller")).toBe("popularity");
     expect(normalizeProductSort("popularity")).toBe("popularity");
     expect(normalizeProductSort("mostVisited")).toBe("popularity");
-    expect(normalizeProductSort("-salesCount")).toBe("popularity");
+    // «پرفروش‌ترین» دیگر به popularity نگاشت نمی‌شود؛ ترتیب واقعی salesCount
+    expect(normalizeProductSort("bestSelling")).toBe("bestSelling");
+    expect(normalizeProductSort("-salesCount")).toBe("bestSelling");
     expect(normalizeProductSort("priceAsc")).toBe("priceAsc");
     expect(normalizeProductSort("discount")).toBe("discount");
   });

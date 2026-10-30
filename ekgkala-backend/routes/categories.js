@@ -53,6 +53,32 @@ router.post(
 router.get('/slug/:slug', cacheMiddleware(CACHE_TTL.LONG), categoryController.getCategoryBySlug)
 
 // ============================================
+// کشف و همگام‌سازی مشخصات فنی دسته‌بندی (ادمین)
+// ============================================
+router.get(
+  '/:id/discovered-specs',
+  protect,
+  checkPermission(PERMISSIONS.CATEGORY_READ),
+  categoryController.getDiscoveredSpecs,
+)
+
+router.post(
+  '/:id/sync-discovered-properties',
+  protect,
+  checkPermission(PERMISSIONS.CATEGORY_UPDATE),
+  async (req, res, next) => {
+    try {
+      await categoryController.syncDiscoveredProperties(req, res, next)
+      clearCacheByPrefix('/api/categories')
+      clearCacheByPrefix('/api/products')
+      clearCacheByPrefix('/api/v1/admin/products')
+    } catch (error) {
+      next(error)
+    }
+  },
+)
+
+// ============================================
 // Ù„ÛŒØ³Øª Ùˆ Ø§ÛŒØ¬Ø§Ø¯ Ø¯Ø³ØªÙ‡â€ŒØ¨Ù†Ø¯ÛŒ
 // ============================================
 router

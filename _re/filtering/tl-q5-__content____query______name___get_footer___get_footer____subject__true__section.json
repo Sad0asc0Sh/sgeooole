@@ -1,0 +1,598 @@
+[
+  {
+    "subject": "لینک ها",
+    "section": "links",
+    "info": [
+      {
+        "title": "دسترسی سریع",
+        "values": [
+          {
+            "link": "https://www.technolife.com/blog/",
+            "name": "بلاگ",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "بلاگ",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/multimedia/speaker",
+            "name": "اسپیکر",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "اسپیکر",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/gold-silver-jewel",
+            "name": "خرید طلا",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "خرید طلا",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/home-app/electric",
+            "name": "لوازم خانگی برقی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "لوازم خانگی برقی",
+            "token": ""
+          },
+          {
+            "link": "/category/mobile/mobile-phone",
+            "name": "خرید گوشی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "خرید گوشی",
+            "token": ""
+          },
+          {
+            "link": "/category/mobile/mobile-phone/brand-samsung",
+            "name": "گوشی سامسونگ",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گوشی سامسونگ",
+            "token": ""
+          },
+          {
+            "link": "/category/mobile/mobile-phone/brand-apple",
+            "name": "گوشی آیفون",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گوشی آیفون",
+            "token": ""
+          },
+          {
+            "link": "/category/mobile/mobile-phone/brand-xiaomi",
+            "name": "گوشی شیائومی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گوشی شیائومی",
+            "token": ""
+          },
+          {
+            "link": "/category/laptop-equipment/laptop",
+            "name": "خرید لپ تاپ",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "خرید لپ تاپ",
+            "token": ""
+          },
+          {
+            "link": "/compare",
+            "name": "مقایسه گوشی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "مقایسه گوشی",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "دسترسی سریع",
+        "token": ""
+      },
+      {
+        "title": "پرفروش ترین محصولات",
+        "values": [
+          {
+            "link": "https://www.technolife.com/category/gold-silver-jewel/sekke-tala/sekke-parsian",
+            "name": "سکه پارسیان",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "سکه پارسیان",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/gaming",
+            "name": "گیمینگ",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گیمینگ",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/mobile/mobile-phone/brand-apple/series-iphone-18",
+            "name": "آیفون ۱۸",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "آیفون ۱۸",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/pc-equipment/storage-devices/hard-drive/hdd/external-hard-drive",
+            "name": "هارد اکسترنال",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "هارد اکسترنال",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/home-app/electric/airtreatment/heater",
+            "name": "بخاری",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "بخاری",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/product-165916/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-s25-fe-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85",
+            "name": "گوشی s2۵ fe",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گوشی s2۵ fe",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/wearable-gadget/smartwatch",
+            "name": "ساعت هوشمند",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "ساعت هوشمند",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/tablet-equipment/tablet",
+            "name": "تبلت",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "تبلت",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/health-beauty/electrical-personal-care/hair-styling-tools/hair-dryer",
+            "name": "سشوار",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "سشوار",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/category/sports-travel/bags",
+            "name": "کوله پشتی و چمدان",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "کوله پشتی و چمدان",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "پرفروش ترین محصولات",
+        "token": ""
+      },
+      {
+        "title": "درباره ما",
+        "values": [
+          {
+            "link": "https://www.technolife.com/landings/download-app",
+            "name": "اپلیکیشن تکنولایف",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "اپلیکیشن تکنولایف",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-2/%D8%A2%D8%B4%D9%86%D8%A7%DB%8C%DB%8C%20%D9%85%D8%AE%D8%AA%D8%B5%D8%B1%20%D8%A8%D8%A7%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "تکنولایف در یک نگاه",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "تکنولایف در یک نگاه",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-3/%D8%A7%D9%87%D8%AF%D8%A7%D9%81%20%D9%88%20%D8%AA%D8%B9%D9%87%D8%AF%20%D9%87%D8%A7%DB%8C%20%D8%AA%DA%A9%D9%86%D9%88%20%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "اهداف و تعهدهای ما",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "اهداف و تعهدهای ما",
+            "token": ""
+          },
+          {
+            "link": "/faq",
+            "name": "سوالات متداول",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "سوالات متداول",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-55/%D9%81%D8%B1%D9%88%D8%B4%DA%AF%D8%A7%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C%20%D8%AD%D8%B6%D9%88%D8%B1%DB%8C%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "فروشگاه های حضوری",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "فروشگاه های حضوری",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/contact-us",
+            "name": "تماس با ما",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "تماس با ما",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/image/technolife_1403.pdf",
+            "name": "گزارش سال 1403",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "گزارش سال 1403",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "درباره ما",
+        "token": ""
+      },
+      {
+        "title": "پیش از خرید",
+        "values": [
+          {
+            "link": "/landings/installment-payment",
+            "name": "راهنمای خرید اقساطی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "راهنمای خرید اقساطی",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/blog/b2b-sales/",
+            "name": "خرید سازمانی",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "خرید سازمانی",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-5/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C%20%D8%AE%D8%B1%DB%8C%D8%AF%20%D8%A7%D8%B2%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "راهنمای خرید از تکنولایف",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "راهنمای خرید از تکنولایف",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-7/%D8%B1%D9%88%D8%B4%20%D9%87%D8%A7%DB%8C%20%D8%AE%D8%B1%DB%8C%D8%AF%20%D8%A7%D8%B2%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "روش های خرید از تکنولایف",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "روش های خرید از تکنولایف",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-8/%D8%B4%D8%B1%D8%A7%DB%8C%D8%B7%20%D8%B6%D9%85%D8%A7%D9%86%D8%AA%20%D9%87%D9%81%D8%AA%20%D8%B1%D9%88%D8%B2%D9%87%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "ضمانت هفت‌روزه تکنولایف",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "ضمانت هفت‌روزه تکنولایف",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-9/%D8%B1%D9%88%D8%B4%E2%80%8C%D9%87%D8%A7%20%D9%88%20%D9%87%D8%B2%DB%8C%D9%86%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C%20%D8%A7%D8%B1%D8%B3%D8%A7%D9%84",
+            "name": "شیوه‌ها و هزینه ارسال",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "شیوه‌ها و هزینه ارسال",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "پیش از خرید",
+        "token": ""
+      },
+      {
+        "title": "پس از خرید",
+        "values": [
+          {
+            "link": "/staticpage/page-10/%D8%AA%D8%B6%D9%85%DB%8C%D9%86%20%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1%DB%8C",
+            "name": "تضمین رجیستری",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "تضمین رجیستری",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-11/%D8%B1%D9%88%DB%8C%D9%87%20%D9%87%D8%A7%DB%8C%20%D8%A8%D8%A7%D8%B2%DA%AF%D8%B1%D8%AF%D8%A7%D9%86%D8%AF%D9%86%20%DA%A9%D8%A7%D9%84%D8%A7",
+            "name": "رویه‌های بازگرداندن کالا",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "رویه‌های بازگرداندن کالا",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-12/%D8%B3%D9%88%D8%A7%D9%84%D8%A7%D8%AA%20%D9%85%D8%AA%D8%AF%D8%A7%D9%88%D9%84%20%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1%DB%8C",
+            "name": "سوالات متداول رجیستری",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "سوالات متداول رجیستری",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-13/%D9%85%DA%A9%D8%A7%D9%86%20%DB%8C%D8%A7%D8%A8%DB%8C%20%D8%B3%D9%81%D8%A7%D8%B1%D8%B4%20%D9%87%D8%A7%DB%8C%20%D8%AE%D8%A7%D8%B1%D8%AC%20%D8%A7%D8%B2%20%D8%AA%D9%87%D8%B1%D8%A7%D9%86",
+            "name": "رهگیری سفارش‌ها",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "رهگیری سفارش‌ها",
+            "token": ""
+          },
+          {
+            "link": "https://www.technolife.com/staticpage/page-19/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C%20%D9%85%D8%B1%D8%AC%D9%88%D8%B9%DB%8C%20%D8%AF%D8%B1%20%D8%B3%D8%A7%DB%8C%D8%AA",
+            "name": "راهنمای مرجوعی در سایت",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "راهنمای مرجوعی در سایت",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "پس از خرید",
+        "token": ""
+      },
+      {
+        "title": "قوانین و مقررات",
+        "values": [
+          {
+            "link": "/staticpage/page-14/%D9%82%D9%88%D8%A7%D9%86%DB%8C%D9%86%20%D9%88%20%D9%85%D9%82%D8%B1%D8%B1%D8%A7%D8%AA",
+            "name": "قوانین و مقررات",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "قوانین و مقررات",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-15/%D8%AD%D8%B1%DB%8C%D9%85%20%D8%AE%D8%B5%D9%88%D8%B5%DB%8C%20%DA%A9%D8%A7%D8%B1%D8%A8%D8%B1%D8%A7%D9%86",
+            "name": "حریم خصوصی کاربران",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "حریم خصوصی کاربران",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-16/%D8%A7%D8%B2%20%D8%B2%D8%A8%D8%A7%D9%86%20%D9%85%D8%B4%D8%AA%D8%B1%DB%8C%D8%A7%D9%86%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81",
+            "name": "از زبان مشتریان تکنولایف",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "از زبان مشتریان تکنولایف",
+            "token": ""
+          },
+          {
+            "link": "/staticpage/page-1/%D8%A8%D9%87%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81%20%D8%AE%D9%88%D8%B4%20%D8%A2%D9%85%D8%AF%DB%8C%D8%AF",
+            "name": "چرا تکنولایف؟",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "چرا تکنولایف؟",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "قوانین و مقررات",
+        "token": ""
+      }
+    ]
+  },
+  {
+    "subject": "شبکه های اجتماعی",
+    "section": "socialMedia",
+    "info": [
+      {
+        "title": "اینستاگرام تکنولایف",
+        "values": [],
+        "link": "https://www.instagram.com/technolife.eshop",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImgsnd3HZ.webp",
+        "alt_image": "اینستاگرام تکنولایف",
+        "token": ""
+      },
+      {
+        "title": "آپارات تکنو لایف",
+        "values": [],
+        "link": "https://www.aparat.com/technolife.com",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImgLueLo3.webp",
+        "alt_image": "آپارات تکنو لایف",
+        "token": ""
+      },
+      {
+        "title": "تلگرام تکنولایف",
+        "values": [],
+        "link": "https://t.me/technolife",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImgcHi6f1.webp",
+        "alt_image": "تلگرام تکنولایف",
+        "token": ""
+      },
+      {
+        "title": "یوتیوب تکنولایف",
+        "values": [],
+        "link": "https://www.youtube.com/c/Technolife_eshop",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImg7ujbp2.webp",
+        "alt_image": "یوتیوب تکنولایف",
+        "token": ""
+      }
+    ]
+  },
+  {
+    "subject": "ارتباط با ما",
+    "section": "contactUs",
+    "info": [
+      {
+        "title": "تلفن",
+        "values": [
+          {
+            "link": "tel:021-58424000",
+            "name": "021-58424000",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "021-58424000",
+            "token": ""
+          },
+          {
+            "link": "tel:021-91077500",
+            "name": "021-91077500",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "021-91077500",
+            "token": ""
+          },
+          {
+            "link": "tel:021-62816000",
+            "name": "021-62816000",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "021-62816000",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "تلفن",
+        "token": ""
+      },
+      {
+        "title": "ایمیل ",
+        "values": [
+          {
+            "link": "mailto:info@technolife.com",
+            "name": "info@technolife.com",
+            "target": "_blank",
+            "removeFromApp": false,
+            "image": "/image/",
+            "alt_image": "info@technolife.com",
+            "token": ""
+          }
+        ],
+        "link": "",
+        "target": "",
+        "removeFromApp": false,
+        "image": "/image/",
+        "alt_image": "ایمیل ",
+        "token": ""
+      }
+    ]
+  },
+  {
+    "subject": "لوگو ها",
+    "section": "logos",
+    "info": [
+      {
+        "title": "تکنوپی",
+        "values": [],
+        "link": "https://technopay.ir/?utm_source=technolife&utm_medium=footer&utm_campaign=technolife",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImg9b2XMW.png",
+        "alt_image": "تکنوپی",
+        "token": ""
+      },
+      {
+        "title": "تکنوگلد",
+        "values": [],
+        "link": "https://technogold.gold/?utm_source=technolife&utm_medium=footer&utm_campaign=technolife",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImgcXMKSD.png",
+        "alt_image": "تکنوگلد",
+        "token": ""
+      },
+      {
+        "title": "تکنو اکسپرس",
+        "values": [],
+        "link": "https://technoexpressco.com/",
+        "target": "_blank",
+        "removeFromApp": false,
+        "image": "/image/footerImghICzG8.png",
+        "alt_image": "تکنو اکسپرس",
+        "token": ""
+      }
+    ]
+  }
+]

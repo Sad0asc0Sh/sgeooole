@@ -42,6 +42,7 @@ const SORT_OPTIONS = [
   { value: "newest", label: "جدیدترین", icon: Sparkles },
   { value: "priceAsc", label: "ارزان‌ترین", icon: ArrowUpDown },
   { value: "priceDesc", label: "گران‌ترین", icon: ArrowUpDown },
+  { value: "bestSelling", label: "پرفروش‌ترین", icon: TrendingUp },
   { value: "popularity", label: "محبوب‌ترین", icon: LayoutGrid },
   { value: "discount", label: "بیشترین تخفیف", icon: Flame },
 ] as const;
@@ -49,6 +50,29 @@ const SORT_OPTIONS = [
 function containsCategory(category: Category, slug: string | null): boolean {
   return category.slug === slug || !!category.children?.some((child) => containsCategory(child, slug));
 }
+
+// ─── رنگ‌ها (Color Swatches) — Phase 4.2 ─────────────────────────
+const COLOR_PROPERTY_HINTS = ["رنگ", "colour", "color"];
+const COLOR_HEX: Record<string, string> = {
+  "مشکی": "#111827", "سیاه": "#111827",
+  "سفید": "#f9fafb", "شیری": "#f9fafb",
+  "خاکستری": "#6b7280", "طوسی": "#9ca3af", "خاکستری تیره": "#4b5563",
+  "نقره‌ای": "#cbd5e1", "نقره ای": "#cbd5e1",
+  "آبی": "#2563eb", "سرمه‌ای": "#1e3a8a", "فیروزه‌ای": "#06b6d4",
+  "قرمز": "#dc2626", "زرشکی": "#7f1d1d", "صورتی": "#ec4899",
+  "صورتی روشن": "#f9a8d4", "بنفش": "#7c3aed", "ارغوانی": "#6d28d9",
+  "سبز": "#16a34a", "سبز روشن": "#4ade80", "زیتونی": "#4d7c0f",
+  "زرد": "#facc15", "طلایی": "#d4af37", "نارنجی": "#ea580c",
+  "قهوه‌ای": "#78350f", "کرم": "#f5e6c8", "بژ": "#e7d8b1",
+  "مسی": "#b45309", "برنزی": "#a16207", "تیتانیوم": "#8b8f94",
+  "مشکی تیتانیوم": "#3f3f46", "خاکستری تیتانیوم": "#71717a",
+};
+
+const isColorProperty = (name: string) =>
+  COLOR_PROPERTY_HINTS.some((hint) => name.toLowerCase().includes(hint));
+
+const swatchFor = (value: string): string | null => COLOR_HEX[value.trim()] ?? null;
+
 
 // Each sheet owns keyboard focus without interfering with route scroll restoration.
 function useSheetDialog(open: boolean, onClose: () => void) {
@@ -304,6 +328,8 @@ function ProductListingContent() {
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [brandsError, setBrandsError] = useState(false);
   const [brandSearchQuery, setBrandSearchQuery] = useState("");
+  // جستجوی داخلی در مقادیر ویژگی‌های طولانی (بیش از ۶ مقدار) — Phase 4.2
+  const [propertySearch, setPropertySearch] = useState<Record<string, string>>({});
   const [categoryDetails, setCategoryDetails] = useState<CategoryDetails | null>(null);
   const [brandDetails, setBrandDetails] = useState<Brand | null>(null);
   const singleBrandSlug = selectedBrands.length === 1 ? selectedBrands[0] : undefined;
@@ -356,6 +382,7 @@ function ProductListingContent() {
     isReady,
     isValidating,
     showSkeleton,
+    showUpdating,
     showError,
     error,
   } = useProductListing(listingQuery);
@@ -526,7 +553,7 @@ function ProductListingContent() {
 
   const propertyOptions = useMemo(() => {
     const metadata = categoryDetails?.slug === categorySlug ? categoryDetails.properties.filter((prop) => prop.isFilterable !== false) : [];
-    const properties: Array<{ name: string; unit?: string; values: Array<{ value: string; count?: number }> }> = facets?.properties
+    const properties: Array<{ name: string; unit?: string; isPinned?: boolean; isConfigured?: boolean; values: Array<{ value: string; count?: number; isSelected?: boolean }> }> = facets?.properties
       ? facets.properties.map((prop) => ({ ...prop, unit: metadata.find((item) => item.name === prop.name)?.unit, values: [...prop.values] }))
       : metadata.map((prop) => ({ name: prop.name, unit: prop.unit, values: (prop.options || []).map((value) => ({ value })) }));
     Object.entries(selectedProperties).forEach(([name, selected]) => {
@@ -538,6 +565,40 @@ function ProductListingContent() {
     });
     return properties;
   }, [categoryDetails, categorySlug, facets?.properties, selectedProperties]);
+
+  // ─── فیلترهای سریع بالای لیست (Quick Filter Pills) — Phase 4.2 ───
+  // ۳ تا ۴ ویژگی برتر: اول پین‌شده‌ها، بعد بیشترین پوشش. از هر ویژگی
+  // حداکثر دو مقدار پرتکرار به‌صورت چیپ نمایش داده می‌شود تا کاربر بدون
+  // اسکرول در سایدبار، کلیدترین فیلترها را با یک کلیک اعمال کند.
+  const quickFilters = useMemo(() => {
+    if (!propertyOptions.length) return [] as Array<{ property: string; value: string; count: number; selected: boolean }>;
+    const coverage = (prop: (typeof propertyOptions)[number]) =>
+      prop.values.reduce((sum, item) => sum + (item.count ?? 0), 0);
+    const ranked = propertyOptions
+      .filter((prop) => prop.values.some((item) => (item.count ?? 0) > 0 || (item.isSelected ?? false)))
+      .sort((a, b) => {
+        if (Boolean(b.isPinned) !== Boolean(a.isPinned)) return b.isPinned ? 1 : -1;
+        return coverage(b) - coverage(a);
+      })
+      .slice(0, 4);
+
+    const pills: Array<{ property: string; value: string; count: number; selected: boolean }> = [];
+    for (const prop of ranked) {
+      const top = [...prop.values]
+        .filter((item) => (item.count ?? 0) > 0 || selectedProperties[prop.name]?.includes(item.value))
+        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+        .slice(0, 2);
+      for (const item of top) {
+        pills.push({
+          property: prop.name,
+          value: item.value,
+          count: item.count ?? 0,
+          selected: Boolean(selectedProperties[prop.name]?.includes(item.value)),
+        });
+      }
+    }
+    return pills.slice(0, 8);
+  }, [propertyOptions, selectedProperties]);
 
   // Find active category name for chips
   const activeCategoryName = useMemo(() => {
@@ -731,6 +792,11 @@ function ProductListingContent() {
                     </span>
                   )}
                   <span className="flex-1 text-right">{brand.name}</span>
+                  {typeof brand.count === "number" && (
+                    <span className="text-[11px] font-medium tabular-nums text-gray-400">
+                      {brand.count.toLocaleString("fa-IR")}
+                    </span>
+                  )}
                   {isActive && (
                     <Check size={14} className="text-kala-500 flex-shrink-0" />
                   )}
@@ -817,16 +883,46 @@ function ProductListingContent() {
           {[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating.toLocaleString("fa-IR")} و بالاتر</option>)}
         </select>
       </FilterSection>
-      {propertyOptions.map((prop, index) => (
+      {propertyOptions.map((prop, index) => {
+        const searchTerm = propertySearch[prop.name] ?? "";
+        const visibleValues = searchTerm.trim()
+          ? prop.values.filter((item) => item.value.toLowerCase().includes(searchTerm.trim().toLowerCase()))
+          : prop.values;
+        const colorProperty = isColorProperty(prop.name);
+        return (
         <FilterSection key={`${categorySlug}-${prop.name}`} title={`${prop.name}${prop.unit ? ` (${prop.unit})` : ""}`} defaultOpen={index < 3 || !!selectedProperties[prop.name]?.length} badge={selectedProperties[prop.name]?.length}>
+          {prop.values.length > 6 && (
+            <div className="relative mb-3">
+              <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                aria-label={`جستجو در مقادیر ${prop.name}`}
+                placeholder={`جستجو در ${prop.name}…`}
+                value={searchTerm}
+                onChange={(event) => setPropertySearch((previous) => ({ ...previous, [prop.name]: event.target.value }))}
+                className="w-full rounded-xl border border-gray-100 bg-gray-50 py-2 pl-3 pr-9 text-sm transition-all focus:border-kala-300 focus:outline-none focus:ring-2 focus:ring-kala-200"
+              />
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
-            {prop.values.map(({ value, count }) => {
+            {visibleValues.map(({ value, count }) => {
               const selected = !!selectedProperties[prop.name]?.includes(value);
+              const color = colorProperty ? swatchFor(value) : null;
               return <button type="button" key={value} aria-pressed={selected} onClick={() => handlePropertyFilter(prop.name, value)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${selected ? "bg-kala-500 text-white shadow-sm shadow-kala-200" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>
+                {color && (
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-3 shrink-0 rounded-full border border-black/10"
+                    style={{ backgroundColor: color }}
+                  />
+                )}
                 {value}{count !== undefined && <span>({count.toLocaleString("fa-IR")})</span>}{selected && <Check size={12} />}
               </button>;
             })}
+            {visibleValues.length === 0 && (
+              <p className="text-[11px] text-gray-400">موردی با این جستجو یافت نشد</p>
+            )}
           </div>
           {!facets?.properties && !categoryDetails?.properties.find((item) => item.name === prop.name)?.options?.length && (
             <form className="flex gap-2 mt-2" onSubmit={(event) => {
@@ -841,7 +937,8 @@ function ProductListingContent() {
           )}
           {prop.values.length > 1 && <p className="mt-2 text-[11px] leading-5 text-gray-500">نمایش محصولات با هر یک از گزینه‌های انتخاب‌شده</p>}
         </FilterSection>
-      ))}
+        );
+      })}
     </div>
   );
 
@@ -1062,6 +1159,47 @@ function ProductListingContent() {
               </div>
             </div>
 
+            {/* فیلترهای سریع بالای لیست (به سبک ترب/تکنولایف) */}
+            {quickFilters.length > 1 && (
+              <div
+                role="group"
+                aria-label="فیلترهای سریع"
+                className="mb-4 -mx-1 flex gap-2 overflow-x-auto px-1 pb-1 custom-scrollbar"
+              >
+                {quickFilters.map((pill) => {
+                  const color = isColorProperty(pill.property) ? swatchFor(pill.value) : null;
+                  return (
+                    <button
+                      key={`${pill.property}-${pill.value}`}
+                      type="button"
+                      aria-pressed={pill.selected}
+                      aria-label={`${pill.property}: ${pill.value}`}
+                      onClick={() => handlePropertyFilter(pill.property, pill.value)}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        pill.selected
+                          ? "border-kala-500 bg-kala-500 text-white shadow-sm shadow-kala-200"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-kala-300 hover:text-kala-700"
+                      }`}
+                    >
+                      {color && (
+                        <span
+                          aria-hidden="true"
+                          className="h-3 w-3 rounded-full border border-black/10"
+                          style={{ backgroundColor: color }}
+                        />
+                      )}
+                      <span>{pill.value}</span>
+                      {pill.count > 0 && (
+                        <span className={`tabular-nums ${pill.selected ? "text-white/80" : "text-gray-400"}`}>
+                          {pill.count.toLocaleString("fa-IR")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{showInitialLoader || isValidating ? "در حال بارگذاری محصولات…" : showError ? "بارگذاری محصولات انجام نشد" : `${total.toLocaleString("fa-IR")} محصول یافت شد`}</p>
             {/* Products Grid */}
             {showInitialLoader ? (
@@ -1090,9 +1228,18 @@ function ProductListingContent() {
                 {searchQuery && <button type="button" onClick={() => removeFilter("search")} className="mt-3 text-sm text-kala-700">حذف عبارت جستجو</button>}
               </div>
             ) : (
+              <div className="relative" aria-busy={showUpdating}>
+                {showUpdating && (
+                  <div className="pointer-events-none absolute inset-x-0 -top-2 z-10 flex justify-center">
+                    <span className="flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[11px] font-bold text-gray-600 shadow-sm ring-1 ring-gray-100">
+                      <Loader2 size={12} className="animate-spin text-kala-500" />
+                      در حال به‌روزرسانی…
+                    </span>
+                  </div>
+                )}
               <motion.div
                 layout
-                className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5"
+                className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-5 transition-opacity duration-200 ${showUpdating ? "opacity-60 pointer-events-none" : ""}`}
                 data-scroll-anchor="product-grid"
               >
                 <AnimatePresence mode="popLayout">
@@ -1110,6 +1257,7 @@ function ProductListingContent() {
                   ))}
                 </AnimatePresence>
               </motion.div>
+              </div>
             )}
 
             {/* Pagination */}

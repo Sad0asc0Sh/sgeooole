@@ -73,8 +73,14 @@ const CategorySchema = new mongoose.Schema(
         type: { type: String, enum: ['text', 'number', 'select'], default: 'select' },
         options: [{ type: String }], // Predefined options for 'select' type, e.g., ["2MP", "4MP", "8MP"]
         isFilterable: { type: Boolean, default: true }, // Should this appear in sidebar filters?
+        // آیا این ویژگی در «فیلترهای سریع» بالای لیست سنجاق شود؟
+        isPinned: { type: Boolean, default: false },
         unit: { type: String, default: '' }, // Optional unit for display, e.g., "ساعت", "متر"
         order: { type: Number, default: 0 }, // Display order
+        // مترادف‌های نام ویژگی (مثلاً «حافظه» برای «ظرفیت حافظه»)
+        aliases: [{ type: String }],
+        // نگاشت مترادف مقدار به مقدار استاندارد (مثلاً {"۱۲۸ گیگ": "128GB"})
+        valueAliases: { type: mongoose.Schema.Types.Mixed, default: {} },
       }
     ],
   },

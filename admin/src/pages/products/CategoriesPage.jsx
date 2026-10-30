@@ -30,6 +30,7 @@ import {
   DownOutlined,
   CloseCircleFilled,
   SettingOutlined,
+  SyncOutlined,
 } from '@ant-design/icons'
 import { useCategoryStore } from '../../stores'
 import api from '../../api'
@@ -276,6 +277,68 @@ function CategoriesPage() {
   const [newPropertyOptions, setNewPropertyOptions] = useState('')
   const [newPropertyUnit, setNewPropertyUnit] = useState('')
   const [newPropertyFilterable, setNewPropertyFilterable] = useState(true)
+  // فیلتر سریع (سنجاق در بالای لیست) + مترادف‌های نام/مقدار
+  const [newPropertyPinned, setNewPropertyPinned] = useState(false)
+  const [newPropertyAliases, setNewPropertyAliases] = useState('')
+
+  // کشف مشخصات از محصولات واقعی (GET discovered-specs)
+  const [discoverOpen, setDiscoverOpen] = useState(false)
+  const [discovering, setDiscovering] = useState(false)
+  const [discovered, setDiscovered] = useState({ discovered: [], configured: [], backfill: null })
+  const [selectedDiscovered, setSelectedDiscovered] = useState([])
+  const [syncing, setSyncing] = useState(false)
+
+  // کشف ویژگی‌ها از داده‌ی واقعی محصولات همان شاخه + همگام‌سازی با قواعد دسته
+  const openDiscover = async () => {
+    if (!editingCategory?._id) {
+      message.info('ابتدا دسته‌بندی را ذخیره کنید، سپس مشخصات را کشف کنید.')
+      return
+    }
+    setDiscoverOpen(true)
+    setDiscovering(true)
+    setSelectedDiscovered([])
+    try {
+      const { data } = await api.get(`/categories/${editingCategory._id}/discovered-specs`)
+      const payload = data?.data || {}
+      setDiscovered({
+        discovered: payload.discovered || [],
+        configured: payload.configured || [],
+        backfill: payload.backfill || null,
+      })
+      setSelectedDiscovered(
+        (payload.discovered || []).filter((item) => !item.isConfigured).map((item) => item.label),
+      )
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'کشف مشخصات انجام نشد')
+      setDiscoverOpen(false)
+    } finally {
+      setDiscovering(false)
+    }
+  }
+
+  const syncDiscovered = async () => {
+    if (!editingCategory?._id || selectedDiscovered.length === 0) return
+    setSyncing(true)
+    try {
+      const { data } = await api.post(
+        `/categories/${editingCategory._id}/sync-discovered-properties`,
+        { labels: selectedDiscovered },
+      )
+      message.success(data?.message || 'ویژگی‌ها همگام‌سازی شدند')
+      setDiscoverOpen(false)
+      try {
+        const refreshed = await api.get(`/categories/${editingCategory._id}`)
+        const freshProps = refreshed?.data?.data?.properties ?? refreshed?.data?.properties
+        if (Array.isArray(freshProps)) setProperties(freshProps)
+      } catch {
+        // نمایش ندادن خطای رفرش؛ همگام‌سازی موفق بوده است
+      }
+    } catch (error) {
+      message.error(error?.response?.data?.message || 'همگام‌سازی انجام نشد')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const cloneTree = (nodes = []) =>
     nodes.map((node) => ({
@@ -891,6 +954,20 @@ function CategoriesPage() {
               ویژگی‌های فنی برای محصولات این دسته‌بندی را تعریف کنید. این ویژگی‌ها در فرم ایجاد محصول و فیلترهای صفحه محصولات نمایش داده می‌شوند.
             </p>
 
+            <Space style={{ marginBottom: 12 }} wrap>
+              <Button
+                size="small"
+                icon={<SyncOutlined />}
+                onClick={openDiscover}
+                disabled={!editingCategory?._id}
+              >
+                کشف مشخصات از محصولات
+              </Button>
+              <span style={{ color: '#999', fontSize: 11 }}>
+                ویژگی‌های واقعی موجود در محصولات این شاخه را می‌خواند و امکان افزودن آن‌ها را می‌دهد.
+              </span>
+            </Space>
+
             {/* List of existing properties */}
             {properties.length > 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -914,10 +991,19 @@ function CategoriesPage() {
                         <Tag color="green">{prop.type === 'select' ? 'انتخابی' : prop.type === 'number' ? 'عددی' : 'متنی'}</Tag>
                         {prop.unit && <Tag color="orange">{prop.unit}</Tag>}
                         {prop.isFilterable && <Tag color="purple">قابل فیلتر</Tag>}
+                        {prop.isPinned && <Tag color="gold">فیلتر سریع</Tag>}
+                        {Array.isArray(prop.aliases) && prop.aliases.length > 0 && (
+                          <Tag color="default">مترادف: {prop.aliases.join(' ، ')}</Tag>
+                        )}
                       </Space>
                       {prop.type === 'select' && prop.options && prop.options.length > 0 && (
                         <div style={{ marginTop: 4, fontSize: 11, color: '#888' }}>
                           گزینه‌ها: {prop.options.join(' ، ')}
+                        </div>
+                      )}
+                      {prop.valueAliases && Object.keys(prop.valueAliases).length > 0 && (
+                        <div style={{ marginTop: 4, fontSize: 11, color: '#888' }}>
+                          نگاشت مقادیر: {Object.entries(prop.valueAliases).map(([from, to]) => `${from}→${to}`).join(' ، ')}
                         </div>
                       )}
                     </div>
@@ -975,13 +1061,27 @@ function CategoriesPage() {
                   />
                 )}
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Checkbox
-                    checked={newPropertyFilterable}
-                    onChange={(e) => setNewPropertyFilterable(e.target.checked)}
-                  >
-                    نمایش در فیلترهای صفحه محصولات
-                  </Checkbox>
+                <Input
+                  placeholder="مترادف‌های نام (اختیاری، با ویرگول: حافظه, storage)"
+                  value={newPropertyAliases}
+                  onChange={(e) => setNewPropertyAliases(e.target.value)}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Space wrap>
+                    <Checkbox
+                      checked={newPropertyFilterable}
+                      onChange={(e) => setNewPropertyFilterable(e.target.checked)}
+                    >
+                      نمایش در فیلترهای صفحه محصولات
+                    </Checkbox>
+                    <Checkbox
+                      checked={newPropertyPinned}
+                      onChange={(e) => setNewPropertyPinned(e.target.checked)}
+                    >
+                      سنجاق در فیلترهای سریع
+                    </Checkbox>
+                  </Space>
                   <Button
                     type="primary"
                     size="small"
@@ -1000,6 +1100,8 @@ function CategoriesPage() {
                           : [],
                         unit: newPropertyUnit.trim(),
                         isFilterable: newPropertyFilterable,
+                        isPinned: newPropertyPinned,
+                        aliases: newPropertyAliases.split(',').map(a => a.trim()).filter(Boolean),
                         order: properties.length,
                       }
 
@@ -1007,7 +1109,9 @@ function CategoriesPage() {
                       setNewPropertyName('')
                       setNewPropertyOptions('')
                       setNewPropertyUnit('')
+                      setNewPropertyAliases('')
                       setNewPropertyFilterable(true)
+                      setNewPropertyPinned(false)
                       message.success('ویژگی اضافه شد')
                     }}
                   >
@@ -1016,6 +1120,62 @@ function CategoriesPage() {
                 </div>
               </Space>
             </Card>
+
+            {/* کشف مشخصات از محصولات واقعی */}
+            <Modal
+              title="کشف مشخصات فنی از محصولات"
+              open={discoverOpen}
+              onCancel={() => setDiscoverOpen(false)}
+              onOk={syncDiscovered}
+              okText={syncing ? 'در حال همگام‌سازی…' : `افزودن ${selectedDiscovered.length} ویژگی`}
+              cancelText="انصراف"
+              confirmLoading={syncing}
+              okButtonProps={{ disabled: discovering || selectedDiscovered.length === 0 }}
+              width={720}
+            >
+              {discovering ? (
+                <div style={{ textAlign: 'center', padding: 32 }}>
+                  <Spin />
+                </div>
+              ) : (
+                <>
+                  <p style={{ color: '#666', fontSize: 12 }}>
+                    این فهرست از مقادیر واقعی محصولات همین شاخه ساخته شده است.
+                    ویژگی‌هایی که از قبل تعریف شده‌اند با برچسب «تعریف‌شده» مشخص شده‌اند و بازنویسی نمی‌شوند.
+                  </p>
+                  {discovered.backfill && (
+                    <p style={{ color: '#888', fontSize: 12 }}>
+                      محصولات بررسی‌شده: {Number(discovered.backfill.scanned || 0).toLocaleString('fa-IR')} —
+                      به‌روزرسانی‌شده: {Number(discovered.backfill.updated || 0).toLocaleString('fa-IR')}
+                    </p>
+                  )}
+                  {discovered.discovered.length === 0 ? (
+                    <p style={{ color: '#999' }}>مشخصاتی در محصولات این شاخه یافت نشد.</p>
+                  ) : (
+                    <Checkbox.Group
+                      style={{ display: 'block', maxHeight: 360, overflowY: 'auto' }}
+                      value={selectedDiscovered}
+                      onChange={setSelectedDiscovered}
+                    >
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        {discovered.discovered.map((item) => (
+                          <Checkbox key={item.label} value={item.label} disabled={item.isConfigured}>
+                            <Space wrap>
+                              <Tag color="blue">{item.label}</Tag>
+                              {item.isConfigured && <Tag color="green">تعریف‌شده</Tag>}
+                              <span style={{ fontSize: 11, color: '#888' }}>
+                                پوشش: {Number(item.coverage || 0).toLocaleString('fa-IR')} —
+                                مقادیر: {(item.values || []).slice(0, 6).map((v) => v.value).join(' ، ')}
+                              </span>
+                            </Space>
+                          </Checkbox>
+                        ))}
+                      </Space>
+                    </Checkbox.Group>
+                  )}
+                </>
+              )}
+            </Modal>
           </div>
         </Form>
       </Modal>

@@ -1,0 +1,1829 @@
+[
+  {
+    "id": "request-1",
+    "url": {
+      "url": "https://www.technolife.com/category/mobile/mobile-phone",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-2",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/css/7cfd4afaffb140b9.css",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-3",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/css/fc0c91e69e3ded06.css",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-4",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/webpack-928e6d712106507e.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-5",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/framework-1f1fb5c07f2be279.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-6",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/main-7d3f545caf579da5.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-7",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/pages/_app-63aa0af340a11cce.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-8",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/2962-f499a0698cf41365.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-9",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/9397-12c21fa4229f7c4b.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-10",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/1664-9ad65ab6e4502b59.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-11",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/2866-6cdd3c39cfdeb1d3.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-12",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/4502-4a2fa490619e876d.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-13",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/7465-eedd597dab215436.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-14",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/5622-644ebde12b6070b9.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-15",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/6456-ef4b5b6d2ca03815.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-16",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/7628-ec49e560128a82ae.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-17",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/730-624394dab674dc6d.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-18",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/8239-cbe7591d69d4f6f4.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-19",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/7703-953cfe1c8681ba68.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-20",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/9759-de8842ca3598affe.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-21",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/pages/category/%5B...category%5D-0ceb01d5bc60ff12.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-22",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/5rPD4qZ5CkxauSuefe4tr/_buildManifest.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-23",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/5rPD4qZ5CkxauSuefe4tr/_ssgManifest.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-24",
+    "url": {
+      "url": "https://www.technolife.com/image/banner_TopGifDesktop_tud1uS_2fa28aa3-8983-4478-8ed7-c45e0185a61a.gif",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-25",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-435247_37f53eb2-f107-476e-9174-8d19db99e1bb.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-26",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-149347_2c8970bb-7042-436d-9834-d714ac88f20a.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-27",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-167564_177fff94-75e5-48b4-9bd5-9fcbbce8525e.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-28",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-167567_9a1d242b-fff0-4aad-b9ca-a4ea17d20f3d.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-29",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-149351_b0d82c05-0350-46ac-b5dd-7eba1060e11c.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-30",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-400671_9844cecc-4993-4ba3-9ea3-4ed99635bb7a.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-31",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-314976_4087f71d-dfac-499a-a172-f9ea061f1349.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-32",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-400669_ced81091-e930-48f6-952c-17dfee844a01.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-33",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-43273_42a74d4d-0b45-472e-8830-564ae2c71e45.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-34",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-45071_5650e182-0aa6-4b5e-9e87-98200a36ef1e.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-35",
+    "url": {
+      "url": "https://www.technolife.com/image/static_symbol-defs.svg?v=309",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [
+        "v"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-36",
+    "url": {
+      "url": "https://www.technolife.com/manifest-desktop.json",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-37",
+    "url": {
+      "url": "https://www.technolife.com/assets/fonts/yekanBakh/woff/Yekan%20Bakh%20FaNum%2005%20Medium.woff",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-38",
+    "url": {
+      "url": "https://www.technolife.com/assets/fonts/yekanBakh/woff/Yekan%20Bakh%20FaNum%2004%20Regular.woff",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-39",
+    "url": {
+      "url": "https://www.technolife.com/assets/fonts/yekanBakh/woff/Yekan%20Bakh%20FaNum%2006%20Bold.woff",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-40",
+    "url": {
+      "url": "https://www.technolife.com/assets/fonts/yekanBakh-en/woff2/YekanBakh-SemiBold.woff2",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-41",
+    "url": {
+      "url": "https://www.technolife.com/assets/fonts/yekanBakh-en/woff2/YekanBakh-Regular.woff2",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-42",
+    "url": {
+      "url": "https://www.technolife.com/image/static_logo_techno_new.svg",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-43",
+    "url": {
+      "url": "https://www.technolife.com/image/banner_SearchBannerDesktop_XsxzRG_1fbd9d7f-1814-4403-b8f3-804b4bf2eb7e.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-44",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-165487_77719c10-38f3-430c-b650-bca7d2ac9f5a.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-45",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-166041_1de3f93a-9189-43fd-b113-95fc93808174.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-46",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-120450_dc792ffc-4b8b-48ed-bfbe-3d19f8bdfe4e.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-47",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-420649_b5c6c24d-304c-4c2f-ba98-126c55923e1b.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-48",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-292906_610cfd0e-21e7-4bf7-a9b8-db233150bfe8.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-49",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-569090_0a811a3a-187b-42af-aba0-1978b6132e92.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-50",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-570404_ed1485fb-3966-4b92-ae3f-f9d6d93c8baa.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-51",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-579344_5ba98fd8-0d7b-459b-9101-2f97adc581fe.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-52",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-168682_e06921d9-fac9-4dde-a896-b588481c160f.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-53",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-75119_7762bd79-3f71-4e81-ad32-cae8afe456f6.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-54",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-599028_8dd99e6c-1884-4069-ad80-3be2fbc3cb84.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-55",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-301273_0e3a0c94-061c-477e-9c3b-b560de7cae82.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-56",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-166235_3ed977c3-5949-4168-80a4-d6e85f663a27.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-57",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-435246_b8b709e9-444b-4847-b378-86195c2ebb43.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-58",
+    "url": {
+      "url": "https://www.google-analytics.com/analytics.js",
+      "origin": "https://www.google-analytics.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-59",
+    "url": {
+      "url": "https://www.googletagmanager.com/gtag/js?id=G-Y3K1BCQMJP",
+      "origin": "https://www.googletagmanager.com",
+      "query_parameter_names": [
+        "id"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-60",
+    "url": {
+      "url": "https://www.technolife.com/image/smartechScript.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-61",
+    "url": {
+      "url": "https://www.technolife.com/image/yektanetScript.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-62",
+    "url": {
+      "url": "https://www.technolife.com/image/matomoScript.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-63",
+    "url": {
+      "url": "https://www.technolife.com/image/matomoTagManagerScript.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-64",
+    "url": {
+      "url": "https://www.technolife.com/image/clarityScript.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-65",
+    "url": {
+      "url": "https://s1.mediaad.org/serve/22220/retargeting.js",
+      "origin": "https://s1.mediaad.org",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-66",
+    "url": {
+      "url": "https://www.googletagmanager.com/gtm.js?id=GTM-P4JNVFM&gtm_auth=&gtm_preview=&gtm_cookies_win=x",
+      "origin": "https://www.googletagmanager.com",
+      "query_parameter_names": [
+        "id",
+        "gtm_auth",
+        "gtm_preview",
+        "gtm_cookies_win"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-67",
+    "url": {
+      "url": "https://ai-ads.technolife.com/viewStreamApi?page=1",
+      "origin": "https://ai-ads.technolife.com",
+      "query_parameter_names": [
+        "page"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-68",
+    "url": {
+      "url": "https://www.technolife.com/shop_customer",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-69",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/719-aebd53fc725d6054.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-70",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/4118-80d9126ea644883a.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-71",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/7978-435322005a8fc4e6.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-72",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/8451-4d07dac21b2b317c.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-73",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/pages/index-d7e77637152472a2.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-74",
+    "url": {
+      "url": "https://www.technolife.com/_next/data/5rPD4qZ5CkxauSuefe4tr/cart.json",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-75",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/2044-d412ed21a1448b5d.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-76",
+    "url": {
+      "url": "https://www.technolife.com/_next/static/chunks/pages/cart-834d24060e25b8f8.js",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-77",
+    "url": {
+      "url": "https://www.google.com/measurement/conversion?random=1793376016677&cv=11&tid=G-Y3K1BCQMJP&fst=1793376016677&fmt=8&en=session_start&gtm=45je6as1v9204762416za208zd9204762416xecxf1&gcs=G1--&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&gacid=1789656216.1793376017&hn=www.googleadservices.com&frm=0&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&npa=0&pscdl=noapi&auid=1697583032.1793376017&gtm_ee=1&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&rcb=18",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "tid",
+        "fst",
+        "fmt",
+        "en",
+        "gtm",
+        "gcs",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "gacid",
+        "hn",
+        "frm",
+        "tiba",
+        "npa",
+        "pscdl",
+        "auid",
+        "gtm_ee",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "rcb"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-78",
+    "url": {
+      "url": "https://analytics.google.com/g/collect?v=2&tid=G-Y3K1BCQMJP&gtm=45je6as1v9204762416za208zd9204762416xf1&_p=1793376014921&_gaz=1&gcs=G1--&gcd=13l3l3R3l5l1&npa=0&dma=0&_eu=AAAAAGAC&_prs=ok&cid=1789656216.1793376017&frm=0&pscdl=noapi&rcb=18&sr=1440x900&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=fa-ir&gaf=2&_s=1&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&sid=1793376016&sct=1&seg=0&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&dt=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&en=page_view&_fv=1&_nsi=1&_ss=2&_ee=1&tfd=4727",
+      "origin": "https://analytics.google.com",
+      "query_parameter_names": [
+        "v",
+        "tid",
+        "gtm",
+        "_p",
+        "_gaz",
+        "gcs",
+        "gcd",
+        "npa",
+        "dma",
+        "_eu",
+        "_prs",
+        "cid",
+        "frm",
+        "pscdl",
+        "rcb",
+        "sr",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uam",
+        "uamb",
+        "uap",
+        "uapv",
+        "uaw",
+        "ul",
+        "gaf",
+        "_s",
+        "tag_exp",
+        "sid",
+        "sct",
+        "seg",
+        "dl",
+        "dt",
+        "en",
+        "_fv",
+        "_nsi",
+        "_ss",
+        "_ee",
+        "tfd"
+      ],
+      "redacted": false
+    },
+    "status": 204,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-79",
+    "url": {
+      "url": "https://stats.g.doubleclick.net/g/collect?v=2&tid=G-Y3K1BCQMJP&cid=1789656216.1793376017&gtm=45je6as1v9204762416za208zd9204762416xf1&rcb=18&aip=1&dma=0&gcs=G1--&gcd=13l3l3R3l5l1&npa=0&frm=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370",
+      "origin": "https://stats.g.doubleclick.net",
+      "query_parameter_names": [
+        "v",
+        "tid",
+        "cid",
+        "gtm",
+        "rcb",
+        "aip",
+        "dma",
+        "gcs",
+        "gcd",
+        "npa",
+        "frm",
+        "tag_exp"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-80",
+    "url": {
+      "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16714137275/?random=1793376016695&cv=11&fst=1793376016695&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45je6as1v9204762416za208zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&frm=0&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dgtag.config&ept=9&rfmt=3&fmt=4",
+      "origin": "https://googleads.g.doubleclick.net",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "frm",
+        "tiba",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "rfmt",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-81",
+    "url": {
+      "url": "https://www.google.com/rmkt/collect/16714137275/?random=1793376016695&cv=11&fst=1793376016695&fmt=8&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45je6as1v9204762416za208zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&frm=0&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dgtag.config&ept=68&gcp=5",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "fmt",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "frm",
+        "tiba",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "gcp"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-82",
+    "url": {
+      "url": "https://googleads.g.doubleclick.net/pagead/viewthroughconversion/16714137275/?random=1793376016712&cv=11&fst=1793376016712&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45je6as1v9204762416za200zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&frm=0&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dpage_view%3Bpage_path%3D%2Fcategory%2Fmobile%2Fmobile-phone&ept=9&rfmt=3&fmt=4",
+      "origin": "https://googleads.g.doubleclick.net",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "tiba",
+        "frm",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "rfmt",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-83",
+    "url": {
+      "url": "https://www.google.com/rmkt/collect/16714137275/?random=1793376016712&cv=11&fst=1793376016712&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45je6as1v9204762416za200zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&frm=0&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dpage_view%3Bpage_path%3D%2Fcategory%2Fmobile%2Fmobile-phone&ept=68&gcp=5",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "fmt",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "tiba",
+        "frm",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "gcp"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-84",
+    "url": {
+      "url": "https://www.google.com/ccm/collect?rcb=18&frm=0&apvc=1&auid=1697583032.1793376017&dt=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&tid=AW-16714137275&en=page_view&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&scrsrc=www.googletagmanager.com&rnd=1610104829.1793376017&navt=n&npa=0&gtm=45je6as1v9204762416za208zd9204762416xecxf1&gcs=G1--&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&tft=1793376016718&tfd=4752&tids=AW-16714137275&fmt=8",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "rcb",
+        "frm",
+        "apvc",
+        "auid",
+        "dt",
+        "tid",
+        "en",
+        "dl",
+        "scrsrc",
+        "rnd",
+        "navt",
+        "npa",
+        "gtm",
+        "gcs",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "tft",
+        "tfd",
+        "tids",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-85",
+    "url": {
+      "url": "https://ad.doubleclick.net/ccm/s/collect?auid=1697583032.1793376017&gtm=45je6as1v9204762416za208zd9204762416xecxf1&fmt=8",
+      "origin": "https://ad.doubleclick.net",
+      "query_parameter_names": [
+        "auid",
+        "gtm",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 204,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-86",
+    "url": {
+      "url": "https://www.google.com/ccm/collect?rcb=18&frm=0&apvc=0&auid=1697583032.1793376017&dt=Page%20%3A%20%2Fcategory%2Fmobile%2Fmobile-phone&tid=AW-16714137275&en=page_view&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&scrsrc=www.googletagmanager.com&rnd=1610104829.1793376017&navt=n&npa=0&ep.page_path=%2Fcategory%2Fmobile%2Fmobile-phone&gtm=45je6as1v9204762416za200zd9204762416xecxf1&gcs=G1--&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&tft=1793376016719&tfd=4752&tids=AW-16714137275&fmt=8",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "rcb",
+        "frm",
+        "apvc",
+        "auid",
+        "dt",
+        "tid",
+        "en",
+        "dl",
+        "scrsrc",
+        "rnd",
+        "navt",
+        "npa",
+        "ep.page_path",
+        "gtm",
+        "gcs",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "tft",
+        "tfd",
+        "tids",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-87",
+    "url": {
+      "url": "https://static1.intrack.ir/api/web/download/sdk/v1/inTrack.min.js?v=00",
+      "origin": "https://static1.intrack.ir",
+      "query_parameter_names": [
+        "v"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-88",
+    "url": {
+      "url": "https://cdn.yektanet.com/rg_woebegone/scripts_v3/gMXuNJn6/rg.complete.js?v=202609030019",
+      "origin": "https://cdn.yektanet.com",
+      "query_parameter_names": [
+        "v"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-89",
+    "url": {
+      "url": "https://life-matomo.tgms.ir/matomo.js",
+      "origin": "https://life-matomo.tgms.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-90",
+    "url": {
+      "url": "https://www.google-analytics.com/j/collect?v=1&_v=j102&a=2068265152&t=pageview&_s=1&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&dp=%2Fcategory%2Fmobile%2Fmobile-phone&ul=fa-ir&dt=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&sr=1440x900&vp=1440x900&_u=YADAAEABAAAAACAAI~&jid=1636113507&gjid=1172448042&cid=1789656216.1793376017&tid=UA-122369400-1&_gid=1446741540.1793376017&_r=1&_slc=1&z=334404490",
+      "origin": "https://www.google-analytics.com",
+      "query_parameter_names": [
+        "v",
+        "_v",
+        "a",
+        "t",
+        "_s",
+        "dl",
+        "dp",
+        "ul",
+        "dt",
+        "sr",
+        "vp",
+        "_u",
+        "jid",
+        "gjid",
+        "cid",
+        "tid",
+        "_gid",
+        "_r",
+        "_slc",
+        "z"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-91",
+    "url": {
+      "url": "https://life-matomo.tgms.ir/js/container_U7luwe2c.js",
+      "origin": "https://life-matomo.tgms.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-92",
+    "url": {
+      "url": "https://www.clarity.ms/tag/tzpc3527gf",
+      "origin": "https://www.clarity.ms",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-93",
+    "url": {
+      "url": "https://panel.adexo.ir/retargeting/script/130/base.js?v=2026.9.30.19&source=adexo",
+      "origin": "https://panel.adexo.ir",
+      "query_parameter_names": [
+        "v",
+        "source"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-94",
+    "url": {
+      "url": "https://analytics.google.com/g/collect?v=2&tid=G-Y3K1BCQMJP&gtm=45je6as1v9204762416za200zd9204762416xf1&_p=1793376014921&gcs=G1--&gcd=13l3l3R3l5l1&npa=0&dma=0&_eu=AAAAAGQC&cid=1789656216.1793376017&frm=0&pscdl=noapi&rcb=18&sr=1440x900&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uam=&uamb=0&uap=Windows&uapv=19.0.0&uaw=0&ul=fa-ir&gaf=2&_s=2&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&dp=%2Fcategory%2Fmobile%2Fmobile-phone&dt=Page%20%3A%20%2Fcategory%2Fmobile%2Fmobile-phone&sid=1793376016&sct=1&seg=1&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&en=page_view&_ee=1&_et=17&tfd=5866",
+      "origin": "https://analytics.google.com",
+      "query_parameter_names": [
+        "v",
+        "tid",
+        "gtm",
+        "_p",
+        "gcs",
+        "gcd",
+        "npa",
+        "dma",
+        "_eu",
+        "cid",
+        "frm",
+        "pscdl",
+        "rcb",
+        "sr",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uam",
+        "uamb",
+        "uap",
+        "uapv",
+        "uaw",
+        "ul",
+        "gaf",
+        "_s",
+        "tag_exp",
+        "dp",
+        "dt",
+        "sid",
+        "sct",
+        "seg",
+        "dl",
+        "en",
+        "_ee",
+        "_et",
+        "tfd"
+      ],
+      "redacted": false
+    },
+    "status": 204,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-95",
+    "url": {
+      "url": "https://www.google.com/ccm/collect?rcb=2&frm=0&apvc=0&ae=g&auid=1697583032.1793376017&dt=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&en=page_view&dl=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&scrsrc=www.googletagmanager.com&rnd=1610104829.1793376017&navt=n&npa=0&ep.ads_data_redaction=0&gtm=45He6as1v830184754za200zd830184754xeaxf1&gcs=G1--&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938469~118897920~118897930~120385422~120469145~120469153~121191153~121246026~121246034~123691370~123814185&tft=1793376017833&tfd=5867&fmt=8",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "rcb",
+        "frm",
+        "apvc",
+        "ae",
+        "auid",
+        "dt",
+        "en",
+        "dl",
+        "scrsrc",
+        "rnd",
+        "navt",
+        "npa",
+        "ep.ads_data_redaction",
+        "gtm",
+        "gcs",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "tft",
+        "tfd",
+        "fmt"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-96",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-391126_87a9180e-2564-4b62-b3bc-72d39614cc85.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-97",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-276896_a3d696dc-fca6-4bae-9fbd-4f3db8cc477f.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-98",
+    "url": {
+      "url": "https://www.technolife.com/image/small_product-TLP-323340_0601e4b3-4baf-4918-9f1c-eafdff800f57.png",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-99",
+    "url": {
+      "url": "https://www.technolife.com/image/ads.svg",
+      "origin": "https://www.technolife.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-100",
+    "url": {
+      "url": "https://www.google.com/pagead/1p-user-list/16714137275/?random=1793376016712&cv=11&fst=1793376000000&bg=ffffff&guid=ON&async=1&en=page_view&gtm=45je6as1v9204762416za200zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&frm=0&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dpage_view%3Bpage_path%3D%2Fcategory%2Fmobile%2Fmobile-phone&ept=9&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1AEAQM4h3EtPI0aRc7L597Y8u8fILzI2KW0RiJ8aliA4m-Pq0_5cCFISxjvFEpBl01J65mN7u7O10HR4GkXQpMddmBUPVAEFBswsBmGSPfuHjN7BUnIp-s8d3XSb3WbmIYYdhbUTOL_Ua7WKiX7LBjTRd41OE2kGQxq3_LaVVbzW0hoW7bOXd3IqPSDBo8wVKSC42sxL9tKUIC4tiBhjRoYVvidCTYgmxllw3CnzmZscxclAiFV4ppJETZHSCGOFirjNN5wjCRFlOXJAvb0cUBZYxn6B6Q&random=1050266822&rmt_tld=0&ipr=y",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "tiba",
+        "frm",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "rfmt",
+        "fmt",
+        "is_vtc",
+        "cid",
+        "random",
+        "rmt_tld",
+        "ipr"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-101",
+    "url": {
+      "url": "https://static1.intrack.ir/api/web/download/sdk/v1/intcs.wasm",
+      "origin": "https://static1.intrack.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-102",
+    "url": {
+      "url": "https://static1.intrack.ir/api/web/download/sdk/v1/device.html",
+      "origin": "https://static1.intrack.ir",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-103",
+    "url": {
+      "url": "https://www.google.com/pagead/1p-user-list/16714137275/?random=1793376016695&cv=11&fst=1793376000000&bg=ffffff&guid=ON&async=1&en=gtag.config&gtm=45je6as1v9204762416za208zd9204762416xecxf1&gcd=13l3l3R3l5l1&dma=0&tag_exp=115938465~115938468~118897920~118897930~120213116~120385422~120469145~120469153~121191153~121246026~121246034~123691370&u_w=1440&u_h=900&url=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&rcb=18&frm=0&tiba=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&hn=www.googleadservices.com&npa=0&pscdl=noapi&auid=1697583032.1793376017&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B8.0.0.0%7CChromium%3B156.0.8078.49%7CMicrosoft%2520Edge%3B156.0.4314.50&uamb=0&uam=&uap=Windows&uapv=19.0.0&uaw=0&data=event%3Dgtag.config&ept=9&rfmt=3&fmt=3&is_vtc=1&cid=CAQS1AEAQM4h3A3slXyW80TD0AihIn0D-Jsu7hJ9jonS1FfzYUg1Ay_MDFYWwGqLZO02ZaJWsCJcqPtSIUY9HoYRggr-7sKH9tGabuVdce9Ep_oXsNVcYnYUiP51jK2Ag9LD5prScqnGcDCh8eU9RpVVN4E_dQFqYdYbs_oDVJ9QOz2lSIEt2M1zITFWQkma7GY55p8FGfXgGEZgUub64VZo007sPp-mvkCMvhGSBLges9SwU3nezXYLKctVYe1rI2DqMZfBEBu7NPHMSpYhaXsfIq5ixpaYfA&random=4090221644&rmt_tld=0&ipr=y",
+      "origin": "https://www.google.com",
+      "query_parameter_names": [
+        "random",
+        "cv",
+        "fst",
+        "bg",
+        "guid",
+        "async",
+        "en",
+        "gtm",
+        "gcd",
+        "dma",
+        "tag_exp",
+        "u_w",
+        "u_h",
+        "url",
+        "rcb",
+        "frm",
+        "tiba",
+        "hn",
+        "npa",
+        "pscdl",
+        "auid",
+        "uaa",
+        "uab",
+        "uafvl",
+        "uamb",
+        "uam",
+        "uap",
+        "uapv",
+        "uaw",
+        "data",
+        "ept",
+        "rfmt",
+        "fmt",
+        "is_vtc",
+        "cid",
+        "random",
+        "rmt_tld",
+        "ipr"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-104",
+    "url": {
+      "url": "https://audience.yektanet.com/api/v1/scripts/preview/validate/?app_id=WS7o14yV",
+      "origin": "https://audience.yektanet.com",
+      "query_parameter_names": [
+        "app_id"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-105",
+    "url": {
+      "url": "https://cdn.yektanet.com/assets/iframe/yngt.html?fp=undefined&report=0",
+      "origin": "https://cdn.yektanet.com",
+      "query_parameter_names": [
+        "fp",
+        "report"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-106",
+    "url": {
+      "url": "https://ua.yektanet.com/api/analytics-event/v1/collect?aa=event&abe=L&abf=775f8ac7-b3a9-4c87-9214-8b407c589472&abj=0&aed=adv&abh=3100&sv=3&st=rg.complete.js&su=1791640559515&fis=1&ffu=1&ac=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&ae=%7B%7D&ad=technolife.com&as=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&aef=WS7o14yV&aec=3065&ai=f6c1cb9a-00f7-9d8c-03c7-5c62e15e2336&abw=1440&abb=7404&aby=1440&abz=900&al=1440&am=900&abk=%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84",
+      "origin": "https://ua.yektanet.com",
+      "query_parameter_names": [
+        "aa",
+        "abe",
+        "abf",
+        "abj",
+        "aed",
+        "abh",
+        "sv",
+        "st",
+        "su",
+        "fis",
+        "ffu",
+        "ac",
+        "ae",
+        "ad",
+        "as",
+        "aef",
+        "aec",
+        "ai",
+        "abw",
+        "abb",
+        "aby",
+        "abz",
+        "al",
+        "am",
+        "abk"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-107",
+    "url": {
+      "url": "https://ua.yektanet.com/api/analytics-event/v1/collect?aa=event&abe=L&abf=bbb37296-7acb-4867-8ee9-3cb2b98f5996&abj=1&aed=adv&abh=3100&sv=3&st=rg.complete.js&su=1791640559515&fis=1&ffu=1&psc=1612&psi=4772&ac=https%3A%2F%2Fwww.technolife.com%2Fcategory%2Fmobile%2Fmobile-phone&ae=%7B%7D&ad=technolife.com&as=%D8%AE%D8%B1%DB%8C%D8%AF%20%DA%AF%D9%88%D8%B4%DB%8C%20-%20%D9%84%DB%8C%D8%B3%D8%AA%20%D9%82%DB%8C%D9%85%D8%AA%20%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D8%AF%D9%84%20%D8%AC%D8%AF%DB%8C%D8%AF%20%D8%A7%D9%85%D8%B1%D9%88%D8%B2%209%20%D8%A2%D8%A8%D8%A7%D9%86&aef=WS7o14yV&aec=3065&ai=f6c1cb9a-00f7-9d8c-03c7-5c62e15e2336&abw=1440&abb=7404&aby=1440&abz=900&al=1440&am=900&abk=%DA%AF%D9%88%D8%B4%DB%8C%20%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84",
+      "origin": "https://ua.yektanet.com",
+      "query_parameter_names": [
+        "aa",
+        "abe",
+        "abf",
+        "abj",
+        "aed",
+        "abh",
+        "sv",
+        "st",
+        "su",
+        "fis",
+        "ffu",
+        "psc",
+        "psi",
+        "ac",
+        "ae",
+        "ad",
+        "as",
+        "aef",
+        "aec",
+        "ai",
+        "abw",
+        "abb",
+        "aby",
+        "abz",
+        "al",
+        "am",
+        "abk"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "POST"
+  },
+  {
+    "id": "request-108",
+    "url": {
+      "url": "https://audience-scripts.yektanet.com/public/static/preview/product-helpers.36214edbffd561c89f59.js",
+      "origin": "https://audience-scripts.yektanet.com",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-109",
+    "url": {
+      "url": "https://scripts.clarity.ms/0.8.73-beta/clarity.js",
+      "origin": "https://scripts.clarity.ms",
+      "query_parameter_names": [],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  },
+  {
+    "id": "request-110",
+    "url": {
+      "url": "https://s1.mediaad.org/v1/retargeting/22220/advertiser.json?ver=1.33.8",
+      "origin": "https://s1.mediaad.org",
+      "query_parameter_names": [
+        "ver"
+      ],
+      "redacted": false
+    },
+    "status": null,
+    "mime": "",
+    "method": "GET"
+  }
+]

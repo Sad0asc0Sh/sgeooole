@@ -1,0 +1,1631 @@
+### body
+- document:
+  - paragraph
+  - banner:
+    - link "festival_banner":
+      - /url: https://vibe.ir/?utm_source=technolife&utm_medium=onsite&utm_campaign=technolife_vibe_credit&utm_content=topbar_banner
+      - img "festival_banner"
+    - link "Technolife":
+      - /url: /
+      - img "Technolife"
+    - navigation:
+      - img
+      - textbox "محصول، برند یا دسته مورد نظرتان را جستجو کنید"
+    - navigation:
+      - text: ورود ثبت نام
+      - link:
+        - /url: /cart
+        - img
+    - navigation:
+      - list:
+        - listitem:
+          - img
+          - text: دسته بندی محصولات
+        - listitem:
+          - link "خرید سازمانی":
+            - /url: https://www.technolife.com/blog/b2b-sales/
+            - img
+            - text: خرید سازمانی
+        - listitem:
+          - link "کارت هدیه":
+            - /url: https://www.technolife.com/category/gift-card/physical-card
+            - img
+            - text: کارت هدیه
+        - listitem:
+          - link "کالاهای استوک جدید":
+            - /url: https://www.technolife.com/category/stock-products
+            - img
+            - text: کالاهای استوک جدید
+        - listitem:
+          - link "خرید اقساطی":
+            - /url: https://www.technolife.com/landings/installment-payment
+            - img
+            - text: خرید اقساطی
+        - listitem:
+          - link "خرید طلای دیجیتال":
+            - /url: https://technogold.gold/?utm_source=technolife&utm_medium=footer&utm_campaign=&utm_content=technogold
+            - img
+            - text: خرید طلای دیجیتال
+        - listitem:
+          - link "فروشنده شو":
+            - /url: https://selleracademy.technolife.com/landing
+  - main:
+    - navigation:
+      - list:
+        - listitem:
+          - link "تکنولایف":
+            - /url: /
+          - text: /
+        - listitem:
+          - link "گوشی موبایل و تجهیزات":
+            - /url: /category/mobile
+          - text: /
+        - listitem:
+          - link "گوشی موبایل":
+            - /url: /category/mobile/mobile-phone
+    - heading "گوشی موبایل" [level=1]
+    - navigation:
+      - list:
+        - listitem:
+          - link "گوشی موبایل نوکیا":
+            - /url: /category/mobile/mobile-phone/brand-nokia
+            - img
+            - text: گوشی موبایل نوکیا
+        - listitem:
+          - link "گوشی موبایل سامسونگ":
+            - /url: /category/mobile/mobile-phone/brand-samsung
+            - img
+            - text: گوشی موبایل سامسونگ
+        - listitem:
+          - link "گوشی موبایل شیائومی":
+            - /url: /category/mobile/mobile-phone/brand-xiaomi
+            - img
+            - text: گوشی موبایل شیائومی
+        - listitem:
+          - link "گوشی موبایل اپل":
+            - /url: /category/mobile/mobile-phone/brand-apple
+            - img
+            - text: گوشی موبایل اپل
+        - listitem:
+          - link "گوشی موبایل پوکو":
+            - /url: /category/mobile/mobile-phone/brand-poco
+            - img
+            - text: گوشی موبایل پوکو
+        - listitem:
+          - link "گوشی موبایل تی سی اچ":
+            - /url: /category/mobile/mobile-phone/brand-tch
+            - img
+            - text: گوشی موبایل تی سی اچ
+        - listitem:
+          - link "گوشی موبایل ژوبیتر":
+            - /url: /category/mobile/mobile-phone/brand-jubiter
+            - img
+            - text: گوشی موبایل ژوبیتر
+        - listitem:
+          - link "گوشی موبایل جنرال لوکس":
+            - /url: /category/mobile/mobile-phone/brand-general-luxe
+            - img
+            - text: گوشی موبایل جنرال لوکس
+        - listitem:
+          - link "گوشی موبایل نمو":
+            - /url: /category/mobile/mobile-phone/brand-nemo
+            - img
+            - text: گوشی موبایل نمو
+        - listitem:
+          - link "گوشی موبایل ژیواکو":
+            - /url: /category/mobile/mobile-phone/brand-zhivaco
+            - img
+            - text: گوشی موبایل ژیواکو
+        - listitem:
+          - link "گوشی موبایل کامتل":
+            - /url: /category/mobile/mobile-phone/brand-comtel
+            - img
+            - text: گوشی موبایل کامتل
+        - listitem:
+          - link "گوشی موبایل آنر":
+            - /url: /category/mobile/mobile-phone/brand-honor
+            - img
+            - text: گوشی موبایل آنر
+        - listitem:
+          - link "گوشی موبایل هانوفر":
+            - /url: /category/mobile/mobile-phone/brand-hanofer
+            - img
+            - text: گوشی موبایل هانوفر
+        - listitem:
+          - link "گوشی موبایل بلک ویو":
+            - /url: /category/mobile/mobile-phone/brand-blackview
+            - img
+            - text: گوشی موبایل بلک ویو
+        - listitem:
+          - link "گوشی موبایل ارد":
+            - /url: /category/mobile/mobile-phone/brand-orod
+            - img
+            - text: گوشی موبایل ارد
+        - listitem:
+          - link "گوشی موبایل جی ال ایکس":
+            - /url: /category/mobile/mobile-phone/brand-glx
+            - img
+            - text: گوشی موبایل جی ال ایکس
+        - listitem:
+          - link "گوشی موبایل الویا":
+            - /url: /category/mobile/mobile-phone/brand-elevia
+            - img
+            - text: گوشی موبایل الویا
+        - listitem:
+          - link "گوشی موبایل موتورولا":
+            - /url: /category/mobile/mobile-phone/brand-motorola
+            - img
+            - text: گوشی موبایل موتورولا
+        - listitem:
+          - link "گوشی موبایل کاجیتل":
+            - /url: /category/mobile/mobile-phone/brand-kgtel
+            - img
+            - text: گوشی موبایل کاجیتل
+        - listitem:
+          - link "گوشی موبایل وکال":
+            - /url: /category/mobile/mobile-phone/brand-vocal
+            - img
+            - text: گوشی موبایل وکال
+        - listitem:
+          - link "گوشی موبایل تی موبایل":
+            - /url: /category/mobile/mobile-phone/brand-tmobile
+            - img
+            - text: گوشی موبایل تی موبایل
+        - listitem:
+          - link "گوشی موبایل میدسل":
+            - /url: /category/mobile/mobile-phone/brand-middcell
+            - img
+            - text: گوشی موبایل میدسل
+        - listitem:
+          - link "گوشی موبایل تکنو (Tecno)":
+            - /url: /category/mobile/mobile-phone/brand-tecno-mobile
+            - img
+            - text: گوشی موبایل تکنو (Tecno)
+        - listitem:
+          - link "گوشی موبایل ریلمی":
+            - /url: /category/mobile/mobile-phone/brand-realme
+            - img
+            - text: گوشی موبایل ریلمی
+        - listitem:
+          - link "گوشی موبایل داکس":
+            - /url: /category/mobile/mobile-phone/brand-dox
+            - img
+            - text: گوشی موبایل داکس
+        - listitem:
+          - link "گوشی موبایل دوجی":
+            - /url: /category/mobile/mobile-phone/brand-doogee
+            - img
+            - text: گوشی موبایل دوجی
+        - listitem:
+          - link "گوشی موبایل داریا":
+            - /url: /category/mobile/mobile-phone/brand-daria
+            - img
+            - text: گوشی موبایل داریا
+        - listitem:
+          - link "گوشی موبایل آلکاتل":
+            - /url: /category/mobile/mobile-phone/brand-alcatel
+            - img
+            - text: گوشی موبایل آلکاتل
+        - listitem:
+          - link "گوشی موبایل اوتل":
+            - /url: /category/mobile/mobile-phone/brand-otel
+            - img
+            - text: گوشی موبایل اوتل
+        - listitem:
+          - link "گوشی موبایل بلووم":
+            - /url: /category/mobile/mobile-phone/brand-bloom
+            - img
+            - text: گوشی موبایل بلووم
+        - listitem:
+          - link "گوشی موبایل جی پلاس":
+            - /url: /category/mobile/mobile-phone/brand-gplus
+            - img
+            - text: گوشی موبایل جی پلاس
+        - listitem:
+          - link "گوشی موبایل ال جی":
+            - /url: /category/mobile/mobile-phone/brand-lg
+            - img
+            - text: گوشی موبایل ال جی
+        - listitem:
+          - link "گوشی موبایل هوآوی":
+            - /url: /category/mobile/mobile-phone/brand-huawei
+            - img
+            - text: گوشی موبایل هوآوی
+        - listitem:
+          - link "گوشی موبایل وان پلاس":
+            - /url: /category/mobile/mobile-phone/brand-oneplus
+            - img
+            - text: گوشی موبایل وان پلاس
+        - listitem:
+          - link "گوشی موبایل اینفینیکس":
+            - /url: /category/mobile/mobile-phone/brand-infinix
+            - img
+            - text: گوشی موبایل اینفینیکس
+        - listitem:
+          - link "گوشی موبایل بلک بری":
+            - /url: /category/mobile/mobile-phone/brand-blackberry
+            - img
+            - text: گوشی موبایل بلک بری
+        - listitem:
+          - link "گوشی موبایل جیونی":
+            - /url: /category/mobile/mobile-phone/brand-gionee
+            - img
+            - text: گوشی موبایل جیونی
+        - listitem:
+          - link "گوشی موبایل انرجایزر":
+            - /url: /category/mobile/mobile-phone/brand-energizer
+            - img
+            - text: گوشی موبایل انرجایزر
+        - listitem:
+          - link "گوشی موبایل بلو":
+            - /url: /category/mobile/mobile-phone/brand-blue
+            - img
+            - text: گوشی موبایل بلو
+        - listitem:
+          - link "گوشی موبایل هایسنس":
+            - /url: /category/mobile/mobile-phone/brand-hisense
+            - img
+            - text: گوشی موبایل هایسنس
+        - listitem:
+          - link "گوشی موبایل ناتینگ":
+            - /url: /category/mobile/mobile-phone/brand-nothing
+            - img
+            - text: گوشی موبایل ناتینگ
+        - listitem:
+          - link "گوشی موبایل اوپو":
+            - /url: /category/mobile/mobile-phone/brand-oppo
+            - img
+            - text: گوشی موبایل اوپو
+        - listitem:
+          - link "گوشی موبایل گوگل":
+            - /url: /category/mobile/mobile-phone/brand-google
+            - img
+            - text: گوشی موبایل گوگل
+        - listitem:
+          - link "گوشی موبایل تی سی ال":
+            - /url: /category/mobile/mobile-phone/brand-tcl
+            - img
+            - text: گوشی موبایل تی سی ال
+        - listitem:
+          - link "گوشی موبایل رنسو":
+            - /url: /category/mobile/mobile-phone/brand-renso
+            - img
+            - text: گوشی موبایل رنسو
+        - listitem:
+          - link "گوشی موبایل اچ ام دی":
+            - /url: /category/mobile/mobile-phone/brand-hmd
+            - img
+            - text: گوشی موبایل اچ ام دی
+        - listitem:
+          - link "گوشی موبایل یولفون":
+            - /url: /category/mobile/mobile-phone/brand-ulefone
+            - img
+            - text: گوشی موبایل یولفون
+        - listitem:
+          - link "گوشی موبایل ردتون":
+            - /url: /category/mobile/mobile-phone/brand-red-tone
+            - img
+            - text: گوشی موبایل ردتون
+        - listitem:
+          - link "گوشی موبایل موبودو":
+            - /url: /category/mobile/mobile-phone/brand-mobodo
+            - img
+            - text: گوشی موبایل موبودو
+        - listitem:
+          - link "گوشی موبایل اینوی":
+            - /url: /category/mobile/mobile-phone/brand-inoi
+            - img
+            - text: گوشی موبایل اینوی
+        - listitem:
+          - link "گوشی موبایل بلک شارک":
+            - /url: /category/mobile/mobile-phone/brand-black-shark
+            - img
+            - text: گوشی موبایل بلک شارک
+        - listitem:
+          - link "گوشی موبایل سونی":
+            - /url: /category/mobile/mobile-phone/brand-sony
+            - img
+            - text: گوشی موبایل سونی
+        - listitem:
+          - link "گوشی موبایل سیکو":
+            - /url: /category/mobile/mobile-phone/brand-siccoo
+            - img
+            - text: گوشی موبایل سیکو
+        - listitem:
+          - link "گوشی موبایل اچ تی سی":
+            - /url: /category/mobile/mobile-phone/brand-htc
+            - img
+            - text: گوشی موبایل اچ تی سی
+        - listitem:
+          - link "گوشی موبایل ویوو":
+            - /url: /category/mobile/mobile-phone/brand-vivo
+            - img
+            - text: گوشی موبایل ویوو
+        - listitem:
+          - link "گوشی موبایل سایفر":
+            - /url: /category/mobile/mobile-phone/brand-cypher
+            - img
+            - text: گوشی موبایل سایفر
+        - listitem:
+          - link "گوشی موبایل ایسوس":
+            - /url: /category/mobile/mobile-phone/brand-asus
+            - img
+            - text: گوشی موبایل ایسوس
+        - listitem:
+          - link "گوشی موبایل ویکو":
+            - /url: /category/mobile/mobile-phone/brand-wiko
+            - img
+            - text: گوشی موبایل ویکو
+        - listitem:
+          - link "گوشی موبایل اسمارت":
+            - /url: /category/mobile/mobile-phone/brand-smart
+            - img
+            - text: گوشی موبایل اسمارت
+        - listitem:
+          - link "گوشی براساس حافظه داخلی":
+            - /url: /category/mobile/mobile-phone/type-storage
+            - img
+            - text: گوشی براساس حافظه داخلی
+        - listitem:
+          - link "گوشی دکمه ای":
+            - /url: /category/mobile/mobile-phone/type-feature-phone
+            - img
+            - text: گوشی دکمه ای
+        - listitem:
+          - link "گوشی تا 25 میلیون تومان":
+            - /url: /category/mobile/mobile-phone/price-up-to-25ml
+            - img
+            - text: گوشی تا 25 میلیون تومان
+        - listitem:
+          - link "گوشی ارزان":
+            - /url: /category/mobile/mobile-phone/price-economy
+            - img
+            - text: گوشی ارزان
+        - listitem:
+          - link "گوشی تا 5 میلیون تومان":
+            - /url: /category/mobile/mobile-phone/price-up-to-5ml
+            - img
+            - text: گوشی تا 5 میلیون تومان
+        - listitem:
+          - link "موبایل تا ۱۰۰ میلیون":
+            - /url: /category/mobile/mobile-phone/price-to-100
+            - img
+            - text: موبایل تا ۱۰۰ میلیون
+        - listitem:
+          - link "گوشی 64 گیگابایت":
+            - /url: /category/mobile/mobile-phone/storage-64gb
+            - img
+            - text: گوشی 64 گیگابایت
+        - listitem:
+          - link "گوشی شارژ سریع":
+            - /url: /category/mobile/mobile-phone/type-fast-charging
+            - img
+            - text: گوشی شارژ سریع
+        - listitem:
+          - link "گوشی تا 50 میلیون":
+            - /url: /category/mobile/mobile-phone/price-up-to-50ml
+            - img
+            - text: گوشی تا 50 میلیون
+        - listitem:
+          - link "گوشی با دوربین 50 مگاپیکسل":
+            - /url: /category/mobile/mobile-phone/camera-50-mp
+            - img
+            - text: گوشی با دوربین 50 مگاپیکسل
+        - listitem:
+          - link "گوشی 4g":
+            - /url: /category/mobile/mobile-phone/type-4g
+            - img
+            - text: گوشی 4g
+        - listitem:
+          - link "گوشی 128 گیگابایت":
+            - /url: /category/mobile/mobile-phone/storage-128gb
+            - img
+            - text: گوشی 128 گیگابایت
+        - listitem:
+          - link "گوشی سه دوربین":
+            - /url: /category/mobile/mobile-phone/camera-3-number
+            - img
+            - text: گوشی سه دوربین
+        - listitem:
+          - link "گوشی تا 100 میلیون":
+            - /url: /category/mobile/mobile-phone/price-up-to-100ml
+            - img
+            - text: گوشی تا 100 میلیون
+        - listitem:
+          - link "گوشی‌های 5G":
+            - /url: /category/mobile/mobile-phone/type-5g
+            - img
+            - text: گوشی‌های 5G
+        - listitem:
+          - link "گوشی 256 گیگابایت":
+            - /url: /category/mobile/mobile-phone/storage-256gb
+            - img
+            - text: گوشی 256 گیگابایت
+        - listitem:
+          - link "گوشی بالای 100 میلیون":
+            - /url: /category/mobile/mobile-phone/price-over-100ml
+            - img
+            - text: گوشی بالای 100 میلیون
+        - listitem:
+          - link "گوشی با دوربین 108 مگاپیکسل":
+            - /url: /category/mobile/mobile-phone/camera-108-mp
+            - img
+            - text: گوشی با دوربین 108 مگاپیکسل
+        - listitem:
+          - link "گوشی میان رده":
+            - /url: /category/mobile/mobile-phone/type-midrange
+            - img
+            - text: گوشی میان رده
+        - listitem:
+          - link "گوشی با باتری قوی":
+            - /url: /category/mobile/mobile-phone/type-long-battery
+            - img
+            - text: گوشی با باتری قوی
+        - listitem:
+          - link "گوشی تا 10 میلیون":
+            - /url: /category/mobile/mobile-phone/price-up-to-10ml
+            - img
+            - text: گوشی تا 10 میلیون
+        - listitem:
+          - link "گوشی عکاسی":
+            - /url: /category/mobile/mobile-phone/type-photography
+            - img
+            - text: گوشی عکاسی
+        - listitem:
+          - link "گوشی ضد آب":
+            - /url: /category/mobile/mobile-phone/type-waterproof
+            - img
+            - text: گوشی ضد آب
+        - listitem:
+          - link "گوشی های پرچمدار":
+            - /url: /category/mobile/mobile-phone/series-flagship
+            - img
+            - text: گوشی های پرچمدار
+        - listitem:
+          - link "گوشی با دوربین 200 مگاپیکسل":
+            - /url: /category/mobile/mobile-phone/camera-200-mp
+            - img
+            - text: گوشی با دوربین 200 مگاپیکسل
+        - listitem:
+          - link "گوشی تا 30 میلیون":
+            - /url: /category/mobile/mobile-phone/price-up-to-30ml
+            - img
+            - text: گوشی تا 30 میلیون
+        - listitem:
+          - link "گوشی تا 32 گیگابایت":
+            - /url: /category/mobile/mobile-phone/storage-32gb
+            - img
+            - text: گوشی تا 32 گیگابایت
+        - listitem:
+          - link "گوشی 512 گیگابایت":
+            - /url: /category/mobile/mobile-phone/storage-512gb
+            - img
+            - text: گوشی 512 گیگابایت
+        - listitem:
+          - link "گوشی چهار دوربین":
+            - /url: /category/mobile/mobile-phone/camera-4-number
+            - img
+            - text: گوشی چهار دوربین
+        - listitem:
+          - link "گوشی با شارژر":
+            - /url: /category/mobile/mobile-phone/type-with-charger
+            - img
+            - text: گوشی با شارژر
+        - listitem:
+          - link "گوشی تاشو":
+            - /url: /category/mobile/mobile-phone/type-flip
+            - img
+            - text: گوشی تاشو
+        - listitem:
+          - link "گوشی قاتل پرچمدار":
+            - /url: /category/mobile/mobile-phone/series-flagship-killer
+            - img
+            - text: گوشی قاتل پرچمدار
+        - listitem:
+          - link "گوشی های گیمینگ":
+            - /url: /category/mobile/mobile-phone/type-gaming
+            - img
+            - text: گوشی های گیمینگ
+        - listitem:
+          - link "گوشی دانش آموزی":
+            - /url: /category/mobile/mobile-phone/type-student
+            - img
+            - text: گوشی دانش آموزی
+        - listitem:
+          - link "گوشی یک ترابایت":
+            - /url: /category/mobile/mobile-phone/storage-1tb
+            - img
+            - text: گوشی یک ترابایت
+        - listitem:
+          - link "گوشی با دوربین 64 مگاپیکسل":
+            - /url: /category/mobile/mobile-phone/camera-64-mp
+            - img
+            - text: گوشی با دوربین 64 مگاپیکسل
+      - button:
+        - img
+      - button:
+        - img
+    - complementary:
+      - img
+      - paragraph: فیلترها
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - checkbox
+      - paragraph: فقط کالا‌های موجود
+      - checkbox
+      - paragraph: فیلتر براساس قیمت
+      - img
+      - paragraph: برندها
+      - img
+      - paragraph: تعداد هسته پردازشگر
+      - img
+      - paragraph: قلم
+      - img
+      - paragraph: رده بندی
+      - img
+      - paragraph: تاشو
+      - img
+      - paragraph: سیستم عامل
+      - img
+      - paragraph: حافظه داخلی (Storage)
+      - img
+      - paragraph: حافظه RAM
+      - img
+      - paragraph: سایز صفحه نمایش
+      - img
+      - paragraph: دوربین جلو
+      - img
+      - paragraph: کیفیت دوربین اصلی
+      - img
+      - paragraph: کیفیت دوربین سلفی
+      - img
+      - paragraph: شبکه اینترنت
+      - img
+      - paragraph: مناسب برای
+      - img
+      - paragraph: ضد آب
+      - img
+      - paragraph: سری آیفون
+      - img
+      - paragraph: سری سامسونگ
+      - img
+      - paragraph: سری شیائومی
+      - img
+      - paragraph: ریجن
+      - img
+      - paragraph: همراه با شارژر
+      - img
+      - paragraph: ظرفیت باتری
+      - img
+      - paragraph: شارژ سریع
+      - img
+      - paragraph: شارژ بی‌ سیم
+      - img
+      - paragraph: شارژ معکوس
+      - img
+      - paragraph: رنگ ها
+      - img
+    - navigation:
+      - img
+      - paragraph: "ترتیب:"
+      - list:
+        - listitem:
+          - button "پرفروش ترین"
+        - listitem:
+          - button "بیشترین قیمت"
+        - listitem:
+          - button "کمترین قیمت"
+        - listitem:
+          - button "جدیدترین"
+        - listitem:
+          - button "بیشترین تخفیف"
+    - paragraph: 2669 کالا
+    - button "مقایسه":
+      - paragraph: مقایسه
+    - article:
+      - link "گوشی موبایل نوکیا مدل (2023) 105 دو سیم کارت مونتاژ ایران copy-small-image.png":
+        - /url: /product-435247/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-(2024)-105-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86
+        - img "گوشی موبایل نوکیا مدل (2023) 105 دو سیم کارت مونتاژ ایران copy-small-image.png"
+      - img
+      - paragraph: "1.8"
+      - img
+      - paragraph: "-"
+      - img
+      - paragraph: "1000"
+      - link "گوشی موبایل نوکیا مدل (2024) 105 دو سیم کارت مونتاژ ایران":
+        - /url: /product-435247/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-(2024)-105-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86
+        - heading "گوشی موبایل نوکیا مدل (2024) 105 دو سیم کارت مونتاژ ایران" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.0"
+      - img
+      - text: "10"
+      - paragraph: 2,980,000تومان
+      - paragraph: 3,300,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:28:50
+      - img "تبلیغات"
+      - link "گوشی موبایل تی سی اچ مدل One Pro دو سیم کارت ظرفیت 128 گیگابایت رم 8 گیگابایت":
+        - /url: /product-391126/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-one-pro-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA?seller_item_id=6a6f57aaa26bc7e3f67f742f
+        - img "گوشی موبایل تی سی اچ مدل One Pro دو سیم کارت ظرفیت 128 گیگابایت رم 8 گیگابایت"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: ۶.۷۴
+      - img
+      - paragraph: ۵۰
+      - img
+      - paragraph: ۵۰۰۰
+      - link "گوشی موبایل تی سی اچ مدل One Pro دو سیم کارت ظرفیت 128 گیگابایت رم 8 گیگابایت":
+        - /url: /product-391126/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-one-pro-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA?seller_item_id=6a6f57aaa26bc7e3f67f742f
+        - heading "گوشی موبایل تی سی اچ مدل One Pro دو سیم کارت ظرفیت 128 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: "5.0"
+      - img
+      - text: "7"
+      - paragraph: 45,399,000تومان
+      - paragraph: 48,690,000
+      - text: تومان
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت-small-image":
+        - /url: /product-149347/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت-small-image"
+      - img
+      - paragraph: 64GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت":
+        - /url: /product-149347/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "3.9"
+      - img
+      - text: "4"
+      - paragraph: 42,500,000تومان
+      - paragraph: 44,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 17:38:50
+      - img "تبلیغات"
+      - link "گوشی موبایل تی سی اچ مدل One Lite دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت":
+        - /url: /product-276896/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-one-lite-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%E2%80%8C%DB%8C%D8%AA?seller_item_id=6925736674a6f7349f154ff7
+        - img "گوشی موبایل تی سی اچ مدل One Lite دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت"
+      - img
+      - paragraph: 64GB
+      - img
+      - paragraph: ۶.۷۴
+      - img
+      - paragraph: ۱۳ مگاپیکسل
+      - img
+      - paragraph: ۵۰۰۰
+      - link "گوشی موبایل تی سی اچ مدل One Lite دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت":
+        - /url: /product-276896/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-one-lite-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%E2%80%8C%DB%8C%D8%AA?seller_item_id=6925736674a6f7349f154ff7
+        - heading "گوشی موبایل تی سی اچ مدل One Lite دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت" [level=2]
+      - img
+      - paragraph: "4.8"
+      - img
+      - text: "3"
+      - paragraph: 36,350,000تومان
+      - paragraph: 37,300,000
+      - text: تومان
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 4 گیگابایت copy-small-image.png":
+        - /url: /product-167564/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 4 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام":
+        - /url: /product-167564/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.0"
+      - img
+      - text: "5"
+      - paragraph: 63,500,000تومان
+      - paragraph: 66,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 14:20:50
+      - img "تبلیغات"
+      - link "گوشی موبایل تی سی اچ مدل Neo دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت":
+        - /url: /product-323340/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-neo-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%E2%80%8C%DB%8C%D8%AA?seller_item_id=6a5202699942899d0a439b66
+        - img "گوشی موبایل تی سی اچ مدل Neo دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت"
+      - img
+      - paragraph: 64GB
+      - img
+      - paragraph: ۶.۷۴
+      - img
+      - paragraph: ۱۳ مگاپیکسل
+      - img
+      - paragraph: ۵۰۰۰
+      - link "گوشی موبایل تی سی اچ مدل Neo دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت":
+        - /url: /product-323340/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-neo-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%E2%80%8C%DB%8C%D8%AA?seller_item_id=6a5202699942899d0a439b66
+        - heading "گوشی موبایل تی سی اچ مدل Neo دو سیم کارت ظرفیت 64 گیگابایت رم 4 گیگابا‌یت" [level=2]
+      - img
+      - paragraph: "4.0"
+      - img
+      - text: "3"
+      - paragraph: 34,999,000تومان
+      - paragraph: 35,999,000
+      - text: تومان
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image":
+        - /url: /product-167567/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام":
+        - /url: /product-167567/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.3"
+      - img
+      - text: "3"
+      - paragraph: 72,300,000تومان
+      - paragraph: 74,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 17:14:50
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت-small-image":
+        - /url: /product-149351/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت-small-image"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت":
+        - /url: /product-149351/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.2"
+      - img
+      - text: "3"
+      - paragraph: 48,500,000تومان
+      - paragraph: 49,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 20:40:50
+      - link "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image":
+        - /url: /product-400671/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a57-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-400671/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a57-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.1"
+      - img
+      - text: "1"
+      - paragraph: 159,500,000تومان
+      - paragraph: 161,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 20:34:50
+      - link "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png":
+        - /url: /product-314976/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-15-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.77"
+      - img
+      - paragraph: "108"
+      - img
+      - paragraph: "6000"
+      - link "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-314976/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-15-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.3"
+      - img
+      - text: "6"
+      - paragraph: 96,300,000تومان
+      - paragraph: 102,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:41:50
+      - link "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png":
+        - /url: /product-400669/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a37-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-400669/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a37-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.8"
+      - img
+      - text: "1"
+      - paragraph: 125,800,000تومان
+      - paragraph: 127,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 23:41:50
+      - link "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image":
+        - /url: /product-43273/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-106-(2023)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - img "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image"
+      - img
+      - paragraph: 8MB
+      - img
+      - paragraph: "1.8"
+      - img
+      - paragraph: "-"
+      - img
+      - paragraph: "1000"
+      - link "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا":
+        - /url: /product-43273/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-106-(2023)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - heading "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.0"
+      - img
+      - text: "5"
+      - paragraph: 3,899,000تومان
+      - paragraph: 4,100,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 15:04:50
+      - link "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image":
+        - /url: /product-45071/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-3210-(2024)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - img "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image"
+      - img
+      - paragraph: "2.4"
+      - img
+      - paragraph: "2"
+      - img
+      - paragraph: "1450"
+      - link "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا":
+        - /url: /product-45071/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%DB%8C%D8%A7-%D9%85%D8%AF%D9%84-3210-(2024)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - heading "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "3.8"
+      - img
+      - text: "9"
+      - paragraph: 7,099,000تومان
+      - paragraph: 7,800,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 14:08:50
+      - link "گوشی موبايل نوکيا مدل 110 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا copy-small-image.png":
+        - /url: /product-435246/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%D9%8A%D8%A7-%D9%85%D8%AF%D9%84-110-(2024)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - img "گوشی موبايل نوکيا مدل 110 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا copy-small-image.png"
+      - img
+      - paragraph: "1.8"
+      - img
+      - paragraph: QVGA
+      - img
+      - paragraph: "1000"
+      - link "گوشی موبايل نوکيا مدل 110 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا":
+        - /url: /product-435246/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%D9%8A%D8%A7-%D9%85%D8%AF%D9%84-110-(2024)-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86-%D8%AA%D8%AD%D8%AA-%D9%84%DB%8C%D8%B3%D8%A7%D9%86%D8%B3-%D9%86%D9%88%DA%A9%DB%8C%D8%A7
+        - heading "گوشی موبايل نوکيا مدل 110 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "3.5"
+      - img
+      - text: "15"
+      - paragraph: 3,850,000تومان
+      - paragraph: 4,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:28:50
+      - link "گوشی موبایل اپل مدل iPhone 17 ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active-small-image":
+        - /url: /product-165487/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%A7%D9%BE%D9%84-%D9%85%D8%AF%E2%80%8C%D9%84-iphone-17-ch-a-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---not-active-%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1-%D8%B4%D8%AF%D9%87
+        - img "گوشی موبایل اپل مدل iPhone 17 ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active-small-image"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.3"
+      - img
+      - paragraph: "48"
+      - link "گوشی موبایل اپل مد‌ل iPhone 17 CH/A ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active رجیستر شده":
+        - /url: /product-165487/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%A7%D9%BE%D9%84-%D9%85%D8%AF%E2%80%8C%D9%84-iphone-17-ch-a-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---not-active-%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1-%D8%B4%D8%AF%D9%87
+        - heading "گوشی موبایل اپل مد‌ل iPhone 17 CH/A ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active رجیستر شده" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.3"
+      - img
+      - text: "4"
+      - paragraph: 394,999,000تومان
+      - paragraph: 409,999,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 22:01:50
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام -small-image":
+        - /url: /product-167563/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85-
+        - img "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام -small-image"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-167563/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a17-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85-
+        - heading "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.4"
+      - img
+      - text: "2"
+      - paragraph: 94,500,000تومان
+      - paragraph: 95,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 21:26:50
+      - link "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران-small-image":
+        - /url: /product-24143/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%D9%8A%D8%A7-%D9%85%D8%AF%D9%84-106-(2018)-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86
+        - img "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران-small-image"
+      - img
+      - paragraph: 4MB
+      - img
+      - paragraph: "1.8"
+      - img
+      - paragraph: "-"
+      - img
+      - paragraph: "800"
+      - link "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران":
+        - /url: /product-24143/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D9%86%D9%88%DA%A9%D9%8A%D8%A7-%D9%85%D8%AF%D9%84-106-(2018)-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%85%D9%88%D9%86%D8%AA%D8%A7%DA%98-%D8%A7%DB%8C%D8%B1%D8%A7%D9%86
+        - heading "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.1"
+      - img
+      - text: "7"
+      - paragraph: 3,730,000تومان
+      - paragraph: 4,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:28:50
+      - link "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 512 گیگابایت رم 12 گیگابایت copy-small-image.png":
+        - /url: /product-107882/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-14s-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 512 گیگابایت رم 12 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.67"
+      - img
+      - paragraph: "200"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-107882/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-14s-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.2"
+      - img
+      - text: "15"
+      - paragraph: 85,300,000تومان
+      - paragraph: 99,900,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:08:50
+      - link "گوشی موبایل شیائومی مدل Poco C85 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png":
+        - /url: /product-166041/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D9%BE%D9%88%DA%A9%D9%88-%D9%85%D8%AF%D9%84-c85-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی مدل Poco C85 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.9"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "6000"
+      - link "گوشی موبایل پوکو مدل C85 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-166041/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D9%BE%D9%88%DA%A9%D9%88-%D9%85%D8%AF%D9%84-c85-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل پوکو مدل C85 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.4"
+      - paragraph: 68,400,000تومان
+      - link "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png":
+        - /url: /product-107905/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-a5-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.88"
+      - img
+      - paragraph: "32"
+      - img
+      - paragraph: "5200"
+      - link "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 128 گیگابایت رم 4 گیگابایت":
+        - /url: /product-107905/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-a5-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 128 گیگابایت رم 4 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.2"
+      - img
+      - text: "8"
+      - paragraph: 44,700,000تومان
+      - paragraph: 48,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 21:04:50
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت-small-image":
+        - /url: /product-149352/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت-small-image"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت":
+        - /url: /product-149352/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a07-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.1"
+      - img
+      - text: "3"
+      - paragraph: 58,100,000تومان
+      - paragraph: 59,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:54:50
+      - link "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 4 گیگابایت copy-small-image.png":
+        - /url: /product-166010/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-redmi-15c-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 4 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.9"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "6000"
+      - link "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-166010/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-redmi-15c-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.4"
+      - img
+      - text: "8"
+      - paragraph: 68,500,000تومان
+      - paragraph: 74,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 18:25:50
+      - link "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت-small-image":
+        - /url: /product-120450/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-arc-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA
+        - img "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت-small-image"
+      - img
+      - paragraph: 4MB
+      - img
+      - paragraph: "1.77"
+      - img
+      - paragraph: X
+      - img
+      - paragraph: "1000"
+      - link "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت":
+        - /url: /product-120450/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AA%DB%8C-%D8%B3%DB%8C-%D8%A7%DA%86-%D9%85%D8%AF%D9%84-arc-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA
+        - heading "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت" [level=2]
+      - img
+      - paragraph: "4.3"
+      - paragraph: 2,808,000تومان
+      - link "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png":
+        - /url: /product-165916/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-s25-fe-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "4900"
+      - link "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-165916/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-s25-fe-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.0"
+      - img
+      - text: "1"
+      - paragraph: 226,900,000تومان
+      - paragraph: 228,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 23:30:50
+      - link "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image":
+        - /url: /product-99215/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a26-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام":
+        - /url: /product-99215/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a26-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-6-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.3"
+      - img
+      - text: "2"
+      - paragraph: 81,200,000تومان
+      - paragraph: 82,300,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 23:47:50
+      - link "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png":
+        - /url: /product-173207/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-15-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.9"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "7000"
+      - link "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-173207/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-15-4g-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.3"
+      - img
+      - text: "2"
+      - paragraph: 74,500,000تومان
+      - paragraph: 75,900,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:44:50
+      - link "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت-small-image":
+        - /url: /product-76419/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-14-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت-small-image"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.67"
+      - img
+      - paragraph: "108"
+      - img
+      - paragraph: "5500"
+      - link "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت":
+        - /url: /product-76419/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-redmi-note-14-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت" [level=2]
+      - img
+      - paragraph: "4.2"
+      - img
+      - text: "13"
+      - paragraph: 87,900,000تومان
+      - paragraph: 99,900,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 14:54:50
+      - link "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png":
+        - /url: /product-116578/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-poco-c71-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.88"
+      - img
+      - paragraph: "32"
+      - img
+      - paragraph: "5200"
+      - link "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 128 گیگابایت رم 4 گیگابایت":
+        - /url: /product-116578/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B4%DB%8C%D8%A7%D8%A6%D9%88%D9%85%DB%8C-%D9%85%D8%AF%D9%84-poco-c71-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 128 گیگابایت رم 4 گیگابایت" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.2"
+      - img
+      - text: "12"
+      - paragraph: 44,300,000تومان
+      - paragraph: 49,900,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 02:53:50
+      - link "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png":
+        - /url: /product-69646/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a16-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام":
+        - /url: /product-69646/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-a16-4g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-4-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: "4.3"
+      - paragraph: 62,998,000تومان
+      - link "گوشی موبایل ژوبیتر مدل K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی-small-image":
+        - /url: /product-420649/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%DA%98%D9%88%D8%A8%DB%8C%D8%AA%D8%B1-%D9%85%D8%AF%D9%84-jphone-k10-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-3-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-+-3-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-%D9%85%D8%AC%D8%A7%D8%B2%DB%8C
+        - img "گوشی موبایل ژوبیتر مدل K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی-small-image"
+      - img
+      - paragraph: "6.52"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل ژوبیتر مدل jPhone K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی":
+        - /url: /product-420649/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%DA%98%D9%88%D8%A8%DB%8C%D8%AA%D8%B1-%D9%85%D8%AF%D9%84-jphone-k10-%D8%AF%D9%88-%D8%B3%DB%8C%D9%85-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-64-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-3-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-+-3-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-%D9%85%D8%AC%D8%A7%D8%B2%DB%8C
+        - heading "گوشی موبایل ژوبیتر مدل jPhone K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی" [level=2]
+      - img
+      - paragraph: "3.7"
+      - img
+      - text: "3"
+      - paragraph: 29,190,000تومان
+      - paragraph: 30,000,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 16:26:38
+      - link "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت-small-image":
+        - /url: /product-292906/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AC%D9%86%D8%B1%D8%A7%D9%84-%D9%84%D9%88%DA%A9%D8%B3-%D9%85%D8%AF%D9%84-130-%D8%AF%D9%88-%D8%B3%D9%8A%D9%85%E2%80%8C-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - img "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت-small-image"
+      - img
+      - paragraph: 4MB
+      - img
+      - paragraph: ۲.۴
+      - link "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت":
+        - /url: /product-292906/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%AC%D9%86%D8%B1%D8%A7%D9%84-%D9%84%D9%88%DA%A9%D8%B3-%D9%85%D8%AF%D9%84-130-%D8%AF%D9%88-%D8%B3%D9%8A%D9%85%E2%80%8C-%DA%A9%D8%A7%D8%B1%D8%AA-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-4-%D9%85%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA
+        - heading "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت" [level=2]
+      - img
+      - paragraph: "3.4"
+      - img
+      - text: "24"
+      - paragraph: 2,690,000تومان
+      - paragraph: 3,500,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 19:28:50
+      - link "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image":
+        - /url: /product-99347/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a36-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image"
+      - img
+      - paragraph: 256GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - link "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-99347/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a36-5g-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: ارسال زیر ۳ ساعت
+      - img
+      - paragraph: "4.1"
+      - img
+      - text: "2"
+      - paragraph: 107,000,000تومان
+      - paragraph: 108,300,000
+      - text: تومان
+      - paragraph: تکنوآف
+      - time: 23:34:50
+      - link "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png":
+        - /url: /product-529048/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a37-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - img "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png"
+      - img
+      - paragraph: 128GB
+      - img
+      - paragraph: "6.7"
+      - img
+      - paragraph: "50"
+      - img
+      - paragraph: "5000"
+      - link "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت - ویتنام":
+        - /url: /product-529048/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%DB%8C%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-galaxy-a37-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-128-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+        - heading "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت - ویتنام" [level=2]
+      - img
+      - paragraph: "4.0"
+      - paragraph: 110,990,000تومان
+    - link:
+      - /url: /category/mobile/mobile-phone?page=9
+      - button:
+        - img
+    - link "1":
+      - /url: /category/mobile/mobile-phone?page=1
+      - button "1"
+    - button "..." [disabled]
+    - link "9":
+      - /url: /category/mobile/mobile-phone?page=9
+      - button "9"
+    - button "10" [disabled]
+    - link "11":
+      - /url: /category/mobile/mobile-phone?page=11
+      - button "11"
+    - button "..." [disabled]
+    - link "89":
+      - /url: /category/mobile/mobile-phone?page=89
+      - button "89"
+    - link:
+      - /url: /category/mobile/mobile-phone?page=11
+      - button:
+        - img
+    - article:
+      - heading "گوشی موبایل و تلفن همراه" [level=1]
+      - paragraph: قیمت گوشی یکی از فاکتورهای تعیین‌کننده در انتخاب و خرید گوشی در کنار چندین فاکتور دیگر است. اگر در فکر انتخاب یک گوشی جدید هستید، قیمت موبایل، برند گوشی، ظرفیت آن، کیفیت دوربین، همینطوری کارایی که از تلفن همراه خود انتظار دارید، از عواملی هستند که در خرید موبایل باید در نظر بگیرید و پس از آن اقدام به خرید نمایید.
+      - heading "برترین برندهای گوشی موبایل در بازار" [level=2]
+      - paragraph: خرید گوشی همواره خریدی لذت بخش و صد البته تقریبا می‌توان گفت پرچالش به حساب می‌آید. در تکنولایف می‌توانید روی لیست بلندبالایی از انواع گوشی موبایل هوشمند و دکمه‌ای از برندهای متنوع حساب باز کنید. خوشبختانه تنوع موجودی و مدل‌های معرفی شده گوشی آنقدر بالا است که نیازی نیست حتما بودجه خود را به اندازه گران قیمت‌ترین گوشی‌های بازار افزایش دهید، بلکه می‌توانید به سراغ خرید انواع گوشی قاتل پرچمدار، میان رده و اقتصادی و ارزان قیمت هم بروید.
+      - heading "گوشی سامسونگ" [level=3]
+      - paragraph:
+        - text: اگر قصد خرید موبایل جدید دارید، احتمال این که انتخاب اول شما
+        - link "گوشی سامسونگ":
+          - /url: https://www.technolife.com/category/mobile/mobile-phone/brand-samsung
+        - text: باشد خیلی زیاد است. انواع گوشی در این برند با قیمت‌های متنوع و رده‌بندی‌های گوناگون به‌فروش می‌رسند. شما می‌توانید از گوشی با قیمت مناسب، که در دسته اقتصادی و ارزان قرار می‌گیرند، تا گوشی تلفن همراه پرچمدار و گران قیمت که برای کارهایی مانند گیمینگ و عکاسی فوق‌العاده‌اند مانند خانواده بالارده گلکسی اس 26 را در میان گوشی های سامسونگ پیدا و انتخاب کنید.
+      - heading "گوشی ایفون" [level=3]
+      - paragraph:
+        - text: گوشی های اپل همواره در لیست بهترین گوشی در بازار قرار دارند و خیلی‌ها همیشه دنبال انتخاب تلفن همراه خود از میان گوشی‌های اپل هستند. اپل از آن برندهاست که فقط گوشی‌های پرچمدار تولید کرده و شما نمی‌توانید گوشی ارزانی در میان انواع گوشی این برند پیدا کنید. پس معمولا کسانی که گوشی غیراندرویدی و گران‌قیمت اپل را دوست دارند به سراغ
+        - link "خرید گوشی آیفون":
+          - /url: https://www.technolife.com/category/mobile/mobile-phone/brand-apple
+        - text: می‌روند.
+      - heading "گوشی شیائومی" [level=3]
+      - paragraph:
+        - text: فروش موبایل شیائومی این روزها خیلی زیاد و داغ است. یکی از دلایلش شاید این باشد که گوشی‌های این برند تنوع بسیار بالایی داشته و اگر بخواهیم قیمت گوشی امروز را چک کنیم، می‌بینیم که نسبت به خیلی از برندها خوش قیمت‌تر هستند. برای مثال، گوشی پرچمدار شیائومی با قیمت مناسب‌تری نسبت به پرچمدارهای اپل و سامسونگ به فروش می‌رسند. البته نباید تنها دلیل پرفروش بودن این برند را
+        - link "قیمت گوشی شیائومی":
+          - /url: https://www.technolife.com/category/mobile/mobile-phone/brand-xiaomi
+        - text: بدانیم. شیائومی با تنوع گسترده‌ای که در تولید گوشی ارزان، گوشی میانرده، قاتل پرچمدار، پرچمدار و همینطور گوشی‌های مخصوص عکاسی یا گیمینگ تولید کرده، توانسته طرفداران زیادی برای خود فراهم کند.
+      - heading "گوشی نوکیا" [level=3]
+      - paragraph:
+        - text: حتی با روی کار آمدن گوشی های هوشمند هم از محبوبیت گوشی نوکیا کاسته نشد. قیمت گوشی ساده اگرچه بالاتر از چند سال پیش رفته، اما به‌خاطر باتری بادوام، بدنه محکم و مقاوم و شکل ظاهری ساده انواع
+        - link "گوشی نوکیا":
+          - /url: https://www.technolife.com/category/mobile/mobile-phone/brand-nokia
+        - text: ، این گوشی ها برای کسانی‌که گوشی هوشمند دوست ندارند یا یک گوشی ساده هم می‌خواهند در کنار گوشی های جدید به دست بگیرند، انتخابی مناسب هستند.
+      - heading "انواع رده بندی گوشی" [level=2]
+      - paragraph: "برای خرید بهترین گوشی با توجه به بودجه‌ای که در اختیار دارید، لازم است علاوه بر قیمت روزانه موبایل، از انتظاراتی که از گوشی دارید هم اطلاع داشته باشید. رده‌های گوشی‌ها در بازار، طبق چیزی است که در ادامه مشاهده می‌کنید:"
+      - paragraph: "• گوشی اقتصادی یا ارزان قیمت: این گوشی‌ها از آن دست گوشی موبایل هستند که قیمتی پایین داشته و برای استفاده روزانه هستند و نباید از دوربین، پردازنده و عملکرد گوشی انتظار خاصی داشته باشید. بنابراین کسانی‌که سراغ خرید گوشی موبایل ارزان می‌روند، گوشی‌های ساده‌ای می‌خواهند."
+      - paragraph:
+        - text: "• گوشی میان رده: گوشی‌هایی که در دسته میان‌رده قرار می‌گیرند، دسته گسترده‌ای هستند. گوشی‌های این رده بعضی‌ها کارآیی ساده‌ای دارند و برخی نیز پردازنده قوی‌ دارند و به‌عنوان"
+        - link "گوشی گیمینگ":
+          - /url: https://www.technolife.com/category/mobile/mobile-phone/type-gaming
+        - text: یا گوشی مناسب عکاسی نیز می‌توانید روی آن‌ها حساب کنید. این گوشی ها به‌خاطر بازه قیمتی گسترده‌ای که شامل می‌شوند، در سبد خرید خیلی از کاربران قرار می‌گیرند. گوشی‌های سری a سامسونگ در دسته گوشی‌های میان رده جای می‌گیرند.
+      - paragraph: "• گوشی قاتل پرچمدار: گوشی‌های قاتل پرچمدار گوشی‌های قوی هستند که معمولا افرادی که نمی‌توانند گوشی‌های ممتاز برند مورد نظر خود را خریداری کنند، سراغ گوشی‌های قاتل پرچمدار می‌روند. این گوشی‌ها، خیلی از امتیازات گوشی‌های پرچمدار را دارند."
+      - paragraph: "• گوشی پرچمدار: گوشی پرچمدار گران‌ترین گوشی‌های هر برند هستند. برای مثال، گوشی سری s سامسونگ در این دسته جای می‌گیرند. اکثر برندهای سازنده گوشی، مدل‌هایی از گوشی پرچمدار را نیز دارند. این گوشیها، به قوی‌ترین پردازنده، قوی‌ترین لنز دوربین، بهترین بدنه از نظر دوام، و بهترین باتری‌ها مجهز هستند. بنابراین اگر برای خرید موبایل جدید هیچ محدودیتی از نظر بودجه ندارید، حتما سراغ پرچمدارها بروید."
+      - heading "قیمت گوشی" [level=2]
+      - paragraph: با توجه به قیمت گوشی، انتخاب و خرید گوشی جدید براساس انتظارات و کارهایی که از گوشی جدید خود می‌خواهید بسیار منطقی و ضروری است. شما می‌توانید قیمت گوشی در مدل‌های مختلف را در فروشگاه تکنولایف ببینید، با هم مقایسه کنید و به سبد خرید خود بیفزایید.
+      - heading "خرید گوشی از تکنولایف" [level=2]
+      - paragraph:
+        - text: خرید گوشی جزو ضروری‌ترین خریدهای زندگی ماست. این روزها همه افراد، از کودکان گرفته تا سالمندان، به گوشی نیاز دارند و با آنلاین شدن بخش گسترده‌ای از خدمات، داشتن گوشی به یک ضرورت تبدیل شده است. شما می‌توانید با استفاده از
+        - link "اپلیکیشن تکنولایف":
+          - /url: https://www.technolife.com/landings/download-app
+        - text: ، مدل گوشی موردنیاز خود را با بهترین قیمت، به‌صورت نقدی یا اقساطی خریداری کنید.
+      - paragraph: نمایش بیشتر
+      - img
+    - button "بازگشت به بالا":
+      - paragraph: بازگشت به بالا
+      - img
+  - contentinfo:
+    - button "scroll to top":
+      - img
+      - text: بازگشت به بالا
+    - navigation:
+      - strong: دسترسی سریع
+      - link "بلاگ":
+        - /url: https://www.technolife.com/blog/
+      - link "اسپیکر":
+        - /url: https://www.technolife.com/category/multimedia/speaker
+      - link "خرید طلا":
+        - /url: https://www.technolife.com/category/gold-silver-jewel
+      - link "لوازم خانگی برقی":
+        - /url: https://www.technolife.com/category/home-app/electric
+      - link "خرید گوشی":
+        - /url: /category/mobile/mobile-phone
+      - link "گوشی سامسونگ":
+        - /url: /category/mobile/mobile-phone/brand-samsung
+      - link "گوشی آیفون":
+        - /url: /category/mobile/mobile-phone/brand-apple
+      - link "گوشی شیائومی":
+        - /url: /category/mobile/mobile-phone/brand-xiaomi
+      - link "خرید لپ تاپ":
+        - /url: /category/laptop-equipment/laptop
+      - link "مقایسه گوشی":
+        - /url: /compare
+    - navigation:
+      - strong: پرفروش ترین محصولات
+      - link "سکه پارسیان":
+        - /url: https://www.technolife.com/category/gold-silver-jewel/sekke-tala/sekke-parsian
+      - link "گیمینگ":
+        - /url: https://www.technolife.com/gaming
+      - link "آیفون ۱۸":
+        - /url: https://www.technolife.com/category/mobile/mobile-phone/brand-apple/series-iphone-18
+      - link "هارد اکسترنال":
+        - /url: https://www.technolife.com/category/pc-equipment/storage-devices/hard-drive/hdd/external-hard-drive
+      - link "بخاری":
+        - /url: https://www.technolife.com/category/home-app/electric/airtreatment/heater
+      - link "گوشی s2۵ fe":
+        - /url: https://www.technolife.com/product-165916/%DA%AF%D9%88%D8%B4%DB%8C-%D9%85%D9%88%D8%A8%D8%A7%D9%8A%D9%84-%D8%B3%D8%A7%D9%85%D8%B3%D9%88%D9%86%DA%AF-%D9%85%D8%AF%D9%84-galaxy-s25-fe-%D8%B8%D8%B1%D9%81%DB%8C%D8%AA-256-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA-%D8%B1%D9%85-8-%DA%AF%DB%8C%DA%AF%D8%A7%D8%A8%D8%A7%DB%8C%D8%AA---%D9%88%DB%8C%D8%AA%D9%86%D8%A7%D9%85
+      - link "ساعت هوشمند":
+        - /url: https://www.technolife.com/category/wearable-gadget/smartwatch
+      - link "تبلت":
+        - /url: https://www.technolife.com/category/tablet-equipment/tablet
+      - link "سشوار":
+        - /url: https://www.technolife.com/category/health-beauty/electrical-personal-care/hair-styling-tools/hair-dryer
+      - link "کوله پشتی و چمدان":
+        - /url: https://www.technolife.com/category/sports-travel/bags
+    - navigation:
+      - strong: درباره ما
+      - link "اپلیکیشن تکنولایف":
+        - /url: https://www.technolife.com/landings/download-app
+      - link "تکنولایف در یک نگاه":
+        - /url: /staticpage/page-2/%D8%A2%D8%B4%D9%86%D8%A7%DB%8C%DB%8C%20%D9%85%D8%AE%D8%AA%D8%B5%D8%B1%20%D8%A8%D8%A7%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "اهداف و تعهدهای ما":
+        - /url: /staticpage/page-3/%D8%A7%D9%87%D8%AF%D8%A7%D9%81%20%D9%88%20%D8%AA%D8%B9%D9%87%D8%AF%20%D9%87%D8%A7%DB%8C%20%D8%AA%DA%A9%D9%86%D9%88%20%D9%84%D8%A7%DB%8C%D9%81
+      - link "سوالات متداول":
+        - /url: /faq
+      - link "فروشگاه های حضوری":
+        - /url: /staticpage/page-55/%D9%81%D8%B1%D9%88%D8%B4%DA%AF%D8%A7%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C%20%D8%AD%D8%B6%D9%88%D8%B1%DB%8C%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "تماس با ما":
+        - /url: /staticpage/contact-us
+      - link "گزارش سال 1403":
+        - /url: https://www.technolife.com/image/technolife_1403.pdf
+    - navigation:
+      - strong: پیش از خرید
+      - link "راهنمای خرید اقساطی":
+        - /url: /landings/installment-payment
+      - link "خرید سازمانی":
+        - /url: https://www.technolife.com/blog/b2b-sales/
+      - link "راهنمای خرید از تکنولایف":
+        - /url: /staticpage/page-5/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C%20%D8%AE%D8%B1%DB%8C%D8%AF%20%D8%A7%D8%B2%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "روش های خرید از تکنولایف":
+        - /url: /staticpage/page-7/%D8%B1%D9%88%D8%B4%20%D9%87%D8%A7%DB%8C%20%D8%AE%D8%B1%DB%8C%D8%AF%20%D8%A7%D8%B2%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "ضمانت هفت‌روزه تکنولایف":
+        - /url: /staticpage/page-8/%D8%B4%D8%B1%D8%A7%DB%8C%D8%B7%20%D8%B6%D9%85%D8%A7%D9%86%D8%AA%20%D9%87%D9%81%D8%AA%20%D8%B1%D9%88%D8%B2%D9%87%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "شیوه‌ها و هزینه ارسال":
+        - /url: /staticpage/page-9/%D8%B1%D9%88%D8%B4%E2%80%8C%D9%87%D8%A7%20%D9%88%20%D9%87%D8%B2%DB%8C%D9%86%D9%87%E2%80%8C%D9%87%D8%A7%DB%8C%20%D8%A7%D8%B1%D8%B3%D8%A7%D9%84
+    - navigation:
+      - strong: پس از خرید
+      - link "تضمین رجیستری":
+        - /url: /staticpage/page-10/%D8%AA%D8%B6%D9%85%DB%8C%D9%86%20%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1%DB%8C
+      - link "رویه‌های بازگرداندن کالا":
+        - /url: /staticpage/page-11/%D8%B1%D9%88%DB%8C%D9%87%20%D9%87%D8%A7%DB%8C%20%D8%A8%D8%A7%D8%B2%DA%AF%D8%B1%D8%AF%D8%A7%D9%86%D8%AF%D9%86%20%DA%A9%D8%A7%D9%84%D8%A7
+      - link "سوالات متداول رجیستری":
+        - /url: /staticpage/page-12/%D8%B3%D9%88%D8%A7%D9%84%D8%A7%D8%AA%20%D9%85%D8%AA%D8%AF%D8%A7%D9%88%D9%84%20%D8%B1%D8%AC%DB%8C%D8%B3%D8%AA%D8%B1%DB%8C
+      - link "رهگیری سفارش‌ها":
+        - /url: /staticpage/page-13/%D9%85%DA%A9%D8%A7%D9%86%20%DB%8C%D8%A7%D8%A8%DB%8C%20%D8%B3%D9%81%D8%A7%D8%B1%D8%B4%20%D9%87%D8%A7%DB%8C%20%D8%AE%D8%A7%D8%B1%D8%AC%20%D8%A7%D8%B2%20%D8%AA%D9%87%D8%B1%D8%A7%D9%86
+      - link "راهنمای مرجوعی در سایت":
+        - /url: https://www.technolife.com/staticpage/page-19/%D8%B1%D8%A7%D9%87%D9%86%D9%85%D8%A7%DB%8C%20%D9%85%D8%B1%D8%AC%D9%88%D8%B9%DB%8C%20%D8%AF%D8%B1%20%D8%B3%D8%A7%DB%8C%D8%AA
+    - navigation:
+      - strong: قوانین و مقررات
+      - link "قوانین و مقررات":
+        - /url: /staticpage/page-14/%D9%82%D9%88%D8%A7%D9%86%DB%8C%D9%86%20%D9%88%20%D9%85%D9%82%D8%B1%D8%B1%D8%A7%D8%AA
+      - link "حریم خصوصی کاربران":
+        - /url: /staticpage/page-15/%D8%AD%D8%B1%DB%8C%D9%85%20%D8%AE%D8%B5%D9%88%D8%B5%DB%8C%20%DA%A9%D8%A7%D8%B1%D8%A8%D8%B1%D8%A7%D9%86
+      - link "از زبان مشتریان تکنولایف":
+        - /url: /staticpage/page-16/%D8%A7%D8%B2%20%D8%B2%D8%A8%D8%A7%D9%86%20%D9%85%D8%B4%D8%AA%D8%B1%DB%8C%D8%A7%D9%86%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81
+      - link "چرا تکنولایف؟":
+        - /url: /staticpage/page-1/%D8%A8%D9%87%20%D8%AA%DA%A9%D9%86%D9%88%D9%84%D8%A7%DB%8C%D9%81%20%D8%AE%D9%88%D8%B4%20%D8%A2%D9%85%D8%AF%DB%8C%D8%AF
+    - navigation:
+      - paragraph: ارتباط با ما
+      - paragraph: "تلفن :"
+      - link "021-58424000":
+        - /url: tel:021-58424000
+      - text: "-"
+      - link "021-91077500":
+        - /url: tel:021-91077500
+      - text: "-"
+      - link "021-62816000":
+        - /url: tel:021-62816000
+      - paragraph: "ایمیل :"
+      - link "info@technolife.com":
+        - /url: mailto:info@technolife.com
+      - paragraph: شبکه های اجتماعی
+      - link "اینستاگرام تکنولایف":
+        - /url: https://www.instagram.com/technolife.eshop
+        - img "اینستاگرام تکنولایف"
+      - link "آپارات تکنو لایف":
+        - /url: https://www.aparat.com/technolife.com
+        - img "آپارات تکنو لایف"
+      - link "تلگرام تکنولایف":
+        - /url: https://t.me/technolife
+        - img "تلگرام تکنولایف"
+      - link "یوتیوب تکنولایف":
+        - /url: https://www.youtube.com/c/Technolife_eshop
+        - img "یوتیوب تکنولایف"
+      - paragraph: "دانلود اپلیکیشن ما از:"
+      - link "دانلود از بازار":
+        - /url: https://cafebazaar.ir/app/com.technolife
+        - img "دانلود از بازار"
+      - link "دانلود از سیب اپ":
+        - /url: https://sibapp.com/applications/Technolife
+        - img "دانلود از سیب اپ"
+      - link "دانلود از مایکت":
+        - /url: https://myket.ir/app/com.technolife
+        - img "دانلود از مایکت"
+    - navigation:
+      - link "تکنوپی":
+        - /url: https://technopay.ir/?utm_source=technolife&utm_medium=footer&utm_campaign=technolife
+        - img "تکنوپی"
+      - link "تکنوگلد":
+        - /url: https://technogold.gold/?utm_source=technolife&utm_medium=footer&utm_campaign=technolife
+        - img "تکنوگلد"
+      - link "تکنو اکسپرس":
+        - /url: https://technoexpressco.com/
+        - img "تکنو اکسپرس"
+      - navigation:
+        - link "نماد اعتماد الکترونیکی تکنولایف":
+          - /url: https://trustseal.enamad.ir/?id=503658&Code=goySWpXTDssfX3WtKAISFyRvVbDU4LK2
+          - img "نماد اعتماد الکترونیکی تکنولایف"
+        - link "اتحادیه کشوری کسب و کار های مجازی":
+          - /url: https://www.technolife.com/image/ecunion.pdf
+          - img "اتحادیه کشوری کسب و کار های مجازی"
+        - link "جشنواره وب موبایل ایران":
+          - /url: https://www.technolife.com/staticpage/page-17/نماد اعتماد الکترونیکی تکنولایف
+          - img "جشنواره وب موبایل ایران"
+        - link "انجمن علمی تجارت الکترونیکی ایران":
+          - /url: https://www.technolife.com/staticpage/page-17/نماد اعتماد الکترونیکی تکنولایف
+          - img "انجمن علمی تجارت الکترونیکی ایران"
+        - link "ساماندهی تکنولایف":
+          - /url: https://logo.samandehi.ir/Verify.aspx?id=376505&p=xlaojyoegvkadshwobpddshw
+          - img "ساماندهی تکنولایف"
+    - text: ۱۴۰۵-1391
+    - paragraph: تمامی حقوق مادی و معنوی این سایت متعلق به تکنولایف می‌باشد.
+  - alert
+  - iframe
+  - button "Open chat window":
+    - img

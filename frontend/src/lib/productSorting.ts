@@ -2,6 +2,7 @@ export const PRODUCT_SORT_OPTIONS = [
   { value: "newest", label: "جدیدترین" },
   { value: "priceAsc", label: "ارزان‌ترین" },
   { value: "priceDesc", label: "گران‌ترین" },
+  { value: "bestSelling", label: "پرفروش‌ترین" },
   { value: "popularity", label: "محبوب‌ترین" },
   { value: "discount", label: "بیشترین تخفیف" },
 ] as const;
@@ -11,7 +12,9 @@ export type ProductSort = (typeof PRODUCT_SORT_OPTIONS)[number]["value"];
 const aliases: Record<string, ProductSort> = {
   bestseller: "popularity",
   bestSellers: "popularity",
-  bestSelling: "popularity",
+  // «پرفروش‌ترین» دیگر alias محبوب‌ترین نیست: بک‌اند آن را بر اساس salesCount
+  // مرتب می‌کند، در حالی که popularity اول بر اساس بازدید/امتیاز است.
+  bestSelling: "bestSelling",
   flash: "discount",
   special: "discount",
   popularity: "popularity",
@@ -20,7 +23,7 @@ const aliases: Record<string, ProductSort> = {
   "-price": "priceDesc",
   "-createdAt": "newest",
   createdAt: "newest",
-  "-salesCount": "popularity",
+  "-salesCount": "bestSelling",
   "-views": "popularity",
   "-discount": "discount",
 };

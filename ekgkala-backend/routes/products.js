@@ -11,6 +11,8 @@ const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
+const { prepareProductSpecsAndDescription } = require('../services/specAndDescriptionService')
+const { mergeCategoryRules } = require('../services/listingFacets')
 const { applyPromotionOverlay, ttlUntil, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { applyOwnPromotionRules, deactivateCampaign } = require('../services/promotionLifecycleService')
@@ -737,6 +739,37 @@ const sanitizeAttributesForSave = (attributes) => {
 }
 
 // ============================================
+// نرمال‌سازی مشخصات در زمان ذخیره‌ی محصول (ایجاد/ویرایش)
+// --------------------------------------------
+// بدون این مرحله، محصولی که از فرم ادمین ثبت می‌شود فقط {label, value}
+// دارد و از مزیت باکت‌بندی/تطبیق نرمال‌شده بی‌بهره می‌ماند.
+// توضیحات هرگز بازنویسی نمی‌شود (پایپ‌لاین غیرمخرب است).
+// ============================================
+const SPEC_PAYLOAD_KEYS = ['properties', 'specifications', 'attributes', 'variants', 'description']
+
+const normalizeProductSpecPayload = async (payload, categoryId) => {
+  if (!payload || typeof payload !== 'object') return payload
+  if (!SPEC_PAYLOAD_KEYS.some((key) => payload[key] !== undefined)) return payload
+
+  let rules = []
+  if (categoryId) {
+    try {
+      const category = await Category.findById(categoryId).select('properties').lean()
+      rules = mergeCategoryRules([{ properties: category?.properties }])
+    } catch {
+      rules = []
+    }
+  }
+
+  const prepared = prepareProductSpecsAndDescription(payload, rules)
+  if (prepared.properties.length) {
+    payload.properties = prepared.properties
+    payload.specifications = prepared.specifications
+  }
+  return payload
+}
+
+// ============================================
 // GET /api/products
 // Public products list with filters & pagination
 // Query params:
@@ -1291,6 +1324,9 @@ router.post(
         })
       }
 
+      // مشخصات را قبل از درج نرمال می‌کنیم تا محصول از لحظه‌ی ایجاد فیلترپذیر باشد
+      await normalizeProductSpecPayload(productData, productData.category)
+
       const product = await Product.create(productData)
 
       clearCacheByPrefix('/api/products')
@@ -1579,6 +1615,15 @@ router.put(
       if (Object.keys(unsetFields).length > 0) {
         updateMongoQuery.$unset = unsetFields
       }
+
+      // نرمال‌سازی مشخصات پیش از ذخیره: باکت‌های استاندارد + normValue
+      // (تحت تأثیر قرار گرفتن `updates` روی updateMongoQuery.$set کار می‌کند)
+      let specCategoryId = updates.category
+      if (!specCategoryId) {
+        const existingForSpecs = await Product.findById(req.params.id).select('category').lean()
+        specCategoryId = existingForSpecs?.category
+      }
+      await normalizeProductSpecPayload(updates, specCategoryId)
 
       const updatedProduct = await Product.findByIdAndUpdate(
         req.params.id,
@@ -2259,8 +2304,31 @@ const handleProductImport = async (req, res) => {
     })
 
     // Fetch all categories and brands for resilient matching
-    const allCategories = await Category.find({}).select('_id name').lean()
+    // properties هم خوانده می‌شود تا پایپ‌لاین مشخصات با قواعد همان دسته اجرا شود.
+    const allCategories = await Category.find({}).select('_id name properties').lean()
     const allBrands = await Brand.find({}).select('_id name').lean()
+
+    // قواعد فیلتر هر دسته برای پایپ‌لاین مشخصات درون‌ریزی (Phase 2.4.2)
+    const rulesByCategory = new Map(
+      allCategories.map((cat) => [String(cat._id), mergeCategoryRules([{ properties: cat.properties }])]),
+    )
+    const specsForImportRow = (row, categoryId, existing = {}) => {
+      const has = (value) => value !== undefined && value !== null && String(value).trim() !== ''
+      const source = {
+        name: has(row.name) ? row.name : existing.name,
+        description: has(row.description) ? row.description : existing.description,
+        specifications: has(row.specifications) ? row.specifications : existing.specifications,
+        properties: existing.properties,
+        attributes: existing.attributes,
+        variants: existing.variants,
+      }
+      const rules = categoryId ? rulesByCategory.get(String(categoryId)) || [] : []
+      // توضیحات ادمین هرگز بازنویسی نمی‌شود (فقط خواندنی).
+      const prepared = prepareProductSpecsAndDescription(source, rules)
+      return prepared.properties.length
+        ? { properties: prepared.properties, specifications: prepared.specifications }
+        : null
+    }
 
     const resolveCategoryId = (inputVal) => {
       if (!inputVal) return null
@@ -2435,6 +2503,14 @@ const handleProductImport = async (req, res) => {
             if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
             if (parsedImages) updateFields.images = parsedImages
 
+            // پایپ‌لاین مشخصات: properties و specifications استاندارد از
+            // specifications / attributes / variants / توضیحات ساخته می‌شود.
+            const importedSpecs = specsForImportRow(row, categoryId || existingProduct.category, existingProduct)
+            if (importedSpecs) {
+              updateFields.properties = importedSpecs.properties
+              updateFields.specifications = importedSpecs.specifications
+            }
+
             if (Object.keys(updateFields).length > 0) {
               if (updateFields.price !== undefined && existingProduct.productType === 'variable' && Array.isArray(existingProduct.variants)) {
                 updateFields.variants = existingProduct.variants.map((v) => ({
@@ -2498,6 +2574,14 @@ const handleProductImport = async (req, res) => {
             }
 
             productData.productCode = assignProductCode(rowSku, i)
+
+            // پایپ‌لاین مشخصات در مسیر «ایجاد» هم اجرا می‌شود تا محصول
+            // درون‌ریزی‌شده از همان ابتدا فیلترپذیر باشد.
+            const createdSpecs = specsForImportRow(row, categoryId)
+            if (createdSpecs) {
+              productData.properties = createdSpecs.properties
+              productData.specifications = createdSpecs.specifications
+            }
 
             if (productData.productType === 'variable') {
               productData.variants = [{

@@ -13,13 +13,43 @@ const imageUrls = (images) => (Array.isArray(images) ? images : [])
   .map((image) => (typeof image === 'string' ? image : image?.url))
   .filter((url) => typeof url === 'string' && url.trim())
 
+/**
+ * مشخصات فنی برای فید ترب.
+ *
+ * منبع اول `product.specifications` (شیء رسمی) است. سپس `product.properties`
+ * (آرایه‌ی {label, value}) مکمل آن می‌شود تا ویژگی‌های سطح متغیر (رنگ، ظرفیت،
+ * گارانتی) و مقادیری که فقط در properties ثبت شده‌اند هم به فید برسند.
+ * مقدار نمایشی `value` ترجیح داده می‌شود (نه bucket نرمال‌شده) تا نیم‌فاصله و
+ * نگارش اصلی حفظ شود. کلیدهای موجود در specifications هرگز بازنویسی نمی‌شوند.
+ */
+const MAX_SPEC_ENTRIES = 80
+
 const mapSpecifications = (product) => {
   const spec = {}
+  let count = 0
+  const put = (name, value) => {
+    if (count >= MAX_SPEC_ENTRIES) return
+    const key = String(name == null ? '' : name).trim()
+    const text = String(value == null ? '' : value).trim()
+    if (!key || !text) return
+    if (Object.prototype.hasOwnProperty.call(spec, key)) return
+    spec[key] = text
+    count += 1
+  }
+
   const productSpecs = product?.specifications
 
   if (productSpecs && typeof productSpecs === 'object' && !Array.isArray(productSpecs)) {
     for (const [name, value] of Object.entries(productSpecs)) {
-      if (value != null && value !== '') spec[String(name)] = String(value)
+      if (value != null && value !== '') put(name, value)
+    }
+  }
+
+  // مکمل: properties (شامل ویژگی‌های متغیر و برچسب‌های کشف‌شده)
+  if (Array.isArray(product?.properties)) {
+    for (const item of product.properties) {
+      if (!item || typeof item !== 'object') continue
+      put(item.label, item.value)
     }
   }
 

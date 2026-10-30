@@ -1,6 +1,121 @@
 const Category = require('../models/Category')
 const Product = require('../models/Product')
 const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
+const { mergeCategoryRules, filterableRules } = require('../services/listingFacets')
+const { prepareProductSpecsAndDescription } = require('../services/specAndDescriptionService')
+const mongoose = require('mongoose')
+
+// ------------------------------------------------------------------
+// زنجیره‌ی قواعد یک دسته با ارث‌بری: خود دسته → والدها → زیرشاخه‌ها
+// (Phase 3.1 — همان منطقی که در resolveListingContext هم اجرا می‌شود)
+// ------------------------------------------------------------------
+const loadCategoryRuleChain = async (categoryId) => {
+  const id = mongoose.Types.ObjectId.isValid(String(categoryId))
+    ? new mongoose.Types.ObjectId(String(categoryId))
+    : null
+  if (!id) return []
+  const rows = await Category.aggregate([
+    { $match: { _id: id } },
+    { $graphLookup: { from: Category.collection.name, startWith: '$parent', connectFromField: 'parent', connectToField: '_id', as: 'ancestors', maxDepth: 10 } },
+    { $graphLookup: { from: Category.collection.name, startWith: '$_id', connectFromField: '_id', connectToField: 'parent', as: 'descendants', maxDepth: 20 } },
+    { $project: { self: '$properties', ancestors: '$ancestors.properties', descendants: '$descendants.properties' } },
+  ])
+  const row = rows[0] || {}
+  return mergeCategoryRules([
+    { properties: row.self || [] },
+    ...(row.ancestors || []).map((properties) => ({ properties })),
+    ...(row.descendants || []).map((properties) => ({ properties })),
+  ])
+}
+
+// شناسه‌های یک دسته + زیرشاخه‌ها
+const categoryWithDescendants = async (categoryId) => {
+  const id = new mongoose.Types.ObjectId(String(categoryId))
+  const rows = await Category.aggregate([
+    { $match: { _id: id } },
+    { $graphLookup: { from: Category.collection.name, startWith: '$_id', connectFromField: '_id', connectToField: 'parent', as: 'descendants', maxDepth: 20 } },
+    { $project: { ids: { $concatArrays: [['$_id'], '$descendants._id'] } } },
+  ])
+  return rows[0]?.ids || [id]
+}
+
+// ------------------------------------------------------------------
+// Backfill: محصولاتی که specifications/description دارند اما properties
+// آن‌ها خالی یا قدیمی است، با prepareProductSpecsAndDescription همگام می‌شوند.
+// (توضیحات هرگز بازنویسی نمی‌شود — فقط خواندنی.)
+// ------------------------------------------------------------------
+const backfillCategoryProductSpecs = async (ids, rules, { limit = 500 } = {}) => {
+  const stale = await Product.find({
+    category: { $in: ids },
+    $or: [
+      { properties: { $exists: false } },
+      { 'properties.0': { $exists: false } },
+      { 'properties.normValue': { $exists: false } },
+    ],
+  })
+    .select('name description specifications attributes variants properties')
+    .limit(limit)
+    .lean()
+
+  if (!stale.length) return { scanned: 0, updated: 0 }
+
+  const operations = []
+  for (const product of stale) {
+    const prepared = prepareProductSpecsAndDescription(product, rules)
+    if (!prepared.properties.length) continue
+    operations.push({
+      updateOne: {
+        filter: { _id: product._id },
+        update: { $set: { properties: prepared.properties, specifications: prepared.specifications } },
+      },
+    })
+  }
+
+  if (operations.length) {
+    await Product.bulkWrite(operations, { ordered: false })
+  }
+  return { scanned: stale.length, updated: operations.length }
+}
+
+// ------------------------------------------------------------------
+// کشف مشخصات از داده‌ی واقعی محصولات همان شاخه
+// ------------------------------------------------------------------
+const discoverCategorySpecs = async (ids) => {
+  const rows = await Product.aggregate([
+    { $match: { category: { $in: ids } } },
+    { $unwind: '$properties' },
+    { $match: { 'properties.label': { $nin: [null, ''] } } },
+    {
+      $group: {
+        _id: { label: '$properties.label', value: { $ifNull: ['$properties.bucket', '$properties.value'] } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { count: -1 } },
+    { $limit: 2000 },
+  ])
+
+  const byLabel = new Map()
+  for (const row of rows) {
+    const label = row._id?.label
+    const value = row._id?.value
+    if (!label || !value) continue
+    if (!byLabel.has(label)) byLabel.set(label, new Map())
+    byLabel.get(label).set(value, (byLabel.get(label).get(value) || 0) + row.count)
+  }
+
+  return [...byLabel.entries()]
+    .map(([label, values]) => ({
+      label,
+      coverage: [...values.values()].reduce((sum, count) => sum + count, 0),
+      values: [...values.entries()]
+        .map(([value, count]) => ({ value, count }))
+        .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, 'fa'))
+        .slice(0, 60),
+    }))
+    .sort((a, b) => b.coverage - a.coverage)
+}
+
 
 const parseBooleanQueryParam = (value) =>
   value === true || value === 'true' || value === '1' || value === 1
@@ -491,10 +606,18 @@ exports.getCategoryBySlug = async (req, res) => {
       })
     }
 
-    // Return only the filterable properties for frontend use
-    const filterableProperties = (category.properties || [])
-      .filter(prop => prop.isFilterable !== false)
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
+    // لیست کامل ویژگی‌های قابل فیلتر *شاخه* با ارث‌بری سلسله‌مراتبی:
+    // خود دسته + والدها + زیرشاخه‌ها (یکتا شده و به ترتیب `order`).
+    const chainRules = await loadCategoryRuleChain(category._id)
+    const filterableProperties = filterableRules(chainRules).map((rule) => ({
+      name: rule.name,
+      type: rule.type,
+      options: rule.options,
+      isFilterable: rule.isFilterable,
+      isPinned: rule.isPinned,
+      unit: rule.unit,
+      order: rule.order,
+    }))
 
     res.json({
       success: true,
@@ -514,6 +637,101 @@ exports.getCategoryBySlug = async (req, res) => {
       message: 'خطا در دریافت اطلاعات دسته‌بندی',
       error: error.message,
     })
+  }
+}
+
+// ==================================================================
+// GET /api/categories/:id/discovered-specs
+// مشخصات کشف‌شده از داده‌ی واقعی محصولات + وضعیت همگام‌سازی
+// (قبل از گزارش، محصولات دارای specifications/description ولی بدون
+// properties به‌صورت خودکار Backfill می‌شوند.)
+// ==================================================================
+exports.getDiscoveredSpecs = async (req, res) => {
+  try {
+    const ids = await categoryWithDescendants(req.params.id)
+    const rules = await loadCategoryRuleChain(req.params.id)
+    const backfill = await backfillCategoryProductSpecs(ids, rules)
+    const discovered = await discoverCategorySpecs(ids)
+
+    const configuredKeys = new Set(rules.map((rule) => rule.key))
+    const { normCompareKey } = require('../services/specNormalization')
+
+    res.json({
+      success: true,
+      data: {
+        backfill,
+        configured: rules.map((rule) => ({ name: rule.name, options: rule.options, isFilterable: rule.isFilterable })),
+        discovered: discovered.map((entry) => ({
+          ...entry,
+          isConfigured: configuredKeys.has(normCompareKey(entry.label)),
+        })),
+      },
+    })
+  } catch (error) {
+    console.error('Error discovering category specs:', error)
+    res.status(500).json({ success: false, message: 'خطا در کشف مشخصات دسته‌بندی', error: error.message })
+  }
+}
+
+// ==================================================================
+// POST /api/categories/:id/sync-discovered-properties
+// افزودن ویژگی‌های کشف‌شده به category.properties (بدون بازنویسی
+// قواعد موجود ادمین) و Backfill محصولات همان شاخه.
+// body: { labels?: string[] }  — اگر نیامده باشد همه‌ی برچسب‌های کشف‌شده
+// ==================================================================
+exports.syncDiscoveredProperties = async (req, res) => {
+  try {
+    const category = await Category.findById(req.params.id)
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'دسته‌بندی یافت نشد' })
+    }
+
+    const ids = await categoryWithDescendants(category._id)
+    const chainRules = await loadCategoryRuleChain(category._id)
+    const discovered = await discoverCategorySpecs(ids)
+    const { normCompareKey } = require('../services/specNormalization')
+
+    const requested = Array.isArray(req.body?.labels) && req.body.labels.length
+      ? new Set(req.body.labels.map((label) => normCompareKey(label)))
+      : null
+
+    const existingKeys = new Set((category.properties || []).map((prop) => normCompareKey(prop.name)))
+    const nextOrder = (category.properties || []).reduce((max, prop) => Math.max(max, Number(prop.order) || 0), 0) + 1
+
+    const added = []
+    let order = nextOrder
+    for (const entry of discovered) {
+      const key = normCompareKey(entry.label)
+      if (existingKeys.has(key)) continue
+      if (requested && !requested.has(key)) continue
+      category.properties.push({
+        name: entry.label,
+        type: 'select',
+        options: entry.values.map((value) => value.value).slice(0, 60),
+        isFilterable: true,
+        unit: '',
+        order: order++,
+      })
+      existingKeys.add(key)
+      added.push(entry.label)
+    }
+
+    if (added.length) await category.save()
+
+    // Backfill با قواعد به‌روزشده
+    const rules = await loadCategoryRuleChain(category._id)
+    const backfill = await backfillCategoryProductSpecs(ids, rules, { limit: 1000 })
+
+    res.json({
+      success: true,
+      message: added.length
+        ? `${added.length} ویژگی همگام‌سازی شد`
+        : 'ویژگی جدیدی برای افزودن یافت نشد',
+      data: { added, backfill },
+    })
+  } catch (error) {
+    console.error('Error syncing discovered properties:', error)
+    res.status(500).json({ success: false, message: 'خطا در همگام‌سازی ویژگی‌های دسته‌بندی', error: error.message })
   }
 }
 

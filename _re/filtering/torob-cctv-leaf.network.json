@@ -1,0 +1,19 @@
+[
+  {
+    "id": "request-1",
+    "url": {
+      "url": "https://api.torob.com/v4/base-product/search/?page=0&size=24&category_id=1105&source=next_desktop",
+      "origin": "https://api.torob.com",
+      "query_parameter_names": [
+        "page",
+        "size",
+        "category_id",
+        "source"
+      ],
+      "redacted": false
+    },
+    "status": 200,
+    "mime": "",
+    "method": "GET"
+  }
+]

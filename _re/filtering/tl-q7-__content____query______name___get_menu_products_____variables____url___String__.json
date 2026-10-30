@@ -1,0 +1,1504 @@
+{
+  "pages": [
+    {
+      "results": [
+        {
+          "name": "گوشی موبایل نوکیا مدل (2024) 105 دو سیم کارت مونتاژ ایران",
+          "_id": "69e8cedd9c6ccd9b602ed0a1",
+          "code": "TLP-435247",
+          "normal_price": 3300000,
+          "discount": "10%",
+          "discounted_price": 2980000,
+          "icons": [
+            {
+              "font": "icon-smartphone-1",
+              "value": "1.8"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "X"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "1000"
+            }
+          ],
+          "deadline": "1795206600000",
+          "colors": [
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-435247_37f53eb2-f107-476e-9174-8d19db99e1bb.png",
+          "alt_image": "گوشی موبایل نوکیا مدل (2023) 105 دو سیم کارت مونتاژ ایران copy-small-image.png",
+          "score_count": 10,
+          "score_avg": 4,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1785756540000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "70143254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت",
+          "_id": "68a02f6b7f43d13f9a1ba708",
+          "code": "TLP-149347",
+          "normal_price": 44000000,
+          "discount": "4%",
+          "discounted_price": 42500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "64GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795253940000",
+          "colors": [
+            "#22a148",
+            "#1a1a1a",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-149347_2c8970bb-7042-436d-9834-d714ac88f20a.png",
+          "alt_image": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 64 گیگابایت رم 4 گیگابایت-small-image",
+          "score_count": 133,
+          "score_avg": 3.924812030075188,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792748340000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "63543254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام",
+          "_id": "68cfaea7270780718fb1ea20",
+          "code": "TLP-167564",
+          "normal_price": 66500000,
+          "discount": "5%",
+          "discounted_price": 63500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795242060000",
+          "colors": [
+            "#1a1a1a",
+            "#8f8f8f",
+            "#3479bf"
+          ],
+          "image": "/image/small_product-TLP-167564_177fff94-75e5-48b4-9bd5-9fcbbce8525e.png",
+          "alt_image": "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 4 گیگابایت copy-small-image.png",
+          "score_count": 46,
+          "score_avg": 3.9782608695652173,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1790144460000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "51663254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام",
+          "_id": "68cfaf08a234f87185e92786",
+          "code": "TLP-167567",
+          "normal_price": 74000000,
+          "discount": "3%",
+          "discounted_price": 72300000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795252500000",
+          "colors": [
+            "#3479bf",
+            "#1a1a1a",
+            "#8f8f8f"
+          ],
+          "image": "/image/small_product-TLP-167567_9a1d242b-fff0-4aad-b9ca-a4ea17d20f3d.png",
+          "alt_image": "گوشی موبایل سامسونگ مدل Galaxy A17 ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image",
+          "score_count": 89,
+          "score_avg": 4.337078651685394,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1790154900000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "62103254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت",
+          "_id": "68a038e8a33e5941cf7fd966",
+          "code": "TLP-149351",
+          "normal_price": 49500000,
+          "discount": "3%",
+          "discounted_price": 48500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795264860000",
+          "colors": [
+            "#22a148",
+            "#1a1a1a",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-149351_b0d82c05-0350-46ac-b5dd-7eba1060e11c.png",
+          "alt_image": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 4 گیگابایت-small-image",
+          "score_count": 72,
+          "score_avg": 4.180555555555555,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793104860000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "74463254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام",
+          "_id": "69d9f1169b81a458cc84665d",
+          "code": "TLP-400671",
+          "normal_price": 161000000,
+          "discount": "1%",
+          "discounted_price": 159500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795221300000",
+          "colors": [
+            "#8f8f8f",
+            "#00009c",
+            "#3479bf",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-400671_9844cecc-4993-4ba3-9ea3-4ed99635bb7a.png",
+          "alt_image": "گوشی موبايل سامسونگ Galaxy A57 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image",
+          "score_count": 18,
+          "score_avg": 4.055555555555555,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1787488500000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "74103254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "6978698ad1bea0450bcebe63",
+          "code": "TLP-314976",
+          "normal_price": 102000000,
+          "discount": "6%",
+          "discounted_price": 96300000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.77"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "108"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "6000"
+            }
+          ],
+          "deadline": "1795261320000",
+          "colors": [
+            "#22a148",
+            "#1a1a1a",
+            "#74c1f6",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-314976_4087f71d-dfac-499a-a172-f9ea061f1349.png",
+          "alt_image": "گوشی موبايل شیائومی مدل Redmi Note 15 4G ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png",
+          "score_count": 72,
+          "score_avg": 4.277777777777778,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793014920000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "70923254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام",
+          "_id": "69d9ed104521ff58c6e43264",
+          "code": "TLP-400669",
+          "normal_price": 127000000,
+          "discount": "1%",
+          "discounted_price": 125800000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795362120000",
+          "colors": [
+            "#b030b0",
+            "#0c4214",
+            "#ffffff"
+          ],
+          "image": "/image/small_product-TLP-400669_ced81091-e930-48f6-952c-17dfee844a01.png",
+          "alt_image": "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png",
+          "score_count": 5,
+          "score_avg": 4.8,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793115720000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "85323254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا",
+          "_id": "6669807ed823ac3c58ce55e7",
+          "code": "TLP-43273",
+          "normal_price": 4100000,
+          "discount": "5%",
+          "discounted_price": 3899000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "8MB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "1.8"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "X"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "1000"
+            }
+          ],
+          "deadline": "1795244700000",
+          "colors": [
+            "#8f8f8f"
+          ],
+          "image": "/image/small_product-TLP-43273_42a74d4d-0b45-472e-8830-564ae2c71e45.png",
+          "alt_image": "گوشی موبايل نوکیا مدل 106 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image",
+          "score_count": 168,
+          "score_avg": 4.005952380952381,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792825500000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "54303254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا",
+          "_id": "6677e634b1bd8e3c4594edb9",
+          "code": "TLP-45071",
+          "normal_price": 7800000,
+          "discount": "9%",
+          "discounted_price": 7099000,
+          "icons": [
+            {
+              "font": "icon-smartphone-1",
+              "value": "2.4"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "2"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "1450"
+            }
+          ],
+          "deadline": "1795241340000",
+          "colors": [
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-45071_5650e182-0aa6-4b5e-9e87-98200a36ef1e.png",
+          "alt_image": "گوشی موبايل نوکیا مدل 3210 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا-small-image",
+          "score_count": 60,
+          "score_avg": 3.7666666666666666,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1777010940000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "50943254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل نوکيا مدل 110 (2024) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا",
+          "_id": "69e8ce98505f949b5a186386",
+          "code": "TLP-435246",
+          "normal_price": 4500000,
+          "discount": "15%",
+          "discounted_price": 3850000,
+          "icons": [
+            {
+              "font": "icon-smartphone-1",
+              "value": "1.8 "
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "QVGA"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "1000"
+            }
+          ],
+          "deadline": "1795206600000",
+          "colors": [
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-435246_b8b709e9-444b-4847-b378-86195c2ebb43.png",
+          "alt_image": "گوشی موبايل نوکيا مدل 110 (2023) دو سیم کارت مونتاژ ایران تحت لیسانس نوکیا copy-small-image.png",
+          "score_count": 2,
+          "score_avg": 3.5,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1785756540000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "70143254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل اپل مد‌ل iPhone 17 CH/A ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active رجیستر شده",
+          "_id": "68be9c4ec0d82f4a76f0dab2",
+          "code": "TLP-165487",
+          "normal_price": 409999000,
+          "discount": "4%",
+          "discounted_price": 394999000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.3"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "48"
+            }
+          ],
+          "deadline": "1795269720000",
+          "colors": [
+            "#3479bf",
+            "#22a148",
+            "#1a1a1a",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-165487_77719c10-38f3-430c-b650-bca7d2ac9f5a.png",
+          "alt_image": "گوشی موبایل اپل مدل iPhone 17 ظرفیت 256 گیگابایت رم 8 گیگابایت - Not Active-small-image",
+          "score_count": 114,
+          "score_avg": 4.271929824561404,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792245720000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "79323254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام ",
+          "_id": "68cfaea012bf077167cabb67",
+          "code": "TLP-167563",
+          "normal_price": 95500000,
+          "discount": "2%",
+          "discounted_price": 94500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795354020000",
+          "colors": [
+            "#3479bf",
+            "#1a1a1a",
+            "#8f8f8f"
+          ],
+          "image": "/image/small_product-TLP-167563_1ee9a83c-f635-41fe-b0f0-e0ae6f009fd0.png",
+          "alt_image": "گوشی موبایل سامسونگ مدل Galaxy A17 4G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام -small-image",
+          "score_count": 79,
+          "score_avg": 4.379746835443038,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792243620000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "77223254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران",
+          "_id": "64abf45fc17c6e7bfb8cf8bb",
+          "code": "TLP-24143",
+          "normal_price": 4000000,
+          "discount": "7%",
+          "discounted_price": 3730000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "4MB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "1.8"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "X"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "800"
+            }
+          ],
+          "deadline": "1795206600000",
+          "colors": [
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-24143_bc0c2b4f-4e78-40ed-896c-f0fac3cd2f58.png",
+          "alt_image": "گوشی موبايل نوکيا مدل 106 (2018) ظرفیت 4 مگابایت رم 4 مگابایت - مونتاژ ایران-small-image",
+          "score_count": 89,
+          "score_avg": 4.101123595505618,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1785756540000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "70143254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "680895558f60f4d15158fa79",
+          "code": "TLP-107882",
+          "normal_price": 99900000,
+          "discount": "15%",
+          "discounted_price": 85300000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.67"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "200"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795259340000",
+          "colors": [
+            "#b030b0",
+            "#1a1a1a",
+            "#3479bf"
+          ],
+          "image": "/image/small_product-TLP-107882_f908ceec-167e-4663-bb55-5c70fc647bc3.png",
+          "alt_image": "گوشی موبایل شیائومی مدل Redmi Note 14S 4G ظرفیت 512 گیگابایت رم 12 گیگابایت copy-small-image.png",
+          "score_count": 226,
+          "score_avg": 4.1991150442477885,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792840140000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "68943254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل پوکو مدل C85 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "68c57a6dfe5b644a67a536bd",
+          "code": "TLP-166041",
+          "normal_price": 68400000,
+          "discount": null,
+          "discounted_price": null,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.9"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "6000"
+            }
+          ],
+          "deadline": null,
+          "colors": [
+            "#22a148",
+            "#1a1a1a",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-166041_1de3f93a-9189-43fd-b113-95fc93808174.png",
+          "alt_image": " گوشی موبایل شیائومی مدل Poco C85 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png",
+          "score_count": 123,
+          "score_avg": 4.430894308943089,
+          "available": 3000,
+          "marketing_group": null,
+          "marketing_group_id": null,
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": null,
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 0,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": null,
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 128 گیگابایت رم 4 گیگابایت",
+          "_id": "6808a79f8f60f4d151590443",
+          "code": "TLP-107905",
+          "normal_price": 48500000,
+          "discount": "8%",
+          "discounted_price": 44700000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.88"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "32"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5200"
+            }
+          ],
+          "deadline": "1795266300000",
+          "colors": [
+            "#3479bf",
+            "#1a1a1a",
+            "#22a148",
+            "#d4a54c"
+          ],
+          "image": "/image/small_product-TLP-107905_00329560-bda5-4c54-a197-0bfd36fc4f21.png",
+          "alt_image": "گوشی موبایل شیائومی مدل Redmi A5 4G ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png",
+          "score_count": 182,
+          "score_avg": 4.1923076923076925,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792847100000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "75903254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت",
+          "_id": "68a03933d6d7083f94313e9b",
+          "code": "TLP-149352",
+          "normal_price": 59500000,
+          "discount": "3%",
+          "discounted_price": 58100000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795262100000",
+          "colors": [
+            "#b030b0",
+            "#22a148",
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-149352_58f5291a-4d9f-4a86-8fcc-52d48d418266.png",
+          "alt_image": "گوشی موبايل سامسونگ مدل Galaxy A07 4G ظرفیت 128 گیگابایت رم 6 گیگابایت-small-image",
+          "score_count": 122,
+          "score_avg": 4.147540983606557,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793274900000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "71703254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "68c57113e5e2934a6e1ce2a1",
+          "code": "TLP-166010",
+          "normal_price": 74000000,
+          "discount": "8%",
+          "discounted_price": 68500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.9"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "6000"
+            }
+          ],
+          "deadline": "1795256760000",
+          "colors": [
+            "#1a1a1a",
+            "#3479bf",
+            "#22a148",
+            "#ffa600"
+          ],
+          "image": "/image/small_product-TLP-166010_55a9fc23-66cd-4faa-a727-254d8d4ce61b.png",
+          "alt_image": "گوشی موبایل شیائومی Redmi 15C 4G دو سیم کارت ظرفیت 256 گیگابایت رم 4 گیگابایت copy-small-image.png",
+          "score_count": 117,
+          "score_avg": 4.435897435897436,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792405560000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "66363254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت",
+          "_id": "68448ee57021157f38d276c2",
+          "code": "TLP-120450",
+          "normal_price": 2808000,
+          "discount": null,
+          "discounted_price": 2999000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "4MB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "1.77"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "  X"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "1000"
+            }
+          ],
+          "deadline": "1793097900209",
+          "colors": [
+            "#00009c",
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-120450_dc792ffc-4b8b-48ed-bfbe-3d19f8bdfe4e.png",
+          "alt_image": "گوشی موبایل تی سی اچ مدل ARC دو سیم کارت-small-image",
+          "score_count": 38,
+          "score_avg": 4.315789473684211,
+          "available": 3000,
+          "marketing_group": "تکنو تایم",
+          "marketing_group_id": "691e21f3c8aa8015691f47f7",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793007001731",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": true,
+            "badge_config": {
+              "text_color": "#ffffff",
+              "background_color": "#393939",
+              "icon": "badge-691e21f3c8aa8015691f47f7d3tbno_8e99c0f0-256d-45e1-bf69-cf4ce1bf93d0.png"
+            }
+          },
+          "discount_time": null,
+          "is_turbo": false
+        },
+        {
+          "name": "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام",
+          "_id": "68c3d53499e4824a52cebc68",
+          "code": "TLP-165916",
+          "normal_price": 228000000,
+          "discount": "1%",
+          "discounted_price": 226900000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "4900 "
+            }
+          ],
+          "deadline": "1795361460000",
+          "colors": [
+            "#1a1a1a",
+            "#00009c",
+            "#3479bf",
+            "#ffffff"
+          ],
+          "image": "/image/small_product-TLP-165916_12725e0a-c3cb-4b9d-8aa1-99a0f7879bf6.png",
+          "alt_image": "گوشی موبايل سامسونگ مدل Galaxy S25 FE ظرفیت 256 گیگابایت رم 8 گیگابایت copy-small-image.png",
+          "score_count": 223,
+          "score_avg": 3.9551569506726456,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793028660000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "84663254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام",
+          "_id": "67c44e74a1df999f00ff8a70",
+          "code": "TLP-99215",
+          "normal_price": 82300000,
+          "discount": "2%",
+          "discounted_price": 81200000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7 "
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795362480000",
+          "colors": [
+            "#1a1a1a",
+            "#e05ce0",
+            "#ffffff"
+          ],
+          "image": "/image/small_product-TLP-99215_4253a776-f07d-4c62-8132-789c949fbe4c.png",
+          "alt_image": "گوشی موبايل سامسونگ Galaxy A26 5G ظرفیت 128 گیگابایت رم 6 گیگابایت - ویتنام-small-image",
+          "score_count": 168,
+          "score_avg": 4.285714285714286,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793116080000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "85683254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "68e66baa6f1f601190bec737",
+          "code": "TLP-173207",
+          "normal_price": 75900000,
+          "discount": "2%",
+          "discounted_price": 74500000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.9"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "7000"
+            }
+          ],
+          "deadline": "1795261500000",
+          "colors": [
+            "#8f8f8f",
+            "#b030b0",
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-173207_4767c8ea-327d-4dbc-b43c-8e6ed8fe19dd.png",
+          "alt_image": "گوشی موبایل شیائومی مدل Redmi 15 4G دو سیم کارت ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png",
+          "score_count": 90,
+          "score_avg": 4.277777777777777,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793274300000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "71103254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت",
+          "_id": "6787996a9dd3922e5c60307c",
+          "code": "TLP-76419",
+          "normal_price": 99900000,
+          "discount": "13%",
+          "discounted_price": 87900000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.67"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "108 "
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5500 "
+            }
+          ],
+          "deadline": "1795244100000",
+          "colors": [
+            "#22a148",
+            "#1a1a1a",
+            "#3479bf"
+          ],
+          "image": "/image/small_product-TLP-76419_f1e2310c-8a01-47dc-8a9a-be4d02825825.png",
+          "alt_image": "گوشی موبايل شیائومی مدل Redmi Note 14 4G ظرفیت 256 گیگابایت رم 8 گیگابایت-small-image",
+          "score_count": 683,
+          "score_avg": 4.2269399707174236,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1791269700000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "53703254",
+          "is_turbo": false
+        },
+        {
+          "name": "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 128 گیگابایت رم 4 گیگابایت",
+          "_id": "68358f6f4ead517f31af0276",
+          "code": "TLP-116578",
+          "normal_price": 49900000,
+          "discount": "12%",
+          "discounted_price": 44300000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.88"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "32"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5200"
+            }
+          ],
+          "deadline": "1795287240000",
+          "colors": [
+            "#1a1a1a",
+            "#3479bf",
+            "#d4a54c"
+          ],
+          "image": "/image/small_product-TLP-116578_e16ac268-40fc-4028-9479-abca7d0ff378.png",
+          "alt_image": "گوشی موبایل شیائومی مدل Poco C71 ظرفیت 64 گیگابایت رم 4 گیگابایت copy-small-image.png",
+          "score_count": 178,
+          "score_avg": 4.202247191011236,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792868040000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "10443254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 4 گیگابایت - ویتنام",
+          "_id": "6753f514c30e9b2e726159c1",
+          "code": "TLP-69646",
+          "normal_price": 62998000,
+          "discount": null,
+          "discounted_price": null,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": null,
+          "colors": [
+            "#1a1a1a",
+            "#8f8f8f"
+          ],
+          "image": "/image/small_product-TLP-69646_ca7a1c03-d5a4-4d76-aab9-d64da1219b5d.png",
+          "alt_image": "گوشی موبایل سامسونگ مدل Galaxy A16 4G ظرفیت 128 گیگابایت رم 6 گیگابایت copy-small-image.png",
+          "score_count": 305,
+          "score_avg": 4.340983606557377,
+          "available": 3000,
+          "marketing_group": null,
+          "marketing_group_id": null,
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": null,
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 0,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": null,
+          "is_turbo": false
+        },
+        {
+          "name": "گوشی موبایل ژوبیتر مدل jPhone K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی",
+          "_id": "69dcc7f29b81a458cc84bed3",
+          "code": "TLP-420649",
+          "normal_price": 30000000,
+          "discount": "3%",
+          "discounted_price": 29190000,
+          "icons": [
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.52"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": "1795249500000",
+          "colors": [
+            "#d4a54c",
+            "#8f8f8f"
+          ],
+          "image": "/image/small_product-TLP-420649_b5c6c24d-304c-4c2f-ba98-126c55923e1b.png",
+          "alt_image": "گوشی موبایل ژوبیتر مدل K10 دو سیم کارت ظرفیت 64 گیگابایت رم 3 گیگابایت + 3 گیگابایت رم مجازی-small-image",
+          "score_count": 26,
+          "score_avg": 3.730769230769231,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1792830408629",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "59211883",
+          "is_turbo": false
+        },
+        {
+          "name": "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت",
+          "_id": "69357d9172f3111939a04a78",
+          "code": "TLP-292906",
+          "normal_price": 3500000,
+          "discount": "24%",
+          "discounted_price": 2690000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "4MB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "۲.۴"
+            }
+          ],
+          "deadline": "1795206600000",
+          "colors": [
+            "#1a1a1a"
+          ],
+          "image": "/image/small_product-TLP-292906_610cfd0e-21e7-4bf7-a9b8-db233150bfe8.png",
+          "alt_image": "گوشی موبایل جنرال لوکس مدل 130 دو سيم‌ کارت ظرفیت 4 مگابایت-small-image",
+          "score_count": 7,
+          "score_avg": 3.4285714285714284,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1785756540000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "70143254",
+          "is_turbo": false
+        },
+        {
+          "name": "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام",
+          "_id": "67c454f7a1df999f00ff93d5",
+          "code": "TLP-99347",
+          "normal_price": 108300000,
+          "discount": "2%",
+          "discounted_price": 107000000,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "256GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            }
+          ],
+          "deadline": "1795361700000",
+          "colors": [
+            "#ffffff",
+            "#1a1a1a",
+            "#f6f436",
+            "#b030b0"
+          ],
+          "image": "/image/small_product-TLP-99347_d03a5204-6570-4a86-921f-12d4656533c3.png",
+          "alt_image": "گوشی موبايل سامسونگ Galaxy A36 5G ظرفیت 256 گیگابایت رم 8 گیگابایت - ویتنام-small-image",
+          "score_count": 183,
+          "score_avg": 4.098360655737705,
+          "available": 3000,
+          "marketing_group": "تکنوآف",
+          "marketing_group_id": "60779877653b565130b952ab",
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": "1793115300000",
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 1,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": "84903254",
+          "is_turbo": true
+        },
+        {
+          "name": "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت - ویتنام",
+          "_id": "6a3948350f4d5a74e241a934",
+          "code": "TLP-529048",
+          "normal_price": 110990000,
+          "discount": null,
+          "discounted_price": null,
+          "icons": [
+            {
+              "font": "icon-hard-disk-drive",
+              "value": "128GB"
+            },
+            {
+              "font": "icon-smartphone-1",
+              "value": "6.7"
+            },
+            {
+              "font": "icon-photo-camera",
+              "value": "50"
+            },
+            {
+              "font": "icon-battery-1",
+              "value": "5000"
+            }
+          ],
+          "deadline": null,
+          "colors": [
+            "#1a1a1a",
+            "#0c4214",
+            "#b030b0",
+            "#ffffff"
+          ],
+          "image": "/image/small_product-TLP-529048_4a1cc393-4531-4a7d-a13f-58ce4cf5d318.png",
+          "alt_image": "گوشی موبایل سامسونگ Galaxy A37 ظرفیت 128 گیگابایت رم 8 گیگابایت copy-small-image.png",
+          "score_count": 1,
+          "score_avg": 4,
+          "available": 3000,
+          "marketing_group": null,
+          "marketing_group_id": null,
+          "warningCount": null,
+          "show_color": true,
+          "free_delivery": false,
+          "start_date_discount": null,
+          "discount_info": {
+            "is_permanent": false,
+            "daily_repeat": 0,
+            "is_special_event": false,
+            "badge_config": null
+          },
+          "discount_time": null,
+          "is_turbo": false
+        }
+      ],
+      "count": 2669,
+      "banners": null
+    }
+  ],
+  "pageParams": [
+    null
+  ]
+}
