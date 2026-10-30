@@ -12,7 +12,7 @@
  * ============================================================
  */
 
-const { normalizeBucketValue, normCompareKey, toValueKey } = require('./specNormalization')
+const { normalizeBucketValue, normCompareKey, toValueKey, isNonFilterableKey } = require('./specNormalization')
 
 const INTERNAL = '__listing'
 
@@ -406,6 +406,77 @@ function propertyFacetBranchWithCounts(criterion, index, context = {}) {
   ]
 }
 
+/**
+ * شاخه‌ی «همه‌ی ویژگی‌های موجود در نتایج» (propBase).
+ *
+ * چرا لازم است: شاخه‌های `prop_${index}` فقط برای ویژگی‌هایی ساخته می‌شوند که
+ * کاربر در URL انتخاب کرده است. بنابراین در ورود اول به یک دسته‌بندی (بدون هیچ
+ * فیلتری) هیچ `prop_*` وجود نداشت و همه‌ی ویژگی‌ها با count=0 برمی‌گشتند و
+ * نوار Quick Filter Pills خالی می‌ماند.
+ *
+ * این شاخه یک‌بار روی کل نتایج منطبق اجرا می‌شود و همه‌ی جفت‌های
+ * (برچسب، مقدار) را از `properties` و `variants.options` می‌شمارد.
+ */
+function basePropertiesFacetBranch({ definiteMatches = [], priceMatch = [], maxBuckets = 500 } = {}) {
+  const labelKey = { $ifNull: ['$$p.normLabel', '$$p.label'] }
+  const propPairs = {
+    $map: {
+      input: { $ifNull: ['$properties', []] },
+      as: 'p',
+      in: {
+        labelKey,
+        labelDisplay: '$$p.label',
+        valKey: { $ifNull: ['$$p.normValue', '$$p.value'] },
+        valDisplay: { $ifNull: ['$$p.bucket', '$$p.value'] },
+      },
+    },
+  }
+  const variantPairs = {
+    $map: {
+      input: {
+        $reduce: {
+          input: { $ifNull: [ref('variants'), []] },
+          initialValue: [],
+          in: { $concatArrays: ['$$value', { $ifNull: ['$$this.options', []] }] },
+        },
+      },
+      as: 'p',
+      in: {
+        labelKey: { $ifNull: ['$$p.normLabel', '$$p.name'] },
+        labelDisplay: '$$p.name',
+        valKey: { $ifNull: ['$$p.normValue', '$$p.value'] },
+        valDisplay: '$$p.value',
+      },
+    },
+  }
+
+  return [
+    ...definiteMatches,
+    ...priceMatch,
+    { $project: { pairs: { $setUnion: [propPairs, variantPairs] } } },
+    { $unwind: '$pairs' },
+    { $match: { 'pairs.valKey': { $nin: [null, ''] }, 'pairs.labelKey': { $nin: [null, ''] } } },
+    // یک محصول برای یک (برچسب، مقدار) فقط یک بار شمرده می‌شود
+    {
+      $group: {
+        _id: { labelKey: '$pairs.labelKey', valKey: '$pairs.valKey', doc: '$_id' },
+        labelDisplay: { $first: '$pairs.labelDisplay' },
+        valDisplay: { $first: '$pairs.valDisplay' },
+      },
+    },
+    {
+      $group: {
+        _id: { labelKey: '$_id.labelKey', valKey: '$_id.valKey' },
+        labelDisplay: { $first: '$labelDisplay' },
+        displayValue: { $first: '$valDisplay' },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { count: -1, '_id.valKey': 1 } },
+    { $limit: Math.max(1, Number(maxBuckets) || 500) },
+  ]
+}
+
 // ------------------------------------------------------------
 // ۵) رتبه‌بندی و قالب‌بندی فست
 // ------------------------------------------------------------
@@ -424,6 +495,7 @@ function rankAndFormatPropertyFacets({
   rules = [],
   selected = new Map(),
   maxValues = 40,
+  maxAutoFacets = 10,
 } = {}) {
   const ruleByKey = new Map(filterableRules(rules).map((rule) => [rule.key, rule]))
   const labels = new Set([...bucketsByLabel.keys(), ...selected.keys()])
@@ -482,17 +554,46 @@ function rankAndFormatPropertyFacets({
       isConfigured: Boolean(rule),
       isPinned: Boolean(rule && rule.isPinned),
       order: rule ? rule.order : Number.MAX_SAFE_INTEGER,
+      hasUserSelection: selectedValues.length > 0,
+      totalCoverage: trimmed.reduce((sum, item) => sum + (Number(item.count) || 0), 0),
       values: trimmed,
     })
   }
 
-  // ویژگی‌های تعریف‌شده در دسته اول و به ترتیب `order`
-  result.sort((a, b) => {
-    if (a.isConfigured !== b.isConfigured) return a.isConfigured ? -1 : 1
-    if (a.order !== b.order) return a.order - b.order
-    return a.name.localeCompare(b.name, 'fa')
-  })
-  return result
+  // ------------------------------------------------------------
+  // حاکمیت ضدشلوغی سایدبار (Anti-Clutter Governance)
+  // ------------------------------------------------------------
+  // ویژگی‌های تعریف‌شده‌ی ادمین و ویژگی‌هایی که کاربر انتخاب کرده همیشه
+  // می‌مانند. ویژگی‌های «کشف‌شده‌ی خودکار» فقط اگر واقعاً فیلترپذیر باشند
+  // نمایش داده می‌شوند تا سایدبار دسته‌های بزرگ از متن‌های آزاد پر نشود.
+  const configured = []
+  const userSelected = []
+  const autos = []
+
+  for (const entry of result) {
+    if (entry.isConfigured) {
+      configured.push(entry)
+      continue
+    }
+    if (entry.hasUserSelection) {
+      userSelected.push(entry)
+      continue
+    }
+    // کلیدهای صرفاً جدولی هرگز به‌صورت خودکار وارد سایدبار نمی‌شوند
+    if (isNonFilterableKey(entry.name)) continue
+    const liveValues = entry.values.filter((item) => (Number(item.count) || 0) > 0)
+    // تک‌مقداره‌ها فایده‌ی فیلترینگ ندارند؛ پراکندگی بیش از ۱۸ مقدار هم
+    // سایدبار را غیرقابل استفاده می‌کند.
+    if (liveValues.length < 2 || liveValues.length > 18) continue
+    autos.push(entry)
+  }
+
+  configured.sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'fa'))
+  userSelected.sort((a, b) => a.name.localeCompare(b.name, 'fa'))
+  autos.sort((a, b) => (b.totalCoverage - a.totalCoverage) || a.name.localeCompare(b.name, 'fa'))
+
+  const limit = Number.isFinite(Number(maxAutoFacets)) ? Math.max(0, Number(maxAutoFacets)) : 10
+  return [...configured, ...userSelected, ...autos.slice(0, limit)]
 }
 
 module.exports = {
@@ -505,6 +606,7 @@ module.exports = {
   variantCouplingStages,
   propertyFacetBranch,
   propertyFacetBranchWithCounts,
+  basePropertiesFacetBranch,
   facetBaseStages,
   rankAndFormatPropertyFacets,
   INTERNAL,

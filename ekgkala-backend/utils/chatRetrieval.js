@@ -150,12 +150,8 @@ function specList(p, max = 8) {
     if (!v.trim() || v === '[object Object]') return;
     out.push({ label: String(label).trim(), value: v.trim().slice(0, 120) });
   };
-  if (Array.isArray(p.properties)) {
-    for (const prop of p.properties) {
-      push(prop.label, prop.value);
-      if (out.length >= max) return out;
-    }
-  }
+  // ترتیب اهمیت: جدول کامل specifications (متن کامل) بر فست‌های کوتاه
+  // properties (باکت‌شده برای سایدبار) مقدم است.
   const specs = p.specifications;
   if (specs && typeof specs === 'object' && !Array.isArray(specs)) {
     for (const [k, v] of Object.entries(specs)) {
@@ -166,6 +162,12 @@ function specList(p, max = 8) {
     for (const s of specs) {
       if (s && typeof s === 'object') push(s.label || s.name || s.key, s.value);
       else if (typeof s === 'string') push('ویژگی', s);
+      if (out.length >= max) return out;
+    }
+  }
+  if (Array.isArray(p.properties)) {
+    for (const prop of p.properties) {
+      push(prop.label, prop.value);
       if (out.length >= max) return out;
     }
   }

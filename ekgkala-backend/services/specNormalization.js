@@ -230,6 +230,130 @@ function formatQuantity({ value, unit }) {
 }
 
 // ------------------------------------------------------------
+// ۳.۵) یکسان‌سازی نام ویژگی‌ها (Canonical Labels)
+// ------------------------------------------------------------
+// هدف: «فرکانس ریموت»، «فرکانس گیرنده» و «بازه فرکانسی» همه به یک فست
+// استاندارد «فرکانس کاری» برسند تا سایدبار به‌جای ده‌ها کلید هم‌معنا،
+// چند فست تمیز داشته باشد.
+//
+// اولویت: categoryRules (rule.name + rule.aliases) → دیکشنری سراسری.
+const BUILTIN_KEY_SYNONYMS = [
+  { canonical: 'فرکانس کاری', aliases: ['فرکانس ریموت', 'فرکانس گیرنده', 'بازه فرکانسی', 'فرکانس کاری ریموت', 'فرکانس'] },
+  { canonical: 'نوع کددهی', aliases: ['نوع کد ریموت', 'نوع کدینگ', 'فناوری کد', 'نحوه کددهی', 'نوع کد', 'روش کددهی ریموت'] },
+  { canonical: 'تعداد رله', aliases: ['تعداد رله خروجی', 'رله خروجی', 'تعداد خروجی رله'] },
+  { canonical: 'تعداد کانال', aliases: ['تعداد کانال ورودی تصویر', 'تعداد کانال تصویر', 'کانال ها', 'کانال‌ها', 'تعداد کانال‌ها'] },
+  { canonical: 'رزولوشن تصویر', aliases: ['وضوح تصویر', 'کیفیت تصویر', 'رزولوشن', 'resolution'] },
+  { canonical: 'حداکثر رزولوشن ضبط', aliases: ['حداکثر رزولوشن پشتیبانی', 'رزولوشن ضبط', 'کیفیت ضبط', 'حداکثر کیفیت ضبط'] },
+  { canonical: 'نوع کاربری', aliases: ['نوع دستگاه', 'نوع محصول', 'کاربری'] },
+  { canonical: 'تعداد کلید', aliases: ['تعداد دکمه', 'تعداد کلید', 'تعداد دکمه کلید', 'تعداد دکمه‌ها'] },
+  { canonical: 'ولتاژ تغذیه', aliases: ['ولتاژ کاری', 'ولتاژ ورودی', 'منبع تغذیه', 'تغذیه'] },
+  { canonical: 'استاندارد حفاظتی', aliases: ['درجه حفاظت', 'درجه حفاظت ip', 'کلاس حفاظتی', 'استاندارد حفاظت محیطی', 'درجه حفاظتی'] },
+  { canonical: 'میکروفون داخلی', aliases: ['میکروفن', 'میکروفون', 'میکروفن داخلی', 'میکروفون داخلی'] },
+  { canonical: 'نوع دید در شب', aliases: ['دید در شب', 'night vision'] },
+  { canonical: 'سایز لنز', aliases: ['لنز', 'نوع لنز', 'فاصله کانونی'] },
+  { canonical: 'برد عملکرد', aliases: ['برد ریموت', 'برد ریموت کنترل', 'برد عملیاتی', 'برد'] },
+  { canonical: 'ظرفیت هر لنگه', aliases: ['حداکثر وزن هر لنگه', 'تحمل وزن هر لنگه', 'قدرت جابجایی هر لنگه', 'وزن هر لنگه'] },
+  { canonical: 'قدرت لیفت موتور', aliases: ['قدرت لیفت', 'قدرت لیفت ظرفیت', 'قدرت موتور'] },
+  { canonical: 'نوع اتصال', aliases: ['نوع ارتباط', 'اتصال', 'رابط ارتباطی'] },
+  { canonical: 'گارانتی', aliases: ['مدت گارانتی', 'ضمانت', 'مدت ضمانت'] },
+]
+
+const SYNONYM_LOOKUP = (() => {
+  const map = new Map()
+  for (const entry of BUILTIN_KEY_SYNONYMS) {
+    map.set(normCompareKey(entry.canonical), entry.canonical)
+    for (const alias of entry.aliases) map.set(normCompareKey(alias), entry.canonical)
+  }
+  return map
+})()
+
+/**
+ * نام استاندارد یک ویژگی.
+ * @param {string} label برچسب خام
+ * @param {Array} categoryRules قواعد دسته‌بندی (rule.name + rule.aliases)
+ */
+function canonicalizeSpecLabel(label, categoryRules = []) {
+  const raw = normalizeText(label)
+  if (!raw) return ''
+  const key = normCompareKey(raw)
+
+  if (Array.isArray(categoryRules)) {
+    for (const rule of categoryRules) {
+      if (!rule || !rule.name) continue
+      if (normCompareKey(rule.name) === key) return String(rule.name).trim()
+      const aliases = Array.isArray(rule.aliases) ? rule.aliases : []
+      if (aliases.some((alias) => normCompareKey(alias) === key)) return String(rule.name).trim()
+    }
+  }
+
+  return SYNONYM_LOOKUP.get(key) || raw
+}
+
+// ------------------------------------------------------------
+// ۳.۶) قواعد باکت‌سازی مقدار به ازای ویژگی‌های استاندارد
+// ------------------------------------------------------------
+// هر قاعده فقط روی ویژگیِ *همان نام استاندارد* اثر می‌گذارد. اگر هیچ قاعده‌ای
+// تطبیق نداد، در نهایت normalizeBucketValue عمومی اجرا می‌شود (هرگز حذف).
+const countBucketRule = (suffix) => (text) => {
+  const match = text.match(/(\d{1,4})/)
+  return match ? `${Number(match[1])} ${suffix}` : null
+}
+
+const FACET_VALUE_RULES = [
+  { labels: ['تعداد زون'], map: countBucketRule('زون') },
+  { labels: ['تعداد رله'], map: countBucketRule('رله') },
+  { labels: ['تعداد کانال'], map: countBucketRule('کانال') },
+  { labels: ['تعداد کلید'], map: countBucketRule('کلید') },
+  {
+    labels: ['فرکانس کاری'],
+    map: (text) => {
+      if (/(مولتی|multi|250\s*تا\s*450)/iu.test(text)) return 'مولتی‌فرکانس'
+      const ghz = text.match(/(\d+(?:[.,]\d+)?)\s*(?:ghz|گیگاهرتز)/iu)
+      if (ghz) return `${formatNumber(Number(ghz[1].replace(',', '.')))} گیگاهرتز`
+      const mhz = text.match(/(\d+(?:[.,]\d+)?)\s*(?:mhz|مگاهرتز)/iu)
+      // 433.92 MHz ⇒ 433 مگاهرتز (برش، نه گرد کردن — قرارداد فست‌های ترب)
+      if (mhz) return `${formatNumber(Math.floor(Number(mhz[1].replace(',', '.'))))} مگاهرتز`
+      return null
+    },
+  },
+  {
+    labels: ['نوع کددهی'],
+    map: (text) => {
+      if (/(هاپینگ|hopping|rolling|کد\s*متغیر)/iu.test(text)) return 'هاپینگ کد (Hopping)'
+      if (/(learning|لرن|ev\s*1527|کد\s*آموزش)/iu.test(text)) return 'کد لرن (Learning)'
+      if (/(بلوتوث|bluetooth|کپی|clone)/iu.test(text)) return 'بلوتوثی (کپی‌شونده)'
+      return null
+    },
+  },
+  {
+    labels: ['رزولوشن تصویر', 'حداکثر رزولوشن ضبط'],
+    map: (text) => {
+      if (/(8\s*mp|4k|2160p)/iu.test(text)) return '8 مگاپیکسل (4K)'
+      if (/(5\s*mp)/iu.test(text)) return '5 مگاپیکسل'
+      if (/(4\s*mp|1440p|2k)/iu.test(text)) return '4 مگاپیکسل'
+      if (/(2\s*mp|1080p|full\s*hd|2\s*مگاپیکسل)/iu.test(text)) return '2 مگاپیکسل'
+      return null
+    },
+  },
+  {
+    labels: ['استاندارد حفاظتی'],
+    map: (text) => {
+      const match = text.match(/ip\s*(\d{2})/iu)
+      return match ? `IP${match[1]}` : null
+    },
+  },
+]
+
+const findFacetRule = (label) => {
+  const key = normCompareKey(label)
+  return FACET_VALUE_RULES.find((rule) => rule.labels.some((candidate) => normCompareKey(candidate) === key)) || null
+}
+
+// جمله‌های توضیحی طولانی برای سایدبار مناسب نیستند (چیپ ۳ خطی می‌سازند)
+const MAX_FACET_VALUE_CHARS = 45
+const MAX_FACET_VALUE_WORDS = 7
+
+// ------------------------------------------------------------
 // ۴) قواعد کلید-محور (Rule-Based) + نرمال‌ساز عمومی (Generic)
 // ------------------------------------------------------------
 /**
@@ -308,12 +432,28 @@ const KEY_RULES = [
   },
 ]
 
+// کلیدهایی که فقط مخصوص «جدول مشخصات فنی» صفحه محصول‌اند و نباید سایدبار
+// فیلترها را شلوغ کنند. این‌ها در `specifications` ذخیره می‌شوند ولی وارد
+// `properties` نمی‌شوند — مگر ادمین صراحتاً آن‌ها را در category.properties
+// با isFilterable !== false تعریف کند (آن‌گاه isExplicitlyEnabledByAdmin
+// بر این لیست مقدم است).
+const SPEC_TABLE_ONLY_KEYS = [
+  'مدت ضبط پیام', 'تعداد مدیران سیستم', 'حالت های قابل تعریف برای زون',
+  'حالت‌های قابل تعریف برای زون', 'اقلام همراه', 'محتویات بسته', 'متعلقات نصب',
+  'نکات نصب', 'دمای کاری', 'محدوده دمای کاری', 'رطوبت کاری', 'ابعاد', 'وزن',
+  'وزن بسته بندی', 'وزن بسته‌بندی', 'گارانتی', 'مدت گارانتی', 'ضمانت', 'مدت ضمانت',
+  'وضعیت کالا', 'اصالت کالا', 'مدل', 'نام محصول', 'تست سیستم', 'ثبت رویداد',
+  'نام گذاری اجزا', 'نام‌گذاری اجزا', 'روش ریست خام سازی', 'روش ریست خام‌سازی',
+  'روش کددهی', 'نشانگر وضعیت', 'طراحی خروجی صدا', 'حفاظت tamper', 'سیستم ضد دستکاری',
+]
+
 const NON_FILTERABLE_KEYS_BASE = new Set(
   [
     'description', 'توضیحات', 'تصویر', 'تصاویر', 'image', 'images', 'عکس',
     'بارکد', 'barcode', 'کد کالا', 'sku', 'شناسه', 'id', 'لینک', 'url',
     'نام', 'name', 'قیمت', 'price', 'موجودی', 'stock', 'وزن بسته‌بندی',
     'کد انبار', 'warehouse',
+    ...SPEC_TABLE_ONLY_KEYS,
   ].map(normCompareKey),
 )
 
@@ -379,6 +519,37 @@ function normalizeBucketValue(label, rawValue) {
 }
 
 /**
+ * باکت‌سازی مخصوص فست‌ها (لایه‌ی دوم) با در نظر گرفتن طول جمله.
+ *
+ * خروجی:
+ *  - `bucket`     : مقدار کوتاه و خوانا برای چیپ سایدبار (نیم‌فاصله حفظ می‌شود)
+ *  - `filterable` : آیا این مقدار برای فست مناسب است؟
+ *  - `ruleMatched`: آیا یک قاعده‌ی اختصاصی آن را باکت کرد؟
+ *
+ * قاعده‌ی طول: جمله‌ی توضیحی بیش از ۴۵ کاراکتر یا بیش از ۷ کلمه که با هیچ
+ * قاعده‌ای باکت نشود، فقط در `specifications` می‌ماند و وارد سایدبار نمی‌شود.
+ */
+function normalizeFacetValue(label, rawValue) {
+  const text = normalizeText(rawValue)
+  if (!text) return { bucket: null, filterable: false, ruleMatched: false }
+
+  const canonicalLabel = canonicalizeSpecLabel(label)
+  const rule = findFacetRule(canonicalLabel)
+  if (rule) {
+    const mapped = rule.map(text)
+    if (mapped) return { bucket: mapped, filterable: true, ruleMatched: true }
+  }
+
+  const bucket = normalizeBucketValue(canonicalLabel, text)
+  if (!bucket) return { bucket: null, filterable: false, ruleMatched: false }
+
+  const words = bucket.split(/\s+/).filter(Boolean).length
+  const tooLong = bucket.length > MAX_FACET_VALUE_CHARS || words > MAX_FACET_VALUE_WORDS
+
+  return { bucket, filterable: !tooLong && !isNonFilterableKey(canonicalLabel), ruleMatched: false }
+}
+
+/**
  * هسته‌ی عددی برای بازه‌بندی‌های عددی (آینه‌ی باگ `dist <= 50` که بازه‌ی ۴۰ متر را می‌بلعید).
  * بازه‌ی درست: هر کران بالا شامل خودش است و کران‌های تودرتو نیستند.
  */
@@ -404,6 +575,12 @@ module.exports = {
   formatQuantity,
   formatNumber,
   normalizeBucketValue,
+  normalizeFacetValue,
+  canonicalizeSpecLabel,
+  BUILTIN_KEY_SYNONYMS,
+  SPEC_TABLE_ONLY_KEYS,
+  MAX_FACET_VALUE_CHARS,
+  MAX_FACET_VALUE_WORDS,
   bucketizeByThresholds,
   isNonFilterableKey,
   NON_FILTERABLE_KEYS_BASE,

@@ -764,7 +764,14 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
   const prepared = prepareProductSpecsAndDescription(payload, rules)
   if (prepared.properties.length) {
     payload.properties = prepared.properties
+  }
+  if (Object.keys(prepared.specifications).length) {
     payload.specifications = prepared.specifications
+  }
+  // توضیحات تمیزشده (بدون بلوک تکراری جدول مشخصات) ذخیره می‌شود
+  if (typeof payload.description === 'string' && payload.description.trim()) {
+    payload.description = prepared.description
+    if (!payload.guarantee && prepared.guarantee) payload.guarantee = prepared.guarantee
   }
   return payload
 }

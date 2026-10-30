@@ -15,6 +15,7 @@
 
 import api from "@/lib/api";
 import { resolvePricing } from "@/lib/pricing";
+import { buildProductSpecs } from "@/lib/productSpecs";
 import { appendPropertyFilters, type ProductFilterProperties, type ProductFilterFacets } from "@/lib/productFilters";
 
 // Re-export types from the SSR-safe types file for backward compatibility
@@ -96,6 +97,9 @@ interface BackendProduct {
 
   // Dynamic properties (category-based specifications)
   properties?: Array<{ label: string; value: string }>;
+  // Full-text spec table (backend `specifications`) + guarantee
+  specifications?: Record<string, unknown> | Array<{ key?: string; label?: string; name?: string; value?: unknown }>;
+  guarantee?: string;
 
   // Variable-product fields (only present when productType === 'variable')
   productType?: "simple" | "variable";
@@ -321,8 +325,14 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     // Colors (optional)
     colors: backendProduct.colors,
 
-    // Specifications (optional) - Use properties if specs not available
-    specs: backendProduct.specs || backendProduct.properties?.map(p => ({ label: p.label, value: p.value })),
+    // Specifications: specifications (full text) + properties + guarantee
+    specs: buildProductSpecs({
+      specifications: backendProduct.specifications,
+      specs: backendProduct.specs,
+      properties: backendProduct.properties,
+      guarantee: backendProduct.guarantee,
+    }),
+    guarantee: backendProduct.guarantee,
 
     // Campaign label (time-limited discount)
     campaignLabel: backendProduct.campaignLabel,

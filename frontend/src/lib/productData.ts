@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { Product, ProductAttribute, ProductColor, ProductVariant } from "@/types/product";
 import { buildProductUrl } from "./paths";
+import { buildProductSpecs, type BackendSpecifications } from "./productSpecs";
 import { resolvePricing } from "@/lib/pricing";
 import { updateServerClock, updateServerClockFromPayload } from "@/lib/serverClock";
 
@@ -149,6 +150,10 @@ type BackendProduct = {
   discount?: number;
   colors?: ProductColor[];
   specs?: Product["specs"];
+  // Two-layer spec model from the backend
+  specifications?: BackendSpecifications;
+  properties?: Array<{ label?: string; value?: unknown }>;
+  guarantee?: string;
   campaignLabel?: string;
   campaignTheme?: string;
   compareAtPrice?: number;
@@ -343,7 +348,14 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
         ? mappedVariants.reduce((sum, v) => sum + v.stock, 0)
         : Number(countInStock) || 0,
     colors: backend.colors,
-    specs: backend.specs,
+    // تب «مشخصات فنی»: specifications (متن کامل) + properties + گارانتی
+    specs: buildProductSpecs({
+      specifications: backend.specifications,
+      specs: backend.specs,
+      properties: backend.properties,
+      guarantee: backend.guarantee,
+    }),
+    guarantee: backend.guarantee,
     campaignLabel: backend.campaignLabel,
     campaignTheme: backend.campaignTheme,
     // Time-based promotions (keep raw flags/timers; UI derives active state)

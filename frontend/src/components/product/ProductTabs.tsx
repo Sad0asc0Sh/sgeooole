@@ -12,6 +12,41 @@ interface ProductTabsProps {
     product: Product;
 }
 
+// The storefront's structured product template (header / intro / 01..06 cards /
+// applications / technical table) is styled entirely with inline CSS. Detecting
+// it lets us skip the Quill style-stripping pass that would flatten it.
+const STRUCTURED_TEMPLATE_RE = /(background:\s*#f9fafb|font-family:\s*Tahoma|محصول\s*حرفه)/i;
+const isStructuredTemplate = (html: string) => STRUCTURED_TEMPLATE_RE.test(html);
+
+const SPEC_HEADING = "مشخصات\\s*فنی";
+
+/**
+ * Remove a leftover trailing «مشخصات فنی» block (comment + container + heading +
+ * table). Products created before the backend cleanup may still ship it, and it
+ * duplicates the dedicated specs tab.
+ */
+const stripSpecificationBlock = (html: string): string => {
+    let out = html;
+
+    // comment + container div + heading + table
+    out = out.replace(
+        new RegExp(`<!--\\s*Technical\\s+Specifications\\s*-->\\s*<div\\b[^>]*>\\s*<h[1-6]\\b[^>]*>\\s*${SPEC_HEADING}\\s*<\\/h[1-6]>[\\s\\S]*?<\\/table>\\s*<\\/div>`, "gi"),
+        "",
+    );
+    // container div + heading + table
+    out = out.replace(
+        new RegExp(`<div\\b[^>]*>\\s*<h[1-6]\\b[^>]*>\\s*${SPEC_HEADING}\\s*<\\/h[1-6]>[\\s\\S]*?<\\/table>\\s*<\\/div>`, "gi"),
+        "",
+    );
+    // heading + table without a dedicated container
+    out = out.replace(
+        new RegExp(`<h[1-6]\\b[^>]*>\\s*${SPEC_HEADING}\\s*<\\/h[1-6]>\\s*<table\\b[\\s\\S]*?<\\/table>`, "gi"),
+        "",
+    );
+
+    return out.trim();
+};
+
 export default function ProductTabs({ product }: ProductTabsProps) {
     const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -37,6 +72,17 @@ export default function ProductTabs({ product }: ProductTabsProps) {
         // renders exactly one <h1> (the product name); extra h1s coming from
         // rich-text descriptions would create duplicate h1s on the page.
         cleaned = demoteH1ToH2(cleaned);
+
+        // 1c. Remove any leftover "Technical Specifications" block. New products
+        // already store a cleaned description, but older rows in the database may
+        // still carry the trailing container/heading/table, which duplicates the
+        // dedicated specs tab and leaves an empty white box.
+        cleaned = stripSpecificationBlock(cleaned);
+
+        // 1d. The storefront's structured product template must keep ALL inline
+        // styles (backgrounds, colours, the 01..06 cards, table layout). The
+        // Quill-normalisation below would destroy them, so return as-is.
+        if (isStructuredTemplate(cleaned)) return cleaned;
 
         // 2. Strip inline background-color and color styles completely
         cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {

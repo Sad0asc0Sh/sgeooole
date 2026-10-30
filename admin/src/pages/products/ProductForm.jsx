@@ -25,6 +25,7 @@ import {
   InboxOutlined,
   PlusOutlined,
   DeleteOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons'
 import RichTextEditor from '../../components/RichTextEditor'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -98,6 +99,86 @@ function ProductForm() {
   // ============================================
   const [selectedCategoryId, setSelectedCategoryId] = useState(null)
   const [specs, setSpecs] = useState({}) // { propertyName: value }
+  // فیلدهای «افزودن مشخصه دلخواه»
+  const [newSpecLabel, setNewSpecLabel] = useState('')
+  const [newSpecValue, setNewSpecValue] = useState('')
+
+  // ============================================
+  // استخراج خودکار جدول «مشخصات فنی» از متن توضیحات
+  // ============================================
+  const SPEC_HEADING_RE = /مشخصات\s*فنی|جدول\s*مشخصات|مشخصات\s*محصول/
+
+  const extractSpecsFromDescriptionHtml = (html) => {
+    if (!html || typeof window === 'undefined') return { rows: [], html }
+    const doc = new DOMParser().parseFromString(html, 'text/html')
+    const rows = []
+    let changed = false
+
+    Array.from(doc.body.querySelectorAll('table')).forEach((table) => {
+      const previous = table.previousElementSibling
+      const previousText = previous ? (previous.textContent || '').replace(/\s+/g, ' ').trim() : ''
+      const ownText = (table.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80)
+      if (!SPEC_HEADING_RE.test(previousText) && !SPEC_HEADING_RE.test(ownText)) return
+
+      Array.from(table.querySelectorAll('tr')).forEach((tr) => {
+        const cells = Array.from(tr.querySelectorAll('th,td'))
+        if (cells.length < 2) return
+        const label = (cells[0].textContent || '').trim()
+        const value = (cells[1].textContent || '').trim()
+        if (label && value) rows.push({ label, value })
+      })
+
+      const parent = table.parentElement
+      const heading = previous && /^H[1-6]$/.test(previous.tagName) ? previous : null
+      if (heading) heading.remove()
+      table.remove()
+      changed = true
+      // اگر کانتینر بعد از حذف خالی شد، خودش هم حذف شود (باکس سفید خالی)
+      if (parent && parent !== doc.body && !(parent.textContent || '').replace(/\s+/g, ' ').trim()) {
+        parent.remove()
+      }
+    })
+
+    // کامنت باقی‌مانده‌ی Technical Specifications
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_COMMENT)
+    const comments = []
+    while (walker.nextNode()) {
+      if (/Technical\s+Specifications|مشخصات\s*فنی/i.test(walker.currentNode.nodeValue || '')) {
+        comments.push(walker.currentNode)
+      }
+    }
+    comments.forEach((node) => { node.remove(); changed = true })
+
+    return { rows, html: changed ? doc.body.innerHTML.trim() : html }
+  }
+
+  const handleAutoExtractSpecs = () => {
+    const html = form.getFieldValue('description') || ''
+    const { rows, html: cleanedHtml } = extractSpecsFromDescriptionHtml(html)
+    if (rows.length === 0) {
+      message.info('جدول «مشخصات فنی» در متن توضیحات پیدا نشد.')
+      return
+    }
+    const next = { ...specs }
+    rows.forEach(({ label, value }) => {
+      if (next[label] === undefined || String(next[label]).trim() === '') next[label] = value
+    })
+    setSpecs(next)
+    form.setFieldValue('description', cleanedHtml)
+    message.success(`${rows.length} مشخصه استخراج و جدول از توضیحات حذف شد.`)
+  }
+
+  const handleAddCustomSpec = () => {
+    const label = newSpecLabel.trim()
+    const value = newSpecValue.trim()
+    if (!label || !value) {
+      message.warning('نام و مقدار مشخصه را وارد کنید.')
+      return
+    }
+    setSpecs({ ...specs, [label]: value })
+    setNewSpecLabel('')
+    setNewSpecValue('')
+  }
 
   // Category store (Zustand)
   const categoriesTree = useCategoryStore((state) => state.categoriesTree)
@@ -217,16 +298,24 @@ function ProductForm() {
               message.info('کمپین تخفیف این محصول منقضی شده بود و به طور هوشمند غیرفعال شد.')
             }
 
-            // Load specs from product.properties
+            // Load specs: properties first, then specifications on top so the
+            // full-text table rows (extracted from the HTML description) win.
+            const specsObj = {}
             if (p.properties && Array.isArray(p.properties)) {
-              const specsObj = {}
               p.properties.forEach(prop => {
                 if (prop.label && prop.value !== undefined) {
                   specsObj[prop.label] = prop.value
                 }
               })
-              setSpecs(specsObj)
             }
+            if (p.specifications && typeof p.specifications === 'object' && !Array.isArray(p.specifications)) {
+              Object.entries(p.specifications).forEach(([label, value]) => {
+                if (value !== null && value !== undefined && String(value).trim() !== '') {
+                  specsObj[label] = String(value)
+                }
+              })
+            }
+            setSpecs(specsObj)
 
             // Set selected category for dynamic properties
             if (p.category) {
@@ -692,12 +781,19 @@ function ProductForm() {
 
       // اضافه کردن مشخصات فنی (مبتنی بر دسته‌بندی)
       // Convert specs object to array format: [{ label, value }]
-      const propertiesArray = Object.entries(specs)
+      const specEntries = Object.entries(specs)
         .filter(([, value]) => value !== '' && value !== null && value !== undefined)
-        .map(([label, value]) => ({ label, value: String(value) }))
+        .map(([label, value]) => [label, String(value)])
+
+      const propertiesArray = specEntries.map(([label, value]) => ({ label, value }))
 
       if (propertiesArray.length > 0) {
         payload.properties = propertiesArray
+      }
+
+      // جدول کامل مشخصات فنی (تب «مشخصات فنی» و فید ترب) با متن کامل
+      if (specEntries.length > 0) {
+        payload.specifications = Object.fromEntries(specEntries)
       }
 
       // Check if there are images still uploading
@@ -949,6 +1045,17 @@ function ProductForm() {
                       </>
                     )}
 
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                      <Button
+                        type="dashed"
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        onClick={handleAutoExtractSpecs}
+                      >
+                        استخراج خودکار مشخصات از جدول توضیحات
+                      </Button>
+                    </div>
+
                     <Form.Item
                       name="description"
                       label="توضیحات"
@@ -963,6 +1070,75 @@ function ProductForm() {
                 label: 'مشخصات فنی',
                 children: (
                   <>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                      <Button
+                        type="dashed"
+                        size="small"
+                        icon={<ThunderboltOutlined />}
+                        onClick={handleAutoExtractSpecs}
+                      >
+                        استخراج خودکار مشخصات از جدول توضیحات
+                      </Button>
+                    </div>
+
+                    <Card
+                      size="small"
+                      title="مشخصات فنی ثبت‌شده این کالا"
+                      style={{ marginBottom: 16, background: '#fafafa' }}
+                    >
+                      {Object.keys(specs).length === 0 ? (
+                        <p style={{ margin: 0, color: '#888', fontSize: 13 }}>
+                          هنوز مشخصه‌ای ثبت نشده است. با دکمه «استخراج خودکار» جدول انتهای توضیحات را بخوانید،
+                          یا از پایین همین کارت مشخصه‌ی دلخواه اضافه کنید.
+                        </p>
+                      ) : (
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          {Object.entries(specs).map(([label, value]) => (
+                            <div key={label} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <Input value={label} disabled style={{ flex: '0 0 34%' }} />
+                              <Input
+                                aria-label={`مقدار ${label}`}
+                                value={value === undefined || value === null ? '' : String(value)}
+                                onChange={(e) => setSpecs((prev) => ({ ...prev, [label]: e.target.value }))}
+                                style={{ flex: 1 }}
+                              />
+                              <Button
+                                danger
+                                type="text"
+                                size="small"
+                                icon={<DeleteOutlined />}
+                                aria-label={`حذف ${label}`}
+                                onClick={() => setSpecs((prev) => {
+                                  const next = { ...prev }
+                                  delete next[label]
+                                  return next
+                                })}
+                              />
+                            </div>
+                          ))}
+                        </Space>
+                      )}
+
+                      <Divider style={{ margin: '12px 0' }} />
+                      <Space.Compact style={{ width: '100%' }}>
+                        <Input
+                          placeholder="نام مشخصه جدید"
+                          value={newSpecLabel}
+                          onChange={(e) => setNewSpecLabel(e.target.value)}
+                          style={{ width: '38%' }}
+                        />
+                        <Input
+                          placeholder="مقدار"
+                          value={newSpecValue}
+                          onChange={(e) => setNewSpecValue(e.target.value)}
+                          style={{ flex: 1 }}
+                        />
+                        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddCustomSpec}>
+                          افزودن مشخصه
+                        </Button>
+                      </Space.Compact>
+                    </Card>
+
                     {!selectedCategoryId ? (
                       <Alert
                         message="ابتدا دسته‌بندی را انتخاب کنید"

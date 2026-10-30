@@ -15,6 +15,7 @@ const {
   bucketizeByThresholds,
   parseQuantity,
   toValueKey,
+  normCompareKey,
   isNonFilterableKey,
   PREVIOUSLY_BLOCKED_KEYS,
 } = require('../services/specNormalization')
@@ -33,7 +34,7 @@ const {
   rankAndFormatPropertyFacets,
 } = require('../services/listingFacets')
 
-const { parseListingQuery, buildListingPipeline } = require('../services/productListingService')
+const { parseListingQuery, buildListingPipeline, listProducts } = require('../services/productListingService')
 const { resolveSort, buildSort } = require('../services/productSorting')
 
 const now = new Date('2026-09-17T12:00:00Z')
@@ -149,7 +150,7 @@ const RICH_DESCRIPTION = [
   '<table><tr><th>مشخصات فنی</th><td></td></tr><tr><th>رزولوشن</th><td>4MP</td></tr><tr><th>نوع باتری</th><td>لیتیوم-یون</td></tr></table>',
 ].join('')
 
-test('rich admin HTML description is never stripped or overwritten', () => {
+test('rich admin HTML description keeps everything except the duplicate spec table', () => {
   assert.equal(hasRichHtml(RICH_DESCRIPTION), true)
 
   const prepared = prepareProductSpecsAndDescription(
@@ -158,16 +159,28 @@ test('rich admin HTML description is never stripped or overwritten', () => {
     {},
   )
 
-  // توضیحات عیناً حفظ می‌شود
-  assert.equal(prepared.description, RICH_DESCRIPTION)
+  // ۱) بلوک جدول مشخصات فنی به‌صورت پیش‌فرض حذف می‌شود (تکرار با تب مشخصات)
+  assert.doesNotMatch(prepared.description, /<table/i)
+  assert.doesNotMatch(prepared.description, /4MP/)
+
+  // ۲) بقیه‌ی محتوای ادمین ۱۰۰٪ حفظ می‌شود
   assert.match(prepared.description, /<img src="\/uploads\/camera-front\.jpg"/)
   assert.match(prepared.description, /<a href="https:\/\/example\.com\/guide">/)
   assert.match(prepared.description, /<strong>۴ مگاپیکسل<\/strong>/)
+  assert.match(prepared.description, /<p>دوربین مداربسته/)
 
-  // مشخصات فقط خوانده شده‌اند (بدون تغییر DOM)
-  const labels = prepared.properties.map((item) => item.label)
-  assert.ok(labels.includes('رزولوشن'))
-  assert.ok(labels.includes('نوع باتری'))
+  // ۳) مشخصات از جدول خوانده شده‌اند (خواندنی، نه مخرب)
+  const specLabels = Object.keys(prepared.specifications)
+  assert.ok(specLabels.includes('رزولوشن'))
+  assert.ok(specLabels.includes('نوع باتری'))
+
+  // ۴) در حالت خروج صریح، توضیحات بایت‌به‌بایت دست‌نخورده می‌ماند
+  const kept = prepareProductSpecsAndDescription(
+    { name: 'دوربین', description: RICH_DESCRIPTION, specifications: {} },
+    [],
+    { removeDuplicateSpecTable: false },
+  )
+  assert.equal(kept.description, RICH_DESCRIPTION)
 })
 
 test('plain description is left byte-identical too (no forced template)', () => {
@@ -175,16 +188,28 @@ test('plain description is left byte-identical too (no forced template)', () => 
   assert.equal(prepared.description, '<p>متن ساده ادمین</p>')
 })
 
-test('duplicate spec table removal only removes the marked table', () => {
-  const html = `<p>مقدمه</p><table><tr><td>مشخصات فنی</td><td></td></tr><tr><td>رزولوشن</td><td>4MP</td></tr></table><p>پایان</p><img src="/x.jpg" />`
+test('duplicate spec table removal drops the marked table but keeps other tables', () => {
+  const html = [
+    '<p>مقدمه</p>',
+    '<table><tr><td>مشخصات فنی</td><td></td></tr><tr><td>رزولوشن</td><td>4MP</td></tr></table>',
+    '<table><tr><td>جدول قیمت</td><td>۱۰۰۰</td></tr></table>',
+    '<p>پایان</p><img src="/x.jpg" />',
+  ].join('')
   const cleaned = removeDuplicateSpecTables(html)
   assert.doesNotMatch(cleaned, /4MP/)
+  // جدول غیرمرتبط با مشخصات فنی باید بماند
+  assert.match(cleaned, /جدول قیمت/)
   assert.match(cleaned, /<p>مقدمه<\/p>/)
   assert.match(cleaned, /<p>پایان<\/p>/)
   assert.match(cleaned, /<img src="\/x\.jpg" \/>/)
 
-  // پیش‌فرض: هرگز حذف نمی‌شود
-  const untouched = prepareProductSpecsAndDescription({ description: html }, [])
+  // پیش‌فرض جدید: حذف انجام می‌شود
+  const removedByDefault = prepareProductSpecsAndDescription({ description: html }, [])
+  assert.doesNotMatch(removedByDefault.description, /4MP/)
+  assert.match(removedByDefault.description, /جدول قیمت/)
+
+  // خروج صریح: دست‌نخورده
+  const untouched = prepareProductSpecsAndDescription({ description: html }, [], { removeDuplicateSpecTable: false })
   assert.match(untouched.description, /4MP/)
 })
 
@@ -264,6 +289,11 @@ test('rankAndFormatPropertyFacets keeps category order and never drops selected 
       { value: '4MP', bucket: '4 مگاپیکسل', count: 3 },
     ]],
     ['ویژگی کشف‌شده', [{ value: 'X', bucket: 'X', count: 1 }]],
+    // ویژگی خودکارِ معتبر: ≥۲ مقدار با count>0 ⇒ باید نمایش داده شود
+    ['نوع اتصال', [
+      { value: 'بی‌سیم', bucket: 'بی‌سیم', count: 4 },
+      { value: 'باسیم', bucket: 'باسیم', count: 2 },
+    ]],
   ])
   const selected = new Map([['نوع باتری', ['لیتیوم-یون']], ['رزولوشن', ['8 مگاپیکسل']]])
 
@@ -272,7 +302,12 @@ test('rankAndFormatPropertyFacets keeps category order and never drops selected 
   // ترتیب: ویژگی‌های تعریف‌شده‌ی دسته اول و به ترتیب order
   assert.equal(facets[0].name, 'رزولوشن')
   assert.equal(facets[1].name, 'نوع باتری')
-  assert.equal(facets.at(-1).name, 'ویژگی کشف‌شده')
+
+  // حاکمیت ضدشلوغی: ویژگی خودکارِ تک‌مقداره حذف می‌شود…
+  assert.equal(facets.some((facet) => facet.name === 'ویژگی کشف‌شده'), false)
+  // …ولی ویژگی خودکارِ چندمقداره می‌ماند و بعد از ویژگی‌های دسته قرار می‌گیرد
+  assert.equal(facets.at(-1).name, 'نوع اتصال')
+  assert.equal(facets.at(-1).isConfigured, false)
 
   // گزینه‌ی انتخاب‌شده حتی بدون محصول باقی می‌ماند
   const resolution = facets.find((facet) => facet.name === 'رزولوشن')
@@ -543,6 +578,146 @@ test('torobMapper merges properties into the feed spec without overwriting speci
   assert.ok(spec['نوع اتصال'].includes('\u200c'))
   // رکوردهای خالی حذف می‌شوند
   assert.equal(Object.keys(spec).length, 3)
+})
+
+// ------------------------------------------------------------
+// ۱۰) قالب واقعی «پنل دزدگیر سایلکس SG8-S»
+// ------------------------------------------------------------
+test('Silex SG8-S template: full specs, guarantee, block removal, filterable buckets', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const html = fs.readFileSync(path.join(__dirname, 'fixtures', 'silex-sg8s-description.html'), 'utf8')
+  const prepared = prepareProductSpecsAndDescription({ name: 'SG8-S', description: html })
+
+  // (الف) هر ۹ ردیف جدول با متن کامل در specifications
+  const specs = prepared.specifications
+  assert.equal(Object.keys(specs).length, 9)
+  assert.equal(specs['نوع دستگاه'], 'پنل دزدگیر اماکن سیم‌کارتی')
+  assert.equal(specs['تعداد زون'], '5 زون قابل برنامه‌ریزی')
+  assert.equal(specs['حالت‌های قابل تعریف برای زون'], '8 حالت عملکرد')
+  assert.equal(specs['تعداد رله خروجی'], '4 رله کنترلی')
+  assert.equal(specs['فرکانس ریموت'], '433.92 MHz')
+  assert.equal(specs['نوع کد ریموت'], 'Hopping Code')
+  assert.equal(specs['مدت ضبط پیام'], '24 ثانیه')
+  assert.equal(specs['تعداد مدیران سیستم'], '4 مدیر (Admin)')
+  assert.equal(specs['گارانتی'], '36 ماه گارانتی سایلکس')
+
+  // (ب) گارانتی از جدول استخراج می‌شود
+  assert.equal(prepared.guarantee, '36 ماه گارانتی سایلکس')
+
+  // (ج) کل بلوک انتهایی حذف شده و بقیه‌ی قالب دست‌نخورده است
+  const desc = prepared.description
+  assert.doesNotMatch(desc, /<table/i)
+  assert.doesNotMatch(desc, /Technical Specifications/)
+  assert.equal(desc.includes('مشخصات فنی'), false)
+  assert.doesNotMatch(desc, /<h1\b/i)
+  assert.match(desc, /<h2[^>]*>پنل دزدگیر اماکن سیم‌کارتی سایلکس مدل SG8-S<\/h2>/)
+  assert.match(desc, /معرفی محصول/)
+  assert.match(desc, /کاربردها/)
+  for (const num of ['01', '02', '03', '04', '05', '06']) assert.ok(desc.includes(num), `card ${num}`)
+  assert.match(desc, /<img[^>]+silex-sg8s-panel\.jpg/)
+  assert.match(desc, /<a href="https:\/\/example\.com\/silex-sg8s-manual"/)
+  // استایل‌های اینلاین قالب حفظ شده‌اند
+  assert.match(desc, /background:\s*#f9fafb/)
+  assert.match(desc, /font-family:\s*Tahoma/)
+  assert.match(desc, /<span style="color:#b45309; font-weight:bold;">/)
+
+  // (د) properties فقط شامل فست‌های کوتاه و استاندارد
+  const byLabel = new Map(prepared.properties.map((item) => [item.label, item.value]))
+  assert.equal(byLabel.get('نوع کاربری'), 'پنل دزدگیر اماکن سیم‌کارتی')
+  assert.equal(byLabel.get('تعداد زون'), '5 زون')
+  assert.equal(byLabel.get('تعداد رله'), '4 رله')
+  assert.equal(byLabel.get('فرکانس کاری'), '433 مگاهرتز')
+  assert.equal(byLabel.get('نوع کددهی'), 'هاپینگ کد (Hopping)')
+  // ردیف‌های صرفاً جدولی وارد properties نمی‌شوند
+  for (const label of ['مدت ضبط پیام', 'تعداد مدیران سیستم', 'حالت‌های قابل تعریف برای زون', 'گارانتی']) {
+    assert.equal(byLabel.has(label), false, `${label} باید فقط در specifications بماند`)
+  }
+  // نیم‌فاصله در مقدار باکت حفظ می‌شود
+  assert.ok(prepared.properties.every((item) => item.value === item.bucket))
+})
+
+// ------------------------------------------------------------
+// ۱۱) propBase: ورود اول به دسته بدون هیچ فیلتری
+// ------------------------------------------------------------
+test('propBase populates facets with real counts on first category entry (no filters)', async () => {
+  const categoryId = id(701)
+  const otherCategory = id(702)
+  const rules = [
+    { name: 'تعداد زون', order: 0, isFilterable: true, options: [] },
+    { name: 'فرکانس کاری', order: 1, isFilterable: true, options: [] },
+    { name: 'نوع اتصال', order: 2, isFilterable: true, options: [] },
+  ]
+
+  const build = (n, props, category = categoryId) => ({
+    _id: id(n),
+    name: `Alarm ${n}`,
+    isActive: true,
+    price: 1000,
+    stock: 3,
+    rating: 4,
+    discount: 0,
+    createdAt: now,
+    category,
+    variants: [],
+    properties: props.map(([label, value]) => ({
+      label,
+      value,
+      normLabel: normCompareKey(label),
+      normValue: toValueKey(value),
+      bucket: value,
+    })),
+  })
+
+  const products = [
+    build(1, [['تعداد زون', '5 زون'], ['فرکانس کاری', '433 مگاهرتز'], ['نوع اتصال', 'بی‌سیم']]),
+    build(2, [['تعداد زون', '8 زون'], ['فرکانس کاری', '433 مگاهرتز'], ['نوع اتصال', 'باسیم']]),
+    build(3, [['تعداد زون', '5 زون'], ['فرکانس کاری', '433 مگاهرتز'], ['نوع اتصال', 'بی‌سیم']]),
+    // محصول دسته‌ی دیگر نباید شمرده شود
+    build(9, [['تعداد زون', '99 زون']], otherCategory),
+  ]
+
+  const chain = () => ({ select() { return this }, sort() { return this }, lean: async () => [] })
+  const models = {
+    Product: {
+      aggregate: (pipeline) => ({ allowDiskUse: async () => aggregate(products, pipeline) }),
+    },
+    Brand: { find: () => chain() },
+    Sale: { find: () => chain() },
+    Category: {
+      collection: { name: 'categories' },
+      findOne: () => ({ select: () => ({ lean: async () => ({ _id: categoryId }) }) }),
+      aggregate: async () => [{
+        ids: [categoryId],
+        selfProperties: rules,
+        ancestorProperties: [],
+        descendantProperties: [],
+      }],
+    },
+  }
+
+  // بدون هیچ پارامتر properties[...] — حالت «ورود اول به دسته»
+  const result = await listProducts({ category: 'alarm-panels' }, models, now)
+
+  assert.ok(Array.isArray(result.facets.properties))
+  assert.ok(result.facets.properties.length > 0, 'سایدبار نباید خالی باشد')
+
+  const byName = new Map(result.facets.properties.map((facet) => [facet.name, facet]))
+  const zones = byName.get('تعداد زون')
+  assert.ok(zones, 'تعداد زون باید حاضر باشد')
+  const zoneValues = new Map(zones.values.map((v) => [v.value, v.count]))
+  assert.equal(zoneValues.get('5 زون'), 2)
+  assert.equal(zoneValues.get('8 زون'), 1)
+  assert.equal(zoneValues.get('99 زون'), undefined, 'محصول دسته‌ی دیگر شمرده نمی‌شود')
+
+  const freq = byName.get('فرکانس کاری')
+  assert.ok(freq)
+  assert.equal(freq.values.find((v) => v.value === '433 مگاهرتز').count, 3)
+
+  // نیم‌فاصله در برچسب نمایشی حفظ می‌شود
+  const conn = byName.get('نوع اتصال')
+  assert.ok(conn)
+  assert.ok(conn.values.some((v) => v.value === 'بی‌سیم' && v.count === 2))
 })
 
 // ------------------------------------------------------------

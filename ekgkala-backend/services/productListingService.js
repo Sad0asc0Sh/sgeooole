@@ -9,8 +9,10 @@ const {
   variantCouplingStages,
   facetBaseStages,
   propertyFacetBranchWithCounts,
+  basePropertiesFacetBranch,
   rankAndFormatPropertyFacets,
 } = require('./listingFacets')
+const { normCompareKey } = require('./specNormalization')
 
 const MAX_PAGE = 100000
 const MAX_LIMIT = 100
@@ -516,6 +518,10 @@ function buildListingPipeline(options, {
     priceRange: [{ $group: { _id: null, min: { $min: ref('price') }, max: { $max: ref('price') } } }],
   }
   if (includeFacets) {
+    // پایه‌ی فست ویژگی‌ها: همه‌ی جفت‌های (برچسب، مقدار) در نتایج فعلی.
+    // بدون این شاخه، ورود اول به یک دسته (بدون فیلتر انتخابی) هیچ شاخه‌ی
+    // prop_* نداشت و همه‌ی شمارش‌ها صفر می‌ماندند.
+    facetBranches.propBase = basePropertiesFacetBranch({ definiteMatches, priceMatch })
     // فست برند: برند اعمال نمی‌شود (Disjunctive) تا سایر برندها هم دیده شوند
     facetBranches.brands = [
       ...facetBaseStages({ priceMatch: options.priceConditions }),
@@ -584,10 +590,37 @@ async function buildFacets({ raw, criteria, context, options, models }) {
       .filter(Boolean)
   }
 
-  // --- ویژگی‌ها: از شاخه‌ی prop_i به باکت‌های هر برچسب ---
-  // `_id` کلید مقایسه‌ای است (برای ادغام مقدارهای هم‌ارز) و `displayValue`
-  // رشته‌ی خام با نیم‌فاصله‌ی حفظ‌شده است (برای نمایش در UI).
+  // --- ویژگی‌ها ---
+  // ۱) ابتدا propBase: همه‌ی ویژگی‌های موجود با شمارش واقعی (ورود اول به دسته)
+  // ۲) سپس شاخه‌ی Disjunctive ویژگی‌های انتخاب‌شده جایگزین می‌شود تا مقادیر
+  //    خواهرِ همان ویژگی، شمارش مستقل خود را حفظ کنند.
   const bucketsByLabel = new Map()
+  const addBucket = (label, entry) => {
+    if (!bucketsByLabel.has(label)) bucketsByLabel.set(label, [])
+    bucketsByLabel.get(label).push(entry)
+  }
+
+  const ruleByKey = new Map(filterableRules(context.categoryRules).map((rule) => [rule.key, rule]))
+  const resolveLabel = (labelKey, labelDisplay) => {
+    const rule = ruleByKey.get(normCompareKey(labelKey))
+      || (labelDisplay ? ruleByKey.get(normCompareKey(labelDisplay)) : null)
+    return rule ? rule.name : (labelDisplay || labelKey)
+  }
+
+  for (const row of Array.isArray(raw?.propBase) ? raw.propBase : []) {
+    const labelKey = row?._id?.labelKey
+    const valKey = row?._id?.valKey
+    if (!labelKey || !valKey) continue
+    const display = row.displayValue || valKey
+    addBucket(resolveLabel(labelKey, row.labelDisplay), {
+      key: valKey,
+      value: display,
+      bucket: display,
+      count: row.count,
+    })
+  }
+
+  // شاخه‌های اختصاصی ویژگی‌های انتخاب‌شده، نتایج propBase همان برچسب را جایگزین می‌کنند
   criteria.forEach((criterion, index) => {
     const rows = Array.isArray(raw?.[`prop_${index}`]) ? raw[`prop_${index}`] : []
     bucketsByLabel.set(
@@ -602,6 +635,7 @@ async function buildFacets({ raw, criteria, context, options, models }) {
         })),
     )
   })
+
   // ویژگی‌های تعریف‌شده در دسته حتی بدون محصول هم در سایدبار دیده شوند
   for (const rule of filterableRules(context.categoryRules)) {
     if (!bucketsByLabel.has(rule.name)) bucketsByLabel.set(rule.name, [])
@@ -611,6 +645,8 @@ async function buildFacets({ raw, criteria, context, options, models }) {
     bucketsByLabel,
     rules: context.categoryRules,
     selected: options.properties,
+    // سقف ویژگی‌های خودکار: در صفحه‌ی دسته ۱۰، در جستجوی آزاد ۶
+    maxAutoFacets: context.categoryRules.length ? 10 : 6,
   })
 
   return { brands, categories, properties }

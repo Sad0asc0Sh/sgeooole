@@ -102,6 +102,7 @@ export interface Product {
     countInStock: number;
     colors?: ProductColor[]; // Optional color variants
     specs?: ProductSpec[]; // Technical specifications
+    guarantee?: string; // Product guarantee text (e.g. "36 ماه گارانتی سایلکس")
     campaignLabel?: string; // Active campaign name (time-limited discount)
     campaignTheme?: string; // Badge color theme
     compareAtPrice?: number; // Original price for comparison

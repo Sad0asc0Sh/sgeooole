@@ -23,9 +23,12 @@ const {
   normCompareKey,
   toValueKey,
   normalizeBucketValue,
+  normalizeFacetValue,
+  canonicalizeSpecLabel,
   isNonFilterableKey,
   NON_FILTERABLE_KEYS_BASE,
   PREVIOUSLY_BLOCKED_KEYS,
+  SPEC_TABLE_ONLY_KEYS,
 } = require('./specNormalization')
 
 // نگهبان نفی برای سازگاری با مصرف‌کننده‌های خارجی
@@ -141,32 +144,125 @@ function extractSpecsFromHtml(html) {
   return pairs
 }
 
+// عنوان‌هایی که یک جدول را «جدول مشخصات فنی» می‌کنند
+const SPEC_HEADING_TEXT = /(?:مشخصات\s*فنی|جدول\s*مشخصات(?:\s*فنی)?|مشخصات\s*محصول)/iu
+
+/** تبدیل `<h1>` به `<h2>` — تک‌بودن h1 صفحه حفظ می‌شود (هم‌طول، پس ایندکس‌ها می‌مانند) */
+function demoteDescriptionH1(html) {
+  if (typeof html !== 'string' || !/<h1\b/i.test(html)) return html
+  return html.replace(/<h1(\b[^>]*)>([\s\S]*?)<\/h1>/gi, '<h2$1>$2</h2>')
+}
+
+/** ایندکس بسته‌شدن `</div>` متناظر با یک `<div ...>` (با شمارش تودرتویی) */
+function findMatchingDivClose(html, openIndex) {
+  const tagRe = /<\/?div\b[^>]*>/gi
+  tagRe.lastIndex = openIndex
+  let depth = 0
+  let match
+  while ((match = tagRe.exec(html)) !== null) {
+    if (match[0].startsWith('</')) depth -= 1
+    else depth += 1
+    if (depth === 0) return match.index + match[0].length
+  }
+  return -1
+}
+
 /**
- * حذف «فقط» جدول مشخصات فنی تکراری از توضیحات، بدون لمس بقیه‌ی DOM.
- * پیش‌فرض خاموش است و فقط وقتی ادمین صریحاً بخواهد اجرا می‌شود.
+ * محدوده‌ی کامل بلوک «مشخصات فنی» را پیدا می‌کند:
+ * کامنت `<!-- Technical Specifications -->` + کانتینر `<div>` + تیتر `<h2>` + `<table>`.
+ */
+function findSpecTableBlocks(html) {
+  const blocks = []
+  if (typeof html !== 'string' || !/<table\b/i.test(html)) return blocks
+
+  const tableRe = /<table\b[^>]*>[\s\S]*?<\/table>/gi
+  let table
+  let previousTableEnd = 0
+  while ((table = tableRe.exec(html)) !== null) {
+    const tableStart = table.index
+    const tableEnd = tableStart + table[0].length
+    // پنجره‌ی نگاه‌به‌عقب نباید از جدول قبلی عبور کند، وگرنه نشانگر «مشخصات فنی»
+    // جدول قبلی، جدول‌های بعدی را هم بی‌دلیل حذف می‌کند.
+    const windowStart = Math.max(previousTableEnd, tableStart - 900)
+    previousTableEnd = tableEnd
+    const before = html.slice(windowStart, tableStart)
+    const markerBefore = SPEC_TABLE_MARKER.test(stripTagsToText(before))
+    const markerInside = SPEC_TABLE_MARKER.test(stripTagsToText(table[0].slice(0, 400)))
+    if (!markerBefore && !markerInside) continue
+
+    let start = tableStart
+
+    // ۱) تیتر بلافاصله بالای جدول (حتی بدون div اختصاصی)
+    const headings = [...before.matchAll(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi)]
+    const lastHeading = headings.at(-1)
+    if (lastHeading) {
+      const headingStartAbs = tableStart - before.length + lastHeading.index
+      const headingEndAbs = headingStartAbs + lastHeading[0].length
+      if (/^\s*$/.test(html.slice(headingEndAbs, tableStart)) && SPEC_HEADING_TEXT.test(stripTagsToText(lastHeading[0]))) {
+        start = headingStartAbs
+      }
+    }
+
+    // ۲) کانتینر <div> بلافاصله قبل از تیتر/جدول
+    let containerOpen = -1
+    const beforeStart = html.slice(Math.max(0, start - 400), start)
+    const openDivs = [...beforeStart.matchAll(/<div\b[^>]*>/gi)]
+    const lastOpenDiv = openDivs.at(-1)
+    if (lastOpenDiv) {
+      const divStartAbs = start - beforeStart.length + lastOpenDiv.index
+      if (/^\s*$/.test(html.slice(divStartAbs + lastOpenDiv[0].length, start))) {
+        containerOpen = divStartAbs
+        start = divStartAbs
+      }
+    }
+
+    // ۳) کامنت <!-- Technical Specifications --> قبل از بلوک
+    const beforeComment = html.slice(Math.max(0, start - 400), start)
+    const comments = [...beforeComment.matchAll(/<!--[\s\S]*?-->/g)]
+    const lastComment = comments.at(-1)
+    if (lastComment) {
+      const commentStartAbs = start - beforeComment.length + lastComment.index
+      const commentEndAbs = commentStartAbs + lastComment[0].length
+      if (/^\s*$/.test(html.slice(commentEndAbs, start))) start = commentStartAbs
+    }
+
+    // ۴) پایان بلوک: اگر کانتینر داشتیم، تا بسته‌شدن همان div
+    let end = tableEnd
+    if (containerOpen >= 0) {
+      const close = findMatchingDivClose(html, containerOpen)
+      if (close > 0) end = close
+    }
+
+    blocks.push({ start, end })
+  }
+  return blocks
+}
+
+/**
+ * حذف «کل بلوک» جدول مشخصات فنی از توضیحات — نه فقط تگ `<table>`.
+ *
+ * این تابع عمداً محافظه‌کار است: فقط بلوکی حذف می‌شود که نشانگر «مشخصات فنی»
+ * داشته باشد، و محدوده‌ی حذف دقیقاً تا بسته‌شدن کانتینر همان بلوک است. سایر
+ * بخش‌های قالب (هدر، معرفی محصول، کارت‌های ۰۱..۰۶، کاربردها، تصاویر و لینک‌ها)
+ * با تمام استایل‌های اینلاین دست‌نخورده می‌مانند.
+ *
+ * همچنین `<h1>` داخل توضیحات به `<h2>` تبدیل می‌شود تا سئوی صفحه (تک‌بودن h1) حفظ شود.
  */
 function removeDuplicateSpecTables(html) {
-  if (typeof html !== 'string' || !html.includes('<table')) return html
-  const tableRe = /<table\b[^>]*>[\s\S]*?<\/table>/gi
-  let result = ''
-  let lastIndex = 0
-  let match
-  while ((match = tableRe.exec(html)) !== null) {
-    // نشانگر ممکن است در عنوان بالای جدول باشد (رایج) یا در اولین ردیف خودِ
-    // جدول (مثلاً <th>مشخصات فنی</th>). هر دو پذیرفته می‌شود، ولی حذف فقط
-    // روی همین یک جدول انجام می‌شود.
-    const before = html.slice(Math.max(0, match.index - 400), match.index)
-    const markerBefore = SPEC_TABLE_MARKER.test(stripTagsToText(before))
-    const markerInside = SPEC_TABLE_MARKER.test(stripTagsToText(match[0].slice(0, 300)))
-    if (markerBefore || markerInside) {
-      result += html.slice(lastIndex, match.index)
-    } else {
-      result += html.slice(lastIndex, match.index + match[0].length)
+  if (typeof html !== 'string' || !html) return html
+
+  const blocks = findSpecTableBlocks(html)
+  let cleaned = html
+  if (blocks.length) {
+    // از انتها به ابتدا حذف می‌کنیم تا ایندکس‌های قبلی معتبر بمانند
+    for (const block of [...blocks].sort((a, b) => b.start - a.start)) {
+      cleaned = cleaned.slice(0, block.start) + cleaned.slice(block.end)
     }
-    lastIndex = match.index + match[0].length
+    // فاصله‌ی خالی باقی‌مانده در انتها را جمع کن (باکس خالی نساز)
+    cleaned = cleaned.replace(/(?:\s|<br\s*\/?>)+$/gi, '').trim()
   }
-  result += html.slice(lastIndex)
-  return result
+
+  return demoteDescriptionH1(cleaned)
 }
 
 // ------------------------------------------------------------
@@ -259,26 +355,44 @@ function isExplicitlyEnabledByAdmin(label, categoryRules) {
 }
 
 /**
- * تصمیم نهایی «قابل فیلتر بودن» یک ویژگی.
- * اولویت مطلق با ادمین است: تعریف در دسته + isFilterable !== false
- * بر تمام لیست‌های سیاه داخلی مقدم است.
+ * تصمیم نهایی «قابل فیلتر بودن» یک ویژگی + ساخت جفت (label, value) استاندارد.
+ *
+ * دو لایه:
+ *  - `value`    : متن کامل و خام (برای جدول specifications صفحه محصول)
+ *  - `normValue`: باکت کوتاه و خوانا (برای چیپ فست سایدبار)
+ *
+ * اولویت مطلق با ادمین است: تعریف در دسته + isFilterable !== false بر تمام
+ * لیست‌های سیاه داخلی (از جمله SPEC_TABLE_ONLY_KEYS) مقدم است.
  */
 function normalizeFilterFacetPair({ label, value, categoryRules } = {}) {
-  const cleanLabel = normalizeText(label)
-  if (!cleanLabel) return null
-  const explicitlyEnabledByAdmin = isExplicitlyEnabledByAdmin(cleanLabel, categoryRules)
-  const filterable = explicitlyEnabledByAdmin ? true : !isNonFilterableKey(cleanLabel)
-  const normValue = normalizeBucketValue(cleanLabel, value)
-  if (normValue === null) return null
+  const rawLabel = normalizeText(label)
+  if (!rawLabel) return null
+  const rawValue = normalizeText(value)
+  if (!rawValue) return null
+
+  const canonicalLabel = canonicalizeSpecLabel(rawLabel, categoryRules)
+  const explicitlyEnabledByAdmin =
+    isExplicitlyEnabledByAdmin(canonicalLabel, categoryRules) ||
+    isExplicitlyEnabledByAdmin(rawLabel, categoryRules)
+
+  const { bucket, filterable: bucketFilterable } = normalizeFacetValue(canonicalLabel, value)
+  if (bucket === null) return null
+
   const rule = Array.isArray(categoryRules)
-    ? categoryRules.find((item) => item && normCompareKey(item.name) === normCompareKey(cleanLabel))
+    ? categoryRules.find((item) => item && normCompareKey(item.name) === normCompareKey(canonicalLabel))
     : null
+
   return {
-    label: cleanLabel,
-    value: normalizeText(value),
-    normValue,
+    label: canonicalLabel,
+    rawLabel,
+    // متن کامل برای specifications
+    value: rawValue,
+    rawValue,
+    // باکت کوتاه برای properties / سایدبار
+    normValue: bucket,
+    bucket,
     explicitlyEnabledByAdmin,
-    filterable,
+    filterable: explicitlyEnabledByAdmin ? true : bucketFilterable,
     isPinned: Boolean(rule && rule.isPinned),
     order: rule && Number.isFinite(Number(rule.order)) ? Number(rule.order) : null,
     unit: rule && rule.unit ? rule.unit : '',
@@ -318,21 +432,26 @@ function attributePairs(attributes) {
 // ------------------------------------------------------------
 // ۵) موتور اصلی
 // ------------------------------------------------------------
+// برچسب‌هایی که مقدارشان می‌تواند فیلد `guarantee` محصول را پر کند
+const GUARANTEE_LABEL_KEYS = new Set(
+  ['گارانتی', 'مدت گارانتی', 'ضمانت', 'مدت ضمانت'].map(normCompareKey),
+)
+
 /**
  * آماده‌سازی مشخصات و توضیحات یک محصول.
  *
  * @param {object} product محصول (سند Mongoose، شیء ساده یا payload ادمین)
  * @param {Array}  categoryRules قواعد properties دسته‌بندی (با ارث‌بری)
  * @param {object} options
- *   - removeDuplicateSpecTable: حذف صریح جدول مشخصات تکراری (پیش‌فرض false)
+ *   - removeDuplicateSpecTable: حذف کل بلوک جدول مشخصات از توضیحات (پیش‌فرض true)
  *   - applyStructuredTemplate: درج قالب پیش‌فرض (پیش‌فرض false)
  *   - extractFromDescription: استخراج مشخصات از HTML توضیحات (پیش‌فرض true)
- * @returns {{properties: Array, specifications: object, description: string, extracted: Array}}
+ * @returns {{properties: Array, specifications: object, description: string, guarantee: string, extracted: Array}}
  */
 function prepareProductSpecsAndDescription(product, categoryRules = [], options = {}) {
   const source = product || {}
   const {
-    removeDuplicateSpecTable = false,
+    removeDuplicateSpecTable = true,
     applyStructuredTemplate = false,
     extractFromDescription = true,
   } = options
@@ -362,8 +481,10 @@ function prepareProductSpecsAndDescription(product, categoryRules = [], options 
 
   // (۵) استخراج خواندنی از HTML توضیحات (Phase 2.2.2)
   const descriptionInput = typeof source.description === 'string' ? source.description : ''
+  let extractedFromDesc = []
   if (extractFromDescription && descriptionInput) {
-    for (const pair of extractSpecsFromHtml(descriptionInput)) add(pair.label, pair.value, 'description')
+    extractedFromDesc = extractSpecsFromHtml(descriptionInput)
+    for (const pair of extractedFromDesc) add(pair.label, pair.value, 'description')
   }
 
   // ترتیب: ابتدا ترتیب دسته‌بندی، سپس الفبایی برای بقیه (پایدار)
@@ -378,34 +499,60 @@ function prepareProductSpecsAndDescription(product, categoryRules = [], options 
     return normCompareKey(a.label).localeCompare(normCompareKey(b.label), 'fa')
   })
 
-  // specifications استاندارد (شیء label → value؛ اولین مقدار برنده)
+  // ------------------------------------------------------------
+  // لایه‌ی اول: specifications — جدول کامل صفحه محصول (متن کامل)
+  // ------------------------------------------------------------
+  // همه‌ی آیتم‌ها وارد می‌شوند، حتی `filterable: false` (مثل «مدت ضبط پیام»
+  // یا «تعداد مدیران سیستم») تا تب «مشخصات فنی» هیچ ردیفی را از دست ندهد.
+  // برچسب این لایه «خام» است (وفاداری به سند اصلی)؛ برچسب استانداردشده فقط
+  // در لایه‌ی دوم (properties) استفاده می‌شود.
   const specifications = {}
   for (const item of collected) {
-    if (!(item.label in specifications)) specifications[item.label] = item.value
+    const label = item.rawLabel || item.label
+    if (!(label in specifications)) specifications[label] = item.value
   }
 
-  // properties مخصوص موتور فستینگ (شامل مقادیر نرمال‌شده)
-  // normLabel: کلید مقایسه‌ای برچسب — normValue: باکت استاندارد مقدار.
-  // تطبیق کوئری هم دقیقاً از همین دو تابع عبور می‌کند (Phase 2.4.1).
-  const properties = collected.map((item) => ({
-    label: item.label,
-    value: item.value,
-    normLabel: normCompareKey(item.label),
-    normValue: toValueKey(item.normValue),
-    bucket: item.normValue,
-  }))
+  // ------------------------------------------------------------
+  // لایه‌ی دوم: properties — فقط فست‌های کوتاه و قابل فیلتر سایدبار
+  // ------------------------------------------------------------
+  // `value` = باکت خوانا (با نیم‌فاصله) — `normValue` = کلید مقایسه‌ای.
+  // کلیدهای صرفاً جدولی و جمله‌های بلند اینجا حذف می‌شوند.
+  const properties = collected
+    .filter((item) => item.filterable)
+    .map((item) => ({
+      label: item.label,
+      value: item.normValue,
+      normLabel: normCompareKey(item.label),
+      normValue: toValueKey(item.normValue),
+      bucket: item.normValue,
+    }))
+
+  // ---- گارانتی: از مشخصات استخراج‌شده اگر فیلد اختصاصی خالی بود ----
+  let guarantee = normalizeText(source.guarantee || '')
+  if (!guarantee) {
+    const found = collected.find((item) => GUARANTEE_LABEL_KEYS.has(normCompareKey(item.rawLabel || item.label)))
+    if (found) guarantee = found.value
+  }
 
   // ---- توضیحات: غیرمخرب ----
   let description = descriptionInput
-  if (description && removeDuplicateSpecTable) {
+  // پیش‌فرض روشن: اگر از جدول مشخصات فنیِ توضیحات حداقل یک جفت استخراج شد،
+  // کل بلوک (کامنت + کانتینر + تیتر + جدول) حذف می‌شود تا با تب مشخصات فنی
+  // تکرار نشود و باکس سفید خالی در انتهای توضیحات نماند.
+  if (description && removeDuplicateSpecTable && extractedFromDesc.length > 0) {
     description = removeDuplicateSpecTables(description)
+  } else if (description) {
+    // حتی وقتی جدولی برای حذف نیست، h1 داخلی باید به h2 تبدیل شود
+    description = demoteDescriptionH1(description)
   }
   if (applyStructuredTemplate) {
     // فقط با درخواست صریح ادمین؛ و فقط وقتی توضیحات خالی است یا ادمین
     // واقعاً خواسته قالبنشود. محتوای موجود هرگز دور ریخته نمی‌شود.
     const template = buildStructuredHtmlDescription({
       name: source.name,
-      properties: collected.map((item) => ({ label: item.label, value: item.value })),
+      properties: collected
+        .filter((item) => item.filterable)
+        .map((item) => ({ label: item.label, value: item.normValue })),
     })
     description = description && description.trim() ? `${description}\n${template}` : template
   }
@@ -414,12 +561,22 @@ function prepareProductSpecsAndDescription(product, categoryRules = [], options 
     properties,
     specifications,
     description,
-    extracted: collected.map(({ label, value, bucket, source: sourceTag }) => ({ label, value, bucket, source: sourceTag })),
+    guarantee,
+    extracted: collected.map(({ label, value, normValue, filterable, source: sourceTag }) => ({
+      label,
+      value,
+      bucket: normValue,
+      filterable,
+      source: sourceTag,
+    })),
+    extractedFromDescriptionCount: extractedFromDesc.length,
   }
 }
 
 /**
  * فقط استخراج (بدون تغییر توضیحات) — برای Backfill و endpointهای دسته‌بندی.
+ * توجه: توضیحات این‌جا دست‌نخورده برمی‌گردد (removeDuplicateSpecTable=false)
+ * تا Backfill هرگز متن ادمین را تغییر ندهد.
  */
 function extractSpecsOnly(product, categoryRules = []) {
   return prepareProductSpecsAndDescription(product, categoryRules, {
@@ -436,11 +593,13 @@ module.exports = {
     prepareProductSpecsAndDescription(
       { description, specifications: options.specifications },
       options.categoryRules || [],
-      { removeDuplicateSpecTable: options.removeDuplicateSpecTable === true },
+      { removeDuplicateSpecTable: options.removeDuplicateSpecTable !== false },
     ),
   buildStructuredHtmlDescription,
   extractSpecsFromHtml,
   removeDuplicateSpecTables,
+  findSpecTableBlocks,
+  demoteDescriptionH1,
   stripTagsToText,
   hasRichHtml,
   toSpecPairs,
@@ -449,6 +608,8 @@ module.exports = {
   normalizeFilterFacetPair,
   isExplicitlyEnabledByAdmin,
   NEGATION_GUARD,
+  GUARANTEE_LABEL_KEYS,
+  SPEC_TABLE_ONLY_KEYS,
   NON_FILTERABLE_KEYS: NON_FILTERABLE_KEYS_BASE,
   PREVIOUSLY_BLOCKED_KEYS,
 }

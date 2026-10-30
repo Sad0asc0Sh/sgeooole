@@ -25,14 +25,20 @@ const imageUrls = (images) => (Array.isArray(images) ? images : [])
 const MAX_SPEC_ENTRIES = 80
 
 const mapSpecifications = (product) => {
+  const { normCompareKey } = require('../services/specNormalization')
   const spec = {}
+  const seenKeys = new Set()
   let count = 0
   const put = (name, value) => {
     if (count >= MAX_SPEC_ENTRIES) return
     const key = String(name == null ? '' : name).trim()
     const text = String(value == null ? '' : value).trim()
     if (!key || !text) return
-    if (Object.prototype.hasOwnProperty.call(spec, key)) return
+    // برچسب‌های هم‌معنا («فرکانس ریموت» و «فرکانس کاری») یک بار در فید می‌آیند؛
+    // اولی (از specifications، متن کامل) برنده است.
+    const compareKey = normCompareKey(key)
+    if (seenKeys.has(compareKey)) return
+    seenKeys.add(compareKey)
     spec[key] = text
     count += 1
   }
