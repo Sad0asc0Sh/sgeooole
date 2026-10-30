@@ -254,8 +254,13 @@ const BUILTIN_KEY_SYNONYMS = [
   { canonical: 'برد عملکرد', aliases: ['برد ریموت', 'برد ریموت کنترل', 'برد عملیاتی', 'برد'] },
   { canonical: 'ظرفیت هر لنگه', aliases: ['حداکثر وزن هر لنگه', 'تحمل وزن هر لنگه', 'قدرت جابجایی هر لنگه', 'وزن هر لنگه'] },
   { canonical: 'قدرت لیفت موتور', aliases: ['قدرت لیفت', 'قدرت لیفت ظرفیت', 'قدرت موتور'] },
-  { canonical: 'نوع اتصال', aliases: ['نوع ارتباط', 'اتصال', 'رابط ارتباطی'] },
+  { canonical: 'نوع اتصال', aliases: ['نوع ارتباط', 'اتصال', 'رابط ارتباطی', 'نحوه اتصال'] },
   { canonical: 'گارانتی', aliases: ['مدت گارانتی', 'ضمانت', 'مدت ضمانت'] },
+  // تجهیزات امنیتی / الکترونیکی (Commit 48.3)
+  { canonical: 'تعداد زون', aliases: ['زون ها', 'زون‌ها', 'تعداد زون باسیم و بیسیم', 'ظرفیت زون'] },
+  { canonical: 'پشتیبانی از سیم‌کارت', aliases: ['سیم کارت', 'سیم‌کارت', 'ماژول سیم کارت', 'ماژول سیم‌کارت'] },
+  { canonical: 'نحوه کنترل', aliases: ['کنترل از راه دور', 'روش کنترل', 'مدیریت دستگاه'] },
+  { canonical: 'جریان مصرفی', aliases: ['جریان خروجی', 'شدت جریان', 'آمپر خروجی', 'جریان'] },
 ]
 
 const SYNONYM_LOOKUP = (() => {
@@ -287,6 +292,112 @@ function canonicalizeSpecLabel(label, categoryRules = []) {
   }
 
   return SYNONYM_LOOKUP.get(key) || raw
+}
+
+// ------------------------------------------------------------
+// ۳.۵.۱) ویژگی‌های هویتی کالا (Core Identity)
+// ------------------------------------------------------------
+// این‌ها «شناسنامه‌ی» یک کالا هستند: حتی اگر دسته فقط یک محصول داشته باشد،
+// باید در سایدبار دیده شوند تا کالا قابل پیدا شدن باشد.
+const CORE_IDENTITY_LABELS = [
+  'نوع کاربری',
+  'تعداد زون',
+  'تعداد کانال',
+  'رزولوشن تصویر',
+  'حداکثر رزولوشن ضبط',
+  'فرکانس کاری',
+  'نوع کددهی',
+  'نوع اتصال',
+  'تعداد رله',
+  'تعداد کلید',
+  'ولتاژ تغذیه',
+  'جریان مصرفی',
+  'استاندارد حفاظتی',
+  'نوع دید در شب',
+  'سایز لنز',
+  'برد عملکرد',
+  'جنس بدنه',
+]
+
+const CORE_IDENTITY_KEYS = new Set(CORE_IDENTITY_LABELS.map(normCompareKey))
+
+function isCoreIdentityKey(label) {
+  const canonical = canonicalizeSpecLabel(label)
+  return CORE_IDENTITY_KEYS.has(normCompareKey(canonical)) || CORE_IDENTITY_KEYS.has(normCompareKey(label))
+}
+
+// ------------------------------------------------------------
+// ۳.۵.۲) فشرده‌ساز هوشمند عمومی مقادیر
+// ------------------------------------------------------------
+// هدف: حتی کالایی که هیچ قاعده‌ی اختصاصی برایش نوشته نشده، مقدارهای
+// توصیفی جدول HTML را به باکت کوتاه و فیلترپذیر تبدیل کند.
+const TRAILING_DESCRIPTOR_PATTERNS = [
+  /(?:^|\s)(?:قابل\s*برنامه\s*ریزی|قابل\s*برنامه‌ریزی)\s*$/iu,
+  /(?:^|\s)کنترلی\s*$/iu,
+  /(?:^|\s)در\s*فضای\s*باز\s*$/iu,
+  /(?:^|\s)در\s*حالت\s*استندبای\s*$/iu,
+  /(?:^|\s)با\s*قابلیت\s+[\s\S]+$/iu,
+  /(?:^|\s)پشتیبانی\s*از\s+[\s\S]+$/iu,
+  /(?:^|\s)به\s*همراه\s+[\s\S]+$/iu,
+]
+
+const stripTrailingDescriptors = (input) => {
+  let out = input
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const pattern of TRAILING_DESCRIPTOR_PATTERNS) {
+      const next = out.replace(pattern, '').trim()
+      if (next && next !== out) {
+        out = next
+        changed = true
+      }
+    }
+  }
+  return out
+}
+
+// «عدد + واحد» در ابتدای متن (نه لزوماً کل متن)
+const LEADING_QUANTITY_RE =
+  /^(\d+(?:[.,]\d+)?)\s*(ولت|آمپر|میلی[\s-]*آمپر|وات|کیلووات|متر|میلی[\s-]*متر|سانتی[\s-]*متر|مگاهرتز|گیگاهرتز|گیگابایت|ترابایت|مگابایت|کیلوبایت|مگاپیکسل|پیکسل|اینچ|دسی[\s-]*بل|دسیبل|آمپرساعت|میلی[\s-]*آمپرساعت|کیلوگرم|گرم|ساعت|دقیقه|ثانیه|روز|ماه|سال)/iu
+
+/**
+ * تبدیل عبارت توصیفی به باکت کوتاه.
+ *
+ * ترتیب:
+ *  ۱) حذف پسوندهای توصیفی رایج («قابل برنامه‌ریزی»، «کنترلی»، «در فضای باز»، …)
+ *  ۲) حذف پرانتز توضیحی انتهایی اگر بخش قبلش ۲..۳۰ کاراکتر باشد
+ *  ۳) برای کلیدهای «تعداد …»: استخراج «<عدد> <واحد بعدی>»
+ *  ۴) بازگرداندن «<عدد> <واحد استاندارد>» از ابتدای متن
+ *
+ * همیشه رشته برمی‌گرداند (در بدترین حالت، ورودیِ پاک‌سازی‌شده).
+ */
+function condenseDescriptiveValueToBucket(canonicalLabel, rawText) {
+  let text = normalizeText(rawText)
+  if (!text) return ''
+
+  // ۱) پسوندهای توصیفی
+  text = stripTrailingDescriptors(text)
+
+  // ۲) پرانتز توضیحی انتهایی
+  const paren = text.match(/^([\s\S]{2,30}?)\s*\([^)]*\)\s*$/u)
+  if (paren && paren[1].trim()) text = paren[1].trim()
+
+  // ۳) الگوی «تعداد …» با واحدِ بعد از عدد
+  if (/^تعداد\s/u.test(canonicalLabel || '')) {
+    const countMatch = text.match(/(\d{1,4})\s+([\p{L}\u200c]{2,})/u)
+    if (countMatch) return `${Number(countMatch[1])} ${countMatch[2]}`
+  }
+
+  // ۴) کمیت در ابتدای متن
+  const quantity = text.match(LEADING_QUANTITY_RE)
+  if (quantity) {
+    const unit = canonicalUnit(quantity[2])
+    const value = Number(quantity[1].replace(',', '.'))
+    if (unit && Number.isFinite(value)) return `${formatNumber(value)} ${unit}`
+  }
+
+  return text
 }
 
 // ------------------------------------------------------------
@@ -534,13 +645,17 @@ function normalizeFacetValue(label, rawValue) {
   if (!text) return { bucket: null, filterable: false, ruleMatched: false }
 
   const canonicalLabel = canonicalizeSpecLabel(label)
+
+  // ۱) قاعده‌ی اختصاصی همان ویژگی
   const rule = findFacetRule(canonicalLabel)
   if (rule) {
     const mapped = rule.map(text)
     if (mapped) return { bucket: mapped, filterable: true, ruleMatched: true }
   }
 
-  const bucket = normalizeBucketValue(canonicalLabel, text)
+  // ۲) فشرده‌ساز عمومی (پسوندهای توصیفی، پرانتز، تعداد/کمیت) سپس نرمال‌ساز
+  const condensed = condenseDescriptiveValueToBucket(canonicalLabel, text)
+  const bucket = normalizeBucketValue(canonicalLabel, condensed)
   if (!bucket) return { bucket: null, filterable: false, ruleMatched: false }
 
   const words = bucket.split(/\s+/).filter(Boolean).length
@@ -577,6 +692,10 @@ module.exports = {
   normalizeBucketValue,
   normalizeFacetValue,
   canonicalizeSpecLabel,
+  condenseDescriptiveValueToBucket,
+  isCoreIdentityKey,
+  CORE_IDENTITY_LABELS,
+  CORE_IDENTITY_KEYS,
   BUILTIN_KEY_SYNONYMS,
   SPEC_TABLE_ONLY_KEYS,
   MAX_FACET_VALUE_CHARS,

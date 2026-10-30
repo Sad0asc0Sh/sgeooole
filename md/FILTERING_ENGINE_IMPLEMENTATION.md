@@ -411,3 +411,99 @@ $unwind → $group({labelKey, valKey, doc}) → $group({labelKey, valKey})
 
 **محدودیت باقی‌مانده:** آزمایش انتها-به-انتها با MongoDB واقعی همچنان انجام نشده
 (نه `mongod` بود نه Docker)؛ تست‌ها با `mingo` اجرا می‌شوند.
+
+---
+
+## ۹) Commit 48.3 — موتور تطبیق‌پذیر و خودبه‌روزرسان
+
+### ۹.۱. رفع تکرار ردیف‌های هم‌معنا (۱۳ → ۹)
+
+**ریشه:** `specifications` برچسب خام دارد (`فرکانس ریموت`) و `properties` برچسب
+استاندارد (`فرکانس کاری`). هر سه مصرف‌کننده (PDP، فرم ادمین، فید ترب) کلید مقایسه را
+از جدول مترادف‌ها عبور نمی‌دادند ⇒ هر ۴ ویژگی هم‌معنا دو بار می‌آمد.
+
+**راه‌حل:** کلید مقایسه = `normCompareKey(canonicalizeSpecLabel(label))` در سه نقطه:
+
+| محل | پیاده‌سازی |
+|---|---|
+| `utils/torobMapper.js` | `mapSpecifications` → کلید کانونیکال؛ ردیف اول (متن کامل) برنده |
+| `frontend/src/lib/productSpecs.ts` | `SYNONYM_GROUPS` + `normalizeLabelKey` |
+| `admin/src/utils/specKey.js` (جدید) | `normSpecKey` برای ادغام در فرم ادمین |
+
+نتیجه‌ی سنجش: `Object.keys(mapSpecifications(prepared)).length === 9` (نه ۱۳) و
+`buildProductSpecs(...)` هم ۹ ردیف.
+
+### ۹.۲. فشرده‌ساز هوشمند عمومی (`condenseDescriptiveValueToBucket`)
+
+پیش از بررسی طول جمله در `normalizeFacetValue` اجرا می‌شود و چهار کار می‌کند:
+
+1. حذف پسوندهای توصیفی («قابل برنامه‌ریزی»، «کنترلی»، «در فضای باز»، «در حالت استندبای»،
+   «با قابلیت …»، «پشتیبانی از …»، «به همراه …»)
+2. حذف پرانتز توضیحی انتهایی اگر بخش قبلش ۲..۳۰ کاراکتر باشد
+3. برای کلیدهای `تعداد …`: `«<عدد> <کلمه بعدی>»`
+4. کمیت ابتدای متن: `«<عدد> <واحد استاندارد>»`
+
+نمونه‌ها: `20 حافظه پیامک و تماس` → `20 حافظه` · `4 پورت 10/100` → `4 پورت` ·
+`12 ولت DC (قابلیت کارکرد از 9 تا 15 ولت)` → `12 ولت` · `100 متر در فضای باز` → `100 متر`.
+
+به‌علاوه `CORE_IDENTITY_KEYS` (۱۷ ویژگی هویتی) و `isCoreIdentityKey` اضافه شد، و
+`BUILTIN_KEY_SYNONYMS` با ۴ گروه جدید (تعداد زون، پشتیبانی از سیم‌کارت، نحوه کنترل،
+جریان مصرفی) گسترش یافت.
+
+### ۹.۳. خودبه‌روزرسانی دائمی فست‌های دسته (`autoEvolveCategoryFacets`)
+
+سرویس جدید `services/categoryFacetEvolution.js`:
+
+- `loadCategoryRulesWithAncestors` — قواعد دسته + والدها با `$graphLookup`
+- `autoEvolveCategoryFacets` — افزودن ویژگی/گزینه به `category.properties`
+
+قواعد: تصمیم `isFilterable: false` ادمین محترم است؛ گزینه‌ها تا ۶۰ مورد؛ حداکثر ۲۴
+ویژگی در هر دسته؛ ویژگی‌های هویتی `isPinned` می‌شوند (سقف ۴) و ترتیب ۱..۱۷ می‌گیرند؛
+کلیدهای صرفاً جدولی هرگز خودکار اضافه نمی‌شوند.
+
+**محل‌های فراخوانی:** `normalizeProductSpecPayload` (ذخیره‌ی محصول)، `handleProductImport`
+(یک بار به ازای هر دسته پس از درون‌ریزی، با فیلد `facetsEvolved` در پاسخ)، و اسکریپت
+`scripts/backfillProductSpecs.js`.
+
+### ۹.۴. هویت تک‌محصول
+
+قاعده‌ی قبلی `liveValues.length < 2 → حذف` باعث می‌شد دسته‌ی تک‌محصول هیچ فیلتری
+نداشته باشد. اکنون فقط `0` یا `>18` حذف می‌شود و رتبه‌بندی بر اساس
+`(چندمقداره ? 2 : 0) + (هویتی ? 1 : 0)` است. نتیجه: SG8-S تنها در دسته‌اش، هر ۵ فست
+هویتی را با `count: 1` نشان می‌دهد.
+
+**باگ جانبی که در همین مسیر پیدا و رفع شد:** `rankAndFormatPropertyFacets` کلید قواعد را
+فقط از `rule.key` می‌گرفت؛ اگر قواعد خام (بدون `mergeCategoryRules`) داده می‌شد، همه
+`isConfigured=false` می‌شدند. اکنون `rule.key || normCompareKey(rule.name)`.
+
+### ۹.۵. Paste هوشمند در ویرایشگر ادمین
+
+- `RichTextEditor.jsx`: تشخیص قالب ساختاریافته (`#f9fafb` / `Tahoma` / `<!-- Header` /
+  `<table`) و باز شدن خودکار در **حالت HTML** تا Quill استایل‌ها را تخریب نکند؛
+  به‌علاوه رهگیری `paste` در فاز capture: کد HTML خام مستقیماً به حالت HTML می‌رود.
+- `ProductForm.jsx`: `Form.useWatch('description')` + `handleDescriptionChange` ⇒
+  به‌محض Paste شدن جدول، مشخصات بلافاصله استخراج، جدول از توضیحات حذف و پیام موفقیت
+  نمایش داده می‌شود (بدون کلیک).
+
+### ۹.۶. تکمیل درون‌ریزی و مهاجرت
+
+- `specsForImportRow`: شرط `hasSpecs` (properties **یا** specifications)، بازگرداندن
+  `description` و `guarantee`، و ثبت آن‌ها در هر دو مسیر create/update.
+- قواعد دسته در درون‌ریزی با ارث‌بری والدها (در حافظه، بدون کوئری اضافه).
+- `backfillCategoryProductSpecs`: افزودن `{ specifications: { $exists: false } }` و
+  `{ description: /<table/i }` به شرط، و ذخیره‌ی `description`/`guarantee`.
+- `scripts/backfillProductSpecs.js`: `--dry-run` / `--apply` / `--verbose` / `--limit=N`.
+
+### ۹.۷. نتایج اعتبارسنجی Commit 48.3
+
+| بررسی | نتیجه |
+|---|---|
+| `npm --prefix ekgkala-backend test` | **۰ خطا** (exit=0) |
+| `filtering-engine.test.cjs` | **۳۰/۳۰** (۳ تست جدید 48.3) |
+| `npm --prefix frontend run typecheck` | بدون خطا |
+| `npm --prefix frontend test` | **۳۱۰/۳۱۰** (۶ تست `productSpecs`) |
+| `npm --prefix admin run build` | **موفق** |
+
+**محدودیت باقی‌مانده:** آزمایش انتها-به‌انتهای مهاجرت با MongoDB واقعی انجام نشد
+(نه `mongod` بود نه Docker)؛ اسکریپت مهاجرت آماده است و باید در محیط با دیتابیس
+ابتدا با `--dry-run` اجرا شود.

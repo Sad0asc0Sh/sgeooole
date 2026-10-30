@@ -12,7 +12,13 @@
  * ============================================================
  */
 
-const { normalizeBucketValue, normCompareKey, toValueKey, isNonFilterableKey } = require('./specNormalization')
+const {
+  normalizeBucketValue,
+  normCompareKey,
+  toValueKey,
+  isNonFilterableKey,
+  isCoreIdentityKey,
+} = require('./specNormalization')
 
 const INTERNAL = '__listing'
 
@@ -497,7 +503,11 @@ function rankAndFormatPropertyFacets({
   maxValues = 40,
   maxAutoFacets = 10,
 } = {}) {
-  const ruleByKey = new Map(filterableRules(rules).map((rule) => [rule.key, rule]))
+  // `mergeCategoryRules` برچسب نرمال‌شده (`key`) را می‌سازد، اما این تابع نباید
+  // به آن وابسته باشد: قواعد خام (مثلاً از تست یا فراخوانی مستقیم) هم باید کار کنند.
+  const ruleByKey = new Map(
+    filterableRules(rules).map((rule) => [rule.key || normCompareKey(rule.name), rule]),
+  )
   const labels = new Set([...bucketsByLabel.keys(), ...selected.keys()])
 
   const result = []
@@ -582,15 +592,27 @@ function rankAndFormatPropertyFacets({
     // کلیدهای صرفاً جدولی هرگز به‌صورت خودکار وارد سایدبار نمی‌شوند
     if (isNonFilterableKey(entry.name)) continue
     const liveValues = entry.values.filter((item) => (Number(item.count) || 0) > 0)
-    // تک‌مقداره‌ها فایده‌ی فیلترینگ ندارند؛ پراکندگی بیش از ۱۸ مقدار هم
-    // سایدبار را غیرقابل استفاده می‌کند.
-    if (liveValues.length < 2 || liveValues.length > 18) continue
+    // هیچ مقدار زنده‌ای ندارد ⇒ بی‌فایده؛ بیش از ۱۸ مقدار ⇒ سایدبار غیرقابل استفاده.
+    //
+    // نکته‌ی مهم (Single-Product Identity): ویژگی تک‌مقداره حذف نمی‌شود. اگر یک
+    // دسته فقط یک محصول داشته باشد، همان یک مقدار «هویت» آن کالاست و باید در
+    // سایدبار دیده شود تا کالا قابل پیدا شدن باشد.
+    if (liveValues.length === 0 || liveValues.length > 18) continue
+    entry.liveValueCount = liveValues.length
+    entry.isCoreIdentity = isCoreIdentityKey(entry.name)
     autos.push(entry)
   }
 
   configured.sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'fa'))
   userSelected.sort((a, b) => a.name.localeCompare(b.name, 'fa'))
-  autos.sort((a, b) => (b.totalCoverage - a.totalCoverage) || a.name.localeCompare(b.name, 'fa'))
+  // رتبه‌بندی: چندمقداره‌ی هویتی > هویتیِ تک‌مقداره > چندمقداره > بقیه؛
+  // سپس بر اساس پوشش و الفبا.
+  autos.sort((a, b) => {
+    const aScore = (a.liveValueCount >= 2 ? 2 : 0) + (a.isCoreIdentity ? 1 : 0)
+    const bScore = (b.liveValueCount >= 2 ? 2 : 0) + (b.isCoreIdentity ? 1 : 0)
+    if (bScore !== aScore) return bScore - aScore
+    return (b.totalCoverage - a.totalCoverage) || a.name.localeCompare(b.name, 'fa')
+  })
 
   const limit = Number.isFinite(Number(maxAutoFacets)) ? Math.max(0, Number(maxAutoFacets)) : 10
   return [...configured, ...userSelected, ...autos.slice(0, limit)]

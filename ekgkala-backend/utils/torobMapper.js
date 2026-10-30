@@ -25,7 +25,7 @@ const imageUrls = (images) => (Array.isArray(images) ? images : [])
 const MAX_SPEC_ENTRIES = 80
 
 const mapSpecifications = (product) => {
-  const { normCompareKey } = require('../services/specNormalization')
+  const { normCompareKey, canonicalizeSpecLabel } = require('../services/specNormalization')
   const spec = {}
   const seenKeys = new Set()
   let count = 0
@@ -35,8 +35,9 @@ const mapSpecifications = (product) => {
     const text = String(value == null ? '' : value).trim()
     if (!key || !text) return
     // برچسب‌های هم‌معنا («فرکانس ریموت» و «فرکانس کاری») یک بار در فید می‌آیند؛
+    // کلید مقایسه از جدول مترادف‌ها عبور می‌کند تا تکرار ۱۳ ردیفی رخ ندهد.
     // اولی (از specifications، متن کامل) برنده است.
-    const compareKey = normCompareKey(key)
+    const compareKey = normCompareKey(canonicalizeSpecLabel(key))
     if (seenKeys.has(compareKey)) return
     seenKeys.add(compareKey)
     spec[key] = text

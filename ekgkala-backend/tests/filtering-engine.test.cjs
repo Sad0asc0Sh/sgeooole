@@ -303,11 +303,13 @@ test('rankAndFormatPropertyFacets keeps category order and never drops selected 
   assert.equal(facets[0].name, 'رزولوشن')
   assert.equal(facets[1].name, 'نوع باتری')
 
-  // حاکمیت ضدشلوغی: ویژگی خودکارِ تک‌مقداره حذف می‌شود…
-  assert.equal(facets.some((facet) => facet.name === 'ویژگی کشف‌شده'), false)
-  // …ولی ویژگی خودکارِ چندمقداره می‌ماند و بعد از ویژگی‌های دسته قرار می‌گیرد
-  assert.equal(facets.at(-1).name, 'نوع اتصال')
-  assert.equal(facets.at(-1).isConfigured, false)
+  // حاکمیت ضدشلوغی (Commit 48.3): تک‌مقداره‌ها دیگر کورکورانه حذف نمی‌شوند
+  // (هویت تک‌محصول) ولی کلیدهای صرفاً جدولی و بی‌مقدار همچنان حذف می‌شوند.
+  assert.equal(facets.some((facet) => facet.name === 'ویژگی کشف‌شده'), true)
+  // ویژگی خودکارِ چندمقداره‌ی هویتی («نوع اتصال») بالاتر از تک‌مقداره‌ی عادی می‌آید
+  const autoNames = facets.filter((facet) => !facet.isConfigured).map((facet) => facet.name)
+  assert.deepEqual(autoNames, ['نوع اتصال', 'ویژگی کشف‌شده'])
+  assert.equal(facets[0].isConfigured, true)
 
   // گزینه‌ی انتخاب‌شده حتی بدون محصول باقی می‌ماند
   const resolution = facets.find((facet) => facet.name === 'رزولوشن')
@@ -718,6 +720,119 @@ test('propBase populates facets with real counts on first category entry (no fil
   const conn = byName.get('نوع اتصال')
   assert.ok(conn)
   assert.ok(conn.values.some((v) => v.value === 'بی‌سیم' && v.count === 2))
+})
+
+// ------------------------------------------------------------
+// ۱۲) Commit 48.3 — عدم تکرار مترادف‌ها، هویت تک‌محصول، خودبه‌روزرسانی
+// ------------------------------------------------------------
+const loadSg8s = () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  return fs.readFileSync(path.join(__dirname, 'fixtures', 'silex-sg8s-description.html'), 'utf8')
+}
+
+test('synonym labels never duplicate in the Torob feed (9 rows, not 13)', () => {
+  const { mapSpecifications } = require('../utils/torobMapper')
+  const prepared = prepareProductSpecsAndDescription({ name: 'SG8-S', description: loadSg8s() })
+  const spec = mapSpecifications(prepared)
+
+  assert.equal(Object.keys(spec).length, 9, 'باید ۹ ردیف باشد نه ۱۳')
+  // برچسب خام (از specifications با متن کامل) برنده است
+  assert.equal(spec['فرکانس ریموت'], '433.92 MHz')
+  assert.equal(spec['نوع کد ریموت'], 'Hopping Code')
+  // نسخه‌ی استانداردشده نباید ردیف دوم بسازد
+  assert.equal(spec['فرکانس کاری'], undefined)
+  assert.equal(spec['نوع کددهی'], undefined)
+  assert.equal(spec['تعداد رله'], undefined)
+  assert.equal(spec['نوع کاربری'], undefined)
+})
+
+test('single-product identity: a lone SG8-S still exposes its core facets', async () => {
+  const categoryId = id(801)
+  const prepared = prepareProductSpecsAndDescription({ name: 'SG8-S', description: loadSg8s() })
+
+  // دسته هیچ قاعده‌ی از پیش تعریف‌شده‌ای ندارد
+  const product = {
+    _id: id(1),
+    name: 'SG8-S',
+    isActive: true,
+    price: 5_000_000,
+    stock: 2,
+    rating: 4,
+    discount: 0,
+    createdAt: now,
+    category: categoryId,
+    variants: [],
+    properties: prepared.properties,
+    specifications: prepared.specifications,
+  }
+
+  const chain = () => ({ select() { return this }, sort() { return this }, lean: async () => [] })
+  const models = {
+    Product: { aggregate: (pipeline) => ({ allowDiskUse: async () => aggregate([product], pipeline) }) },
+    Brand: { find: () => chain() },
+    Sale: { find: () => chain() },
+    Category: {
+      collection: { name: 'categories' },
+      findOne: () => ({ select: () => ({ lean: async () => ({ _id: categoryId }) }) }),
+      aggregate: async () => [{ ids: [categoryId], selfProperties: [], ancestorProperties: [], descendantProperties: [] }],
+    },
+  }
+
+  const result = await listProducts({ category: 'alarm-panels' }, models, now)
+  const byName = new Map(result.facets.properties.map((facet) => [facet.name, facet]))
+
+  // هر ۵ فست هویتی با count:1 حاضرند
+  for (const label of ['نوع کاربری', 'تعداد زون', 'تعداد رله', 'فرکانس کاری', 'نوع کددهی']) {
+    const facet = byName.get(label)
+    assert.ok(facet, `فست هویتی «${label}» باید نمایش داده شود`)
+    assert.equal(facet.values[0].count, 1)
+  }
+  // مقادیر باکت‌شده‌ی درست
+  assert.equal(byName.get('تعداد زون').values[0].value, '5 زون')
+  assert.equal(byName.get('تعداد رله').values[0].value, '4 رله')
+  assert.equal(byName.get('فرکانس کاری').values[0].value, '433 مگاهرتز')
+  assert.equal(byName.get('نوع کددهی').values[0].value, 'هاپینگ کد (Hopping)')
+
+  // کلیدهای صرفاً جدولی هرگز وارد سایدبار نمی‌شوند
+  for (const label of ['مدت ضبط پیام', 'تعداد مدیران سیستم', 'گارانتی']) {
+    assert.equal(byName.has(label), false, `${label} نباید در سایدبار باشد`)
+  }
+})
+
+test('autoEvolveCategoryFacets grows category.properties automatically', async () => {
+  const { autoEvolveCategoryFacets } = require('../services/categoryFacetEvolution')
+
+  const makeModel = (doc) => ({
+    findById: async () => doc,
+  })
+
+  // محصول اول: ۵ زون
+  const firstDoc = { properties: [], save: async () => { firstDoc.saved = true } }
+  await autoEvolveCategoryFacets(makeModel(firstDoc), id(1), [
+    { label: 'تعداد زون', normValue: '5 زون' },
+    { label: 'فرکانس کاری', normValue: '433 مگاهرتز' },
+    { label: 'نوع کاربری', normValue: 'پنل دزدگیر اماکن سیم‌کارتی' },
+    { label: 'مدت ضبط پیام', normValue: '24 ثانیه' },
+  ])
+
+  const names = firstDoc.properties.map((prop) => prop.name)
+  assert.ok(names.includes('تعداد زون'))
+  assert.ok(names.includes('فرکانس کاری'))
+  assert.deepEqual(firstDoc.properties.find((p) => p.name === 'تعداد زون').options, ['5 زون'])
+  // ویژگی هویتی باید پین شود (سقف ۴)
+  assert.equal(firstDoc.properties.find((p) => p.name === 'تعداد زون').isPinned, true)
+  // کلید صرفاً جدولی وارد دسته نمی‌شود (prepare آن را filterable:false کرده؛
+  // اینجا مستقیم داده شده و باید در فهرست نهایی نباشد)
+  assert.equal(firstDoc.properties.some((p) => p.name === 'مدت ضبط پیام'), false)
+  assert.equal(firstDoc.saved, true)
+
+  // محصول دوم: ۸ زون ⇒ گزینه‌ی جدید به همان ویژگی اضافه می‌شود
+  await autoEvolveCategoryFacets(makeModel(firstDoc), id(1), [
+    { label: 'تعداد زون', normValue: '8 زون' },
+  ])
+  const zone = firstDoc.properties.find((p) => p.name === 'تعداد زون')
+  assert.deepEqual(zone.options, ['5 زون', '8 زون'])
 })
 
 // ------------------------------------------------------------

@@ -70,4 +70,36 @@ describe("buildProductSpecs", () => {
     expect(buildProductSpecs({})).toEqual([]);
     expect(buildProductSpecs({ specifications: {} })).toEqual([]);
   });
+
+  it("collapses synonym labels so SG8-S shows 9 rows, not 13", () => {
+    // specifications = جدول کامل با برچسب خام؛ properties = فست با برچسب استاندارد
+    const specifications = {
+      "نوع دستگاه": "پنل دزدگیر اماکن سیم‌کارتی",
+      "تعداد زون": "5 زون قابل برنامه‌ریزی",
+      "حالت‌های قابل تعریف برای زون": "8 حالت عملکرد",
+      "تعداد رله خروجی": "4 رله کنترلی",
+      "فرکانس ریموت": "433.92 MHz",
+      "نوع کد ریموت": "Hopping Code",
+      "مدت ضبط پیام": "24 ثانیه",
+      "تعداد مدیران سیستم": "4 مدیر (Admin)",
+      "گارانتی": "36 ماه گارانتی سایلکس",
+    };
+    const properties = [
+      { label: "تعداد رله", value: "4 رله" },
+      { label: "تعداد زون", value: "5 زون" },
+      { label: "فرکانس کاری", value: "433 مگاهرتز" },
+      { label: "نوع کاربری", value: "پنل دزدگیر اماکن سیم‌کارتی" },
+      { label: "نوع کددهی", value: "هاپینگ کد (Hopping)" },
+    ];
+
+    const specs = buildProductSpecs({ specifications, properties });
+
+    expect(specs).toHaveLength(9);
+    // برچسب و متن کامل specifications برنده است
+    expect(specs.find((s) => s.label === "فرکانس ریموت")?.value).toBe("433.92 MHz");
+    expect(specs.some((s) => s.label === "فرکانس کاری")).toBe(false);
+    expect(specs.some((s) => s.label === "نوع کددهی")).toBe(false);
+    expect(specs.some((s) => s.label === "تعداد رله")).toBe(false);
+    expect(specs.some((s) => s.label === "نوع کاربری")).toBe(false);
+  });
 });

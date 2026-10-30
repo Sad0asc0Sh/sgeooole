@@ -13,6 +13,7 @@ const Brand = require('../models/Brand')
 const { listProducts, ListingQueryError } = require('../services/productListingService')
 const { prepareProductSpecsAndDescription } = require('../services/specAndDescriptionService')
 const { mergeCategoryRules } = require('../services/listingFacets')
+const { autoEvolveCategoryFacets, loadCategoryRulesWithAncestors } = require('../services/categoryFacetEvolution')
 const { applyPromotionOverlay, ttlUntil, sanitizeCompareAtPrice, sanitizeVariantsCompareAtPrice } = require('../services/pricingService')
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { applyOwnPromotionRules, deactivateCampaign } = require('../services/promotionLifecycleService')
@@ -753,12 +754,8 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
 
   let rules = []
   if (categoryId) {
-    try {
-      const category = await Category.findById(categoryId).select('properties').lean()
-      rules = mergeCategoryRules([{ properties: category?.properties }])
-    } catch {
-      rules = []
-    }
+    // ارث‌بری سلسله‌مراتبی: قواعد والدها هم باید در زمان ذخیره اعمال شوند
+    rules = await loadCategoryRulesWithAncestors(Category, categoryId)
   }
 
   const prepared = prepareProductSpecsAndDescription(payload, rules)
@@ -773,6 +770,17 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
     payload.description = prepared.description
     if (!payload.guarantee && prepared.guarantee) payload.guarantee = prepared.guarantee
   }
+
+  // خودبه‌روزرسانی فست‌های دسته: از این پس سایدبار بدون دخالت ادمین زنده می‌ماند.
+  // هر خطایی اینجا نباید ذخیره‌ی محصول را بشکند.
+  if (categoryId && prepared.properties.length) {
+    try {
+      await autoEvolveCategoryFacets(Category, categoryId, prepared.properties)
+    } catch (error) {
+      console.error('[AUTO-EVOLVE] failed for category', String(categoryId), error.message)
+    }
+  }
+
   return payload
 }
 
@@ -2311,14 +2319,29 @@ const handleProductImport = async (req, res) => {
     })
 
     // Fetch all categories and brands for resilient matching
-    // properties هم خوانده می‌شود تا پایپ‌لاین مشخصات با قواعد همان دسته اجرا شود.
-    const allCategories = await Category.find({}).select('_id name properties').lean()
+    // properties + parent خوانده می‌شود تا قواعد والدها هم به ارث برسد.
+    const allCategories = await Category.find({}).select('_id name properties parent').lean()
     const allBrands = await Brand.find({}).select('_id name').lean()
 
-    // قواعد فیلتر هر دسته برای پایپ‌لاین مشخصات درون‌ریزی (Phase 2.4.2)
-    const rulesByCategory = new Map(
-      allCategories.map((cat) => [String(cat._id), mergeCategoryRules([{ properties: cat.properties }])]),
-    )
+    // قواعد فیلتر هر دسته با ارث‌بری سلسله‌مراتبی (در حافظه، بدون کوئری اضافه)
+    const categoryById = new Map(allCategories.map((cat) => [String(cat._id), cat]))
+    const rulesCache = new Map()
+    const rulesForCategory = (categoryKey) => {
+      const key = String(categoryKey)
+      if (rulesCache.has(key)) return rulesCache.get(key)
+      const chain = []
+      let cursor = categoryById.get(key)
+      let depth = 0
+      while (cursor && depth < 10) {
+        chain.push({ properties: cursor.properties })
+        cursor = cursor.parent ? categoryById.get(String(cursor.parent)) : null
+        depth += 1
+      }
+      const merged = mergeCategoryRules(chain)
+      rulesCache.set(key, merged)
+      return merged
+    }
+
     const specsForImportRow = (row, categoryId, existing = {}) => {
       const has = (value) => value !== undefined && value !== null && String(value).trim() !== ''
       const source = {
@@ -2329,12 +2352,32 @@ const handleProductImport = async (req, res) => {
         attributes: existing.attributes,
         variants: existing.variants,
       }
-      const rules = categoryId ? rulesByCategory.get(String(categoryId)) || [] : []
+      const rules = categoryId ? rulesForCategory(categoryId) : []
       // توضیحات ادمین هرگز بازنویسی نمی‌شود (فقط خواندنی).
       const prepared = prepareProductSpecsAndDescription(source, rules)
-      return prepared.properties.length
-        ? { properties: prepared.properties, specifications: prepared.specifications }
-        : null
+      const hasSpecs =
+        prepared.properties.length > 0 || Object.keys(prepared.specifications).length > 0
+      if (!hasSpecs) return null
+      return {
+        properties: prepared.properties,
+        specifications: prepared.specifications,
+        description: prepared.description,
+        guarantee: prepared.guarantee,
+      }
+    }
+
+    // صف خودبه‌روزرسانی فست‌های دسته در پایان درون‌ریزی
+    const evolveQueue = new Map()
+    const queueFacetEvolution = (categoryId, properties) => {
+      if (!categoryId || !Array.isArray(properties) || !properties.length) return
+      const key = String(categoryId)
+      if (!evolveQueue.has(key)) evolveQueue.set(key, { categoryId, properties: [] })
+      const bucket = evolveQueue.get(key).properties
+      for (const item of properties) {
+        if (!bucket.some((existing) => existing.label === item.label && existing.normValue === item.normValue)) {
+          bucket.push(item)
+        }
+      }
     }
 
     const resolveCategoryId = (inputVal) => {
@@ -2516,6 +2559,12 @@ const handleProductImport = async (req, res) => {
             if (importedSpecs) {
               updateFields.properties = importedSpecs.properties
               updateFields.specifications = importedSpecs.specifications
+              // توضیحات تمیزشده (بدون جدول تکراری) و گارانتی استخراج‌شده
+              if (importedSpecs.description) updateFields.description = importedSpecs.description
+              if (!existingProduct.guarantee && importedSpecs.guarantee) {
+                updateFields.guarantee = importedSpecs.guarantee
+              }
+              queueFacetEvolution(categoryId || existingProduct.category, importedSpecs.properties)
             }
 
             if (Object.keys(updateFields).length > 0) {
@@ -2588,6 +2637,9 @@ const handleProductImport = async (req, res) => {
             if (createdSpecs) {
               productData.properties = createdSpecs.properties
               productData.specifications = createdSpecs.specifications
+              if (createdSpecs.description) productData.description = createdSpecs.description
+              if (createdSpecs.guarantee) productData.guarantee = createdSpecs.guarantee
+              queueFacetEvolution(categoryId, createdSpecs.properties)
             }
 
             if (productData.productType === 'variable') {
@@ -2621,6 +2673,17 @@ const handleProductImport = async (req, res) => {
         }
       }
 
+      // خودبه‌روزرسانی فست‌های همه‌ی دسته‌های درون‌ریزی‌شده (یک بار به ازای هر دسته)
+      let facetsEvolved = 0
+      for (const { categoryId: evolveCategoryId, properties: evolveProps } of evolveQueue.values()) {
+        try {
+          const evolved = await autoEvolveCategoryFacets(Category, evolveCategoryId, evolveProps)
+          if (evolved.changed) facetsEvolved += 1
+        } catch (error) {
+          console.error('[AUTO-EVOLVE] import sync failed:', error.message)
+        }
+      }
+
       clearCacheByPrefix('/api/products')
       clearCacheByPrefix('/api/v1/admin/products')
       safeUnlink(filePath)
@@ -2637,6 +2700,7 @@ const handleProductImport = async (req, res) => {
         updated: totalUpdated,
         created: totalCreated,
         imported: totalUpdated + totalCreated,
+        facetsEvolved,
         currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
         durationSeconds,
         errors: errors.length > 0 ? errors : undefined,
@@ -2730,6 +2794,17 @@ const handleProductImport = async (req, res) => {
       }
     }
 
+    // خودبه‌روزرسانی فست‌های دسته‌های درون‌ریزی‌شده در حالت CREATE
+    let facetsEvolved = 0
+    for (const { categoryId: evolveCategoryId, properties: evolveProps } of evolveQueue.values()) {
+      try {
+        const evolved = await autoEvolveCategoryFacets(Category, evolveCategoryId, evolveProps)
+        if (evolved.changed) facetsEvolved += 1
+      } catch (error) {
+        console.error('[AUTO-EVOLVE] import sync failed:', error.message)
+      }
+    }
+
     clearCacheByPrefix('/api/products')
     clearCacheByPrefix('/api/v1/admin/products')
     safeUnlink(filePath)
@@ -2741,6 +2816,7 @@ const handleProductImport = async (req, res) => {
       success: true,
       message: resultMessage,
       imported: totalImported,
+      facetsEvolved,
       currencyApplied: globalCurrency === 'rial' ? 'rial_to_toman' : 'toman',
       durationSeconds,
       errors: errors.length > 0 ? errors : undefined,

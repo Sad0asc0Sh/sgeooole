@@ -51,9 +51,12 @@ const backfillCategoryProductSpecs = async (ids, rules, { limit = 500 } = {}) =>
       { properties: { $exists: false } },
       { 'properties.0': { $exists: false } },
       { 'properties.normValue': { $exists: false } },
+      // محصولاتی که مشخصات جدولی ندارند یا هنوز جدول تکراری در توضیحات دارند
+      { specifications: { $exists: false } },
+      { description: /<table/i },
     ],
   })
-    .select('name description specifications attributes variants properties')
+    .select('name description specifications attributes variants properties guarantee')
     .limit(limit)
     .lean()
 
@@ -62,12 +65,19 @@ const backfillCategoryProductSpecs = async (ids, rules, { limit = 500 } = {}) =>
   const operations = []
   for (const product of stale) {
     const prepared = prepareProductSpecsAndDescription(product, rules)
-    if (!prepared.properties.length) continue
+    const hasSpecs = prepared.properties.length > 0 || Object.keys(prepared.specifications).length > 0
+    if (!hasSpecs) continue
+
+    const setFields = {
+      properties: prepared.properties,
+      specifications: prepared.specifications,
+    }
+    // توضیحات تمیزشده فقط اگر جدول تکراری داشته است
+    if (prepared.description) setFields.description = prepared.description
+    if (!product.guarantee && prepared.guarantee) setFields.guarantee = prepared.guarantee
+
     operations.push({
-      updateOne: {
-        filter: { _id: product._id },
-        update: { $set: { properties: prepared.properties, specifications: prepared.specifications } },
-      },
+      updateOne: { filter: { _id: product._id }, update: { $set: setFields } },
     })
   }
 

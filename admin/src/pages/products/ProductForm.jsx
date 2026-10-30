@@ -1,5 +1,5 @@
 import PageHeader from '../../components/ui/PageHeader'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useCallback } from 'react'
 import {
   Card,
   Form,
@@ -33,6 +33,7 @@ import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
 import { createBlobPreview, optimizeImageFile } from '../../utils/imageOptimizer'
 import { parseNumericInput } from '../../utils/formatters'
+import { normSpecKey } from '../../utils/specKey'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
 const modules = {
@@ -152,6 +153,20 @@ function ProductForm() {
     return { rows, html: changed ? doc.body.innerHTML.trim() : html }
   }
 
+  // ادغام بدون تکرار بر اساس کلید مترادف‌ها (فرکانس ریموت == فرکانس کاری)
+  const mergeSpecs = (base, rows) => {
+    const next = { ...base }
+    let added = 0
+    rows.forEach(({ label, value }) => {
+      const key = normSpecKey(label)
+      const exists = Object.keys(next).some((existing) => normSpecKey(existing) === key)
+      if (exists) return
+      next[label] = value
+      added += 1
+    })
+    return { next, added }
+  }
+
   const handleAutoExtractSpecs = () => {
     const html = form.getFieldValue('description') || ''
     const { rows, html: cleanedHtml } = extractSpecsFromDescriptionHtml(html)
@@ -159,14 +174,34 @@ function ProductForm() {
       message.info('جدول «مشخصات فنی» در متن توضیحات پیدا نشد.')
       return
     }
-    const next = { ...specs }
-    rows.forEach(({ label, value }) => {
-      if (next[label] === undefined || String(next[label]).trim() === '') next[label] = value
-    })
+    const { next, added } = mergeSpecs(specs, rows)
     setSpecs(next)
     form.setFieldValue('description', cleanedHtml)
-    message.success(`${rows.length} مشخصه استخراج و جدول از توضیحات حذف شد.`)
+    message.success(`${added} مشخصه استخراج و جدول از توضیحات حذف شد.`)
   }
+
+  // استخراج آنی و بدون کلیک: به‌محض Paste شدن قالب HTML در توضیحات
+  const handleDescriptionChange = useCallback((newHtml) => {
+    const html = String(newHtml || '')
+    if (!html) return
+    const hasSpecTable = /<table\b[\s\S]*?<\/table>/i.test(html)
+      && /مشخصات\s*فنی|جدول\s*مشخصات|مشخصات\s*محصول/i.test(html)
+    if (!hasSpecTable) return
+
+    const { rows, html: cleanedHtml } = extractSpecsFromDescriptionHtml(html)
+    if (rows.length === 0) return
+
+    setSpecs((prev) => mergeSpecs(prev, rows).next)
+    if (cleanedHtml !== html) form.setFieldValue('description', cleanedHtml)
+    message.success(
+      `✨ ${rows.length} مشخصه فنی به‌طور خودکار از قالب توضیحات استخراج و در سیستم فیلترینگ ثبت شد.`,
+    )
+  }, [form])
+
+  const descriptionValue = Form.useWatch('description', form)
+  useEffect(() => {
+    handleDescriptionChange(descriptionValue)
+  }, [descriptionValue, handleDescriptionChange])
 
   const handleAddCustomSpec = () => {
     const label = newSpecLabel.trim()
@@ -175,7 +210,8 @@ function ProductForm() {
       message.warning('نام و مقدار مشخصه را وارد کنید.')
       return
     }
-    setSpecs({ ...specs, [label]: value })
+    const { next } = mergeSpecs(specs, [{ label, value }])
+    setSpecs(next)
     setNewSpecLabel('')
     setNewSpecValue('')
   }
@@ -298,21 +334,22 @@ function ProductForm() {
               message.info('کمپین تخفیف این محصول منقضی شده بود و به طور هوشمند غیرفعال شد.')
             }
 
-            // Load specs: properties first, then specifications on top so the
-            // full-text table rows (extracted from the HTML description) win.
+            // Load specs: specifications (full text) first, then properties only
+            // for labels that are not already present (synonym-aware).
             const specsObj = {}
-            if (p.properties && Array.isArray(p.properties)) {
-              p.properties.forEach(prop => {
-                if (prop.label && prop.value !== undefined) {
-                  specsObj[prop.label] = prop.value
-                }
-              })
-            }
             if (p.specifications && typeof p.specifications === 'object' && !Array.isArray(p.specifications)) {
               Object.entries(p.specifications).forEach(([label, value]) => {
                 if (value !== null && value !== undefined && String(value).trim() !== '') {
                   specsObj[label] = String(value)
                 }
+              })
+            }
+            if (p.properties && Array.isArray(p.properties)) {
+              p.properties.forEach(prop => {
+                if (!prop || !prop.label || prop.value === undefined) return
+                const key = normSpecKey(prop.label)
+                const exists = Object.keys(specsObj).some((existing) => normSpecKey(existing) === key)
+                if (!exists) specsObj[prop.label] = prop.value
               })
             }
             setSpecs(specsObj)

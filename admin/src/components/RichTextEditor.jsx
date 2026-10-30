@@ -32,6 +32,15 @@ const defaultFormats = [
   'script', 'code',
 ]
 
+// قالب HTML ساختاریافته‌ی فروشگاه: نباید هرگز از Quill عبور کند، وگرنه
+// استایل‌های اینلاین کارت‌های ۰۱..۰۶ و جدول‌بندی از بین می‌رود.
+const STRUCTURED_HTML_RE = /(?:<!--\s*(?:Header|Technical\s+Specifications)|background:\s*#f9fafb|font-family:\s*Tahoma|<\s*table\b|^\s*<\s*(?:div|section|article)\b[^>]*style=)/i
+
+// آیا متنی که Paste می‌شود «کد HTML خام» است (نه متن غنی از کلیپ‌بورد)؟
+const looksLikeRawHtml = (text) =>
+  /^\s*<(?:div|section|article|table|!--)/i.test(text) ||
+  (/<table\b/i.test(text) && /مشخصات\s*فنی/i.test(text))
+
 function RichTextEditor({ value, onChange, modules, formats }) {
   const containerRef = useRef(null)
   const quillRef = useRef(null)
@@ -52,12 +61,20 @@ function RichTextEditor({ value, onChange, modules, formats }) {
     setReady(true)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // همگام‌سازی value خارجی با ادیتور (فقط حالت بصری)
+  // همگام‌سازی value خارجی با ادیتور
   useEffect(() => {
-    if (isHtmlMode) return
     const q = quillRef.current
     if (!q || !ready) return
     const nextHtml = value ?? ''
+
+    // قالب ساختاریافته همیشه در حالت HTML باز می‌شود (بدون تخریب استایل‌ها)
+    if (STRUCTURED_HTML_RE.test(nextHtml)) {
+      setIsHtmlMode(true)
+      setHtmlContent(nextHtml)
+      return
+    }
+    if (isHtmlMode) return
+
     const currentHtml = q.root.innerHTML
     if (currentHtml === nextHtml) return
     isApplyingValueRef.current = true
@@ -68,6 +85,23 @@ function RichTextEditor({ value, onChange, modules, formats }) {
     }
     isApplyingValueRef.current = false
   }, [ready, value, isHtmlMode])
+
+  // رهگیری Paste کد HTML خام: مستقیم به حالت HTML برو تا Quill آن را escape نکند
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container || !ready) return
+    const handler = (event) => {
+      const pasted = event.clipboardData?.getData('text/plain') || ''
+      if (!pasted || !looksLikeRawHtml(pasted)) return
+      event.preventDefault()
+      event.stopPropagation()
+      setHtmlContent(pasted)
+      setIsHtmlMode(true)
+      onChange?.(pasted)
+    }
+    container.addEventListener('paste', handler, true)
+    return () => container.removeEventListener('paste', handler, true)
+  }, [ready, onChange])
 
   // ارسال تغییرات ادیتور به بیرون (فقط حالت بصری)
   useEffect(() => {
