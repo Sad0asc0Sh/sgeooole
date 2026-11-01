@@ -118,17 +118,27 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
 
     return (
         <div className="flex h-full bg-white overflow-hidden">
-            {/* --- Right Sidebar (Main Categories) --- */}
-            <aside className="w-[28%] bg-gray-50 h-full overflow-y-auto no-scrollbar pb-20 border-l border-gray-100">
+            {/* --- Right Sidebar (Main Categories) ---
+                Technollife pattern, adapted to a 390px sheet: the parent
+                column stays visible (it is not replaced by a drill-down),
+                the active row is highlighted across its full width, and
+                parent rows are icon + label rows — not a centred icon
+                over a 10px label. The old 28% column + 10px centred
+                label is what broke names like "دوربین مدار بسته" into
+                unreadable fragments. 38% + 13px + 2-line clamp keeps
+                every parent readable in its own row, at a 56px minimum
+                tap height. */}
+            <aside className="w-[38%] shrink-0 bg-gray-50 h-full overflow-y-auto no-scrollbar pb-20 border-l border-gray-100">
                 {categoryTree.map((cat) => (
                     <button
                         key={cat._id}
                         onClick={() => handleCategoryChange(cat._id)}
+                        aria-current={activeId === cat._id ? "true" : undefined}
                         className={`
-                            w-full flex flex-col items-center justify-center gap-2 py-5 px-2 transition-all duration-300 border-b border-gray-100 relative
+                            w-full flex items-center gap-2.5 min-h-[56px] py-3 px-3 text-right transition-all duration-300 border-b border-gray-100 relative
                             ${activeId === cat._id
                                 ? "bg-white text-kala-600 font-bold"
-                                : "text-gray-500 hover:bg-gray-100 font-medium"
+                                : "text-gray-600 hover:bg-gray-100 font-medium"
                             }
                         `}
                     >
@@ -139,7 +149,7 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
 
                         {/* Category Icon */}
                         {resolveCategoryImage(cat) ? (
-                            <div className="relative w-6 h-6">
+                            <div className="relative w-7 h-7 shrink-0">
                                 <ResilientImage
                                     src={resolveCategoryImage(cat)!}
                                     alt={cat.name}
@@ -149,13 +159,13 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                             </div>
                         ) : (
                             <Package
-                                size={24}
+                                size={28}
                                 strokeWidth={1.5}
-                                className={activeId === cat._id ? "text-kala-500" : "text-gray-400"}
+                                className={`shrink-0 ${activeId === cat._id ? "text-kala-500" : "text-gray-400"}`}
                             />
                         )}
 
-                        <span className="w-full px-1 text-[10px] text-center leading-snug break-words whitespace-normal">
+                        <span className="flex-1 min-w-0 text-[13px] leading-[1.6] break-words whitespace-normal [display:-webkit-box] [-webkit-line-clamp:2] [-webkit-box-orient:vertical] overflow-hidden">
                             {cat.name}
                         </span>
                     </button>
@@ -163,9 +173,10 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
             </aside>
 
             {/* --- Left Content (Children Categories) --- */}
-            <main className="flex-1 h-full overflow-y-auto bg-white p-4 pb-24 no-scrollbar">
-                {/* Header */}
-                <div className="flex items-center gap-2 mb-6">
+            <main className="flex-1 min-w-0 h-full overflow-y-auto bg-white p-4 pb-24 no-scrollbar">
+                {/* Header — sticky, and (technolife pattern) it repeats the
+                    active parent as the top link of the children pane. */}
+                <div className="sticky top-0 z-10 bg-white flex items-center gap-2 pb-4 -mx-1 px-1">
                     <span className="text-sm font-bold text-gray-800">
                         {activeCategory?.name}
                     </span>
@@ -208,9 +219,9 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                         handleNavigation(`/products?category=${subCategory.slug}&includeChildren=true`);
                                                     }
                                                 }}
-                                                className="w-full flex items-center justify-between py-3 text-gray-700 font-medium text-sm hover:text-kala-600 transition-colors"
+                                                className="w-full flex items-center justify-between gap-2 py-3 text-gray-700 font-medium text-sm hover:text-kala-600 transition-colors"
                                             >
-                                                <span className="flex items-center gap-3">
+                                                <span className="flex flex-1 min-w-0 items-center gap-3 text-right leading-[1.6]">
                                                     {/* Subcategory Image/Icon - Only show if there's an actual image */}
                                                     {resolveCategoryImage(subCategory) && (
                                                         <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden flex-shrink-0">
@@ -227,9 +238,9 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                     {subCategory.name}
                                                 </span>
                                                 {hasGrandChildren ? (
-                                                    isExpanded ? <ChevronDown size={16} /> : <ChevronLeft size={16} className="text-gray-400" />
+                                                    isExpanded ? <ChevronDown size={16} className="shrink-0" /> : <ChevronLeft size={16} className="shrink-0 text-gray-400" />
                                                 ) : (
-                                                    <ChevronLeft size={16} className="text-gray-400" />
+                                                    <ChevronLeft size={16} className="shrink-0 text-gray-400" />
                                                 )}
                                             </button>
 
@@ -241,30 +252,24 @@ export default function CategoriesContent({ onClose }: CategoriesContentProps) {
                                                     transition={{ duration: 0.3, ease: "easeInOut" }}
                                                     className="overflow-hidden"
                                                 >
-                                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 py-2 pr-2">
+                                                    {/* Technollife pattern: deeper levels are a flat
+                                                        text list, not a 2-column icon grid. The old
+                                                        grid forced 11px centred labels under 56px
+                                                        circles in a ~240px pane and broke long
+                                                        names; a flat row aligned under the parent
+                                                        name (52px = 40px icon + 12px gap) keeps
+                                                        every grandchild on one readable line. */}
+                                                    <div className="flex flex-col py-1">
                                                         {subCategory.children!.map((item) => (
                                                             <button
                                                                 key={item._id}
                                                                 onClick={() => handleNavigation(`/products?category=${item.slug}&includeChildren=true`)}
-                                                                className="flex flex-col items-center gap-2 cursor-pointer group w-full"
+                                                                className="w-full flex items-center justify-between gap-2 py-3 pr-[52px] border-b border-gray-50 last:border-0 cursor-pointer group text-right"
                                                             >
-                                                                <div className="w-14 h-14 bg-gray-50 rounded-full p-2 flex items-center justify-center border border-gray-100 group-hover:border-kala-200 transition-colors overflow-hidden">
-                                                                    {resolveCategoryImage(item) ? (
-                                                                        <div className="relative w-full h-full">
-                                                                            <ResilientImage
-                                                                                src={resolveCategoryImage(item)!}
-                                                                                alt={item.name}
-                                                                                fill
-                                                                                className="object-contain rounded-full"
-                                                                            />
-                                                                        </div>
-                                                                    ) : (
-                                                                        <Package size={24} className="text-gray-300" />
-                                                                    )}
-                                                                </div>
-                                                                <span className="w-full px-1 text-[11px] text-center text-gray-600 leading-snug break-words whitespace-normal group-hover:text-kala-600 transition-colors">
+                                                                <span className="flex-1 min-w-0 text-[13px] leading-[1.6] text-gray-600 break-words whitespace-normal group-hover:text-kala-600 transition-colors">
                                                                     {item.name}
                                                                 </span>
+                                                                <ChevronLeft size={14} className="shrink-0 text-gray-300 group-hover:text-kala-500" />
                                                             </button>
                                                         ))}
                                                     </div>
