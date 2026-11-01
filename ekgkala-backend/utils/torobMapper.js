@@ -16,15 +16,13 @@ const imageUrls = (images) => (Array.isArray(images) ? images : [])
 /**
  * مشخصات فنی برای فید ترب.
  *
- * منبع اول `product.specifications` (شیء رسمی) است. سپس `product.properties`
- * (آرایه‌ی {label, value}) مکمل آن می‌شود تا ویژگی‌های سطح متغیر (رنگ، ظرفیت،
- * گارانتی) و مقادیری که فقط در properties ثبت شده‌اند هم به فید برسند.
- * مقدار نمایشی `value` ترجیح داده می‌شود (نه bucket نرمال‌شده) تا نیم‌فاصله و
- * نگارش اصلی حفظ شود. کلیدهای موجود در specifications هرگز بازنویسی نمی‌شوند.
+ * منبع اول نام برند و گارانتی محصول است تا ترب بتواند کالا را به درستی تطبیق دهد.
+ * سپس `product.specifications` (شیء رسمی) و `product.properties` ({label, value})
+ * و در نهایت ویژگی‌های خاص تنوع انتخابی (`variant.options`) اضافه می‌شوند.
  */
 const MAX_SPEC_ENTRIES = 80
 
-const mapSpecifications = (product) => {
+const mapSpecifications = (product, variant = null) => {
   const { normCompareKey, canonicalizeSpecLabel } = require('../services/specNormalization')
   const spec = {}
   const seenKeys = new Set()
@@ -34,9 +32,6 @@ const mapSpecifications = (product) => {
     const key = String(name == null ? '' : name).trim()
     const text = String(value == null ? '' : value).trim()
     if (!key || !text) return
-    // برچسب‌های هم‌معنا («فرکانس ریموت» و «فرکانس کاری») یک بار در فید می‌آیند؛
-    // کلید مقایسه از جدول مترادف‌ها عبور می‌کند تا تکرار ۱۳ ردیفی رخ ندهد.
-    // اولی (از specifications، متن کامل) برنده است.
     const compareKey = normCompareKey(canonicalizeSpecLabel(key))
     if (seenKeys.has(compareKey)) return
     seenKeys.add(compareKey)
@@ -44,15 +39,26 @@ const mapSpecifications = (product) => {
     count += 1
   }
 
-  const productSpecs = product?.specifications
+  // ۱. برند (حیاتی برای موتور تطبیق خودکار ترب)
+  const brandName = product?.brand?.name || (typeof product?.brand === 'string' ? product.brand : null)
+  if (brandName) {
+    put('برند', brandName)
+  }
 
+  // ۲. گارانتی
+  if (product?.guarantee) {
+    put('گارانتی', product.guarantee)
+  }
+
+  // ۳. مشخصات رسمی کالا
+  const productSpecs = product?.specifications
   if (productSpecs && typeof productSpecs === 'object' && !Array.isArray(productSpecs)) {
     for (const [name, value] of Object.entries(productSpecs)) {
       if (value != null && value !== '') put(name, value)
     }
   }
 
-  // مکمل: properties (شامل ویژگی‌های متغیر و برچسب‌های کشف‌شده)
+  // ۴. ویژگی‌های مکمل کالا
   if (Array.isArray(product?.properties)) {
     for (const item of product.properties) {
       if (!item || typeof item !== 'object') continue
@@ -60,7 +66,27 @@ const mapSpecifications = (product) => {
     }
   }
 
+  // ۵. مشخصات خاص تنوع انتخابی (رنگ، سایز، اقلام مازاد و...)
+  if (Array.isArray(variant?.options)) {
+    for (const opt of variant.options) {
+      if (!opt || typeof opt !== 'object') continue
+      put(opt.name, opt.value)
+    }
+  }
+
   return spec
+}
+
+const buildSubtitle = (product, variant = null) => {
+  if (variant && Array.isArray(variant.options) && variant.options.length > 0) {
+    const parts = variant.options
+      .map((opt) => (typeof opt === 'object' ? opt?.value : opt))
+      .filter((val) => typeof val === 'string' && val.trim().length > 0)
+    if (parts.length > 0) {
+      return parts.join(' - ').slice(0, 500)
+    }
+  }
+  return null
 }
 
 const { computeItemPricing } = require('../services/pricingService')
@@ -144,38 +170,71 @@ const mapTorobProduct = (product, variantOrSales = null, campaignContext = null)
   const images = imageUrls(variant?.images).length > 0 ? imageUrls(variant.images) : imageUrls(product?.images)
   const pricing = getPricing(product, variant, new Date(), effectiveCampaignCtx)
 
+  const inStock = Boolean(
+    product?.isActive === true &&
+    (isVariable ? Number(variant?.stock) > 0 : Number(product?.stock) > 0) &&
+    pricing.currentPrice > 0
+  )
+
   return {
     page_url: buildPageUrl(product),
-    page_unique: isVariable ? `${product.productCode}_${variantId}` : product.productCode,
+    page_unique: isVariable && variantId ? `${product.productCode}_${variantId}` : product.productCode,
     product_group_id: isVariable ? product.productCode : null,
     title: String(product?.name || '').slice(0, 500),
-    subtitle: null,
+    subtitle: buildSubtitle(product, variant),
     short_desc: stripHtml(product?.description),
     category_name: product?.category?.name || null,
     guarantee: product?.guarantee || null,
+    stock_status: 'new',
     current_price: pricing.currentPrice,
     old_price: pricing.oldPrice,
-    availability: Boolean(product?.isActive === true && (isVariable ? Number(variant?.stock) > 0 : Number(product?.stock) > 0)),
+    availability: inStock,
     image_links: images,
-    spec: mapSpecifications(product),
+    spec: mapSpecifications(product, variant),
     date_added: asIsoDate(product?.createdAt),
     date_updated: asIsoDate(product?.updatedAt),
   }
 }
 
+/**
+ * تعیین واریانت کانونیکال (معمولاً ارزان‌ترین واریانت موجود در انبار) برای نمایش تک‌محصول
+ */
+const getCanonicalVariant = (product, campaignContext = null) => {
+  if (!product || product.productType !== 'variable' || !Array.isArray(product.variants) || product.variants.length === 0) {
+    return null
+  }
+  const effectiveCampaignCtx = normalizeCampaignContext(campaignContext)
+  const available = product.variants.filter((v) => Number(v.stock) > 0 && Number(v.price) > 0)
+  const pool = available.length > 0 ? available : product.variants
+
+  const sorted = [...pool].sort((a, b) => {
+    const priceA = getPricing(product, a, new Date(), effectiveCampaignCtx).currentPrice
+    const priceB = getPricing(product, b, new Date(), effectiveCampaignCtx).currentPrice
+    return priceA - priceB
+  })
+
+  return sorted[0] || null
+}
+
 const flattenProduct = (product, campaignContext = null) => {
   if (!product || product.isActive !== true || product.excludeFromTorob === true) return []
-  const rows = product.productType !== 'variable'
-    ? [mapTorobProduct(product, null, campaignContext)]
-    : (Array.isArray(product.variants) ? product.variants : []).map((variant) =>
-        mapTorobProduct(product, variant, campaignContext),
-      )
-  return rows.filter((row) => row.image_links.length > 0)
+  if (product.productType !== 'variable') {
+    return [mapTorobProduct(product, null, campaignContext)].filter((row) => row.image_links.length > 0)
+  }
+  const variants = Array.isArray(product.variants) ? product.variants : []
+  if (variants.length === 0) {
+    return [mapTorobProduct(product, null, campaignContext)].filter((row) => row.image_links.length > 0)
+  }
+  return variants
+    .map((variant) => mapTorobProduct(product, variant, campaignContext))
+    .filter((row) => row.image_links.length > 0)
 }
 
 module.exports = {
   buildPageUrl,
+  buildSubtitle,
   flattenProduct,
+  getCanonicalVariant,
   getPricing,
   mapTorobProduct,
   mapSpecifications,

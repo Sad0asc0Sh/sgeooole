@@ -1,7 +1,12 @@
 const Product = require('../models/Product')
 const logger = require('../utils/logger')
 const { getTorobFeed } = require('../jobs/torobFeedCache')
-const { flattenProduct, mapTorobProduct } = require('../utils/torobMapper')
+const { flattenProduct, mapTorobProduct, getCanonicalVariant } = require('../utils/torobMapper')
+
+// ثبت صریح مدل‌های Mongoose برای جلوگیری از خطای MissingSchemaError در فراخوانی‌های populate
+require('../models/Category')
+require('../models/Brand')
+require('../models/Sale')
 
 const PAGE_SIZE = 100
 const SORTS = new Set(['date_added_desc', 'date_updated_desc'])
@@ -10,7 +15,7 @@ const response = (res, products, currentPage = 1, total = products.length) => re
   api_version: 'torob_api_v3',
   current_page: currentPage,
   total,
-  max_pages: total === 0 ? 0 : Math.ceil(total / PAGE_SIZE),
+  max_pages: total === 0 ? 1 : Math.ceil(total / PAGE_SIZE),
   products,
 })
 
@@ -37,7 +42,7 @@ const validateRequest = (body) => {
 const extractProductCode = (pageUrl) => {
   if (typeof pageUrl !== 'string') return null
   try {
-    const match = new URL(pageUrl).pathname.match(/^\/product\/([^/]+)\//i)
+    const match = new URL(pageUrl).pathname.match(/^\/product\/([^/]+)(?:\/|$)/i)
     return match ? decodeURIComponent(match[1]).toUpperCase() : null
   } catch (_) {
     return null
@@ -50,23 +55,36 @@ const parsePageUnique = (pageUnique) => {
   return match ? { productCode: match[1].toUpperCase(), variantId: match[2] || null } : null
 }
 
-const fetchProducts = async (requests) => {
+const fetchProducts = async (requests, { singlePerCode = false } = {}) => {
   const codes = [...new Set(requests.map((item) => item.productCode))]
   if (codes.length === 0) return []
   const products = await Product.find({
     productCode: { $in: codes },
     isActive: true,
     excludeFromTorob: { $ne: true },
-  }).populate('category', 'name').lean()
+  })
+    .populate('category', 'name')
+    .populate('brand', 'name')
+    .lean()
   const byCode = new Map(products.map((product) => [product.productCode, product]))
 
-  return requests.flatMap(({ productCode, variantId }) => {
+  return requests.flatMap(({ productCode, variantId, isUrlMode }) => {
     const product = byCode.get(productCode)
     if (!product) return []
     if (variantId) {
       if (product.productType !== 'variable') return []
       const variant = (product.variants || []).find((entry) => String(entry._id) === variantId)
       return variant ? [mapTorobProduct(product, variant)].filter((row) => row.image_links.length > 0) : []
+    }
+    // در استعلام تک‌محصول بر اساس URL یا کد بدون شناسه واریانت:
+    // طبق قانون ۱:۱ مستندات ترب، پاسخ به درخواست تک‌محصول نباید شامل چندین تنوع باشد.
+    // واریانت کانونیکال (ارزان‌ترین گزینه موجود) به عنوان نماینده ارسال می‌شود.
+    if (singlePerCode || isUrlMode) {
+      if (product.productType === 'variable') {
+        const canonical = getCanonicalVariant(product)
+        return canonical ? [mapTorobProduct(product, canonical)].filter((row) => row.image_links.length > 0) : []
+      }
+      return [mapTorobProduct(product)].filter((row) => row.image_links.length > 0)
     }
     return flattenProduct(product)
   })
@@ -104,15 +122,18 @@ const getProducts = async (req, res, next) => {
 
     if (Object.prototype.hasOwnProperty.call(req.body, 'page_urls')) {
       req.torobMode = 'page_urls'
-      const requests = req.body.page_urls.map(extractProductCode).filter(Boolean).map((productCode) => ({ productCode, variantId: null }))
-      const products = await fetchProducts(requests)
+      const requests = req.body.page_urls
+        .map(extractProductCode)
+        .filter(Boolean)
+        .map((productCode) => ({ productCode, variantId: null, isUrlMode: true }))
+      const products = await fetchProducts(requests, { singlePerCode: true })
       res.locals.torobProductCount = products.length
       return response(res, products)
     }
 
     req.torobMode = 'page_uniques'
     const requests = req.body.page_uniques.map(parsePageUnique).filter(Boolean)
-    const products = await fetchProducts(requests)
+    const products = await fetchProducts(requests, { singlePerCode: true })
     res.locals.torobProductCount = products.length
     return response(res, products)
   } catch (error) {
@@ -120,4 +141,4 @@ const getProducts = async (req, res, next) => {
   }
 }
 
-module.exports = { PAGE_SIZE, extractProductCode, getProducts, parsePageUnique, torobRequestLogger, validateRequest }
+module.exports = { PAGE_SIZE, extractProductCode, fetchProducts, getProducts, parsePageUnique, torobRequestLogger, validateRequest }
