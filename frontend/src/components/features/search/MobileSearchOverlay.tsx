@@ -1,3 +1,4 @@
+import { buildProductUrl } from "@/lib/paths";
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search, ArrowRight, X, Clock, TrendingUp, ChevronLeft, Loader2, ArrowUpRight } from 'lucide-react';
@@ -304,7 +305,7 @@ const SearchResultItem = ({ product, onClose }: { product: Product; onClose: () 
     const router = useRouter();
 
     // Use slug if available, otherwise fallback to id
-    const productUrl = `/product/${product.slug || product.id}`;
+    const productUrl = buildProductUrl(product as any);
 
     const handleClick = () => {
         router.push(productUrl);

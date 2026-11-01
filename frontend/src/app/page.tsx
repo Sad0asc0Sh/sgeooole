@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import Link from "next/link";
+import { buildProductUrl } from "@/lib/paths";
 import type { Metadata } from "next";
 import HeroSection from "@/components/home/HeroSection";
 import HomeCategoryShowcase from "@/components/home/HomeCategoryShowcase";
@@ -75,6 +77,59 @@ async function fetchBanners(): Promise<Banner[]> {
   }
 }
 
+
+type RailProduct = {
+  _id?: string;
+  id?: string;
+  slug?: string;
+  productCode?: string;
+  name?: string;
+  title?: string;
+};
+
+// ─── Server-rendered crawlable rail links (SEO) ──────────────────────────
+// The homepage rails (ProductRailContainer newest/best-sellers) fetch on the
+// client via SWR, so the initial HTML of / contained ZERO product links
+// (verified live) and the homepage's authority never reached the products it
+// showcases. Mirror the rails' own data sources on the server (newest =
+// /products?sort=-createdAt, best-sellers = /bestsellers — the same calls
+// productService.getNewest/getBestSellers make) and render the links in a
+// visually-hidden nav. Failure-safe: any API error yields an empty list and
+// the homepage renders exactly as before.
+async function fetchHomeRailProducts(): Promise<RailProduct[]> {
+  const timeout = IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000;
+  try {
+    const [newestJson, bestJson] = await Promise.all([
+      fetchJsonWithTimeout<ApiResponse<RailProduct[]> & { success?: boolean }>(
+        `${API_BASE}/products?sort=-createdAt&limit=10&facets=false`,
+        { next: { revalidate } },
+        timeout
+      ),
+      fetchJsonWithTimeout<ApiResponse<RailProduct[]> & { success?: boolean }>(
+        `${API_BASE}/bestsellers?limit=10&in_stock=true`,
+        { next: { revalidate } },
+        timeout
+      ),
+    ]);
+    const seen = new Set<string>();
+    const merged: RailProduct[] = [];
+    for (const list of [newestJson?.data, bestJson?.data]) {
+      if (!Array.isArray(list)) continue;
+      for (const item of list) {
+        if (!item || (!item.slug && !item.productCode && !item._id && !item.id)) continue;
+        const key = item.productCode || item.slug || item._id || item.id || "";
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        merged.push(item);
+      }
+    }
+    return merged;
+  } catch (error) {
+    logBuildFetchWarning("[home] Failed to fetch rail products", error);
+    return [];
+  }
+}
+
 const SkeletonHero = () => (
   <section className="w-full max-w-[1920px] mx-auto animate-pulse">
     <div className="relative mt-2 mb-3 h-[180px] md:mb-0 md:h-auto md:aspect-[1911/430]">
@@ -132,9 +187,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [homepageCats, banners] = await Promise.all([
+  const [homepageCats, banners, railProducts] = await Promise.all([
     fetchHomeCategories(),
     fetchBanners(),
+    fetchHomeRailProducts(),
   ]);
 
   // Never publish a fabricated phone number as factual data: contactPoint
@@ -207,6 +263,26 @@ export default async function Home() {
       <h1 className="sr-only">
         فروشگاه اینترنتی ای کا جی کالا (ekgkala) | خرید آنلاین کالای تکنولوژی و دیجیتال
       </h1>
+      {/* Crawlable product links for the client-rendered rails below (see fetchHomeRailProducts) */}
+      {railProducts.length > 0 && (
+        <nav aria-label="محصولات منتخب فروشگاه" className="sr-only">
+          <ul>
+            {railProducts.map((item) => (
+              <li key={item.productCode || item.slug || item._id || item.id}>
+                <Link
+                  href={buildProductUrl({
+                    id: item._id || item.id || "",
+                    slug: item.slug,
+                    productCode: item.productCode,
+                  } as any)}
+                >
+                  {item.name || item.title || item.slug}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
       <HomeSection variant="hero">
         <Suspense fallback={<SkeletonHero />}>
           <HeroSection initialBanners={banners} />

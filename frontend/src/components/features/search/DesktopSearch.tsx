@@ -10,6 +10,7 @@ import { useScrollLock } from "@/hooks/useScrollLock";
 import { productService, Product } from "@/services/productService";
 import { categoryService, Category } from "@/services/categoryService";
 import { cn } from "@/lib/utils";
+import { buildProductUrl } from "@/lib/paths";
 
 export default function DesktopSearch() {
     const router = useRouter();
@@ -299,7 +300,7 @@ export default function DesktopSearch() {
                                             {products.map((product) => (
                                                 <Link
                                                     key={product.id}
-                                                    href={`/product/${product.slug || product.id}`}
+                                                    href={buildProductUrl(product as any)}
                                                     onClick={() => { addToHistory(query); closeSearch(); }}
                                                     className="flex items-center gap-3 p-2 rounded-lg hover:bg-ekg-50 transition-colors group"
                                                 >

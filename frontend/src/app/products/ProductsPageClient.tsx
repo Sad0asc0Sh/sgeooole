@@ -36,7 +36,6 @@ import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import ProductListingSkeleton from "@/components/product/ProductListingSkeleton";
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
-import { buildProductUrl } from "@/lib/paths";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -287,7 +286,6 @@ function ProductListingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { markRoutePending, markRouteReady } = useRouteLoadingState();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
   // The URL is the only committed filter state. Drafts exist only for submitted inputs.
   const queryString = searchParams.toString();
@@ -616,20 +614,6 @@ function ProductListingContent() {
     };
     return findInTree(categoryTree) || categorySlug;
   }, [categorySlug, categoryTree]);
-
-  const itemList =
-    !showInitialLoader && products.length > 0
-      ? {
-        "@context": "https://schema.org",
-        "@type": "ItemList",
-        itemListElement: products.map((product, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          url: `${siteUrl || ""}${buildProductUrl(product as any)}`,
-          name: product.title || product.name,
-        })),
-      }
-      : null;
 
   // ─── Shared Filter Content (used in both desktop sidebar & mobile drawer) ───
   const renderFilterContent = (isMobile: boolean) => (
@@ -1032,14 +1016,6 @@ function ProductListingContent() {
 
        {/* Main Grid Layout */}
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 items-start">
-          {itemList && (
-            <script
-              type="application/ld+json"
-              suppressHydrationWarning
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
-            />
-          )}
-
         {/* Desktop Sidebar - Sticky on lg+ */}
          <aside className="hidden lg:block lg:col-span-3 sticky self-start overflow-y-auto custom-scrollbar" style={{ top: 'calc(var(--header-height, 136px) + 1rem)', maxHeight: 'calc(100vh - var(--header-height, 136px) - 1.5rem)', transition: 'top 0.3s ease-in-out, max-height 0.3s ease-in-out' }}>
             {renderFilterContent(false)}
