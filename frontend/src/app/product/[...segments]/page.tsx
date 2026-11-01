@@ -94,7 +94,11 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
     const canonicalPath = buildProductUrl(product);
     const canonicalUrl = siteUrl ? `${siteUrl}${canonicalPath}` : canonicalPath;
-    const coverImage = product.images?.[0];
+    // Only a real absolute photo may be the OG image: productData's fallback
+    // for image-less products is the relative "/placeholder.svg".
+    const coverImage = product.images?.find(
+        (img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")
+    );
 
     // Phase 1 SEO: sanitized Persian meta description (no raw HTML/entities)
     // and no «بدون برند» fallback in the title.
@@ -116,7 +120,7 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
             description,
             url: canonicalUrl,
             type: "website",
-            images: coverImage ? [{ url: coverImage }] : undefined,
+            images: coverImage ? [{ url: coverImage, alt: seoTitle }] : undefined,
         },
         twitter: {
             card: "summary_large_image",

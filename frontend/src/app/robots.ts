@@ -38,7 +38,8 @@ const PRIVATE_DISALLOW = [
   "/reset-password/*",
   "/complete-profile",
   "/*?sort=*",
-  "/*?page=*",
+  // NOTE: /*?page=* is intentionally NOT disallowed — blocking ?page= kept
+  // paginated listing pages (and the product links on them) out of the crawl.
   "/*?minPrice=*",
   "/*?maxPrice=*",
 ];

@@ -31,7 +31,7 @@ const nextConfig = {
             {
                 protocol: 'https',
                 hostname: 'c258565.parspack.net',
-                pathname: '/ekgkala-uploads/**',
+                pathname: '/**', // host-wide: do not bucket-lock (bucket name is env-driven)
             },
             {
                 protocol: 'https',
@@ -60,7 +60,7 @@ const nextConfig = {
         minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
         // SECURITY: SVG disabled to prevent XSS attacks
         dangerouslyAllowSVG: false,
-        contentDispositionType: 'attachment',
+        contentDispositionType: 'inline', // inline (not attachment) so Google Images can index optimized images
         contentSecurityPolicy:
             "default-src 'self'; script-src 'none'; sandbox;",
     },

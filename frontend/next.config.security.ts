@@ -130,9 +130,14 @@ const baseConfig: NextConfig = {
         minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
         // SECURITY: SVG disabled to prevent XSS attacks
         dangerouslyAllowSVG: false,
-        contentDispositionType: "attachment",
+        contentDispositionType: "inline", // inline (not attachment) so Google Images can index optimized images
         contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
         remotePatterns: [
+            {
+                protocol: "https",
+                hostname: "c258565.parspack.net",
+                pathname: "/**",
+            },
             {
                 protocol: "https",
                 hostname: "res.cloudinary.com",

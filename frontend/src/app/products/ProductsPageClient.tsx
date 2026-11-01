@@ -36,6 +36,7 @@ import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import ProductListingSkeleton from "@/components/product/ProductListingSkeleton";
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
+import { buildProductUrl } from "@/lib/paths";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -624,7 +625,7 @@ function ProductListingContent() {
         itemListElement: products.map((product, index) => ({
           "@type": "ListItem",
           position: index + 1,
-          url: `${siteUrl || ""}/product/${product.slug || product.id}`,
+          url: `${siteUrl || ""}${buildProductUrl(product as any)}`,
           name: product.title || product.name,
         })),
       }

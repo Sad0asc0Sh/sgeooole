@@ -21,6 +21,7 @@ import { useVelocitySnap } from "@/hooks/useVelocitySnap";
 import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { getServerNow } from "@/lib/serverClock";
+import { buildProductUrl } from "@/lib/paths";
 
 /**
  * Special Offer Rail Component
@@ -191,7 +192,7 @@ function SpecialOfferRail() {
                 key={product.id}
                 style={{ width: "148px", height: "auto" }}
               >
-                <Link href={`/product/${product.id}`} className="block h-full">
+                <Link href={buildProductUrl(product)} className="block h-full">
                   <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
                     {/* نوار چسبیده بج‌ها: «منتخب» و بج کمپین در یک کپسول یکپارچه، بدون فاصله */}
                     <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">

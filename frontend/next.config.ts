@@ -57,7 +57,7 @@ const baseConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     // SECURITY: SVG disabled to prevent XSS attacks
     dangerouslyAllowSVG: false,
-    contentDispositionType: "attachment",
+    contentDispositionType: "inline", // inline (not attachment) so Google Images can index optimized images
     contentSecurityPolicy:
       "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
@@ -65,7 +65,7 @@ const baseConfig: NextConfig = {
       {
         protocol: "https",
         hostname: PARSPACK_ENDPOINT_HOST,
-        pathname: `/${PARSPACK_BUCKET_NAME}/**`,
+        pathname: "/**", // host-wide: do not bucket-lock (bucket name is env-driven)
       },
       // ArvanCloud Object Storage (legacy)
       {

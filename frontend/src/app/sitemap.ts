@@ -7,6 +7,9 @@ type ProductItem = {
   slug?: string;
   productCode?: string;
   updatedAt?: string;
+  name?: string;
+  // API shape: [{ url, public_id }] — plain strings are also accepted defensively.
+  images?: Array<string | { url?: string }>;
 };
 
 type CategoryItem = {
@@ -41,18 +44,59 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
   }
 };
 
-async function fetchProducts(): Promise<ProductItem[]> {
-  try {
-    const json = await fetchJsonWithTimeout(
-      `${API_BASE}/products?limit=1000&isActive=true`,
-      { next: { revalidate: 3600 } },
-      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
-    );
-    return Array.isArray(json?.data) ? json.data : [];
-  } catch (error) {
-    logBuildFetchWarning("[sitemap] Failed to fetch products", error);
-    return [];
+// Absolute, indexable image URLs for one product (image sitemap extension).
+// Skips empty values and placeholders; relative URLs are absolutized against
+// the site origin (productData's "/placeholder.svg" fallback must never leak
+// into the sitemap as a product photo).
+const productImageUrls = (product: ProductItem): string[] => {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const img of product.images ?? []) {
+    const raw = (typeof img === "string" ? img : img?.url || "").trim();
+    if (!raw || raw.toLowerCase().includes("placeholder")) continue;
+    const absolute = /^https?:\/\//i.test(raw)
+      ? raw
+      : raw.startsWith("/")
+        ? `${SITE_URL}${raw}`
+        : null;
+    if (absolute && !seen.has(absolute)) {
+      seen.add(absolute);
+      urls.push(absolute);
+    }
   }
+  return urls;
+};
+
+async function fetchProducts(): Promise<ProductItem[]> {
+  // The backend caps `limit` at 100 (productListingService MAX_LIMIT), so the
+  // old single `limit=1000` request silently returned only page 1 and every
+  // product beyond it was missing from the sitemap. Page through the listing
+  // instead (bounded, and `facets=false` keeps each request cheap).
+  // NOTE: `isActive` is deliberately NOT sent: it is an admin-only filter
+  // (accessControl ADMIN_ONLY_FILTERS) that the backend strips for anonymous
+  // callers before forcing isActive=true itself.
+  const PAGE_LIMIT = 100;
+  const MAX_PAGES = 50;
+  const all: ProductItem[] = [];
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    let json: any = null;
+    try {
+      json = await fetchJsonWithTimeout(
+        `${API_BASE}/products?page=${page}&limit=${PAGE_LIMIT}&facets=false`,
+        { next: { revalidate: 3600 } },
+        IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
+      );
+    } catch (error) {
+      logBuildFetchWarning("[sitemap] Failed to fetch products", error);
+      break;
+    }
+    const items: ProductItem[] = Array.isArray(json?.data) ? json.data : [];
+    all.push(...items);
+    const totalPages = Number(json?.pagination?.totalPages);
+    if (items.length < PAGE_LIMIT) break;
+    if (Number.isFinite(totalPages) && totalPages > 0 && page >= totalPages) break;
+  }
+  return all;
 }
 
 async function fetchCategories(): Promise<CategoryItem[]> {
@@ -118,11 +162,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         slug: product.slug,
         productCode: product.productCode,
       } as any);
+      const images = productImageUrls(product);
       return {
         url: `${SITE_URL}${urlPath}`,
         lastModified: product.updatedAt ? new Date(product.updatedAt) : now,
         changeFrequency: "weekly" as const,
         priority: 0.7,
+        // Image sitemap extension: without this, Google had to discover every
+        // product photo by rendering PDPs (and products have exactly one entry
+        // point — this file — for their images).
+        ...(images.length > 0 ? { images } : {}),
       };
     });
 

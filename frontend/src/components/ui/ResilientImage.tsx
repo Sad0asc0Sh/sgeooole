@@ -131,7 +131,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       }
 
       // Legacy browser fallback: no IntersectionObserver (IE11, old Safari/Chrome)
-      // -> treat as visible so image never stays at opacity:0 forever.
+      // -> treat as visible so retries are never viewport-blocked forever.
       if (typeof IntersectionObserver === "undefined") {
         isInViewport.current = true;
         if (waitingForViewport.current) {
@@ -215,7 +215,10 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       () => ({
         ...style,
         transition: `opacity ${transitionDuration}ms ease-in-out`,
-        opacity: phase === "loaded" || phase === "error" ? 1 : 0,
+        // SEO: the <img> is NEVER opacity:0 in the initial/SSR style. A hidden
+        // first paint made crawlers treat product photos as not rendered; the
+        // skeleton below is only an overlay behind the (always visible) image.
+        opacity: 1,
       }),
       [style, transitionDuration, phase]
     );

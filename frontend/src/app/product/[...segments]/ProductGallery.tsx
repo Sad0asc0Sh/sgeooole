@@ -27,11 +27,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [initialSlide, setInitialSlide] = useState(0);
     const [activeIndex, setActiveIndex] = useState(0);
-    const [mounted, setMounted] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
 
     // Scroll Lock: Prevent body scroll when gallery modal is open
     useEffect(() => {
@@ -86,12 +81,17 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const swiperRef = useRef<SwiperType | null>(null);
     const modalSwiperRef = useRef<SwiperType | null>(null);
 
-    // Early return AFTER all hooks
-    if (!mounted) return (
-        <div className="h-[260px] w-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center">
-            <div className="w-24 h-24 rounded-2xl bg-gray-200 animate-pulse" />
-        </div>
-    );
+    // SEO: no `mounted` gate here. The gallery must render in the server HTML
+    // (Swiper + next/image both SSR their markup) so crawlers can see the main
+    // product images; a client-only placeholder made the PDP ship zero gallery
+    // <img> tags. The modal below is the only client-gated part (portal, open state).
+    const faNum = (n: number) => n.toLocaleString("fa-IR", { useGrouping: false });
+    const brandSuffix = product.brand ? ` برند ${product.brand}` : "";
+    const galleryAlt = (index: number) =>
+        index === 0
+            ? `خرید ${product.name}${brandSuffix}`
+            : `${product.name} - نمای ${faNum(index + 1)}`;
+    const thumbnailAlt = (index: number) => `${product.name} - تصویر کوچک ${faNum(index + 1)}`;
 
     // Compute flash deal status once (no interval needed)
     const now = getServerNow();
@@ -194,7 +194,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                     >
                                         <ResilientImage
                                             src={img}
-                                            alt={`${product.name} - Image ${index + 1}`}
+                                            alt={galleryAlt(index)}
                                             fill
                                             className="object-contain"
                                             sizes="100vw"
@@ -221,7 +221,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             >
                                 <ResilientImage
                                     src={img}
-                                    alt={`Thumbnail ${index + 1}`}
+                                    alt={thumbnailAlt(index)}
                                     fill
                                     className="object-cover"
                                     sizes="64px"
@@ -259,7 +259,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                     <div className="relative w-full h-full min-h-0 min-w-0 overflow-hidden">
                                         <ResilientImage
                                             src={img}
-                                            alt={`${product.name} - Image ${index + 1}`}
+                                            alt={galleryAlt(index)}
                                             fill
                                             className="object-contain object-center !p-4 mix-blend-multiply"
                                             sizes="(max-width: 1023px) 100vw, 45vw"
@@ -302,7 +302,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                         >
                             <ResilientImage
                                 src={img}
-                                alt={`Thumbnail ${index + 1}`}
+                                alt={thumbnailAlt(index)}
                                 fill
                                 className="object-cover"
                                 sizes="(min-width: 1024px) 56px, 48px"

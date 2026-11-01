@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TrendingUp, ShoppingCart, Star, AlertCircle } from 'lucide-react'
 import { getBlurDataURL } from '@/lib/blurPlaceholder'
+import { buildProductUrl } from '@/lib/paths'
 
 // Types
 interface BestsellerScore {
@@ -29,6 +30,7 @@ interface Product {
   _id: string
   name: string
   slug: string
+  productCode?: string
   image?: { url: string }
   price: number
   discount: number
@@ -233,7 +235,7 @@ export default function BestSellers({
                 </div>
 
                 {/* Image */}
-                <Link href={`/product/${product.slug}`}>
+                <Link href={buildProductUrl({ id: product._id, slug: product.slug, productCode: product.productCode } as any)}>
                   <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: '1' }}>
                     {product.image?.url ? (
                       <Image
@@ -271,7 +273,7 @@ export default function BestSellers({
                   )}
 
                   {/* Product Name */}
-                  <Link href={`/product/${product.slug}`}>
+                  <Link href={buildProductUrl({ id: product._id, slug: product.slug, productCode: product.productCode } as any)}>
                     <h3 className="font-semibold text-gray-900 line-clamp-2 hover:text-blue-600 transition">
                       {product.name}
                     </h3>
@@ -316,7 +318,7 @@ export default function BestSellers({
 
                   {/* Add to Cart Button */}
                   <button
-                    onClick={() => router.push(`/product/${product.slug}`)}
+                    onClick={() => router.push(buildProductUrl({ id: product._id, slug: product.slug, productCode: product.productCode } as any))}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition flex items-center justify-center gap-2"
                   >
                     <ShoppingCart className="w-4 h-4" />

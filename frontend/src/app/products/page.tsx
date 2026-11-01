@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense, cache } from "react";
+import Link from "next/link";
 import ProductsPageClient from "./ProductsPageClient";
+import { buildProductUrl } from "@/lib/paths";
+import { parseProductFilters, appendPropertyFilters } from "@/lib/productFilters";
 import { productService } from "@/services/productService";
 import { brandService } from "@/services/brandService";
 
@@ -57,6 +60,69 @@ const resolveBrandName = cache(async (slug?: string): Promise<string | null> => 
     return null;
   }
 });
+
+// ─── Server-rendered crawlable listing (SEO) ─────────────────────────────
+// ProductsPageClient fetches in the browser, so the initial HTML of /products
+// contained ZERO product links (verified live) and pagination was <button>s —
+// crawlers had no path from the listing to the products. The server now
+// fetches the SAME listing the client will show (same filter parsing, same
+// page size as useProductListing) and renders a visually-hidden nav of real
+// <Link>s (products + page numbers) plus a canonical ItemList JSON-LD.
+// Failure-safe by design: any API error returns null and the page renders
+// exactly as before (client UI unchanged, visually and functionally).
+const API_BASE = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const SERVER_PAGE_SIZE = 24; // = useProductListing ITEMS_PER_PAGE
+
+type ServerListingProduct = {
+  _id?: string;
+  id?: string;
+  slug?: string;
+  productCode?: string;
+  name?: string;
+  title?: string;
+};
+
+async function fetchServerListing(
+  params: SearchParams
+): Promise<{ products: ServerListingProduct[]; totalPages: number; currentPage: number } | null> {
+  try {
+    const raw = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      const first = firstString(value as string | string[] | undefined);
+      if (first !== undefined) raw.set(key, first);
+    }
+    const filters = parseProductFilters(raw);
+    const query = new URLSearchParams();
+    query.set("page", String(filters.page));
+    query.set("limit", String(SERVER_PAGE_SIZE));
+    query.set("sort", filters.sort);
+    if (filters.category) query.set("category", filters.category);
+    if (filters.brand) query.set("brand", filters.brand);
+    if (filters.search) query.set("search", filters.search);
+    if (filters.minPrice !== undefined) query.set("minPrice", String(filters.minPrice));
+    if (filters.maxPrice !== undefined) query.set("maxPrice", String(filters.maxPrice));
+    if (filters.includeChildren) query.set("includeChildren", "true");
+    if (filters.inStock) query.set("inStock", "true");
+    if (filters.onSale) query.set("onSale", "true");
+    if (filters.minRating !== undefined) query.set("minRating", String(filters.minRating));
+    appendPropertyFilters(query, filters.properties);
+    query.set("facets", "false"); // links/schema only — facet counts are the client's job
+
+    const res = await fetch(`${API_BASE}/products?${query.toString()}`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json().catch(() => null);
+    const products: ServerListingProduct[] = Array.isArray(json?.data) ? json.data : [];
+    const pagination = json?.pagination || {};
+    const total = Number(pagination.totalItems) || products.length;
+    const totalPages =
+      Number(pagination.totalPages) || Math.max(1, Math.ceil(total / SERVER_PAGE_SIZE));
+    return { products, totalPages, currentPage: filters.page };
+  } catch {
+    return null;
+  }
+}
 
 const brandValuesOf = (params: SearchParams): string[] =>
   (Array.isArray(params.brand) ? params.brand : [params.brand || ""])
@@ -154,6 +220,38 @@ export default async function ProductListingPage({
   const categoryName = showServerHeader ? await resolveCategoryName(category) : null;
   const label = categoryName || (category ? humanizeSlug(category) : null);
 
+  // Crawlable server copy of the current listing (see fetchServerListing).
+  const listing = await fetchServerListing(params);
+  const listingHref = (product: ServerListingProduct) =>
+    buildProductUrl({
+      id: product._id || product.id || "",
+      slug: product.slug,
+      productCode: product.productCode,
+    } as any);
+  const pageHref = (pageNumber: number) => {
+    const next = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      const first = firstString(value as string | string[] | undefined);
+      if (first !== undefined && key !== "page") next.set(key, first);
+    }
+    if (pageNumber > 1) next.set("page", String(pageNumber));
+    const qs = next.toString();
+    return qs ? `/products?${qs}` : "/products";
+  };
+  const itemListSchema =
+    listing && listing.products.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "ItemList",
+          itemListElement: listing.products.map((product, index) => ({
+            "@type": "ListItem",
+            position: (listing.currentPage - 1) * SERVER_PAGE_SIZE + index + 1,
+            url: `${SITE_URL}${listingHref(product)}`,
+            name: product.name || product.title || product.slug || "",
+          })),
+        }
+      : null;
+
   return (
     <>
       {showServerHeader && (
@@ -167,6 +265,34 @@ export default async function ProductListingPage({
               : "مشاهده و خرید آنلاین طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند در فروشگاه اینترنتی ای کا جی کالا؛ با تضمین اصالت، قیمت به‌روز و گارانتی معتبر."}
           </p>
         </div>
+      )}
+      {itemListSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+        />
+      )}
+      {listing && listing.products.length > 0 && (
+        <nav aria-label="فهرست محصولات" className="sr-only">
+          <ul>
+            {listing.products.map((product) => (
+              <li key={product._id || product.id || product.slug}>
+                <Link href={listingHref(product)}>
+                  {product.name || product.title || product.slug}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          {listing.totalPages > 1 && (
+            <ul>
+              {Array.from({ length: listing.totalPages }, (_, i) => i + 1).map((pageNumber) => (
+                <li key={pageNumber}>
+                  <Link href={pageHref(pageNumber)}>{`صفحه ${pageNumber}`}</Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </nav>
       )}
       <Suspense fallback={null}>
         <ProductsPageClient />
