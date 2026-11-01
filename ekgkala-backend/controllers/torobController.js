@@ -14,6 +14,7 @@ const SORTS = new Set(['date_added_desc', 'date_updated_desc'])
 const response = (res, products, currentPage = 1, total = products.length) => res.json({
   api_version: 'torob_api_v3',
   current_page: currentPage,
+  count: total,
   total,
   max_pages: total === 0 ? 1 : Math.ceil(total / PAGE_SIZE),
   products,

@@ -176,6 +176,9 @@ const mapTorobProduct = (product, variantOrSales = null, campaignContext = null)
     pricing.currentPrice > 0
   )
 
+  const addedDate = asIsoDate(product?.createdAt)
+  const updatedDate = asIsoDate(product?.updatedAt || product?.createdAt)
+
   return {
     page_url: buildPageUrl(product),
     page_unique: isVariable && variantId ? `${product.productCode}_${variantId}` : product.productCode,
@@ -183,16 +186,16 @@ const mapTorobProduct = (product, variantOrSales = null, campaignContext = null)
     title: String(product?.name || '').slice(0, 500),
     subtitle: buildSubtitle(product, variant),
     short_desc: stripHtml(product?.description),
-    category_name: product?.category?.name || null,
-    guarantee: product?.guarantee || null,
+    category_name: product?.category?.name ? String(product.category.name).slice(0, 200) : null,
+    guarantee: product?.guarantee ? String(product.guarantee).slice(0, 200) : null,
     stock_status: 'new',
     current_price: pricing.currentPrice,
     old_price: pricing.oldPrice,
     availability: inStock,
     image_links: images,
     spec: mapSpecifications(product, variant),
-    date_added: asIsoDate(product?.createdAt),
-    date_updated: asIsoDate(product?.updatedAt),
+    date_added: addedDate,
+    date_updated: updatedDate,
   }
 }
 
