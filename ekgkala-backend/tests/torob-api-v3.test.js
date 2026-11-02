@@ -30,10 +30,11 @@ const product = {
 
 const rows = flattenProduct(product)
 assert.strictEqual(rows.length, 2)
-assert.deepStrictEqual(rows[0].page_unique, 'KY-0000001_507f1f77bcf86cd799439011')
+// اولین واریانت کانونیکال شناسه اصلی کالا را حفظ می‌کند تا با دیتابیس ترب تطبیق یابد
+assert.deepStrictEqual(rows[0].page_unique, 'KY-0000001')
+assert.strictEqual(rows[0].product_group_id, 'KY-0000001')
 assert.strictEqual(rows[0].page_url, 'https://www.ekgkala.ir/product/ky-0000001/test-product')
 assert.strictEqual(rows[0].current_price, 1080)
-// واریانت compareAtPrice خودش را ندارد؛ oldPrice از مبنای resolved خود واریانت می‌آید
 assert.strictEqual(rows[0].old_price, 1200)
 assert.deepStrictEqual(rows[0].image_links, ['https://cdn.example/blue.jpg'])
 assert.strictEqual(rows[0].short_desc, 'A description')
@@ -46,7 +47,9 @@ assert.strictEqual(rows[0].spec['برند'], 'Test brand')
 assert.strictEqual(rows[0].spec['گارانتی'], '12 months')
 assert.strictEqual(rows[0].spec['Color'], 'Blue')
 
-// دومین واریانت
+// دومین واریانت شناسه ترکیبی دریافت می‌کند
+assert.strictEqual(rows[1].page_unique, 'KY-0000001_507f1f77bcf86cd799439012')
+assert.strictEqual(rows[1].product_group_id, 'KY-0000001')
 assert.strictEqual(rows[1].subtitle, 'Red')
 assert.strictEqual(rows[1].spec['Color'], 'Red')
 

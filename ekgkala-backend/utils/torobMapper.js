@@ -158,12 +158,13 @@ const buildPageUrl = (product) => {
   return `${baseUrl}/product/${productCode}/${slug}`
 }
 
-const mapTorobProduct = (product, variantOrSales = null, campaignContext = null) => {
+const mapTorobProduct = (product, variantOrSales = null, campaignContext = null, options = {}) => {
   const isSecondArgSales =
     Array.isArray(variantOrSales) ||
     (variantOrSales && (variantOrSales.campaignMap instanceof Map || variantOrSales.categoryDiscountMap instanceof Map))
   const variant = isSecondArgSales ? null : variantOrSales
   const effectiveCampaignCtx = isSecondArgSales ? variantOrSales : campaignContext
+  const { isPrimaryVariant = false } = options
 
   const isVariable = product?.productType === 'variable'
   const variantId = variant?._id?.toString?.() || variant?._id
@@ -179,9 +180,17 @@ const mapTorobProduct = (product, variantOrSales = null, campaignContext = null)
   const addedDate = asIsoDate(product?.createdAt)
   const updatedDate = asIsoDate(product?.updatedAt || product?.createdAt)
 
+  // برای واریانت اصلی (یا محصولات ساده)، page_unique دقیقاً برابر با productCode است
+  // تا شناسه محصول ثبت‌شده در دیتابیس ترب بدون تغییر باقی بماند و خطای access=False رفع شود.
+  // واریانت‌های جانبی شناسه ترکیبی دریافت می‌کنند.
+  let pageUnique = product.productCode
+  if (isVariable && variantId && !isPrimaryVariant) {
+    pageUnique = `${product.productCode}_${variantId}`
+  }
+
   return {
     page_url: buildPageUrl(product),
-    page_unique: isVariable && variantId ? `${product.productCode}_${variantId}` : product.productCode,
+    page_unique: pageUnique,
     product_group_id: isVariable ? product.productCode : null,
     title: String(product?.name || '').slice(0, 500),
     subtitle: buildSubtitle(product, variant),
@@ -222,14 +231,21 @@ const getCanonicalVariant = (product, campaignContext = null) => {
 const flattenProduct = (product, campaignContext = null) => {
   if (!product || product.isActive !== true || product.excludeFromTorob === true) return []
   if (product.productType !== 'variable') {
-    return [mapTorobProduct(product, null, campaignContext)].filter((row) => row.image_links.length > 0)
+    return [mapTorobProduct(product, null, campaignContext, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
   }
   const variants = Array.isArray(product.variants) ? product.variants : []
   if (variants.length === 0) {
-    return [mapTorobProduct(product, null, campaignContext)].filter((row) => row.image_links.length > 0)
+    return [mapTorobProduct(product, null, campaignContext, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
   }
+
+  const canonical = getCanonicalVariant(product, campaignContext)
+  const canonicalId = canonical?._id ? String(canonical._id) : (variants[0]?._id ? String(variants[0]._id) : null)
+
   return variants
-    .map((variant) => mapTorobProduct(product, variant, campaignContext))
+    .map((variant) => {
+      const isPrimary = Boolean(canonicalId && String(variant._id) === canonicalId)
+      return mapTorobProduct(product, variant, campaignContext, { isPrimaryVariant: isPrimary })
+    })
     .filter((row) => row.image_links.length > 0)
 }
 

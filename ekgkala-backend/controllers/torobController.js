@@ -75,17 +75,17 @@ const fetchProducts = async (requests, { singlePerCode = false } = {}) => {
     if (variantId) {
       if (product.productType !== 'variable') return []
       const variant = (product.variants || []).find((entry) => String(entry._id) === variantId)
-      return variant ? [mapTorobProduct(product, variant)].filter((row) => row.image_links.length > 0) : []
+      // اگر مستقیماً یک variantId خاص درخواست شده باشد:
+      return variant ? [mapTorobProduct(product, variant, null, { isPrimaryVariant: false })].filter((row) => row.image_links.length > 0) : []
     }
-    // در استعلام تک‌محصول بر اساس URL یا کد بدون شناسه واریانت:
-    // طبق قانون ۱:۱ مستندات ترب، پاسخ به درخواست تک‌محصول نباید شامل چندین تنوع باشد.
-    // واریانت کانونیکال (ارزان‌ترین گزینه موجود) به عنوان نماینده ارسال می‌شود.
+    // در استعلام تک‌محصول با URL یا با کد محصول اصلی بدون شناسه تنوع:
+    // شناسه کالا باید دقیقاً منطبق بر productCode باشد تا در جستجو و اعتبارسنجی ترب تطبیق یابد.
     if (singlePerCode || isUrlMode) {
       if (product.productType === 'variable') {
         const canonical = getCanonicalVariant(product)
-        return canonical ? [mapTorobProduct(product, canonical)].filter((row) => row.image_links.length > 0) : []
+        return canonical ? [mapTorobProduct(product, canonical, null, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0) : []
       }
-      return [mapTorobProduct(product)].filter((row) => row.image_links.length > 0)
+      return [mapTorobProduct(product, null, null, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
     }
     return flattenProduct(product)
   })
