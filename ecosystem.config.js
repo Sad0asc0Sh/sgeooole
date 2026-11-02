@@ -31,9 +31,10 @@ module.exports = {
             script: './ekgkala-backend/server.js',
             cwd: __dirname,
 
-            // Cluster mode for better performance
-            instances: 'max', // Use all CPU cores, or set to specific number like 2
-            exec_mode: 'cluster',
+            // Fork mode with a single instance: server.js runs in-process
+            // scheduled jobs (setInterval), so clustering would duplicate them.
+            instances: 1,
+            exec_mode: 'fork',
 
             // Memory management
             max_memory_restart: '500M', // Restart if memory exceeds 500MB (memory leak protection)
@@ -163,7 +164,7 @@ module.exports = {
             repo: 'git@github.com:your-username/ekgkala.git',
             path: '/var/www/ekgkala',
             'pre-deploy-local': '',
-            'post-deploy': 'pnpm run install:all && pnpm run build && pm2 reload ecosystem.config.js --env production',
+            'post-deploy': 'pnpm run install:ci && pnpm run build && pm2 reload ecosystem.config.js --env production',
             'pre-setup': '',
             env: {
                 NODE_ENV: 'production',
