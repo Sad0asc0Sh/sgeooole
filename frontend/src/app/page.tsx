@@ -200,52 +200,142 @@ export default async function Home() {
   const contactPhone =
     (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim() || "05135013383";
 
+  // Verified profile URLs that belong to this same business entity:
+  // the Enamad trust-seal page already linked from the site footer and
+  // the store's Telegram channel from the live public settings. They pin
+  // those third-party profiles to ekgkala.ir as the canonical entity home.
+  const verifiedProfiles = [
+    "https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6",
+    "https://t.me/ekgkala",
+  ];
+  const socialLinks = Array.from(
+    new Set([
+      ...verifiedProfiles,
+      ...(process.env.NEXT_PUBLIC_SOCIAL_LINKS || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ]),
+  );
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "Organization",
+        // Entity SEO: one canonical Organization/OnlineStore entity for the
+        // brand, with every spelling users actually search for, all three
+        // Mashhad branches exactly as published on /contact, the real logo
+        // file (the old /logo.png URL returned 404) and non-empty sameAs.
+        "@type": ["Organization", "OnlineStore"],
+        "@id": `${SITE_URL}/#organization`,
         name: "ای کا جی کالا",
-        alternateName: ["ekgkala", "ای‌کا‌جی‌کالا", "EKG KALA", SITE_NAME],
+        legalName: "فروشگاه اینترنتی ای کا جی کالا (EKG KALA)",
+        alternateName: [
+          "ای کا جی کالا",
+          "ای‌کا‌جی کالا",
+          "ای‌کا‌جی‌کالا",
+          "ایکاجی کالا",
+          "ایکیجی کالا",
+          "فروشگاه ای کا جی کالا",
+          "ekgkala",
+          "EKG KALA",
+          "EKGKala",
+          "ekgkala.ir",
+          SITE_NAME,
+        ],
         url: SITE_URL,
-        logo: `${SITE_URL}/logo.png`,
-        description:
-          "ای کا جی کالا (ekgkala)؛ فروشگاه اینترنتی جامع عرضه طیف گسترده کالاهای تکنولوژی، دیجیتال و هوشمند با ضمانت اصالت، شبکه تأمین معتبر و ارسال سریع به سراسر کشور.",
-        ...(contactPhone
-          ? {
-              contactPoint: {
-                "@type": "ContactPoint",
-                contactType: "customer service",
-                telephone: contactPhone,
-                areaServed: "IR",
-                availableLanguage: ["fa", "en"],
-              },
-            }
-          : {}),
-        // Postal address of branch 1, exactly as published on /contact —
-        // completes the Organization entity for AI assistants verifying
-        // the business (agent-readiness: contactPoint + address).
-        address: {
-          "@type": "PostalAddress",
-          addressCountry: "IR",
-          addressLocality: "مشهد",
-          streetAddress: "پیروزی 75 بین ولایتی 9و11",
+        foundingDate: "2017",
+        logo: {
+          "@type": "ImageObject",
+          "@id": `${SITE_URL}/#logo`,
+          url: `${SITE_URL}/logo-text.png`,
+          contentUrl: `${SITE_URL}/logo-text.png`,
+          width: 977,
+          height: 347,
+          caption: "فروشگاه اینترنتی ای کا جی کالا (ekgkala)",
         },
-
-        sameAs: (process.env.NEXT_PUBLIC_SOCIAL_LINKS || "")
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        image: [
+          `${SITE_URL}/logo-text.png`,
+          `${SITE_URL}/icon-512x512.png`,
+          `${SITE_URL}/ekg-logo.jpg`,
+        ],
+        description:
+          "فروشگاه اینترنتی ای کا جی کالا (ekgkala / EKG KALA)؛ مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال، الکترونیک و تجهیزات هوشمند در ایران با ۳ شعبه فعال در مشهد (بلوار پیروزی، میدان صاحب‌الزمان و خین‌عرب) و ارسال سریع به سراسر کشور.",
+        contactPoint: [
+          {
+            "@type": "ContactPoint",
+            contactType: "customer service",
+            telephone: contactPhone,
+            areaServed: "IR",
+            availableLanguage: ["fa", "en"],
+          },
+          {
+            "@type": "ContactPoint",
+            contactType: "sales",
+            telephone: "05137136355",
+            areaServed: "IR",
+            availableLanguage: ["fa"],
+          },
+          {
+            "@type": "ContactPoint",
+            contactType: "customer support",
+            telephone: "09154191788",
+            areaServed: "IR",
+            availableLanguage: ["fa"],
+          },
+        ],
+        // All three branch addresses, exactly as published on /contact
+        // (ContactClient branches) — branch 3 (Khin Arab, Tarchi) is the
+        // address Enamad/Torob list for this store, so publishing it here
+        // ties that third-party record to this domain.
+        address: [
+          {
+            "@type": "PostalAddress",
+            name: "شعبه ۱ ای کا جی کالا (بلوار پیروزی)",
+            addressCountry: "IR",
+            addressRegion: "خراسان رضوی",
+            addressLocality: "مشهد",
+            streetAddress: "پیروزی 75 بین ولایتی 9و11",
+          },
+          {
+            "@type": "PostalAddress",
+            name: "شعبه ۲ ای کا جی کالا (میدان صاحب‌الزمان)",
+            addressCountry: "IR",
+            addressRegion: "خراسان رضوی",
+            addressLocality: "مشهد",
+            streetAddress: "میدان صاحب الزمان پاساژ سبحان طبقه +۱ واحد ۱۶",
+          },
+          {
+            "@type": "PostalAddress",
+            name: "شعبه ۳ ای کا جی کالا (خین‌عرب - طرح‌چی)",
+            addressCountry: "IR",
+            addressRegion: "خراسان رضوی",
+            addressLocality: "مشهد",
+            streetAddress: "خین عرب طرح چی6 - پ63",
+          },
+        ],
+        sameAs: socialLinks,
       },
       {
         "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
         name: "ای کا جی کالا",
-        alternateName: ["ekgkala", "ای‌کا‌جی‌کالا"],
+        alternateName: [
+          "فروشگاه اینترنتی ای کا جی کالا",
+          "ای‌کا‌جی کالا",
+          "ایکاجی کالا",
+          "ekgkala",
+          "EKG KALA",
+        ],
         url: SITE_URL,
-        inLanguage: "fa",
+        inLanguage: "fa-IR",
+        publisher: { "@id": `${SITE_URL}/#organization` },
         potentialAction: {
           "@type": "SearchAction",
-          target: `${SITE_URL}/products?search={search_term_string}`,
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${SITE_URL}/products?search={search_term_string}`,
+          },
           "query-input": "required name=search_term_string",
         },
       },
@@ -259,10 +349,14 @@ export default async function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      {/* Brand H1 for SEO: visually hidden, keeps the visual design untouched */}
-      <h1 className="sr-only">
-        فروشگاه اینترنتی ای کا جی کالا (ekgkala) | خرید آنلاین کالای تکنولوژی و دیجیتال
-      </h1>
+      {/* Brand H1 for SEO: visible, subtle one-line brand banner so the
+          homepage's only <h1> is a real rendered heading carrying the exact
+          spaced brand spelling users search for ("ای کا جی کالا"). */}
+      <div className="mx-auto w-full max-w-[1440px] px-4 pt-3 pb-1 text-center md:text-right">
+        <h1 className="text-xs md:text-sm font-bold text-neutral-700">
+          فروشگاه اینترنتی ای کا جی کالا (ekgkala) — مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند در ایران
+        </h1>
+      </div>
       {/* Crawlable product links for the client-rendered rails below (see fetchHomeRailProducts) */}
       {railProducts.length > 0 && (
         <nav aria-label="محصولات منتخب فروشگاه" className="sr-only">

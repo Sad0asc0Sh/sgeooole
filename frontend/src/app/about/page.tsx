@@ -22,5 +22,30 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  return <AboutClient />;
+  // Entity SEO: AboutPage schema so search/AI crawlers read the brand's
+  // identity (founded ۱۳۹۶, three Mashhad branches) from this site itself
+  // and resolve it to the same #organization entity as the homepage.
+  const aboutSchema = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "@id": `${SITE_URL}/about#aboutpage`,
+    name: "درباره فروشگاه اینترنتی ای کا جی کالا (ekgkala)",
+    description,
+    url: `${SITE_URL}/about`,
+    inLanguage: "fa-IR",
+    mainEntity: {
+      "@id": `${SITE_URL}/#organization`,
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }}
+      />
+      <AboutClient />
+    </>
+  );
 }

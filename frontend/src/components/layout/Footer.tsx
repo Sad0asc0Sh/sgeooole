@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
     Send,
     Instagram,
@@ -104,7 +105,11 @@ function Footer() {
     const { isAuthenticated } = useAuth();
     const { categoryTree } = useCategoryTree();
 
-    const [isSeoExpanded, setIsSeoExpanded] = useState(false);
+    const pathname = usePathname();
+    // On the homepage the full brand story starts expanded so its text is
+    // rendered in full for readers and crawlers without a click; on other
+    // pages it stays collapsed as before.
+    const [isSeoExpanded, setIsSeoExpanded] = useState(pathname === "/");
     const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
 
     const [email, setEmail] = useState("");
@@ -325,7 +330,7 @@ function Footer() {
                         <div className={styles.seoTitleGroup}>
                             <span className={styles.seoBadge}>اصالت، امنیت و آرامش</span>
                             <h2 className={styles.seoHeading}>
-                                فروشگاه اینترنتی ای‌کا‌جی کالا (EKG KALA)؛ تجربه‌ای مطمئن در خرید آنلاین دنیای تکنولوژی
+                                فروشگاه اینترنتی ای کا جی کالا (ای‌کا‌جی کالا / EKG KALA)؛ تجربه‌ای مطمئن در خرید آنلاین دنیای تکنولوژی
                             </h2>
                         </div>
                     </div>
@@ -337,7 +342,7 @@ function Footer() {
                         }`}
                     >
                         <p className={styles.seoParagraph}>
-                            فروشگاه اینترنتی <strong>ای‌کا‌جی کالا (EKG KALA)</strong> مسیر خود را از سال{" "}
+                            فروشگاه اینترنتی <strong>ای کا جی کالا (ای‌کا‌جی کالا / EKG KALA)</strong> مسیر خود را از سال{" "}
                             <strong>۱۳۹۶</strong> در کلان‌شهر مشهد با تکیه بر ارزش‌های بنیادین{" "}
                             <strong>امنیت، اعتماد و آرامش خاطر مشتریان</strong> آغاز کرد. پشتوانه‌ای که با تعهد به
                             اصالت کالا و صداقت در خدمات شکل گرفت، امروز به یک پلتفرم جامع خرید آنلاین برای{" "}

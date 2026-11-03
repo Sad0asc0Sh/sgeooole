@@ -7,6 +7,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCategoryTree } from "@/hooks/useCategories";
 import api from "@/lib/api";
 
+jest.mock("next/navigation", () => ({
+    // Off-homepage path: the brand story starts expanded only on "/".
+    usePathname: () => "/products",
+}));
+
 jest.mock("@/services/settingsService", () => ({
     settingsService: {
         getPublicSettings: jest.fn(),
