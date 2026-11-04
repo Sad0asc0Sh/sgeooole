@@ -1,7 +1,8 @@
 const Product = require('../models/Product')
 const logger = require('../utils/logger')
 const { getTorobFeed } = require('../jobs/torobFeedCache')
-const { flattenProduct, mapTorobProduct, getCanonicalVariant } = require('../utils/torobMapper')
+const { flattenProduct } = require('../utils/torobMapper')
+const { getActiveSalesCampaignContext } = require('../services/pricingService')
 
 // ثبت صریح مدل‌های Mongoose برای جلوگیری از خطای MissingSchemaError در فراخوانی‌های populate
 require('../models/Category')
@@ -56,38 +57,36 @@ const parsePageUnique = (pageUnique) => {
   return match ? { productCode: match[1].toUpperCase(), variantId: match[2] || null } : null
 }
 
-const fetchProducts = async (requests, { singlePerCode = false } = {}) => {
-  const codes = [...new Set(requests.map((item) => item.productCode))]
+/**
+ * استعلام تک‌محصول (page_urls / page_uniques).
+ *
+ * همان تابع و همان کمپین فید کامل (`flattenProduct` + `getActiveSalesCampaignContext`)
+ * استفاده می‌شود تا قیمت، موجودی، شناسه و تنوع انتخابی بین فید کامل و استعلام تک‌محصول
+ * هیچ‌وقت اختلاف نداشته باشد. به ازای هر کد کالا حداکثر «یک» ردیف برمی‌گردد.
+ *
+ * شناسه‌ی ترکیبی قدیمی (`KY-X_<variantId>`) دیگر منتشر نمی‌شود. طبق مستند ترب برای
+ * شناسه‌ی حذف‌شده/ناموجود در فید، آرایه‌ی خالی برمی‌گردد (نه ردیفی با page_unique
+ * متفاوت از درخواست). فقط درخواست‌های بدون پسوند تنوع پاسخ می‌گیرند.
+ */
+const fetchProducts = async (requests) => {
+  const codes = [...new Set(requests.filter((item) => !item.variantId).map((item) => item.productCode))]
   if (codes.length === 0) return []
-  const products = await Product.find({
-    productCode: { $in: codes },
-    isActive: true,
-    excludeFromTorob: { $ne: true },
-  })
-    .populate('category', 'name')
-    .populate('brand', 'name')
-    .lean()
+  const [products, campaignContext] = await Promise.all([
+    Product.find({
+      productCode: { $in: codes },
+      isActive: true,
+      excludeFromTorob: { $ne: true },
+    })
+      .populate('category', 'name')
+      .populate('brand', 'name')
+      .lean(),
+    getActiveSalesCampaignContext(new Date()),
+  ])
   const byCode = new Map(products.map((product) => [product.productCode, product]))
 
-  return requests.flatMap(({ productCode, variantId, isUrlMode }) => {
+  return codes.flatMap((productCode) => {
     const product = byCode.get(productCode)
-    if (!product) return []
-    if (variantId) {
-      if (product.productType !== 'variable') return []
-      const variant = (product.variants || []).find((entry) => String(entry._id) === variantId)
-      // اگر مستقیماً یک variantId خاص درخواست شده باشد:
-      return variant ? [mapTorobProduct(product, variant, null, { isPrimaryVariant: false })].filter((row) => row.image_links.length > 0) : []
-    }
-    // در استعلام تک‌محصول با URL یا با کد محصول اصلی بدون شناسه تنوع:
-    // شناسه کالا باید دقیقاً منطبق بر productCode باشد تا در جستجو و اعتبارسنجی ترب تطبیق یابد.
-    if (singlePerCode || isUrlMode) {
-      if (product.productType === 'variable') {
-        const canonical = getCanonicalVariant(product)
-        return canonical ? [mapTorobProduct(product, canonical, null, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0) : []
-      }
-      return [mapTorobProduct(product, null, null, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
-    }
-    return flattenProduct(product)
+    return product ? flattenProduct(product, campaignContext) : []
   })
 }
 
@@ -98,6 +97,7 @@ const torobRequestLogger = (req, res, next) => {
       ip: req.ip,
       mode: req.torobMode || 'invalid',
       products: res.locals.torobProductCount || 0,
+      requested: req.torobRequested,
       statusCode: res.statusCode,
       durationMs: Date.now() - started,
     })
@@ -123,18 +123,20 @@ const getProducts = async (req, res, next) => {
 
     if (Object.prototype.hasOwnProperty.call(req.body, 'page_urls')) {
       req.torobMode = 'page_urls'
+      req.torobRequested = req.body.page_urls.slice(0, 20)
       const requests = req.body.page_urls
         .map(extractProductCode)
         .filter(Boolean)
         .map((productCode) => ({ productCode, variantId: null, isUrlMode: true }))
-      const products = await fetchProducts(requests, { singlePerCode: true })
+      const products = await fetchProducts(requests)
       res.locals.torobProductCount = products.length
       return response(res, products)
     }
 
     req.torobMode = 'page_uniques'
+    req.torobRequested = req.body.page_uniques.slice(0, 20)
     const requests = req.body.page_uniques.map(parsePageUnique).filter(Boolean)
-    const products = await fetchProducts(requests, { singlePerCode: true })
+    const products = await fetchProducts(requests)
     res.locals.torobProductCount = products.length
     return response(res, products)
   } catch (error) {

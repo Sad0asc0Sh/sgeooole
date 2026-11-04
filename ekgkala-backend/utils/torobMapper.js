@@ -228,25 +228,29 @@ const getCanonicalVariant = (product, campaignContext = null) => {
   return sorted[0] || null
 }
 
+/**
+ * قرارداد پایدار فید ترب: هر صفحه‌ی محصول (page_url) دقیقاً «یک» ردیف دارد.
+ *
+ * - محصول ساده: یک ردیف با page_unique = productCode.
+ * - محصول متغیر: یک ردیف با تنوع کانونیکال (ارزان‌ترین تنوع موجود) و باز هم
+ *   page_unique = productCode. شناسه‌ی تنوع‌ها (_id) هرگز وارد page_unique نمی‌شود؛
+ *   چون با ذخیره‌ی دوباره‌ی تنوع‌ها در ادمین عوض می‌شود و ترب آن را «حذف‌شده» می‌بیند.
+ *
+ * چرا یک ردیف: در خروجی پنل ترب (۱۳ آبان) هر ۷ محصول چندتنوعی که چند ردیف با
+ * page_url یکسان در فید داشتند «وضعیت دسترسی: False» بودند، و همه‌ی محصولاتی که
+ * دقیقاً یک ردیف داشتند True بودند. پاسخ حالت page_urls هم همیشه تک‌ردیفی است؛
+ * این تابع فید کامل را با آن هم‌شکل می‌کند.
+ */
 const flattenProduct = (product, campaignContext = null) => {
   if (!product || product.isActive !== true || product.excludeFromTorob === true) return []
-  if (product.productType !== 'variable') {
-    return [mapTorobProduct(product, null, campaignContext, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
-  }
   const variants = Array.isArray(product.variants) ? product.variants : []
-  if (variants.length === 0) {
-    return [mapTorobProduct(product, null, campaignContext, { isPrimaryVariant: true })].filter((row) => row.image_links.length > 0)
-  }
-
-  const canonical = getCanonicalVariant(product, campaignContext)
-  const canonicalId = canonical?._id ? String(canonical._id) : (variants[0]?._id ? String(variants[0]._id) : null)
-
-  return variants
-    .map((variant) => {
-      const isPrimary = Boolean(canonicalId && String(variant._id) === canonicalId)
-      return mapTorobProduct(product, variant, campaignContext, { isPrimaryVariant: isPrimary })
-    })
-    .filter((row) => row.image_links.length > 0)
+  const variant =
+    product.productType === 'variable' && variants.length > 0
+      ? getCanonicalVariant(product, campaignContext) || variants[0]
+      : null
+  return [mapTorobProduct(product, variant, campaignContext, { isPrimaryVariant: true })].filter(
+    (row) => row.image_links.length > 0,
+  )
 }
 
 module.exports = {

@@ -29,8 +29,8 @@ const product = {
 }
 
 const rows = flattenProduct(product)
-assert.strictEqual(rows.length, 2)
-// اولین واریانت کانونیکال شناسه اصلی کالا را حفظ می‌کند تا با دیتابیس ترب تطبیق یابد
+// قرارداد: هر محصول متغیر دقیقاً یک ردیف (تنوع کانونیکال) با شناسه‌ی ثابت productCode
+assert.strictEqual(rows.length, 1)
 assert.deepStrictEqual(rows[0].page_unique, 'KY-0000001')
 assert.strictEqual(rows[0].product_group_id, 'KY-0000001')
 assert.strictEqual(rows[0].page_url, 'https://www.ekgkala.ir/product/ky-0000001/test-product')
@@ -47,11 +47,26 @@ assert.strictEqual(rows[0].spec['برند'], 'Test brand')
 assert.strictEqual(rows[0].spec['گارانتی'], '12 months')
 assert.strictEqual(rows[0].spec['Color'], 'Blue')
 
-// دومین واریانت شناسه ترکیبی دریافت می‌کند
-assert.strictEqual(rows[1].page_unique, 'KY-0000001_507f1f77bcf86cd799439012')
-assert.strictEqual(rows[1].product_group_id, 'KY-0000001')
-assert.strictEqual(rows[1].subtitle, 'Red')
-assert.strictEqual(rows[1].spec['Color'], 'Red')
+// هیچ page_unique ای شامل شناسه‌ی تنوع نیست و هر page_url فقط یک‌بار در فید می‌آید
+const manyRows = [product, { ...product, productCode: 'KY-0000002', slug: 'other' }].flatMap((p) => flattenProduct(p))
+assert.ok(manyRows.every((row) => !row.page_unique.includes('_')))
+assert.strictEqual(new Set(manyRows.map((row) => row.page_url)).size, manyRows.length)
+assert.strictEqual(new Set(manyRows.map((row) => row.page_unique)).size, manyRows.length)
+
+// شناسه با تغییر _id تنوع‌ها (ذخیره‌ی دوباره در ادمین) ثابت می‌ماند
+const reSaved = { ...product, variants: product.variants.map((v, i) => ({ ...v, _id: `60000000000000000000000${i}` })) }
+assert.strictEqual(flattenProduct(reSaved)[0].page_unique, rows[0].page_unique)
+
+// وقتی تنوع ارزان‌تر ناموجود شود، همان شناسه‌ی ثابت به تنوع موجود بعدی می‌رسد
+const cheapOut = { ...product, variants: [{ ...product.variants[0], stock: 0 }, product.variants[1]] }
+const cheapOutRows = flattenProduct(cheapOut)
+assert.strictEqual(cheapOutRows.length, 1)
+assert.strictEqual(cheapOutRows[0].page_unique, 'KY-0000001')
+assert.strictEqual(cheapOutRows[0].subtitle, 'Red')
+assert.strictEqual(cheapOutRows[0].availability, true)
+
+// محصول متغیر بدون تنوع هم یک ردیف دارد
+assert.strictEqual(flattenProduct({ ...product, variants: [], price: 500, stock: 3 }).length, 1)
 
 // تست کانونیکال (باید ارزان‌ترین موجود در انبار را انتخاب کند)
 const canonical = getCanonicalVariant(product)

@@ -160,11 +160,11 @@ async function runTests() {
       if(res.status !== 401) throw new Error('Expected 401');
     });
 
-    await runScenario('8. variable', { page_uniques: [`${p4.productCode}_${p4.variants[0]._id}`, `${p4.productCode}_${p4.variants[1]._id}`] }, token, res => {
+    await runScenario('8. variable', { page_uniques: [p4.productCode, `${p4.productCode}_${p4.variants[0]._id}`] }, token, res => {
       if(res.status !== 200) throw new Error('Status not 200');
-      if(res.data.products.length !== 2) throw new Error('Expected 2 products');
-      const var2 = res.data.products.find(p => p.page_unique.includes(p4.variants[1]._id));
-      if(var2.availability !== false) throw new Error('Variant 2 should be unavailable');
+      // فقط شناسه‌ی ثابت productCode پاسخ می‌گیرد؛ شناسه‌ی ترکیبی قدیمی دیگر منتشر نمی‌شود
+      if(res.data.products.length !== 1) throw new Error('Expected exactly 1 product');
+      if(res.data.products[0].page_unique !== p4.productCode) throw new Error('Variable product must keep the stable productCode');
     });
 
     await runScenario('9. wrong audience', { page: 1, sort: 'date_added_desc' }, wrongAudienceToken, res => {

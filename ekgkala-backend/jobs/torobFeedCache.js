@@ -8,7 +8,7 @@ require('../models/Category')
 require('../models/Brand')
 require('../models/Sale')
 
-const CACHE_KEY = 'torob:feed:v3'
+const CACHE_KEY = 'torob:feed:v4'
 const ttlSeconds = () => Math.max(1, Number.parseInt(process.env.TOROB_FEED_CACHE_TTL_SECONDS, 10) || 600)
 
 const rebuildTorobFeed = async () => {
