@@ -28,6 +28,15 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [initialSlide, setInitialSlide] = useState(0);
     const [activeIndex, setActiveIndex] = useState(0);
 
+    // Preload the next slide in the background while the current one is shown.
+    useEffect(() => {
+        const next = product.images?.[activeIndex + 1];
+        if (next) {
+            const im = new window.Image();
+            im.src = next;
+        }
+    }, [activeIndex, product.images]);
+
     // Scroll Lock: Prevent body scroll when gallery modal is open
     useEffect(() => {
         if (isGalleryOpen) {
@@ -220,7 +229,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                     }`}
                             >
                                 <ResilientImage
-                                    src={img}
+                                    src={product.cardImages?.[index] || img}
+                                    backupSrc={img}
                                     alt={thumbnailAlt(index)}
                                     fill
                                     className="object-cover"
@@ -301,7 +311,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 }`}
                         >
                             <ResilientImage
-                                src={img}
+                                src={product.cardImages?.[index] || img}
+                                backupSrc={img}
                                 alt={thumbnailAlt(index)}
                                 fill
                                 className="object-cover"

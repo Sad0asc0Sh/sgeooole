@@ -12,10 +12,12 @@
  *   const optimized = await optimizeImageFile(file); // WebP/JPEG compressed
  */
 
-const DEFAULT_MAX_WIDTH = 1920;
-const DEFAULT_MAX_HEIGHT = 1920;
+const DEFAULT_MAX_WIDTH = 1200;
+const DEFAULT_MAX_HEIGHT = 1200;
 const TARGET_QUALITY_STEPS = [0.85, 0.75, 0.65, 0.55];
-const TARGET_MAX_BYTES = 500 * 1024; // 500 KB target
+const TARGET_MAX_BYTES = 140 * 1024; // 140 KB target (gallery tier)
+const CARD_TARGET_BYTES = 28 * 1024; // 28 KB target (card tier)
+const CARD_QUALITY_STEPS = [0.78, 0.72, 0.66, 0.58];
 
 /**
  * Create an instant blob URL for local preview (zero network latency).
@@ -84,27 +86,15 @@ function fitDimensions(srcW, srcH, maxW, maxH) {
  * 4. Try JPEG if WebP is not smaller
  * 5. Return the smallest result (or original if optimization did not help)
  */
-export async function optimizeImageFile(file, opts = {}) {
-  if (!file) return file;
-  if (!file.type?.startsWith("image/")) return file;
-  if (file.type === "image/gif") return file;
-
-  const maxWidth = opts.maxWidth ?? DEFAULT_MAX_WIDTH;
-  const maxHeight = opts.maxHeight ?? DEFAULT_MAX_HEIGHT;
-  const targetBytes = opts.targetBytes ?? TARGET_MAX_BYTES;
-
-  if (file.size <= targetBytes) return file;
-
-  let source;
-  try {
-    source = await decodeImage(file);
-  } catch {
-    return file;
-  }
-
+/**
+ * Shared encode helper: render `source` at fitDimensions(maxWidth × maxHeight)
+ * and try WebP then JPEG across the given quality steps.
+ * Returns the smallest blob found, and whether it meets targetBytes.
+ */
+async function encodeBest(source, { maxWidth, maxHeight, targetBytes, qualitySteps }) {
   const srcW = source.width || 0;
   const srcH = source.height || 0;
-  if (!srcW || !srcH) return file;
+  if (!srcW || !srcH) return { blob: null, type: null };
 
   const { width, height } = fitDimensions(srcW, srcH, maxWidth, maxHeight);
 
@@ -112,13 +102,13 @@ export async function optimizeImageFile(file, opts = {}) {
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
+  if (!ctx) return { blob: null, type: null };
 
   let bestBlob = null;
   let bestType = null;
 
   const tryFormat = async (type, needsFill) => {
-    for (const quality of TARGET_QUALITY_STEPS) {
+    for (const quality of qualitySteps) {
       ctx.clearRect(0, 0, width, height);
       if (needsFill) {
         ctx.fillStyle = "#ffffff";
@@ -143,6 +133,45 @@ export async function optimizeImageFile(file, opts = {}) {
   await tryFormat("image/webp", false);
   await tryFormat("image/jpeg", true);
 
+  return { blob: bestBlob, type: bestType };
+}
+
+export async function optimizeImageFile(file, opts = {}) {
+  if (!file) return file;
+  if (!file.type?.startsWith("image/")) return file;
+  if (file.type === "image/gif") return file;
+
+  const maxWidth = opts.maxWidth ?? DEFAULT_MAX_WIDTH;
+  const maxHeight = opts.maxHeight ?? DEFAULT_MAX_HEIGHT;
+  const targetBytes = opts.targetBytes ?? TARGET_MAX_BYTES;
+
+  let source;
+  try {
+    source = await decodeImage(file);
+  } catch {
+    return file;
+  }
+
+  const srcW = source.width || 0;
+  const srcH = source.height || 0;
+  if (!srcW || !srcH) return file;
+
+  // Only skip conversion when the file is ALREADY a WebP that fits both the
+  // dimension and size budget — small JPEG/PNG uploads must still become WebP.
+  const alreadyOptimized =
+    file.type === "image/webp" &&
+    srcW <= maxWidth &&
+    srcH <= maxHeight &&
+    file.size <= targetBytes;
+  if (alreadyOptimized) return file;
+
+  const { blob: bestBlob, type: bestType } = await encodeBest(source, {
+    maxWidth,
+    maxHeight,
+    targetBytes,
+    qualitySteps: TARGET_QUALITY_STEPS,
+  });
+
   if (source.close) {
     try { source.close(); } catch {}
   }
@@ -157,6 +186,50 @@ export async function optimizeImageFile(file, opts = {}) {
     type: bestType,
     lastModified: Date.now(),
   });
+}
+
+/**
+ * Build both product-image tiers in the browser:
+ * - mainFile: 1200×1200 WebP, 140KB target (gallery / PDP)
+ * - cardFile: 420×420 WebP, 28KB target, quality 0.78→0.58 (cards / rails)
+ * GIFs pass through untouched with no card variant.
+ */
+export async function createProductImageVariants(file) {
+  if (!file || !file.type?.startsWith("image/") || file.type === "image/gif") {
+    return { mainFile: file, cardFile: null };
+  }
+
+  let source;
+  try {
+    source = await decodeImage(file);
+  } catch {
+    return { mainFile: file, cardFile: null };
+  }
+
+  const bake = async ({ maxWidth, maxHeight, targetBytes, qualitySteps, suffix }) => {
+    const { blob, type } = await encodeBest(source, { maxWidth, maxHeight, targetBytes, qualitySteps });
+    if (!blob || !type) return null;
+    const baseName = (file.name || "image").replace(/\.[^/.]+$/, "");
+    const ext = type === "image/webp" ? "webp" : "jpg";
+    return new File([blob], `${baseName}${suffix}.${ext}`, { type, lastModified: Date.now() });
+  };
+
+  // Encode sequentially against the same decoded source so we only decode once.
+  const mainFile = (await bake({
+    maxWidth: 1200, maxHeight: 1200, targetBytes: TARGET_MAX_BYTES,
+    qualitySteps: TARGET_QUALITY_STEPS, suffix: "",
+  })) || file;
+
+  const cardFile = await bake({
+    maxWidth: 420, maxHeight: 420, targetBytes: CARD_TARGET_BYTES,
+    qualitySteps: CARD_QUALITY_STEPS, suffix: "-card",
+  });
+
+  if (source.close) {
+    try { source.close(); } catch {}
+  }
+
+  return { mainFile, cardFile };
 }
 
 /**

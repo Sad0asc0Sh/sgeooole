@@ -135,6 +135,8 @@ function defaultVariantOptions(p) {
 function firstImageUrl(p) {
   const imgs = p.images || [];
   for (const img of imgs) {
+    // Card variant (420px) is preferred for chat cards when available.
+    if (img && typeof img.cardUrl === 'string' && img.cardUrl.trim()) return img.cardUrl.trim();
     if (typeof img === 'string' && img.trim()) return img.trim();
     if (img && typeof img.url === 'string' && img.url.trim()) return img.url.trim();
   }

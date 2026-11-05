@@ -46,7 +46,7 @@ import type {
 
 
 
-type BackendImage = string | { url?: string };
+type BackendImage = string | { url?: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } };
 
 type BackendCategory = {
   _id?: string;
@@ -150,16 +150,34 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
     return null;
   };
 
+  // Card (420px) variant of a backend image: cardUrl first, then legacy
+  // size buckets, then the main URL. Returns null when nothing usable.
+  const normalizeCardImage = (img: any): string | null => {
+    if (!img || typeof img !== "object") return null;
+    const url = img.cardUrl || img.sizes?.card || img.sizes?.small || img.sizes?.thumbnail;
+    return typeof url === "string" && url.trim() !== "" ? url.trim() : null;
+  };
+
   let imageArray: string[] = [];
+  let cardImageArray: string[] = [];
   if (backendProduct.images && backendProduct.images.length > 0) {
     imageArray = backendProduct.images
       .map(normalizeImage)
+      .filter((x): x is string => Boolean(x));
+    cardImageArray = backendProduct.images
+      .map(normalizeCardImage)
       .filter((x): x is string => Boolean(x));
   }
   if (imageArray.length === 0 && backendProduct.image) {
     const normalized = normalizeImage(backendProduct.image);
     if (normalized) {
       imageArray = [normalized];
+    }
+  }
+  if (cardImageArray.length === 0 && backendProduct.image) {
+    const normalized = normalizeCardImage(backendProduct.image);
+    if (normalized) {
+      cardImageArray = [normalized];
     }
   }
   if (imageArray.length === 0) {
@@ -208,6 +226,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
           price: vp.finalPrice,
           oldPrice: vp.oldPrice,
           images: (v.images ?? []).map(normalizeImage).filter((x): x is string => Boolean(x)),
+          cardImages: (v.images ?? []).map(normalizeCardImage).filter((x): x is string => Boolean(x)),
           ...(excluded ? { excludeFromPromotion: true as const } : {}),
         };
       })
@@ -242,7 +261,9 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
 
     // Images
     image: imageArray[0], // First image as main image
+    cardImage: cardImageArray[0] || imageArray[0],
     images: imageArray, // All images for gallery
+    cardImages: cardImageArray.length > 0 ? cardImageArray : imageArray,
 
     // Category and Brand (Handle both string ID and populated object)
     category: (() => {
@@ -464,6 +485,10 @@ export const productService = {
 
           // Handle image - bestsellers returns image as string or object
           const imageUrl = normalizeImage(item.image) || "/placeholder.svg";
+          const cardImageUrl =
+            (item.image && typeof item.image === "object"
+              ? item.image.cardUrl || item.image.sizes?.card || item.image.sizes?.small || item.image.sizes?.thumbnail
+              : null) || imageUrl;
 
           // Handle stock - could be a number or an object with variants
           const stock = typeof item.stock === 'number' ? item.stock : 0;
@@ -528,7 +553,9 @@ export const productService = {
             compareAtPrice: pricing.basePrice,
             discount: pricing.discount,
             image: imageUrl,
+            cardImage: cardImageUrl,
             images: [imageUrl],
+            cardImages: [cardImageUrl],
             category: item.category?.name || "عمومی",
             categoryPath: item.category ? [{ id: item.category._id || "", name: item.category.name || "", slug: item.category.slug || "" }] : [],
             rating: item.average_rating || 0,

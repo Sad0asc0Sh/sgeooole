@@ -122,13 +122,46 @@ const uriEncode = (str) => {
 const WEBP_QUALITY = 82;
 const CONVERT_TIMEOUT_MS = 15000;
 
-const convertToWebp = (buffer) =>
-  new Promise((resolve) => {
+// Optional sharp accelerator — used only when installed; otherwise we
+// fall through to the system ImageMagick `convert` binary below.
+let sharp = null;
+try {
+  sharp = require("sharp");
+} catch {
+  sharp = null;
+}
+
+/**
+ * Convert/resize an image buffer to WebP.
+ * Prefers `sharp` when available, otherwise shells out to ImageMagick.
+ * Resolves to null on any failure so callers can fall back to the original.
+ */
+const convertToWebp = (buffer, options = {}) => {
+  const maxWidth = options.maxWidth ?? 1200;
+  const maxHeight = options.maxHeight ?? 1200;
+  const quality = options.quality ?? WEBP_QUALITY;
+
+  if (sharp) {
+    return sharp(buffer)
+      .rotate()
+      .resize({ width: maxWidth, height: maxHeight, fit: "inside", withoutEnlargement: true })
+      .webp({ quality, method: 6 })
+      .toBuffer()
+      .catch((err) => {
+        console.warn("[ParspackS3] sharp WebP conversion failed, using original:", err.message);
+        return null;
+      });
+  }
+
+  return new Promise((resolve) => {
     const child = execFile(
       "convert",
       [
         "-",              // read from stdin
-        "-quality", String(WEBP_QUALITY),
+        "-auto-orient",
+        "-resize", `${maxWidth}x${maxHeight}>`,
+        "-quality", String(quality),
+        "-define", "webp:method=6",
         "-strip",         // remove metadata for smaller size
         "webp:-",         // write webp to stdout
       ],
@@ -157,12 +190,20 @@ const convertToWebp = (buffer) =>
       resolve(null);
     }
   });
+};
 
 const shouldConvertToWebp = (extLower) => {
-  // Skip GIF (animated frames) and files already in webp format
-  if (extLower === ".gif" || extLower === ".webp") return false;
-  return [".jpg", ".jpeg", ".png"].includes(extLower);
+  // Skip only GIF (animated frames). WebP uploads are re-standardized too
+  // (dimensions + quality) so client-produced variants stay uniform.
+  if (extLower === ".gif") return false;
+  return [".jpg", ".jpeg", ".png", ".webp"].includes(extLower);
 };
+
+/** Derived object key for the lightweight card variant of a main image. */
+const cardKeyFor = (objectKey) =>
+  objectKey.endsWith(".webp") && !objectKey.endsWith("-card.webp")
+    ? objectKey.replace(/\.webp$/, "-card.webp")
+    : null;
 
 const MIME_MAP = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -296,46 +337,21 @@ const generateSafeFilename = (originalName) => {
 // Virtual-hosted: host already contains the bucket; PARSPACK_BUCKET_NAME
 // is a key prefix.  The canonical URI signed must equal what ParsPack
 // internally resolves: /<hostBucket>/<bucketName>/<objectKey>
+//
+// Dual-tier: when `generateCard` is true (or a pre-made `cardBuffer` is
+// supplied) the lightweight card variant (`<uuid>-card.webp`, 420px) is
+// uploaded alongside the main gallery file (`<uuid>.webp`, 1200px).
 // ============================================
-const uploadToParsPack = async (buffer, originalName) => {
-  if (!isValidConfig) {
-    throw new Error("تنظیمات ParsPack Cloud Storage انجام نشده است");
-  }
-
-  if (!Buffer.isBuffer(buffer)) {
-    throw new Error("[ParspackS3] Upload payload must be a Buffer");
-  }
-
-  const filename = generateSafeFilename(originalName);
-  const ext = path.extname(originalName).toLowerCase();
-
-  let uploadBuffer = buffer;
-  let uploadFilename = filename;
-  let contentType = MIME_MAP[ext] || "application/octet-stream";
-
-  if (shouldConvertToWebp(ext)) {
-    const webpBuffer = await convertToWebp(buffer);
-    if (webpBuffer) {
-      uploadBuffer = webpBuffer;
-      uploadFilename = filename.replace(/\.[^.]+$/, ".webp");
-      contentType = "image/webp";
-      console.log(
-        `[ParspackS3] Converted to WebP: ${buffer.length} → ${webpBuffer.length} bytes (${Math.round((1 - webpBuffer.length / buffer.length) * 100)}% smaller)`
-      );
-    }
-  }
-
-  const objectKey = `uploads/${uploadFilename}`;
+const putObject = async (uploadBuffer, objectKey, contentType) => {
   const urlPath = `/${PARSPACK_BUCKET_NAME}/${objectKey}`;
   const canonicalUri = uriEncode(`/${HOST_BUCKET}${urlPath}`);
   const hostname = PARSPACK_ENDPOINT;
   const publicUrl = `https://${hostname}${urlPath}`;
+  const url = `https://${hostname}${urlPath}`;
 
   let lastError = null;
 
   for (let attempt = 1; attempt <= MAX_UPLOAD_RETRIES; attempt++) {
-    console.log(`[ParspackS3] Upload attempt ${attempt}/${MAX_UPLOAD_RETRIES} via ${hostname}`);
-
     const now = new Date();
     const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
     const dateStamp = amzDate.slice(0, 8);
@@ -347,8 +363,8 @@ const uploadToParsPack = async (buffer, originalName) => {
       "x-amz-acl": "public-read",
       "x-amz-content-sha256": payloadHash,
       "x-amz-date": amzDate,
+      "cache-control": "public, max-age=31536000, immutable",
     };
-    headersObj["cache-control"] = "public, max-age=31536000, immutable";
     const signedHeaders = Object.keys(headersObj).sort();
 
     const authorization = buildAuthorizationHeader({
@@ -366,8 +382,6 @@ const uploadToParsPack = async (buffer, originalName) => {
       amzDate,
     });
 
-    const url = `https://${hostname}${urlPath}`;
-
     try {
       const response = await axios.put(url, uploadBuffer, {
         headers: {
@@ -380,19 +394,10 @@ const uploadToParsPack = async (buffer, originalName) => {
         transformRequest: [(data) => data],
         httpsAgent: s3HttpsAgent,
       });
-
-      console.log(`[ParspackS3] Upload succeeded on attempt ${attempt} via ${hostname}`);
-
-      return {
-        key: objectKey,
-        filename: uploadFilename,
-        url: publicUrl,
-        etag: response.headers && response.headers.etag,
-      };
+      return { key: objectKey, url: publicUrl, etag: response.headers && response.headers.etag };
     } catch (error) {
       lastError = error;
-      logS3Error(`Upload attempt ${attempt}`, error);
-
+      logS3Error(`Upload attempt ${attempt} (${objectKey})`, error);
       if (attempt < MAX_UPLOAD_RETRIES) {
         const delay = Math.pow(2, attempt - 1) * 500;
         console.warn(`[ParspackS3] Retrying in ${delay}ms...`);
@@ -407,17 +412,95 @@ const uploadToParsPack = async (buffer, originalName) => {
   throw new Error(`خطا در آپلود روی ParsPack Cloud Storage (after ${MAX_UPLOAD_RETRIES} attempts): ${detail}`);
 };
 
-// ============================================
-// Delete file from ParsPack S3
-// ============================================
-const deleteFromParsPack = async (key) => {
-  if (!isValidConfig || !key) {
-    console.warn("[ParspackS3] Config not set, skip delete");
-    return;
+const uploadToParsPack = async (buffer, originalName, options = {}) => {
+  const {
+    cardBuffer = null,
+    generateCard = false,
+    maxWidth = 1200,
+    maxHeight = 1200,
+    quality = 82,
+    cardMaxWidth = 420,
+    cardMaxHeight = 420,
+    cardQuality = 78,
+  } = options;
+
+  if (!isValidConfig) {
+    throw new Error("تنظیمات ParsPack Cloud Storage انجام نشده است");
   }
 
-  const objectKey = key.startsWith("uploads/") ? key : `uploads/${key}`;
+  if (!Buffer.isBuffer(buffer)) {
+    throw new Error("[ParspackS3] Upload payload must be a Buffer");
+  }
 
+  const filename = generateSafeFilename(originalName);
+  const ext = path.extname(originalName).toLowerCase();
+  const isGif = ext === ".gif";
+
+  let uploadBuffer = buffer;
+  let uploadFilename = filename;
+  let contentType = MIME_MAP[ext] || "application/octet-stream";
+
+  if (shouldConvertToWebp(ext)) {
+    const webpBuffer = await convertToWebp(buffer, { maxWidth, maxHeight, quality });
+    if (webpBuffer) {
+      uploadBuffer = webpBuffer;
+      uploadFilename = filename.replace(/\.[^.]+$/, ".webp");
+      contentType = "image/webp";
+      console.log(
+        `[ParspackS3] Converted to WebP: ${buffer.length} → ${webpBuffer.length} bytes (${Math.round((1 - webpBuffer.length / buffer.length) * 100)}% smaller)`
+      );
+    }
+  }
+
+  const objectKey = `uploads/${uploadFilename}`;
+  const mainResult = await putObject(uploadBuffer, objectKey, contentType);
+  console.log(`[ParspackS3] Upload succeeded: ${objectKey}`);
+
+  // Card variant: prefer the client-supplied buffer, else derive it from the
+  // final (already-WebP) main buffer. GIFs never get a card variant.
+  let cardResult = null;
+  const wantsCard = !isGif && contentType === "image/webp" && (generateCard || Buffer.isBuffer(cardBuffer));
+  if (wantsCard) {
+    const cardObjKey = cardKeyFor(objectKey);
+    if (cardObjKey) {
+      let cardBuf = Buffer.isBuffer(cardBuffer) ? cardBuffer : null;
+      if (!cardBuf) {
+        cardBuf = await convertToWebp(uploadBuffer, {
+          maxWidth: cardMaxWidth,
+          maxHeight: cardMaxHeight,
+          quality: cardQuality,
+        });
+      }
+      if (cardBuf) {
+        try {
+          cardResult = await putObject(cardBuf, cardObjKey, "image/webp");
+          console.log(`[ParspackS3] Card variant uploaded: ${cardObjKey} (${cardBuf.length} bytes)`);
+        } catch (cardErr) {
+          // A failed card variant must not fail the whole upload — the
+          // frontend falls back to the main image when cardUrl is absent.
+          console.warn("[ParspackS3] Card variant upload failed, continuing without it:", cardErr.message);
+          cardResult = null;
+        }
+      }
+    }
+  }
+
+  return {
+    key: objectKey,
+    filename: uploadFilename,
+    url: mainResult.url,
+    cardUrl: cardResult ? cardResult.url : mainResult.url,
+    cardKey: cardResult ? cardResult.key : null,
+    etag: mainResult.etag,
+  };
+};
+
+// ============================================
+// Delete file from ParsPack S3
+// Deleting a main `.webp` also removes its `-card.webp` twin so the
+// dual-tier pair never leaves orphans behind.
+// ============================================
+const deleteObject = async (objectKey) => {
   const host = PARSPACK_ENDPOINT;
   const urlPath = `/${PARSPACK_BUCKET_NAME}/${objectKey}`;
   const url = `https://${host}${urlPath}`;
@@ -468,6 +551,22 @@ const deleteFromParsPack = async (key) => {
   }
 };
 
+const deleteFromParsPack = async (key) => {
+  if (!isValidConfig || !key) {
+    console.warn("[ParspackS3] Config not set, skip delete");
+    return;
+  }
+
+  const objectKey = key.startsWith("uploads/") ? key : `uploads/${key}`;
+  const cardObjKey = cardKeyFor(objectKey);
+
+  if (cardObjKey) {
+    await Promise.allSettled([deleteObject(objectKey), deleteObject(cardObjKey)]);
+  } else {
+    await deleteObject(objectKey);
+  }
+};
+
 // ============================================
 // Get public URL from key
 // ============================================
@@ -495,6 +594,10 @@ const extractImageInfo = (buffer, originalName) => {
 module.exports = {
   uploadToParsPack,
   deleteFromParsPack,
+  deleteObject,
+  putObject,
+  convertToWebp,
+  cardKeyFor,
   getPublicUrl,
   extractImageInfo,
   validateFile,

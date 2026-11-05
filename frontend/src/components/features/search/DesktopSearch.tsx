@@ -306,7 +306,7 @@ export default function DesktopSearch() {
                                                 >
                                                     <div className="w-10 h-10 rounded-md bg-white border border-ekg-100 flex-shrink-0 overflow-hidden">
                                                         {product.image ? (
-                                                            <img src={product.image} alt={product.title} className="w-full h-full object-cover" />
+                                                            <img src={product.cardImage || product.image} alt={product.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center bg-ekg-50">
                                                                 <Search className="w-4 h-4 text-ekg-300" />

@@ -50,6 +50,10 @@ const baseConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "framer-motion"],
   },
   images: {
+    // Direct ParsPack S3 delivery: no /_next/image proxy, no server disk cache.
+    // Optimized variants already live on S3 as `<uuid>.webp` (1200px) and
+    // `<uuid>-card.webp` (420px); changing their S3 ACL takes effect instantly.
+    unoptimized: true,
     formats: ["image/avif", "image/webp"],
     deviceSizes: [360, 640, 768, 1024, 1280, 1536, 1920],
     imageSizes: [64, 96, 128, 256, 384],

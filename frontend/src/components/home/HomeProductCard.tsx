@@ -50,7 +50,8 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
 
       <div className={`${imageStyles.frame} ${styles.imageFrame}`}>
         <ResilientImage
-          src={product.image || "/placeholder.png"}
+          src={product.cardImage || product.image || "/placeholder.png"}
+          backupSrc={product.image}
           alt={product.name}
           fill
           className={`${imageStyles.image} ${isOutOfStock ? "grayscale opacity-60" : ""}`}

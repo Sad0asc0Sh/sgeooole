@@ -6,10 +6,10 @@
  * - Responsive srcset generation for S3 URLs
  */
 
-const DEFAULT_MAX_WIDTH = 1920;
-const DEFAULT_MAX_HEIGHT = 1920;
+const DEFAULT_MAX_WIDTH = 1200;
+const DEFAULT_MAX_HEIGHT = 1200;
 const QUALITY_STEPS = [0.85, 0.75, 0.65, 0.55];
-const TARGET_MAX_BYTES = 500 * 1024;
+const TARGET_MAX_BYTES = 140 * 1024;
 
 /* ── Instant Blob Preview ──────────────────────────────────── */
 
@@ -100,8 +100,6 @@ export async function optimizeImageFile(
   const maxHeight = opts.maxHeight ?? DEFAULT_MAX_HEIGHT;
   const targetBytes = opts.targetBytes ?? TARGET_MAX_BYTES;
 
-  if (file.size <= targetBytes) return file;
-
   let source: ImageBitmap | HTMLImageElement;
   try {
     source = await decodeImage(file);
@@ -112,6 +110,15 @@ export async function optimizeImageFile(
   const srcW = source.width || 0;
   const srcH = source.height || 0;
   if (!srcW || !srcH) return file;
+
+  // Only skip conversion when the file is ALREADY a WebP that fits both the
+  // dimension and size budget — small JPEG/PNG uploads must still become WebP.
+  const alreadyOptimized =
+    file.type === "image/webp" &&
+    srcW <= maxWidth &&
+    srcH <= maxHeight &&
+    file.size <= targetBytes;
+  if (alreadyOptimized) return file;
 
   const { width, height } = fitDimensions(srcW, srcH, maxWidth, maxHeight);
   const canvas = document.createElement("canvas");
@@ -177,8 +184,13 @@ export function generateSrcSet(
   url: string,
   widths: number[] = RESPONSIVE_WIDTHS
 ): string {
+  // Images are served unoptimized straight from ParsPack S3, so there is no
+  // server-side resize pipeline to point at. The dual-tier files on S3
+  // (1200px main + 420px `-card.webp`) are the responsive story; a plain
+  // `<img>` just uses `url` directly.
+  void widths;
   if (!url || url.startsWith("blob:") || url.startsWith("data:")) return "";
-  return widths.map((w) => `/_next/image?url=${encodeURIComponent(url)}&w=${w}&q=75 ${w}w`).join(", ");
+  return `${url} 1x`;
 }
 
 /**

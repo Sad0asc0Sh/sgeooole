@@ -115,7 +115,7 @@ const fetchWithRetry = async (
 // Reduced from 3600 (1 hour) to 30 seconds for real-time discount updates from admin panel
 export const PRODUCT_REVALIDATE = 30;
 
-type BackendImage = string | { url?: string };
+type BackendImage = string | { url?: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } };
 
 type BackendCategory = {
   _id?: string;
@@ -187,6 +187,15 @@ const normalizeImage = (img: BackendImage, assetBase: string): string | null => 
   return null;
 };
 
+/** Card (420px) variant of a backend image: cardUrl → legacy size buckets. */
+const normalizeCardImage = (img: BackendImage, assetBase: string): string | null => {
+  if (!img || typeof img !== "object") return null;
+  const url = img.cardUrl || img.sizes?.card || img.sizes?.small || img.sizes?.thumbnail;
+  if (typeof url !== "string" || !url.trim()) return null;
+  const trimmed = url.trim();
+  return trimmed.startsWith("/") ? `${assetBase}${trimmed}` : trimmed;
+};
+
 export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Product & { isActive?: boolean } => {
   const assetBase = getAssetBase(apiUrl);
 
@@ -202,9 +211,13 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
   });
 
   let images: string[] = [];
+  let cardImages: string[] = [];
   if (backend.images && backend.images.length > 0) {
     images = backend.images
       .map((img) => normalizeImage(img, assetBase))
+      .filter((value): value is string => Boolean(value));
+    cardImages = backend.images
+      .map((img) => normalizeCardImage(img, assetBase))
       .filter((value): value is string => Boolean(value));
   }
 
@@ -212,6 +225,13 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     const normalized = normalizeImage(backend.image, assetBase);
     if (normalized) {
       images = [normalized];
+    }
+  }
+
+  if (cardImages.length === 0 && backend.image) {
+    const normalized = normalizeCardImage(backend.image, assetBase);
+    if (normalized) {
+      cardImages = [normalized];
     }
   }
 
@@ -254,6 +274,9 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
           oldPrice: vp.oldPrice,
           images: (v.images ?? [])
             .map((img) => normalizeImage(img, assetBase))
+            .filter((x): x is string => Boolean(x)),
+          cardImages: (v.images ?? [])
+            .map((img) => normalizeCardImage(img, assetBase))
             .filter((x): x is string => Boolean(x)),
           ...(excluded ? { excludeFromPromotion: true as const } : {}),
         };
@@ -335,7 +358,9 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     compareAtPrice: pricing.basePrice,
     discount: pricing.discount,
     image: images[0],
+    cardImage: cardImages[0] || images[0],
     images,
+    cardImages: cardImages.length > 0 ? cardImages : images,
     category,
     categoryPath,
     brand,

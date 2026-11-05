@@ -27,6 +27,8 @@ const nextConfig = {
 
     // Image Configuration
     images: {
+        // Direct ParsPack S3 delivery: no /_next/image proxy, no server disk cache.
+        unoptimized: true,
         remotePatterns: [
             {
                 protocol: 'https',

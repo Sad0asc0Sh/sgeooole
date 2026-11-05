@@ -99,7 +99,8 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                 {/* Product Image */}
                 <div className={`${imageStyles.frame} mb-3 rounded-md`}>
                     <ResilientImage
-                        src={product.image || "/placeholder.png"}
+                        src={product.cardImage || product.image || "/placeholder.png"}
+                        backupSrc={product.image}
                         alt={product.name}
                         fill
                         className={`${imageStyles.image} group-hover:scale-105 transition-transform duration-300 ${isOutOfStock ? "grayscale opacity-60" : ""

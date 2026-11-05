@@ -56,6 +56,11 @@ type LoadPhase = "skeleton" | "loaded" | "error";
 
 export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string;
+  /**
+   * Full-resolution image to switch to when `src` (usually the lightweight
+   * card variant) fails to load. Tried once before the retry/fallback path.
+   */
+  backupSrc?: string;
   maxRetries?: number;
   onRetryExhausted?: () => void;
   showSkeleton?: boolean;
@@ -84,6 +89,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     {
       src,
       fallbackSrc = PLACEHOLDER_SRC,
+      backupSrc,
       maxRetries = MAX_RETRIES,
       onRetryExhausted,
       alt,
@@ -107,9 +113,11 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     const isInViewport = useRef(false);
     const wrapperRef = useRef<HTMLSpanElement>(null);
     const waitingForViewport = useRef(false);
+    const triedBackup = useRef(false);
 
     useEffect(() => {
       retryCount.current = 0;
+      triedBackup.current = false;
       setCurrentSrc(src);
 
       const node = wrapperRef.current;
@@ -160,6 +168,14 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Switch once to the full-res backup (card → main) before burning retries.
+    const tryBackup = useCallback((): boolean => {
+      if (!backupSrc || triedBackup.current || backupSrc === originalSrc) return false;
+      triedBackup.current = true;
+      setCurrentSrc(backupSrc);
+      return true;
+    }, [backupSrc, originalSrc]);
+
     const scheduleRetry = useCallback(() => {
       if (retryCount.current >= maxRetries) {
         setPhase("error");
@@ -187,6 +203,9 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     const handleError = useCallback(() => {
       if (phase === "error") return;
 
+      // First failure of a card variant → full image, immediately.
+      if (tryBackup()) return;
+
       if (typeof originalSrc === "string" && retryCount.current === 0) {
         warmConnection(originalSrc);
       }
@@ -204,7 +223,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       }
 
       scheduleRetry();
-    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, originalSrc]);
+    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, originalSrc, tryBackup]);
 
     const handleLoad = useCallback(() => {
       setPhase("loaded");
@@ -232,6 +251,9 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       style: imageStyle,
       placeholder: rest.placeholder ?? "blur",
       blurDataURL: rest.blurDataURL ?? DEFAULT_BLUR_SVG,
+      // Direct S3 delivery — never route through the server optimizer.
+      unoptimized: rest.unoptimized ?? true,
+      decoding: rest.decoding ?? "async",
       loading: rest.loading ?? (shouldPrioritize ? "eager" : "lazy"),
       fetchPriority: rest.fetchPriority ?? (shouldPrioritize ? "high" : "auto"),
       onError: handleError,

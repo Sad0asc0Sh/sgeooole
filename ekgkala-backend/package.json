@@ -14,6 +14,8 @@
     "migrate:product-codes": "node scripts/generate-product-codes.js",
     "migrate:product-codes:dry": "node scripts/generate-product-codes.js --dry-run --verbose",
     "migrate:all": "pnpm run migrate:slugs && pnpm run migrate:product-codes",
+    "migrate:s3-images": "node scripts/optimize-existing-s3-images.js",
+    "migrate:s3-images:dry": "node scripts/optimize-existing-s3-images.js --dry-run --verbose",
     "report:campaign-conflicts": "node scripts/report-campaign-conflicts.js",
     "report:suspicious-prices": "node scripts/report-suspicious-prices.js",
     "audit:stale-floors": "node scripts/report-stale-floors.cjs",

@@ -10,7 +10,7 @@ export interface WishlistVariant {
   compareAtPrice?: number;
   stock: number;
   options?: Array<{ name: string; value: string }>;
-  images?: Array<string | { url?: string }>;
+  images?: Array<string | { url?: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } }>;
   excludeFromPromotion?: boolean;
 }
 
@@ -29,6 +29,8 @@ export interface WishlistItem {
   specialOfferEndTime?: string;
   images?: Array<{
     url: string;
+    cardUrl?: string;
+    sizes?: { card?: string; small?: string; thumbnail?: string };
     public_id?: string;
   }>;
   stock?: number;

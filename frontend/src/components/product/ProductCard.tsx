@@ -140,7 +140,8 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                     {/* Static Image */}
                     <div className="relative w-full h-full">
                         <ResilientImage
-                            src={product.image || "/placeholder.svg"}
+                            src={product.cardImage || product.image || "/placeholder.svg"}
+                            backupSrc={product.image}
                             alt={product.title}
                             fill
                             className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}

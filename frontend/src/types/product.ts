@@ -67,6 +67,8 @@ export interface ProductVariant {
     stock: number;
     options: ProductVariantOption[];
     images?: string[];
+    /** Lightweight 420px card variants (`<uuid>-card.webp`) parallel to `images`. */
+    cardImages?: string[];
     // مستثنی از تخفیف: تیک تخفیف در ادمین خاموش => هیچ تخفیفی روی این وariant اعمال نمی‌شود
     excludeFromPromotion?: boolean;
 }
@@ -91,7 +93,11 @@ export interface Product {
     oldPrice?: number; // Original price before discount
     discount: number;
     image: string;
+    /** Lightweight 420px variant of `image` for cards/rails (`<uuid>-card.webp`). */
+    cardImage?: string;
     images: string[]; // Gallery images
+    /** Lightweight 420px variants parallel to `images` (for gallery thumbnails). */
+    cardImages?: string[];
     category: string;
     categoryPath?: CategoryPathItem[]; // Structured category hierarchy
     brand?: string;

@@ -320,11 +320,15 @@ const SearchResultItem = ({ product, onClose }: { product: Product; onClose: () 
                     <div className="w-full h-full flex items-center justify-center text-gray-300 bg-gray-50">
                         {product.image ? (
                             <img
-                                src={product.image}
+                                src={product.cardImage || product.image}
                                 alt={product.title}
                                 className="object-cover w-full h-full"
+                                loading="lazy"
+                                decoding="async"
                                 onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none';
+                                    const el = e.target as HTMLImageElement;
+                                    if (el.src !== product.image) el.src = product.image || "/placeholder.svg";
+                                    else el.style.display = 'none';
                                 }}
                             />
                         ) : (

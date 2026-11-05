@@ -517,11 +517,12 @@ const handleCsvUpload = (req, res, next) => {
 // Helpers
 // ============================================
 
-// Normalize upload result from ParsPack to { url, public_id }
+// Normalize upload result from ParsPack to { url, cardUrl, public_id }
 const extractImageInfo = (uploadResult) => {
   if (!uploadResult) return null
   return {
     url: uploadResult.url,
+    cardUrl: uploadResult.cardUrl || uploadResult.url,
     public_id: uploadResult.filename || uploadResult.public_id,
   }
 }
@@ -1691,7 +1692,7 @@ router.post(
 
       const newImages = []
       for (const file of (req.files || [])) {
-        const result = await uploadToParsPack(file.buffer, file.originalname)
+        const result = await uploadToParsPack(file.buffer, file.originalname, { generateCard: true })
         const info = extractImageInfo(result)
         if (info) newImages.push(info)
       }

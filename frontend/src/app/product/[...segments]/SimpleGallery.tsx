@@ -138,7 +138,8 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                             aria-label={`انتخاب تصویر ${index + 1}`}
                         >
                             <ResilientImage
-                                src={img}
+                                src={product.cardImages?.[index] || img}
+                                backupSrc={img}
                                 alt={`Thumbnail ${index + 1}`}
                                 fill
                                 className="object-cover"

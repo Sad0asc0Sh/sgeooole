@@ -59,7 +59,12 @@ const handleSingleImageUpload = (req, res, next) => {
     },
   });
 
-  upload.single("image")(req, res, (err) => {
+  // Accept both the main image and the pre-made lightweight card variant
+  // (admin panel sends `image` + optional `cardImage`).
+  upload.fields([
+    { name: "image", maxCount: 1 },
+    { name: "cardImage", maxCount: 1 },
+  ])(req, res, (err) => {
     if (err) {
       if (err.code === "LIMIT_FILE_SIZE") {
         return res.status(400).json({
@@ -72,6 +77,8 @@ const handleSingleImageUpload = (req, res, next) => {
         message: err.message || "خطا در آپلود فایل",
       });
     }
+    req.file = req.files?.image?.[0];
+    req.cardFile = req.files?.cardImage?.[0];
     next();
   });
 };
@@ -158,13 +165,17 @@ router.post(
       // Validate file
       validateFile(req.file);
 
-      // Upload to ParsPack S3
-      const result = await uploadToParsPack(req.file.buffer, req.file.originalname);
+      // Upload to ParsPack S3 (main + lightweight card variant)
+      const result = await uploadToParsPack(req.file.buffer, req.file.originalname, {
+        generateCard: true,
+        cardBuffer: req.cardFile ? req.cardFile.buffer : null,
+      });
 
       console.log("[UPLOAD] Uploaded to ParsPack:", {
         filename: result.filename,
         key: result.key,
         url: result.url,
+        cardUrl: result.cardUrl,
       });
 
       res.json({
@@ -172,6 +183,7 @@ router.post(
         message: "تصویر با موفقیت در ParsPack آپلود شد",
         data: {
           url: result.url,
+          cardUrl: result.cardUrl || result.url,
           public_id: result.filename,
           key: result.key,
         },
@@ -210,11 +222,12 @@ router.post(
         // Validate file
         validateFile(file);
 
-        // Upload to ParsPack S3
-        const result = await uploadToParsPack(file.buffer, file.originalname);
+        // Upload to ParsPack S3 (main + lightweight card variant)
+        const result = await uploadToParsPack(file.buffer, file.originalname, { generateCard: true });
 
         uploadedImages.push({
           url: result.url,
+          cardUrl: result.cardUrl || result.url,
           public_id: result.filename,
           key: result.key,
         });
@@ -256,8 +269,10 @@ router.post(
       // Validate file
       validateFile(req.file);
 
-      // Upload to ParsPack S3
-      const result = await uploadToParsPack(req.file.buffer, req.file.originalname);
+      // Upload to ParsPack S3 — banners are large, no card variant needed
+      const result = await uploadToParsPack(req.file.buffer, req.file.originalname, {
+        generateCard: false, maxWidth: 1920, maxHeight: 1080, quality: 85,
+      });
 
       res.json({
         success: true,

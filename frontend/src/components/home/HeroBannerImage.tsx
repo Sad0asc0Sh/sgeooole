@@ -91,7 +91,8 @@ export default function HeroBannerImage({
         height: imageHeight,
         sizes: HERO_SIZES,
         quality: 80,
-        unoptimized: isAnimatedOrVector(src),
+        // Direct S3 delivery — banners skip the optimizer entirely.
+        unoptimized: true,
       });
     } catch (error) {
       console.warn("[HERO] Failed to build desktop image props", error);
@@ -111,7 +112,8 @@ export default function HeroBannerImage({
         height: imageHeight,
         sizes: HERO_SIZES,
         quality: 80,
-        unoptimized: isAnimatedOrVector(mobileSrc),
+        // Direct S3 delivery — banners skip the optimizer entirely.
+        unoptimized: true,
       });
     } catch (error) {
       console.warn("[HERO] Failed to build mobile image props", error);

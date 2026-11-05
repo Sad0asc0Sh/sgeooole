@@ -31,7 +31,7 @@ interface Product {
   name: string
   slug: string
   productCode?: string
-  image?: { url: string }
+  image?: { url: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } }
   price: number
   discount: number
   average_rating: number
@@ -239,7 +239,7 @@ export default function BestSellers({
                   <div className="relative w-full bg-gray-100 overflow-hidden" style={{ aspectRatio: '1' }}>
                     {product.image?.url ? (
                       <Image
-                        src={product.image.url}
+                        src={product.image.cardUrl || product.image.sizes?.card || product.image.sizes?.small || product.image.sizes?.thumbnail || product.image.url}
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-300"
@@ -247,6 +247,8 @@ export default function BestSellers({
                         priority={index < 4}
                         fetchPriority={index < 4 ? 'high' : 'auto'}
                         loading={index < 4 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        unoptimized
                         placeholder="blur"
                         blurDataURL={getBlurDataURL()}
                       />

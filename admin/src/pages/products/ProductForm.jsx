@@ -31,7 +31,7 @@ import RichTextEditor from '../../components/RichTextEditor'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
-import { createBlobPreview, optimizeImageFile } from '../../utils/imageOptimizer'
+import { createBlobPreview, createProductImageVariants } from '../../utils/imageOptimizer'
 import { parseNumericInput } from '../../utils/formatters'
 import { normSpecKey } from '../../utils/specKey'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
@@ -254,12 +254,15 @@ function ProductForm() {
         const url = typeof img === 'string' ? img : img?.url
         const public_id =
           img && typeof img === 'object' && img.public_id ? img.public_id : undefined
+        const cardUrl =
+          img && typeof img === 'object' && img.cardUrl ? img.cardUrl : undefined
         if (!url) return null
         return {
           uid: String(index),
           name: `image-${index + 1}`,
           status: 'done',
           url,
+          cardUrl,
           public_id,
         }
       })
@@ -626,11 +629,14 @@ function ProductForm() {
     setUploadingCount(prev => prev + 1)
 
     try {
-      // ── Client-side optimization (WebP/JPEG compression) ──
-      const optimizedFile = await optimizeImageFile(file, { maxWidth: 1920, maxHeight: 1920 })
+      // ── Dual-tier variants (1200px main + 420px card WebP) ──
+      const { mainFile, cardFile } = await createProductImageVariants(file)
 
       const formData = new FormData()
-      formData.append('image', optimizedFile)
+      formData.append('image', mainFile)
+      if (cardFile) {
+        formData.append('cardImage', cardFile)
+      }
 
       const response = await api.post('/uploads/image', formData, {
         timeout: 180000, // 3 minutes for slow connections
@@ -643,7 +649,7 @@ function ProductForm() {
       })
 
       if (response.data.success) {
-        const { url, public_id } = response.data.data
+        const { url, cardUrl, public_id } = response.data.data
         // ── Smooth transition: blob preview → permanent S3 URL ──
         // Preload the S3 image in the background before swapping
         const s3Img = new window.Image()
@@ -654,6 +660,7 @@ function ProductForm() {
             ...f,
             status: 'done',
             url,
+            cardUrl: cardUrl || url,
             public_id,
             thumbUrl: url,
             percent: 100,
@@ -840,10 +847,10 @@ function ProductForm() {
         return
       }
 
-      // Get already uploaded images (with url and public_id)
+      // Get already uploaded images (with url, cardUrl and public_id)
       const uploadedImages = files
         .filter(f => f.status === 'done' && f.url && f.public_id)
-        .map(f => ({ url: f.url, public_id: f.public_id }))
+        .map(f => ({ url: f.url, ...(f.cardUrl ? { cardUrl: f.cardUrl } : {}), public_id: f.public_id }))
 
       if (!isEdit) {
         // ایجاد محصول با تصاویر آپلود شده
@@ -864,11 +871,11 @@ function ProductForm() {
         // Collect existing images (from edit mode) and new uploaded images
         const existingImages = files
           .filter(f => f.status === 'done' && f.url && !f.originFileObj)
-          .map(f => ({ url: f.url, public_id: f.public_id }))
+          .map(f => ({ url: f.url, ...(f.cardUrl ? { cardUrl: f.cardUrl } : {}), public_id: f.public_id }))
 
         const newUploadedImages = files
           .filter(f => f.status === 'done' && f.url && f.originFileObj)
-          .map(f => ({ url: f.url, public_id: f.public_id }))
+          .map(f => ({ url: f.url, ...(f.cardUrl ? { cardUrl: f.cardUrl } : {}), public_id: f.public_id }))
 
         await api.put(`/products/${id}`, {
           ...payload,

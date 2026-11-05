@@ -8,6 +8,12 @@ const firstImageUrl = (images: WishlistItem["images"]): string => {
   return typeof url === "string" && url.length > 0 ? url : "/placeholder.jpg";
 };
 
+/** Lightweight card variant of a wishlist image (cardUrl → legacy sizes). */
+const cardImageUrlOf = (img: { url?: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } } | undefined): string | null => {
+  const url = img?.cardUrl || img?.sizes?.card || img?.sizes?.small || img?.sizes?.thumbnail;
+  return typeof url === "string" && url.length > 0 ? url : null;
+};
+
 const variantImageUrl = (img: string | { url?: string } | null | undefined): string | null => {
   if (typeof img === "string" && img.trim() !== "") return img.trim();
   if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim() !== "") {
@@ -67,6 +73,9 @@ export function wishlistItemToProduct(item: WishlistItem, now: number = getServe
         images: (Array.isArray(v.images) ? v.images : [])
           .map(variantImageUrl)
           .filter((x): x is string => Boolean(x)),
+        cardImages: (Array.isArray(v.images) ? v.images : [])
+          .map((img) => (typeof img === "object" && img ? cardImageUrlOf(img as { cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } }) : null))
+          .filter((x): x is string => Boolean(x)),
         ...(excluded ? { excludeFromPromotion: true as const } : {}),
       };
     });
@@ -81,7 +90,13 @@ export function wishlistItemToProduct(item: WishlistItem, now: number = getServe
     compareAtPrice: pricing.basePrice,
     discount: pricing.discount,
     image: firstImageUrl(item.images),
+    cardImage: cardImageUrlOf(item.images?.[0]) || firstImageUrl(item.images),
     images: item.images ? item.images.map((img) => img.url) : [],
+    cardImages: item.images
+      ? item.images
+          .map((img) => cardImageUrlOf(img))
+          .filter((x): x is string => Boolean(x))
+      : [],
     category: item.category || "",
     rating: item.rating || 0,
     reviewCount: 0,

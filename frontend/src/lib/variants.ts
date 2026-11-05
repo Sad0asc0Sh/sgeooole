@@ -194,6 +194,10 @@ export function withSelectedVariant<T extends Product>(
     if (variant.excludeFromPromotion === true) {
         const exImages =
             variant.images && variant.images.length > 0 ? variant.images : product.images;
+        const exCardImages =
+            variant.cardImages && variant.cardImages.length > 0
+                ? variant.cardImages
+                : product.cardImages;
         return {
             ...product,
             price: num(variant.price, num(product.price)),
@@ -208,7 +212,9 @@ export function withSelectedVariant<T extends Product>(
             campaignTheme: undefined,
             countInStock: num(variant.stock),
             image: exImages[0] ?? product.image,
+            cardImage: exCardImages?.[0] ?? product.cardImage ?? exImages[0] ?? product.image,
             images: exImages,
+            cardImages: exCardImages,
             sku: variant.sku ?? product.sku,
         };
     }
@@ -221,6 +227,10 @@ export function withSelectedVariant<T extends Product>(
     const oldPrice = promotionDead ? undefined : variant.oldPrice;
     const images =
         variant.images && variant.images.length > 0 ? variant.images : product.images;
+    const cardImages =
+        variant.cardImages && variant.cardImages.length > 0
+            ? variant.cardImages
+            : product.cardImages;
     return {
         ...product,
         price,
@@ -228,7 +238,9 @@ export function withSelectedVariant<T extends Product>(
         compareAtPrice: oldPrice ?? product.compareAtPrice,
         countInStock: num(variant.stock),
         image: images[0] ?? product.image,
+        cardImage: cardImages?.[0] ?? product.cardImage ?? images[0] ?? product.image,
         images,
+        cardImages,
         sku: variant.sku ?? product.sku,
     };
 }

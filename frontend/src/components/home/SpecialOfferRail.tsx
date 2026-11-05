@@ -214,7 +214,8 @@ function SpecialOfferRail() {
                     {/* Product Image */}
                     <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
                       <ResilientImage
-                        src={product.image || "/placeholder.png"}
+                        src={product.cardImage || product.image || "/placeholder.png"}
+                        backupSrc={product.image}
                         alt={product.name}
                         fill
                         className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : 'group-hover:scale-105'}`}
