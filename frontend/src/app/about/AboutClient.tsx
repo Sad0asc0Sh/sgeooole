@@ -81,7 +81,7 @@ export default function AboutPage() {
                         <Building2 size={36} aria-hidden />
                     </div>
                     <span className={styles.heroBadge}>از سال ۱۳۹۶ در کنار شما</span>
-                    <h1 className={styles.heroTitle}>فروشگاه اینترنتی ای‌کا‌جی کالا</h1>
+                    <h1 className={styles.heroTitle}>فروشگاه اینترنتی ای کا جی کالا (ekgkala)</h1>
                     <p className={styles.heroText}>
                         مرجعی اصیل برای خرید آنلاین کالای تکنولوژی؛ شکل‌گرفته بر پایه امنیت، اعتماد و آرامش خاطر
                     </p>
@@ -113,7 +113,7 @@ export default function AboutPage() {
                         </div>
                         <div className={styles.cardBody}>
                             <p className={styles.paragraph}>
-                                مجموعه <span className={styles.hlAmber}>ای‌کا‌جی کالا</span> فعالیت خود را از سال <span className={styles.strong}>۱۳۹۶</span> در کلان‌شهر مشهد با دغدغه و رسالت اصلیِ ایجاد <span className={styles.strong}>امنیت و آرامش خاطر</span> برای خانواده‌ها و کسب‌وکارها آغاز نمود. صداقت در عرضه، احترام به اعتماد خریداران و تعهد بی‌قیدوشرط به اصالت کالا، سنگ‌بنای هویت این مجموعه را شکل داد.
+                                مجموعه <span className={styles.hlAmber}>ای کا جی کالا</span> (با نام <span className={styles.strong}>EKG KALA</span> که در فارسی به صورت <span className={styles.strong}>ای‌کا‌جی کالا</span> یا <span className={styles.strong}>ای کی جی کالا</span> نیز شناخته می‌شود و تنها وب‌سایت رسمی آن <span className={styles.strong}>ekgkala.ir</span> است) فعالیت خود را از سال <span className={styles.strong}>۱۳۹۶</span> در کلان‌شهر مشهد با دغدغه و رسالت اصلیِ ایجاد <span className={styles.strong}>امنیت و آرامش خاطر</span> برای خانواده‌ها و کسب‌وکارها آغاز نمود. صداقت در عرضه، احترام به اعتماد خریداران و تعهد بی‌قیدوشرط به اصالت کالا، سنگ‌بنای هویت این مجموعه را شکل داد.
                             </p>
                             <p className={styles.paragraph}>
                                 امروز با پشتوانه سال‌ها تجربه، اعتماد مشتریان وفادار و فعالیت <span className={styles.hlAmber}>سه پایگاه حضوری در مشهد</span>، ای‌کا‌جی کالا به یک فروشگاه اینترنتی جامع و پویا برای عرضه <span className={styles.strong}>طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند</span> تبدیل شده است تا با همکاری شبکه‌ای از تأمین‌کنندگان معتبر در سراسر مشهد، بهترین محصولات روز را با قیمت منصفانه و بدون واسطه به دست خریداران سراسر کشور برساند.

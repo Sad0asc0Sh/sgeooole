@@ -6,6 +6,7 @@ import HeroBannerLink from "./HeroBannerLink";
 import SwiperSlider from "./SwiperSlider";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
+import { bannerAltText } from "@/lib/bannerAlt";
 
 type HeroSectionProps = {
   initialBanners?: Banner[];
@@ -114,7 +115,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
                 <HeroBannerImage
                   src={resolveImageUrl(firstBanner.image, "/placeholder.svg")}
                   mobileSrc={resolveImageUrl(firstBanner.mobileImage, "") || null}
-                  alt={firstBanner.alt || firstBanner.title || "بنر اصلی"}
+                  alt={bannerAltText(firstBanner)}
                   width={firstImage?.width}
                   height={firstImage?.height}
                   mobileWidth={firstMobileImage?.width}

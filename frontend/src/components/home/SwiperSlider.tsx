@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import HeroBannerImage from "./HeroBannerImage";
 import HeroBannerLink from "./HeroBannerLink";
 import { resolveImageUrl } from "@/lib/image";
+import { bannerAltText } from "@/lib/bannerAlt";
 import type { Banner } from "@/services/bannerService";
 
 type SwiperSliderProps = {
@@ -295,7 +296,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                 <HeroBannerImage
                   src={src}
                   mobileSrc={mobileSrc || null}
-                  alt={banner.alt || banner.title || "بنر اصلی"}
+                  alt={bannerAltText(banner)}
                   width={banner.image && typeof banner.image === "object" ? banner.image.width : undefined}
                   height={banner.image && typeof banner.image === "object" ? banner.image.height : undefined}
                   mobileWidth={

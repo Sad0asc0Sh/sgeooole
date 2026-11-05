@@ -31,6 +31,14 @@ const PRIVATE_DISALLOW = [
   "/profile",
   "/api/*",
   "/checkout",
+  // Transactional utility pages must never be crawled or indexed: /cart
+  // was indexed with an "empty cart" title for brand searches, and
+  // /tracking is a per-order lookup form. Their segment layouts also send
+  // noindex as a second layer.
+  "/cart",
+  "/cart/*",
+  "/tracking",
+  "/tracking/*",
   "/payment/*",
   "/order/*",
   "/login",

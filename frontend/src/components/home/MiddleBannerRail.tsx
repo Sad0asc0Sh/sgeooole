@@ -5,6 +5,7 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import HeroBannerLink from "./HeroBannerLink";
 import { Banner, bannerService } from "@/services/bannerService";
 import { generateBannerBlurPlaceholder, resolveImageUrl } from "@/lib/image";
+import { bannerAltText } from "@/lib/bannerAlt";
 
 type MiddleBannerRailProps = {
   /** Active banners fetched by the homepage server component. */
@@ -87,7 +88,7 @@ export default function MiddleBannerRail({
       <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-3 px-4 py-4 md:flex-row md:justify-center md:gap-4 md:py-5">
         {middleBanners.map((banner) => {
           const imageUrl = resolveImageUrl(banner.image, "/placeholder.svg");
-          const label = banner.alt || banner.title || "بنر تبلیغاتی";
+          const label = bannerAltText(banner, "بنر تبلیغاتی ای کا جی کالا");
 
           return (
             <div

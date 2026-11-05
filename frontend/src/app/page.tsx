@@ -143,9 +143,13 @@ const SkeletonHero = () => (
 );
 
 export async function generateMetadata(): Promise<Metadata> {
-  const title = "فروشگاه اینترنتی ای کا جی کالا (ekgkala) | خرید آنلاین کالای تکنولوژی و دیجیتال";
+  // Title starts with the exact brand query «ای کا جی کالا» itself (not the
+  // generic «فروشگاه اینترنتی») for maximum exact-match weight when users
+  // search the brand name — the competing kgkala.ir ranks partly because
+  // its homepage title is exactly its brand name.
+  const title = "ای کا جی کالا (ekgkala) | فروشگاه اینترنتی ای‌کا‌جی کالا - کالای تکنولوژی و دیجیتال";
   const description =
-    "ای کا جی کالا (ekgkala)؛ مرجع خرید آنلاین طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند با تضمین اصالت کالا، قیمت رقابتی و ارسال سریع از مشهد به سراسر کشور.";
+    "وب‌سایت رسمی فروشگاه اینترنتی ای کا جی کالا (ekgkala.ir / ای‌کا‌جی کالا / ای کی جی کالا)؛ مرجع خرید آنلاین کالای تکنولوژی، دیجیتال، دوربین مداربسته، دزدگیر و تجهیزات هوشمند در مشهد و سراسر ایران.";
   const canonicalUrl = SITE_URL ? `${SITE_URL}/` : "/";
   const ogImageUrl =
     process.env.NEXT_PUBLIC_OG_IMAGE ||
@@ -155,10 +159,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords: [
       "ای کا جی کالا",
+      "ای‌کا‌جی کالا",
+      "ای کی جی کالا",
+      "ایکاجی کالا",
       "ekgkala",
-      "ای‌کا‌جی‌کالا",
       "EKG KALA",
+      "ekgkala.ir",
       "فروشگاه اینترنتی ای کا جی کالا",
+      "سایت ای کا جی کالا",
       "خرید آنلاین کالای تکنولوژی",
       "فروشگاه کالای دیجیتال مشهد",
       "خرید اینترنتی کالای هوشمند",
@@ -174,7 +182,7 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: "fa_IR",
       type: "website",
       images: [
-        { url: ogImageUrl, width: 1200, height: 630, alt: title },
+        { url: ogImageUrl, width: 1200, height: 630, alt: "ای کا جی کالا | ekgkala" },
       ],
     },
     twitter: {
@@ -201,11 +209,20 @@ export default async function Home() {
     (process.env.NEXT_PUBLIC_CONTACT_PHONE || "").trim() || "05135013383";
 
   // Verified profile URLs that belong to this same business entity:
-  // the Enamad trust-seal page already linked from the site footer and
-  // the store's Telegram channel from the live public settings. They pin
-  // those third-party profiles to ekgkala.ir as the canonical entity home.
+  // the Enamad trust-seal page already linked from the site footer, the
+  // store's own Torob shop (shop/400109 — Torob redirects it to the
+  // «ای کا جی کالا» shop slug), its listings on the Irangaah and
+  // MarkazTamas directories (both pages are about ekgkala.ir), and the
+  // Telegram channel from the live public settings. Together they pin
+  // every scattered third-party profile to ekgkala.ir as the canonical
+  // entity home, so search engines stop splitting the brand's signals
+  // between this store, Digikala and the similarly-named kgkala.
   const verifiedProfiles = [
     "https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6",
+    "https://torob.com/shop/400109/",
+    "https://torob.com/shop/400109/%D8%A7%DB%8C-%DA%A9%D8%A7-%D8%AC%DB%8C-%DA%A9%D8%A7%D9%84%D8%A7/",
+    "https://irangaah.ir/websites/ekgkala.ir",
+    "https://markaztamas.com/businesses/6658/%D8%A7%DB%8C-%DA%A9%DB%8C-%D8%AC%DB%8C-%DA%A9%D8%A7%D9%84%D8%A7",
     "https://t.me/ekgkala",
   ];
   const socialLinks = Array.from(
@@ -234,13 +251,19 @@ export default async function Home() {
           "ای کا جی کالا",
           "ای‌کا‌جی کالا",
           "ای‌کا‌جی‌کالا",
+          "ای کی جی کالا",
+          "ای‌کی‌جی کالا",
           "ایکاجی کالا",
           "ایکیجی کالا",
           "فروشگاه ای کا جی کالا",
+          "فروشگاه اینترنتی ای کا جی کالا",
+          "شرکت ای کا جی کالا",
           "ekgkala",
           "EKG KALA",
+          "EKG Kala",
           "EKGKala",
           "ekgkala.ir",
+          "www.ekgkala.ir",
           SITE_NAME,
         ],
         url: SITE_URL,
@@ -323,6 +346,7 @@ export default async function Home() {
         alternateName: [
           "فروشگاه اینترنتی ای کا جی کالا",
           "ای‌کا‌جی کالا",
+          "ای کی جی کالا",
           "ایکاجی کالا",
           "ekgkala",
           "EKG KALA",
@@ -354,8 +378,14 @@ export default async function Home() {
           spaced brand spelling users search for ("ای کا جی کالا"). */}
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-3 pb-1 text-center md:text-right">
         <h1 className="text-xs md:text-sm font-bold text-neutral-700">
-          فروشگاه اینترنتی ای کا جی کالا (ekgkala) — مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند در ایران
+          ای کا جی کالا (ekgkala.ir) — وب‌سایت رسمی فروشگاه اینترنتی ای‌کا‌جی کالا؛ مرجع خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند
         </h1>
+        {/* Entity disambiguation: one explicit sentence so search engines
+            and AI overviews resolve «ای کا جی کالا» to THIS store and its
+            only official domain, not to similarly-named stores. */}
+        <p className="mt-1 text-[11px] leading-5 text-neutral-500 md:text-xs">
+          فروشگاه اینترنتی ای کا جی کالا (EKG KALA) یک فروشگاه مستقل در مشهد است و تنها وب‌سایت رسمی آن ekgkala.ir است؛ این مجموعه با دیجی‌کالا و سایر فروشگاه‌های هم‌نام ارتباطی ندارد.
+        </p>
       </div>
       {/* Crawlable product links for the client-rendered rails below (see fetchHomeRailProducts) */}
       {railProducts.length > 0 && (

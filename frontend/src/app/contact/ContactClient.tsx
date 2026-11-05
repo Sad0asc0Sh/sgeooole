@@ -52,7 +52,7 @@ export default function ContactPage() {
                     <div className={shared.heroIcon}>
                         <Building2 size={36} aria-hidden />
                     </div>
-                    <h1 className={shared.heroTitle}>ای‌کا‌جی کالا</h1>
+                    <h1 className={shared.heroTitle}>تماس با فروشگاه اینترنتی ای کا جی کالا (ekgkala)</h1>
                     <p className={shared.heroText}>پشتیبانی مشتریان، مراکز تحویل حضوری و همکاری با تأمین‌کنندگان</p>
                     <span className={shared.heroBadge} style={{ marginTop: 18, marginBottom: 0 }}>
                         مشهد · ۳ پایگاه فعال

@@ -3,6 +3,7 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import { useEffect, useState } from "react";
 import { Banner, bannerService } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
+import { bannerAltText } from "@/lib/bannerAlt";
 import { useRouter } from "next/navigation";
 import { navigateHref } from "@/lib/navigateHref";
 
@@ -63,7 +64,7 @@ export default function BannerStack() {
                             <div className="absolute inset-0">
                                 <ResilientImage
                                     src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
-                                    alt={banner.title}
+                                    alt={bannerAltText(banner, "بنر تبلیغاتی ای کا جی کالا")}
                                     fill
                                     style={{ objectFit: "cover", objectPosition: "center" }}
                                     className="group-hover:brightness-105 transition-all duration-300 pointer-events-none"
