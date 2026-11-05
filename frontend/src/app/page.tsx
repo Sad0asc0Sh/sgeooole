@@ -283,7 +283,7 @@ export default async function Home() {
           `${SITE_URL}/ekg-logo.jpg`,
         ],
         description:
-          "فروشگاه اینترنتی ای کا جی کالا (ekgkala / EKG KALA)؛ مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال، الکترونیک و تجهیزات هوشمند در ایران با ۳ شعبه فعال در مشهد (بلوار پیروزی، میدان صاحب‌الزمان و خین‌عرب) و ارسال سریع به سراسر کشور.",
+          "فروشگاه اینترنتی ای کا جی کالا (ekgkala / EKG KALA)؛ مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال، الکترونیک و تجهیزات هوشمند در ایران با ۳ شعبه فعال در مشهد (بلوار پیروزی، میدان صاحب‌الزمان و خین‌عرب) و ارسال سریع به سراسر کشور. ای کا جی کالا یک فروشگاه مستقل است و تنها وب‌سایت رسمی آن ekgkala.ir است.",
         contactPoint: [
           {
             "@type": "ContactPoint",
@@ -373,20 +373,15 @@ export default async function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      {/* Brand H1 for SEO: visible, subtle one-line brand banner so the
-          homepage's only <h1> is a real rendered heading carrying the exact
-          spaced brand spelling users search for ("ای کا جی کالا"). */}
-      <div className="mx-auto w-full max-w-[1440px] px-4 pt-3 pb-1 text-center md:text-right">
-        <h1 className="text-xs md:text-sm font-bold text-neutral-700">
-          ای کا جی کالا (ekgkala.ir) — وب‌سایت رسمی فروشگاه اینترنتی ای‌کا‌جی کالا؛ مرجع خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند
-        </h1>
-        {/* Entity disambiguation: one explicit sentence so search engines
-            and AI overviews resolve «ای کا جی کالا» to THIS store and its
-            only official domain, not to similarly-named stores. */}
-        <p className="mt-1 text-[11px] leading-5 text-neutral-500 md:text-xs">
-          فروشگاه اینترنتی ای کا جی کالا (EKG KALA) یک فروشگاه مستقل در مشهد است و تنها وب‌سایت رسمی آن ekgkala.ir است؛ این مجموعه با دیجی‌کالا و سایر فروشگاه‌های هم‌نام ارتباطی ندارد.
-        </p>
-      </div>
+      {/* Brand H1 for SEO: visually hidden (the design carries no visible
+          heading here) but present in the rendered DOM for crawlers and
+          assistive tech, carrying the exact brand spelling users search
+          for. The entity-disambiguation copy lives in the background
+          signals instead of the visible page: the Organization JSON-LD
+          description below, the footer brand story, /about and llms.txt. */}
+      <h1 className="sr-only">
+        ای کا جی کالا (ekgkala.ir) — وب‌سایت رسمی فروشگاه اینترنتی ای‌کا‌جی کالا؛ مرجع خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند
+      </h1>
       {/* Crawlable product links for the client-rendered rails below (see fetchHomeRailProducts) */}
       {railProducts.length > 0 && (
         <nav aria-label="محصولات منتخب فروشگاه" className="sr-only">

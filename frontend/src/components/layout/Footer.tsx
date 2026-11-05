@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
     Send,
     Instagram,
@@ -105,11 +104,10 @@ function Footer() {
     const { isAuthenticated } = useAuth();
     const { categoryTree } = useCategoryTree();
 
-    const pathname = usePathname();
-    // On the homepage the full brand story starts expanded so its text is
-    // rendered in full for readers and crawlers without a click; on other
-    // pages it stays collapsed as before.
-    const [isSeoExpanded, setIsSeoExpanded] = useState(pathname === "/");
+    // The brand story stays collapsed by default on every page, exactly as
+    // originally designed — its full text is still in the DOM for crawlers,
+    // and readers expand it with the toggle.
+    const [isSeoExpanded, setIsSeoExpanded] = useState(false);
     const [activeAccordion, setActiveAccordion] = useState<string | null>(null);
 
     const [email, setEmail] = useState("");
