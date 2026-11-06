@@ -42,6 +42,16 @@ export default function BannerStack() {
             <div className="flex flex-col md:flex-row flex-wrap justify-center items-center gap-4 w-full">
                 {banners.map((banner) => {
                     const hasLink = !!banner.link?.trim();
+                    // نسخه‌ی کارت سبک برای بنرهای میانی + fallback به نسخه‌ی کامل
+                    const cardUrl =
+                        banner.image && typeof banner.image === "object"
+                            ? (banner.image as { cardUrl?: string }).cardUrl
+                            : undefined;
+                    const imgSrc = resolveImageUrl(
+                        cardUrl ? { url: cardUrl } : banner.image,
+                        "/placeholder-banner.png"
+                    );
+                    const backupSrc = resolveImageUrl(banner.image, "");
                     return (
                         <div
                             key={banner._id}
@@ -63,7 +73,8 @@ export default function BannerStack() {
                         >
                             <div className="absolute inset-0">
                                 <ResilientImage
-                                    src={resolveImageUrl((banner as any).image, "/placeholder-banner.png")}
+                                    src={imgSrc}
+                                    backupSrc={backupSrc && backupSrc !== imgSrc ? backupSrc : undefined}
                                     alt={bannerAltText(banner, "بنر تبلیغاتی ای کا جی کالا")}
                                     fill
                                     style={{ objectFit: "cover", objectPosition: "center" }}

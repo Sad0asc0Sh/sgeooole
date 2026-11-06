@@ -461,6 +461,74 @@ function CategoriesPage() {
     return e?.fileList || []
   }
 
+  // ============================================================
+  // بهینه‌سازی سمت مرورگر برای تصاویر دسته‌بندی (فاز ۲ — ParsPack):
+  // تصویر 320×320 (هدف 35KB) و آیکون 160×160 (هدف 20KB) با WebP.
+  // بک‌اند هم همین ابعاد را استاندارد می‌کند؛ این‌جا حجم ورودی قبل
+  // از ارسال کنترل می‌شود تا هیچ فایل سنگینی به سرور نرود.
+  // ============================================================
+  const CATEGORY_IMAGE_TARGET = { maxWidth: 320, maxHeight: 320, targetKB: 35, quality: 86 }
+  const CATEGORY_ICON_TARGET = { maxWidth: 160, maxHeight: 160, targetKB: 20, quality: 86 }
+
+  const canvasToBlob = (canvas, type, quality) =>
+    new Promise((resolve) => {
+      if (!canvas?.toBlob) return resolve(null)
+      canvas.toBlob(resolve, type, quality)
+    })
+
+  const loadImageFromFile = (file) =>
+    new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file)
+      const img = new window.Image()
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl)
+        resolve(img)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Failed to load image'))
+      }
+      img.src = objectUrl
+    })
+
+  const optimizeCategoryImageFile = async (file, target) => {
+    if (!file) return file
+    if (!file?.type?.startsWith?.('image/')) return file
+    if (file.type === 'image/gif') return file
+    const targetBytes = target.targetKB * 1024
+    if (file.size <= targetBytes && file.type === 'image/webp') return file
+    try {
+      const img = await loadImageFromFile(file)
+      const scale = Math.min(
+        1,
+        target.maxWidth / (img.naturalWidth || 1),
+        target.maxHeight / (img.naturalHeight || 1)
+      )
+      const outWidth = Math.max(1, Math.round((img.naturalWidth || 1) * scale))
+      const outHeight = Math.max(1, Math.round((img.naturalHeight || 1) * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = outWidth
+      canvas.height = outHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return file
+      let bestBlob = null
+      for (const quality of [target.quality / 100, 0.8, 0.74, 0.68]) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        const blob = await canvasToBlob(canvas, 'image/webp', quality)
+        if (!blob) continue
+        if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob
+        if (blob.size <= targetBytes) break
+      }
+      if (!bestBlob || bestBlob.size >= file.size) return file
+      const baseName = (file.name || 'category').replace(/\.[^/.]+$/, '')
+      return new File([bestBlob], `${baseName}.webp`, { type: 'image/webp', lastModified: Date.now() })
+    } catch (err) {
+      console.warn('[CATEGORY] Image optimization failed; uploading original.', err)
+      return file
+    }
+  }
+
   // Submit handler (create / update)
   const onFinish = async (values) => {
     const isEditMode = Boolean(editingCategory && editingCategory._id)
@@ -501,7 +569,8 @@ function CategoriesPage() {
 
       const iconFile = pickNewFile(values.icon)
       if (iconFile) {
-        formData.append('icon', iconFile.originFileObj)
+        const optimizedIcon = await optimizeCategoryImageFile(iconFile.originFileObj, CATEGORY_ICON_TARGET)
+        formData.append('icon', optimizedIcon)
       } else if (hadIconBefore && (!values.icon || values.icon.length === 0)) {
         // Explicitly request icon removal when user cleared existing icon
         formData.append('removeIcon', 'true')
@@ -509,7 +578,8 @@ function CategoriesPage() {
 
       const imageFile = pickNewFile(values.image)
       if (imageFile) {
-        formData.append('image', imageFile.originFileObj)
+        const optimizedImage = await optimizeCategoryImageFile(imageFile.originFileObj, CATEGORY_IMAGE_TARGET)
+        formData.append('image', optimizedImage)
       } else if (hadImageBefore && (!values.image || values.image.length === 0)) {
         // Explicitly request image removal when user cleared existing image
         formData.append('removeImage', 'true')
@@ -849,7 +919,7 @@ function CategoriesPage() {
           <Form.Item
             name="icon"
             label="آیکون دسته‌بندی (اختیاری)"
-            help="برای نمایش درخت و لیست‌ها، یک آیکون کوچک انتخاب کنید."
+            help="برای نمایش درخت و لیست‌ها — به‌صورت خودکار به 160×160 (هدف 20KB) بهینه می‌شود."
             valuePropName="fileList"
             getValueFromEvent={normFileList}
           >
@@ -872,7 +942,7 @@ function CategoriesPage() {
           <Form.Item
             name="image"
             label="تصویر دسته‌بندی (اختیاری)"
-            help="این تصویر می‌تواند در صفحات فروشگاه نمایش داده شود."
+            help="این تصویر در دایره‌ی دسته‌بندی صفحه اصلی نمایش داده می‌شود — به‌صورت خودکار به 320×320 (هدف 35KB) بهینه می‌شود."
             valuePropName="fileList"
             getValueFromEvent={normFileList}
           >

@@ -67,6 +67,10 @@ type RingSlide = {
 export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  // پهنای باند ابتدا ۱۰۰٪ به بنر اول (LCP) اختصاص می‌یابد؛ اسلایدهای
+  // ثانویه (از جمله کلون‌های ring) فقط پس از لود اسلاید اول، تغییر
+  // اسلاید، یا حداکثر ۴۵۰ms بعد از mount هایدریت می‌شوند.
+  const [hydrateSecondarySlides, setHydrateSecondarySlides] = useState(false);
   const jumpingRef = useRef(false);
   // قفل ناوبری: تا پایان انیمیشن، کلیک/سوایپ بعدی پذیرفته نمی‌شود.
   const lockUntilRef = useRef(0);
@@ -115,6 +119,17 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
     },
     [clearUnlockTimer]
   );
+
+  // سقف ایمنی: حتی اگر بنر اول دیر لود شود، اسلایدهای ثانویه حداکثر
+  // ۴۵۰ms بعد از mount بیرون می‌آیند تا اسلایدر قفل نشود.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setHydrateSecondarySlides(true), 450);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const handlePrimaryBannerLoad = useCallback(() => {
+    setHydrateSecondarySlides(true);
+  }, []);
 
   const slides = useMemo(() => banners.filter(Boolean), [banners]);
   const slideCount = slides.length;
@@ -206,6 +221,8 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
 
   const handleSlideChange = useCallback(
     (instance: SwiperClass) => {
+      // کاربر اسلاید را عوض کرد — اسلایدهای ثانویه باید فوراً در دسترس باشند.
+      setHydrateSecondarySlides(true);
       if (slideCount < 2) {
         setActiveIndex(0);
         return;
@@ -283,8 +300,22 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       >
         {ring.map(({ banner, realIndex, copy, isClone }) => {
           const src = resolveImageUrl(banner.image, "");
-          const mobileSrc = resolveImageUrl(banner.mobileImage, "");
+          // نسخه‌ی کارت (960×480) به‌عنوان fallback خودکار موبایل وقتی
+          // تصویر مستقل موبایل تنظیم نشده است — خیلی سبک‌تر از برش دسکتاپ.
+          const cardUrl =
+            banner.image && typeof banner.image === "object"
+              ? (banner.image as { cardUrl?: string }).cardUrl
+              : undefined;
+          const mobileSrc =
+            resolveImageUrl(banner.mobileImage, "") ||
+            (cardUrl ? resolveImageUrl(cardUrl, "") : "");
           if (!src) return null;
+
+          const isPrimarySlide = !isClone && realIndex === 0;
+          // اسکلت اسلایدها همیشه در DOM می‌مانند (حلقه/initialSlide سالم
+          // می‌ماند)؛ فقط تصویر اسلایدهای ثانویه تا هایدریت رندر نمی‌شود تا
+          // مرورگر چند بنر سنگین را هم‌زمان دانلود نکند.
+          const shouldRenderImage = isPrimarySlide || hydrateSecondarySlides;
 
           return (
             <SwiperSlide
@@ -293,6 +324,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
               aria-hidden={isClone ? "true" : undefined}
             >
               <HeroBannerLink banner={banner} tabIndex={isClone ? -1 : undefined}>
+                {shouldRenderImage ? (
                 <HeroBannerImage
                   src={src}
                   mobileSrc={mobileSrc || null}
@@ -309,9 +341,13 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
                       ? banner.mobileImage.height
                       : undefined
                   }
-                  priority={!isClone && realIndex === 0}
+                  priority={isPrimarySlide}
                   fit={banner.fit === "contain" ? "contain" : "cover"}
+                  onBannerLoad={isPrimarySlide ? handlePrimaryBannerLoad : undefined}
                 />
+                ) : (
+                  <span aria-hidden="true" className="absolute inset-0 block animate-pulse bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
+                )}
               </HeroBannerLink>
             </SwiperSlide>
           );

@@ -3,6 +3,10 @@ import api from "@/lib/api";
 export interface CategoryImage {
   url: string;
   public_id: string;
+  /** نسخه‌ی سبک (320×320 تصویر / 160×160 آیکون) */
+  cardUrl?: string;
+  width?: number;
+  height?: number;
 }
 
 export interface Category {

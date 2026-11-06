@@ -2,6 +2,8 @@ import api from "@/lib/api";
 
 export interface BannerImage {
   url: string;
+  /** نسخه‌ی سبک کارت (960×480) — برای موبایل/بنر میانی وقتی تصویر موبایل نیست */
+  cardUrl?: string;
   public_id?: string;
   filename?: string;
   width?: number;

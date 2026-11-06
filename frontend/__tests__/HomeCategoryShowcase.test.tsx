@@ -58,9 +58,7 @@ beforeEach(() => {
 });
 
 test("renders the curated homepage categories as a carousel", async () => {
-  fetchCategories.mockResolvedValue([camera, dvr, lock]);
-
-  mount([camera]);
+  mount([camera, dvr, lock]);
 
   expect(
     screen.getByRole("heading", { name: "دسته‌بندی‌های فروشگاه" })
@@ -73,7 +71,8 @@ test("renders the curated homepage categories as a carousel", async () => {
     "/products?category=locks&includeChildren=true"
   );
 
-  await waitFor(() => expect(fetchCategories).toHaveBeenCalledWith());
+  // داده از SSR آمده است — درخواست تکراری روی mount نباید زده شود.
+  expect(fetchCategories).not.toHaveBeenCalled();
 });
 
 test("recovers categories in the browser after a failed server fetch", async () => {
@@ -89,15 +88,12 @@ test("recovers categories in the browser after a failed server fetch", async () 
   expect(screen.getByText(dvr.name)).toBeInTheDocument();
 });
 
-test("keeps valid server categories when the background refresh fails", async () => {
-  fetchCategories.mockRejectedValue(new Error("offline"));
-
+test("keeps server categories visible without refetching on mount", async () => {
   mount([camera, lock]);
 
-  await waitFor(() => expect(fetchCategories).toHaveBeenCalled());
-
-  expect(screen.getByText(camera.name)).toBeInTheDocument();
+  expect(await screen.findByText(camera.name)).toBeInTheDocument();
   expect(screen.getByText(lock.name)).toBeInTheDocument();
+  expect(fetchCategories).not.toHaveBeenCalled();
   expect(
     screen.queryByText("بارگذاری دسته‌بندی‌ها انجام نشد.")
   ).not.toBeInTheDocument();
@@ -122,6 +118,25 @@ test("hides only a successfully empty category feed", async () => {
   const { container } = mount(null);
 
   await waitFor(() => expect(container).toBeEmptyDOMElement());
+});
+
+test("renders first category images eagerly from cardUrl, never hidden", async () => {
+  const pictured = category("9", "دسته تصویری", "pictured", {
+    image: {
+      url: "https://s3.example/full.webp",
+      cardUrl: "https://s3.example/card.webp",
+      public_id: "p1",
+    },
+  });
+
+  mount([pictured]);
+
+  const img = await screen.findByRole("img", { name: "دسته تصویری" });
+  expect(img).toHaveAttribute("src", "https://s3.example/card.webp");
+  expect(img).toHaveAttribute("loading", "eager");
+  expect(img.getAttribute("fetchpriority")).toBe("high");
+  expect(img).toHaveStyle({ opacity: "1" });
+  expect(fetchCategories).not.toHaveBeenCalled();
 });
 
 test("shows a loading state while recovery is pending", () => {

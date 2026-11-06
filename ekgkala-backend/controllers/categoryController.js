@@ -172,10 +172,20 @@ const computeConnectedCategoryIdSet = (categories = []) => {
   return connectedIds
 }
 
+// ابعاد استاندارد رتینای دایره‌ی دسته‌بندی در پارس‌پک (فاز ۲):
+// تصویر 320×320 و آیکون 160×160 با کیفیت بالای 86 — دیگر 1200×1200 نیست.
+const CATEGORY_IMAGE_SIZE = { maxWidth: 320, maxHeight: 320, quality: 86 }
+const CATEGORY_ICON_SIZE = { maxWidth: 160, maxHeight: 160, quality: 86 }
+
 // Upload a multer memory file to ParsPack and return { url, public_id }
-const uploadAndExtract = async (file) => {
+// opts: { maxWidth, maxHeight, quality } — برای تصویر/آیکون دسته‌بندی.
+const uploadAndExtract = async (file, opts = {}) => {
   if (!file) return null
-  const result = await uploadToParsPack(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname, {
+    maxWidth: opts.maxWidth ?? 1200,
+    maxHeight: opts.maxHeight ?? 1200,
+    quality: opts.quality ?? 82,
+  })
   return {
     url: result.url,
     public_id: result.filename,
@@ -787,10 +797,10 @@ exports.createCategory = async (req, res) => {
 
     if (req.files) {
       if (req.files.icon && req.files.icon[0]) {
-        categoryData.icon = await uploadAndExtract(req.files.icon[0])
+        categoryData.icon = await uploadAndExtract(req.files.icon[0], CATEGORY_ICON_SIZE)
       }
       if (req.files.image && req.files.image[0]) {
-        categoryData.image = await uploadAndExtract(req.files.image[0])
+        categoryData.image = await uploadAndExtract(req.files.image[0], CATEGORY_IMAGE_SIZE)
       }
     }
 
@@ -861,7 +871,7 @@ exports.updateCategory = async (req, res) => {
           )
         }
       }
-      category.icon = await uploadAndExtract(req.files.icon[0])
+      category.icon = await uploadAndExtract(req.files.icon[0], CATEGORY_ICON_SIZE)
     } else if (removeIcon === 'true' || removeIcon === true) {
       if (category.icon && category.icon.public_id) {
         try {
@@ -887,7 +897,7 @@ exports.updateCategory = async (req, res) => {
           )
         }
       }
-      category.image = await uploadAndExtract(req.files.image[0])
+      category.image = await uploadAndExtract(req.files.image[0], CATEGORY_IMAGE_SIZE)
     } else if (removeImage === 'true' || removeImage === true) {
       if (category.image && category.image.public_id) {
         try {

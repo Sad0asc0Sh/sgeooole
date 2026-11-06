@@ -87,7 +87,16 @@ export default function MiddleBannerRail({
     <section className="w-full bg-white" aria-label="بنرهای تبلیغاتی میانی">
       <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-3 px-4 py-4 md:flex-row md:justify-center md:gap-4 md:py-5">
         {middleBanners.map((banner) => {
-          const imageUrl = resolveImageUrl(banner.image, "/placeholder.svg");
+          // نسخه‌ی کارت 960×480 برای بنرهای میانی — بسیار سبک‌تر از دسکتاپ کامل.
+          const cardUrl =
+            banner.image && typeof banner.image === "object"
+              ? (banner.image as { cardUrl?: string }).cardUrl
+              : undefined;
+          const imageUrl = resolveImageUrl(
+            cardUrl ? { url: cardUrl } : banner.image,
+            "/placeholder.svg"
+          );
+          const backupSrc = resolveImageUrl(banner.image, "");
           const label = bannerAltText(banner, "بنر تبلیغاتی ای کا جی کالا");
 
           return (
@@ -98,6 +107,7 @@ export default function MiddleBannerRail({
               <HeroBannerLink banner={banner} className="absolute inset-0 block">
                 <ResilientImage
                   src={imageUrl}
+                  backupSrc={backupSrc && backupSrc !== imageUrl ? backupSrc : undefined}
                   alt={label}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 32vw"

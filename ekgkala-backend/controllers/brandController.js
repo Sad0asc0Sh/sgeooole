@@ -1,10 +1,13 @@
 const Brand = require('../models/Brand')
 const { uploadToParsPack, deleteFromParsPack } = require('../lib/parspackS3')
 
+// ابعاد استاندارد رتینای لوگوی برند در پارس‌پک (فاز ۲): 320×160 q86.
+const BRAND_LOGO_SIZE = { maxWidth: 320, maxHeight: 160, quality: 86 }
+
 // آپلود فایل multer (memoryStorage) به ParsPack و برگرداندن { url, public_id }
 const extractImageInfo = async (file) => {
   if (!file) return null
-  const result = await uploadToParsPack(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname, BRAND_LOGO_SIZE)
   return {
     url: result.url,
     public_id: result.filename,

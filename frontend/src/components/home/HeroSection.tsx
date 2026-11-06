@@ -103,6 +103,14 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
     firstBanner && typeof firstBanner.mobileImage === "object" && firstBanner.mobileImage
       ? firstBanner.mobileImage
       : null;
+  // fallback موبایل تک‌بنر: نسخه‌ی کارت دسکتاپ (سبک) اگر تصویر موبایل نیست.
+  const firstCardUrl =
+    firstBanner && typeof firstBanner.image === "object" && firstBanner.image
+      ? (firstBanner.image as { cardUrl?: string }).cardUrl
+      : undefined;
+  const singleMobileSrc =
+    resolveImageUrl(firstBanner?.mobileImage, "") ||
+    (firstCardUrl ? resolveImageUrl(firstCardUrl, "") : "");
 
   return (
     <section className="w-full max-w-[1920px] mx-auto" aria-label="بنرهای اصلی فروشگاه">
@@ -114,7 +122,7 @@ export default function HeroSection({ initialBanners = [] }: HeroSectionProps) {
               <HeroBannerLink banner={firstBanner}>
                 <HeroBannerImage
                   src={resolveImageUrl(firstBanner.image, "/placeholder.svg")}
-                  mobileSrc={resolveImageUrl(firstBanner.mobileImage, "") || null}
+                  mobileSrc={singleMobileSrc || null}
                   alt={bannerAltText(firstBanner)}
                   width={firstImage?.width}
                   height={firstImage?.height}

@@ -78,6 +78,7 @@ const normalizeImageInput = (imageInput) => {
     if (!url) return null
 
     const image = { url }
+    if (input.cardUrl) image.cardUrl = String(input.cardUrl).trim()
     if (input.public_id) image.public_id = String(input.public_id)
     if (input.filename) image.filename = String(input.filename)
 
@@ -104,12 +105,28 @@ const normalizeImageAlt = (value, fallback = '') => {
   return alt
 }
 
+// نگاشت نسبی ابعاد بنر (فاز ۲ — ParsPack): نسخه‌ی دسکتاپ 1920×600 q85
+// و نسخه‌ی سبک کارت 960×480 q84 برای موبایل/بنر میانی.
+const BANNER_DESKTOP = { maxWidth: 1920, maxHeight: 600, quality: 85 }
+const BANNER_CARD = { maxWidth: 960, maxHeight: 480, quality: 84 }
+
 // آپلود فایل multer (memoryStorage) به ParsPack و برگرداندن ساختار image بنر
+// cardUrl هم‌زمان با نسخه‌ی کارت سبک ساخته می‌شود تا فرانت بدون تصویر
+// موبایل، fallback سبک داشته باشد (نه برش دسکتاپ سنگین).
 const mapUploadedFileToBannerImage = async (file) => {
   if (!file) return null
-  const result = await uploadToParsPack(file.buffer, file.originalname)
+  const result = await uploadToParsPack(file.buffer, file.originalname, {
+    generateCard: true,
+    maxWidth: BANNER_DESKTOP.maxWidth,
+    maxHeight: BANNER_DESKTOP.maxHeight,
+    quality: BANNER_DESKTOP.quality,
+    cardMaxWidth: BANNER_CARD.maxWidth,
+    cardMaxHeight: BANNER_CARD.maxHeight,
+    cardQuality: BANNER_CARD.quality,
+  })
   return {
     url: result.url,
+    cardUrl: result.cardUrl || undefined,
     public_id: result.filename,
     filename: result.filename,
   }

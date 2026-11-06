@@ -28,10 +28,9 @@ type HeroBannerImageProps = {
   /** cover پیش‌فرض؛ contain برای نمایش کامل تصویر */
   fit?: "cover" | "contain";
   className?: string;
+  /** پس از بارگذاری تصویر (برای آزاد کردن پهنای باند اسلایدهای ثانویه) صدا زده می‌شود */
+  onBannerLoad?: () => void;
 };
-
-const isAnimatedOrVector = (src: string) =>
-  /\.(gif|svg)(\?|#|$)/i.test(src) || /^data:image\/(gif|svg\+xml)/i.test(src);
 
 const toDimension = (value: unknown, fallback: number) => {
   const parsed = Number(value);
@@ -55,29 +54,42 @@ export default function HeroBannerImage({
   priority = false,
   fit = "cover",
   className = "",
+  onBannerLoad,
 }: HeroBannerImageProps) {
+  // اسکلتون فقط نقش لایه‌ی زیرین را دارد؛ تصویر هرگز برای Hydration منتظر
+  // نمی‌ماند (قبلاً opacity-0 تا onLoad به‌معنای تأخیر LCP بود).
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
+  const loadNotifiedRef = useRef(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  const notifyLoaded = () => {
+    if (loadNotifiedRef.current) return;
+    loadNotifiedRef.current = true;
+    setLoaded(true);
+    onBannerLoad?.();
+  };
 
   useEffect(() => {
     setLoaded(false);
     setFailed(false);
+    loadNotifiedRef.current = false;
   }, [src, mobileSrc]);
 
   // SSR images can finish downloading before React attaches onLoad.
-  // Check `complete` on mount so the banner never stays invisible.
+  // Check `complete` on mount so the banner never waits for Hydration.
   useEffect(() => {
     const img = imgRef.current;
     if (!img) return;
 
     const sync = () => {
-      if (img.complete && img.naturalWidth > 0) setLoaded(true);
+      if (img.complete && img.naturalWidth > 0) notifyLoaded();
     };
 
     sync();
     const timer = window.setTimeout(sync, 1200);
     return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, mobileSrc]);
 
   const desktop = useMemo(() => {
@@ -140,8 +152,17 @@ export default function HeroBannerImage({
   const mobileSrcSet = mobile?.props?.srcSet || mobile?.props?.src;
 
   return (
-    <>
-      <picture className="absolute inset-0 block h-full w-full">
+    <div className="absolute inset-0 block h-full w-full">
+      {/* اسکلتون در لایه‌ی زیرین (z-0) — تصویر (z-10) بلافاصله که بایت‌ها
+          از پارس‌پک برسند به‌صورت Progressive نمایش داده می‌شود، بدون
+          هیچ‌انتظاری برای Hydration یا تایمر. */}
+      {!loaded ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 z-0 animate-pulse bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200"
+        />
+      ) : null}
+      <picture className="absolute inset-0 z-10 block h-full w-full">
         {mobileSrcSet ? (
           <source media={MOBILE_BREAKPOINT} srcSet={mobileSrcSet} sizes={HERO_SIZES} />
         ) : null}
@@ -149,14 +170,12 @@ export default function HeroBannerImage({
           {...desktopProps}
           ref={imgRef}
           alt={alt}
-          fetchPriority={priority ? "high" : "auto"}
+          fetchPriority={priority ? "high" : "low"}
           loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          onLoad={() => setLoaded(true)}
+          decoding={priority ? "sync" : "async"}
+          onLoad={notifyLoaded}
           onError={() => setFailed(true)}
-          className={`h-full w-full transition-opacity duration-500 ${
-            loaded ? "opacity-100" : "opacity-0"
-          } ${className}`}
+          className={`h-full w-full opacity-100 ${className}`}
           style={{
             ...(desktopProps.style || {}),
             width: "100%",
@@ -166,13 +185,6 @@ export default function HeroBannerImage({
           }}
         />
       </picture>
-
-      {!loaded ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 animate-pulse bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200"
-        />
-      ) : null}
-    </>
+    </div>
   );
 }

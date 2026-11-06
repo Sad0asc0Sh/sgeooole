@@ -194,8 +194,21 @@ const getMinWidth = (position, device = 'desktop') => {
 
 const MAX_BANNER_UPLOAD_SIZE_MB = 10
 const MAX_BANNER_UPLOAD_SIZE_BYTES = MAX_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
+// اهداف حجمی سبک (فاز ۲ — ParsPack): بنرهای ۱–۲MB دیگر بدون فشرده‌سازی
+// آپلود نمی‌شوند؛ کیفیت WebP بالا (0.88–0.72) حفظ می‌شود.
 const RECOMMENDED_BANNER_UPLOAD_SIZE_MB = 2
 const RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES = RECOMMENDED_BANNER_UPLOAD_SIZE_MB * 1024 * 1024
+const BANNER_SIZE_TARGETS_KB = {
+  desktop: 220,
+  middle: 130,
+  mobile: 95,
+}
+const getBannerTargetBytes = (position, device = 'desktop') => {
+  if (position === 'middle-banner' || position === 'campaign-banner') {
+    return BANNER_SIZE_TARGETS_KB.middle * 1024
+  }
+  return (device === 'mobile' ? BANNER_SIZE_TARGETS_KB.mobile : BANNER_SIZE_TARGETS_KB.desktop) * 1024
+}
 
 // ============================================================
 // دستورالعمل بنر اصلی — نسخهٔ موبایل‌محور (جایگزین نسخهٔ فقط‌دسکتاپ)
@@ -402,7 +415,10 @@ const optimizeBannerImageFile = async (file, position, device = 'desktop') => {
   if (!file?.type?.startsWith?.('image/')) return file
   if (file.type === 'image/gif') return file
 
-  const shouldOptimize = file.size > RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES
+  // هدف حجمی واقعی: ۲۲۰KB دسکتاپ / ۱۳۰KB بنر میانی / ۹۵KB موبایل.
+  // حتی فایل‌های زیر ۲MB هم اگر از هدف بزرگ‌ترند بهینه می‌شوند.
+  const targetBytes = getBannerTargetBytes(position, device)
+  const shouldOptimize = file.size > targetBytes
   if (!shouldOptimize) return file
 
   let bitmap = null
@@ -417,7 +433,8 @@ const optimizeBannerImageFile = async (file, position, device = 'desktop') => {
     const minWidth = Math.min(getMinWidth(position, device), sourceWidth)
     let currentWidth = Math.max(1, Math.round(Math.min(sourceWidth, targetMaxWidth)))
 
-    const qualities = [0.86, 0.78, 0.7, 0.62, 0.54, 0.46]
+    // کیفیت بالا در وهله‌ی اول (0.88→0.72)؛ تنها در صورت نیاز افت می‌کند.
+    const qualities = [0.88, 0.82, 0.78, 0.75, 0.72, 0.66, 0.6]
     const maxPasses = 6
 
     let bestBlob = null
@@ -443,7 +460,7 @@ const optimizeBannerImageFile = async (file, position, device = 'desktop') => {
           bestType = type
         }
 
-        if (blob.size <= RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES) {
+        if (blob.size <= targetBytes) {
           return true
         }
       }
@@ -464,7 +481,7 @@ const optimizeBannerImageFile = async (file, position, device = 'desktop') => {
       const jpegOk = await tryEncode(canvas, 'image/jpeg', true)
 
       if ((webpOk || jpegOk) && bestBlob && bestBlob.size < file.size) break
-      if (bestBlob && bestBlob.size <= RECOMMENDED_BANNER_UPLOAD_SIZE_BYTES && bestBlob.size < file.size) break
+      if (bestBlob && bestBlob.size <= targetBytes && bestBlob.size < file.size) break
       if (currentWidth <= minWidth) break
 
       currentWidth = Math.max(minWidth, Math.round(currentWidth * 0.85))

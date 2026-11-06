@@ -269,9 +269,16 @@ router.post(
       // Validate file
       validateFile(req.file);
 
-      // Upload to ParsPack S3 — banners are large, no card variant needed
+      // Upload to ParsPack S3 — نسخه‌ی دسکتاپ 1920×600 q85 + کارت 960×480 q84
+      // (فاز ۲: فرانت برای موبایل/بنر میانی از cardUrl سبک استفاده می‌کند).
       const result = await uploadToParsPack(req.file.buffer, req.file.originalname, {
-        generateCard: false, maxWidth: 1920, maxHeight: 1080, quality: 85,
+        generateCard: true,
+        maxWidth: 1920,
+        maxHeight: 600,
+        quality: 85,
+        cardMaxWidth: 960,
+        cardMaxHeight: 480,
+        cardQuality: 84,
       });
 
       res.json({
@@ -279,6 +286,7 @@ router.post(
         message: "بنر با موفقیت در ParsPack آپلود شد",
         data: {
           url: result.url,
+          cardUrl: result.cardUrl || result.url,
           public_id: result.filename,
           key: result.key,
         },

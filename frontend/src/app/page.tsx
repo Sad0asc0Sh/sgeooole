@@ -14,6 +14,7 @@ import ValueProposition from "@/components/home/ValueProposition";
 import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
+import { resolveImageUrl } from "@/lib/image";
 
 export const revalidate = 60;
 
@@ -366,6 +367,34 @@ export default async function Home() {
     ],
   };
 
+  // Preload تصاویر بالای فولد (LCP): بنر اول اسلایدر اصلی و ۶ دسته‌بندی اول —
+  // مرورگر بلافاصله پس از HTML دانلود را از پارس‌پک شروع می‌کند. preload بنر
+  // با media جدا می‌شود تا موبایل نسخه‌ی دسکتاپ (و برعکس) را دانلود نکند.
+  const mainSliderBanners = (banners || [])
+    .filter((b) => b.position === "main-slider")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  const firstHero = mainSliderBanners[0];
+  const heroDesktopUrl = firstHero ? resolveImageUrl(firstHero.image, "") : "";
+  const heroMobileUrl = firstHero
+    ? resolveImageUrl(firstHero.mobileImage, "") ||
+      (firstHero.image && typeof firstHero.image === "object" && (firstHero.image as any).cardUrl
+        ? String((firstHero.image as any).cardUrl)
+        : "")
+    : "";
+  const seenPreload = new Set<string>();
+  const categoryPreloadUrls = (homepageCats || [])
+    .slice(0, 6)
+    .map((cat) => {
+      const card =
+        (cat.image && typeof cat.image === "object" && (cat.image as any).cardUrl) ||
+        (cat.icon && typeof cat.icon === "object" && (cat.icon as any).cardUrl);
+      return resolveImageUrl(card || cat.image || cat.icon, "");
+    })
+    .filter((url) => {
+      if (!/^https?:\/\//i.test(url) || seenPreload.has(url)) return false;
+      seenPreload.add(url);
+      return true;
+    });
   return (
     <div className="flex flex-col pb-4">
       <script
@@ -373,6 +402,17 @@ export default async function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      {heroDesktopUrl && heroMobileUrl && heroMobileUrl !== heroDesktopUrl ? (
+        <>
+          <link rel="preload" as="image" href={heroMobileUrl} media="(max-width: 767px)" fetchPriority="high" />
+          <link rel="preload" as="image" href={heroDesktopUrl} media="(min-width: 768px)" fetchPriority="high" />
+        </>
+      ) : heroDesktopUrl ? (
+        <link rel="preload" as="image" href={heroDesktopUrl} fetchPriority="high" />
+      ) : null}
+      {categoryPreloadUrls.map((href) => (
+        <link key={href} rel="preload" as="image" href={href} />
+      ))}
       {/* Brand H1 for SEO: visually hidden (the design carries no visible
           heading here) but present in the rendered DOM for crawlers and
           assistive tech, carrying the exact brand spelling users search

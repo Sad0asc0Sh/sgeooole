@@ -27,8 +27,18 @@ function categoryHref(category: Category): string {
   return `/products?category=${encodeURIComponent(category.slug || category._id)}&includeChildren=true`;
 }
 
-function CircleImage({ url, name }: { url: string; name: string }) {
-  const { src, onError, onLoad, ref, phase } = useResilientImage(url, "/placeholder.png");
+function CircleImage({
+  url,
+  name,
+  priority = false,
+}: {
+  url: string;
+  name: string;
+  priority?: boolean;
+}) {
+  const { src, onError, onLoad, ref } = useResilientImage(url, "/placeholder.png");
+  // هرگز opacity:0 در SSR — تصویر به‌محض رسیدن بایت‌های شبکه دیده می‌شود.
+  // ۸ دسته‌ی اول eager + fetchPriority بالا (بالای فولد).
   return (
     <img
       ref={ref}
@@ -36,7 +46,10 @@ function CircleImage({ url, name }: { url: string; name: string }) {
       alt={name}
       onError={onError}
       onLoad={onLoad}
-      style={{ opacity: phase === "loaded" || phase === "error" ? 1 : 0 }}
+      loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : "auto"}
+      decoding="async"
+      style={{ opacity: 1 }}
     />
   );
 }
@@ -60,13 +73,16 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
   const railRef = useRef<HTMLUListElement>(null);
   const [edge, setEdge] = useState<{ start: boolean; end: boolean }>({ start: true, end: false });
 
+  // وقتی داده از SSR آمده، هیچ درخواست تکراری در mount نزن
+  // (قبلاً revalidateOnMount: true باعث دانلود دوباره‌ی همان لیست می‌شد).
+  const hasSsrData = Array.isArray(categories) && categories.length > 0;
   const { data, error, isLoading, isValidating, mutate } = useSWR<Category[]>(
     "homepage-categories",
     () => categoryService.getHomepage(),
     {
       fallbackData: categories ?? undefined,
-      revalidateOnMount: true,
-      revalidateOnFocus: true,
+      revalidateOnMount: !hasSsrData,
+      revalidateOnFocus: false,
       revalidateOnReconnect: true,
       dedupingInterval: 30000,
       errorRetryCount: 2,
@@ -141,8 +157,12 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
           </div>
         ) : (
           <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
-            {items.map((category) => {
-              const url = imageUrl(category.image) || imageUrl(category.icon);
+            {items.map((category, index) => {
+              // cardUrl (320×320) بر url اصلی ارجح است — سبک‌تر برای دایره‌ی دسته.
+              const cardUrl =
+                (category.image && typeof category.image === "object" && (category.image as { cardUrl?: string }).cardUrl) ||
+                (category.icon && typeof category.icon === "object" && (category.icon as { cardUrl?: string }).cardUrl);
+              const url = cardUrl || imageUrl(category.image) || imageUrl(category.icon);
               return (
                 <li key={category._id || category.slug} className={styles.item}>
                   <Link
@@ -155,7 +175,7 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
                       <span className={styles.disc}>
                         <span className={styles.hairline}>
                           {url ? (
-                            <CircleImage url={url} name={category.name} />
+                            <CircleImage url={url} name={category.name} priority={index < 8} />
                           ) : (
                             <Shapes className={styles.fallbackIcon} strokeWidth={1.5} aria-hidden="true" />
                           )}
