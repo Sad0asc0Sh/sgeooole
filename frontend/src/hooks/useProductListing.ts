@@ -97,16 +97,27 @@ async function fetchProductListing(query: ProductListingQuery): Promise<ProductL
   };
 }
 
-export function useProductListing(query: ProductListingQuery) {
+export function useProductListing(
+  query: ProductListingQuery,
+  initialData?: ProductListingResult | null
+) {
   const cacheKey = useMemo(() => buildListingCacheKey(query), [query]);
   const { cache } = useSWRConfig();
   const fetchedAt = listingCacheTimestamps.get(cacheKey);
-  const isStale = !fetchedAt || Date.now() - fetchedAt >= PRODUCT_LISTING_CACHE_POLICY.staleTime;
+  const hasInitialData = Boolean(
+    initialData &&
+      Array.isArray(initialData.products) &&
+      initialData.currentPage === query.page
+  );
+  const isStale =
+    !hasInitialData &&
+    (!fetchedAt || Date.now() - fetchedAt >= PRODUCT_LISTING_CACHE_POLICY.staleTime);
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     cacheKey,
     () => fetchProductListing(query),
     {
+      fallbackData: hasInitialData ? (initialData ?? undefined) : undefined,
       // SWR has no `staleTime` / `gcTime` options. The policy below provides
       // their equivalents for this listing: a bounded fresh window plus
       // explicit cache eviction after the maximum retention period.

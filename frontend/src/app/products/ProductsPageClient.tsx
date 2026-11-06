@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo, useRef, useId } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { useProductListing } from "@/hooks/useProductListing";
+import { useProductListing, type ProductListingResult } from "@/hooks/useProductListing";
 import { useCategoryFilterNavigation } from "@/hooks/useCategoryFilterNavigation";
 import { useCategoryTree } from "@/hooks/useCategories";
 import { motion, AnimatePresence } from "framer-motion";
@@ -282,7 +282,7 @@ function DesktopSortBar({
 }
 
 // ─── Main Content Component ──────────────────────────────────────
-function ProductListingContent() {
+function ProductListingContent({ initialListing }: { initialListing?: ProductListingResult | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { markRoutePending, markRouteReady } = useRouteLoadingState();
@@ -384,7 +384,7 @@ function ProductListingContent() {
     showUpdating,
     showError,
     error,
-  } = useProductListing(listingQuery);
+  } = useProductListing(listingQuery, initialListing);
 
   const showInitialLoader = showSkeleton;
 
@@ -1224,7 +1224,7 @@ function ProductListingContent() {
                     <motion.div
                       key={product.id}
                       layout
-                      initial={{ opacity: 0, scale: 0.9 }}
+                      initial={false}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
@@ -1410,7 +1410,7 @@ function ProductListingContent() {
   );
 }
 
-export default function ProductsPageClient() {
+export default function ProductsPageClient({ initialListing }: { initialListing?: ProductListingResult | null }) {
   return (
     <Suspense
       fallback={
@@ -1419,7 +1419,7 @@ export default function ProductsPageClient() {
         </div>
       }
     >
-      <ProductListingContent />
+      <ProductListingContent initialListing={initialListing} />
     </Suspense>
   );
 }

@@ -129,7 +129,7 @@ describe("ProductDetailClient — محصول متغیر", () => {
         expect(screen.getAllByText(`+${FA(20000)}`).length).toBeGreaterThan(0);
         // گالری تصویر دوم قرمز را دارد (دسکتاپ + موبایل)
         await waitFor(() => {
-            expect(screen.getAllByLabelText("تی‌شرت - Image 2")).toHaveLength(2);
+            expect(screen.getAllByLabelText("تی‌شرت - نمای ۲")).toHaveLength(2);
         });
     });
 

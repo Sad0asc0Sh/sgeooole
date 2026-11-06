@@ -52,9 +52,14 @@ const nextConfig = {
                 hostname: 'localhost',
             port: '5000',
             },
+            {
+                protocol: 'http',
+                hostname: '127.0.0.1',
+            port: '5000',
+            },
         ],
-        // Image optimization enabled — AVIF/WebP automatic conversion
-        // (Matches next.config.ts active configuration)
+        // Direct S3 delivery (unoptimized) — variants are pre-built on ParsPack
+        // (This .js file is the only config Next loads; a .ts sibling is ignored.)
         formats: ['image/avif', 'image/webp'],
         deviceSizes: [360, 640, 768, 1024, 1280, 1536, 1920],
         imageSizes: [64, 96, 128, 256, 384],

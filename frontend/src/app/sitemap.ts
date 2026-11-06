@@ -9,7 +9,9 @@ type ProductItem = {
   updatedAt?: string;
   name?: string;
   // API shape: [{ url, public_id }] — plain strings are also accepted defensively.
+  image?: string | { url?: string };
   images?: Array<string | { url?: string }>;
+  variants?: Array<{ images?: Array<string | { url?: string }> }>;
 };
 
 type CategoryItem = {
@@ -51,7 +53,13 @@ const logBuildFetchWarning = (message: string, error?: unknown) => {
 const productImageUrls = (product: ProductItem): string[] => {
   const seen = new Set<string>();
   const urls: string[] = [];
-  for (const img of product.images ?? []) {
+  const candidates: Array<string | { url?: string } | undefined> = [
+    ...(product.images ?? []),
+    product.image,
+    ...((product.variants ?? []).flatMap((v) => v?.images ?? [])),
+  ];
+  for (const img of candidates) {
+    if (!img) continue;
     const raw = (typeof img === "string" ? img : img?.url || "").trim();
     if (!raw || raw.toLowerCase().includes("placeholder")) continue;
     const absolute = /^https?:\/\//i.test(raw)

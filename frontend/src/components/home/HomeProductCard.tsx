@@ -52,7 +52,7 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
         <ResilientImage
           src={product.cardImage || product.image || "/placeholder.png"}
           backupSrc={product.image}
-          alt={product.name}
+          alt={`خرید ${product.name || product.title}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
           fill
           className={`${imageStyles.image} ${isOutOfStock ? "grayscale opacity-60" : ""}`}
           sizes="(max-width: 479px) 46vw, (max-width: 767px) 200px, 240px"

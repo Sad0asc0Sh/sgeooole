@@ -47,6 +47,9 @@ const variantSchema = new mongoose.Schema(
     images: [
       {
         url: { type: String },
+        // نسخه‌ی سبک ۴۲۰px همان تصویر؛ بدون این فیلد Mongoose موقع ذخیره
+        // cardUrl واریانت را حذف می‌کرد و فرانت کارت سبک را نمی‌دید.
+        cardUrl: { type: String },
         public_id: { type: String },
       },
     ],

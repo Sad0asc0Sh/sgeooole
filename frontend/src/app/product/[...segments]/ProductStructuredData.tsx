@@ -6,10 +6,23 @@ import { stripHtmlToText } from "@/lib/seo";
 // Schema images must be absolute and real: productData maps products without
 // photos to the relative "/placeholder.svg", which is not an indexable product
 // image and must never be emitted in JSON-LD.
-const absoluteSchemaImages = (images?: string[]): string[] =>
-    (images ?? []).filter(
-        (img) => typeof img === "string" && /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")
-    );
+const absoluteSchemaImages = (images?: string[], variants?: Product["variants"]): string[] => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    const candidates = [
+        ...(images ?? []),
+        ...((variants ?? []).flatMap((v) => v?.images ?? [])),
+    ];
+    for (const img of candidates) {
+        if (typeof img === "string" && /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")) {
+            if (!seen.has(img)) {
+                seen.add(img);
+                result.push(img);
+            }
+        }
+    }
+    return result;
+};
 
 type ProductStructuredDataProps = {
     product: Product;
@@ -111,7 +124,7 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
                 // Plain text only: the raw CMS description is HTML and would put
                 // markup inside the JSON-LD (same helper the meta description uses).
                 description: stripHtmlToText(product.description) || product.title,
-                image: absoluteSchemaImages(product.images),
+                image: absoluteSchemaImages(product.images, product.variants),
                 brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
                 sku: product.sku || product.id,
                 mpn: product.sku,

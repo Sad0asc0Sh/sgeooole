@@ -229,154 +229,6 @@ export default function ProductDetailClient({ product: initialProduct }: Product
             </div>
 
 
-            {/* Desktop Two-Column Layout - With proper header clearance */}
-            <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8 pt-8">
-                <div className="flex flex-row-reverse gap-10 min-w-0">
-                    {/* Right Column - Gallery + Breadcrumb + Title (all sticky together) */}
-                    <div className="w-[45%] max-w-[45%] min-w-0 flex-shrink self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)] supports-[height:100dvh]:max-h-[calc(100dvh-theme(spacing.36)-2rem)] [@media(pointer:coarse)]:max-h-[calc(100svh-theme(spacing.36)-2.5rem)]">
-                        <ProductGallery product={viewProduct} />
-
-                        {/* Breadcrumb - Below Gallery */}
-                        <div className="shrink-0 space-y-1.5 mt-5">
-                            {product.categoryPath && product.categoryPath.length > 0 && (
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
-                                    <Link
-                                        href="/"
-                                        className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
-                                    >
-                                        ای‌کا‌جی کالا
-                                    </Link>
-                                    {product.categoryPath.map((cat, index) => (
-                                        <span key={cat.id} className="flex items-center">
-                                            <span className="mx-1 text-gray-400">&lt;</span>
-                                            <Link
-                                                href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
-                                                className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
-                                                    ? 'text-red-500 hover:text-red-600'
-                                                    : 'text-gray-600 hover:text-kala-700'
-                                                    }`}
-                                            >
-                                                {cat.name}
-                                            </Link>
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-
-                            {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
-                                    <Link
-                                        href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                        className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
-                                    >
-                                        {product.brand}
-                                    </Link>
-                                    <span className="mx-1 text-gray-400">&lt;</span>
-                                    <span className="text-gray-700 font-semibold">
-                                        {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
-                                    </span>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Title - Below Breadcrumb */}
-                        <div className="shrink-0 mt-4">
-                            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-1">{product.title}</h1>
-                            {product.enTitle && (
-                                <span className="text-sm text-gray-400 font-mono">{product.enTitle}</span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Left Column - Product Info */}
-                    <div className="flex-1 min-w-0">
-
-                        {/* Rating Section */}
-                        {product.rating > 0 && (
-                            <div className="flex items-center gap-2 mb-4">
-                                <Star size={16} className="text-yellow-400 fill-yellow-400" />
-                                <span className="text-base font-bold text-gray-800">{product.rating}</span>
-                                <span className="text-sm text-gray-400">
-                                    ({product.reviewCount} {product.reviewCount === 0 ? "" : "دیدگاه"})
-                                </span>
-                            </div>
-                        )}
-
-                        {/* Countdown banner — colours shared with the product card
-                            (lib/campaignTheme.ts), so «پیشنهاد لحظه‌ای» keeps its
-                            amber→orange→red gradient on the detail page too. */}
-                        <ProductPromotionBanner product={viewProduct} />
-
-                        {/* Wishlist & Share Actions */}
-                        <ProductSocialActions product={product} />
-
-                        <hr className="border-gray-100 my-6" />
-
-                        {/* Variant Selector (سیستم جدید attributes/variants) */}
-                        <VariantSelector
-                            attributes={product.attributes ?? []}
-                            variants={product.variants ?? []}
-                            selection={selection}
-                            selectedVariant={selectedVariant}
-                            onChange={handleVariantChange}
-                        />
-
-                        {/* Legacy color selector — فقط برای محصول ساده‌ی دارای `colors` */}
-                        {(product.variants ?? []).length === 0 && (
-                            <ColorSelector
-                                colors={product.colors || []}
-                                selectedColor={selectedColor}
-                                onColorChange={setSelectedColor}
-                            />
-                        )}
-
-                        {/* Features (Stock, Brand) */}
-                        <div className="bg-gray-50 rounded-xl p-5 space-y-4 mb-6">
-                            {product.brand && (
-                                <>
-                                    <div className="flex items-center gap-3 text-sm text-gray-600">
-                                        <ShieldCheck size={20} className="text-gray-400" />
-                                        <span>برند: {product.brand}</span>
-                                    </div>
-                                    <div className="h-px bg-gray-200 w-full" />
-                                </>
-                            )}
-                            <div className="flex items-center gap-3 text-sm text-gray-600">
-                                <Store size={20} className={viewProduct.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
-                                <span>
-                                    {viewProduct.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Low Stock Warning */}
-                        {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (
-                            <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
-                                <div className="p-2 bg-amber-100 rounded-lg">
-                                    <AlertTriangle size={22} className="text-amber-600" />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-base font-bold text-amber-800">
-                                        تنها {viewProduct.countInStock} عدد باقی مانده!
-                                    </span>
-                                    <span className="text-sm text-amber-600">
-                                        قبل از اتمام موجودی اقدام کنید
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Desktop Price & Add to Cart Box */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
-                            <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop={true} />
-                        </div>
-
-                        {/* Product Tabs */}
-                        <ProductTabs product={product} />
-                    </div>
-                </div>
-            </div>
-
             {/* Mobile Layout - Unchanged */}
             <div className="lg:hidden">
                 {/* Gallery Slider - Compact */}
@@ -525,6 +377,155 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 {/* Sticky Action Bar */}
                 <ProductActions product={viewProduct} variantOptions={variantOptions} />
             </div>
+
+            {/* Desktop Two-Column Layout - With proper header clearance */}
+            <div className="hidden lg:block max-w-7xl mx-auto px-6 pb-8 pt-8">
+                <div className="flex flex-row-reverse gap-10 min-w-0">
+                    {/* Right Column - Gallery + Breadcrumb + Title (all sticky together) */}
+                    <div className="w-[45%] max-w-[45%] min-w-0 flex-shrink self-start sticky top-36 will-change-transform flex flex-col max-h-[calc(100vh-theme(spacing.36)-2rem)] supports-[height:100dvh]:max-h-[calc(100dvh-theme(spacing.36)-2rem)] [@media(pointer:coarse)]:max-h-[calc(100svh-theme(spacing.36)-2.5rem)]">
+                        <ProductGallery product={viewProduct} />
+
+                        {/* Breadcrumb - Below Gallery */}
+                        <div className="shrink-0 space-y-1.5 mt-5">
+                            {product.categoryPath && product.categoryPath.length > 0 && (
+                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
+                                    <Link
+                                        href="/"
+                                        className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
+                                    >
+                                        ای‌کا‌جی کالا
+                                    </Link>
+                                    {product.categoryPath.map((cat, index) => (
+                                        <span key={cat.id} className="flex items-center">
+                                            <span className="mx-1 text-gray-400">&lt;</span>
+                                            <Link
+                                                href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
+                                                className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
+                                                    ? 'text-red-500 hover:text-red-600'
+                                                    : 'text-gray-600 hover:text-kala-700'
+                                                    }`}
+                                            >
+                                                {cat.name}
+                                            </Link>
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
+                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
+                                    <Link
+                                        href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                        className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
+                                    >
+                                        {product.brand}
+                                    </Link>
+                                    <span className="mx-1 text-gray-400">&lt;</span>
+                                    <span className="text-gray-700 font-semibold">
+                                        {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Title - Below Breadcrumb */}
+                        <div className="shrink-0 mt-4">
+                            <h1 className="text-xl font-bold text-gray-900 leading-snug mb-1">{product.title}</h1>
+                            {product.enTitle && (
+                                <span className="text-sm text-gray-400 font-mono">{product.enTitle}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Left Column - Product Info */}
+                    <div className="flex-1 min-w-0">
+
+                        {/* Rating Section */}
+                        {product.rating > 0 && (
+                            <div className="flex items-center gap-2 mb-4">
+                                <Star size={16} className="text-yellow-400 fill-yellow-400" />
+                                <span className="text-base font-bold text-gray-800">{product.rating}</span>
+                                <span className="text-sm text-gray-400">
+                                    ({product.reviewCount} {product.reviewCount === 0 ? "" : "دیدگاه"})
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Countdown banner — colours shared with the product card
+                            (lib/campaignTheme.ts), so «پیشنهاد لحظه‌ای» keeps its
+                            amber→orange→red gradient on the detail page too. */}
+                        <ProductPromotionBanner product={viewProduct} />
+
+                        {/* Wishlist & Share Actions */}
+                        <ProductSocialActions product={product} />
+
+                        <hr className="border-gray-100 my-6" />
+
+                        {/* Variant Selector (سیستم جدید attributes/variants) */}
+                        <VariantSelector
+                            attributes={product.attributes ?? []}
+                            variants={product.variants ?? []}
+                            selection={selection}
+                            selectedVariant={selectedVariant}
+                            onChange={handleVariantChange}
+                        />
+
+                        {/* Legacy color selector — فقط برای محصول ساده‌ی دارای `colors` */}
+                        {(product.variants ?? []).length === 0 && (
+                            <ColorSelector
+                                colors={product.colors || []}
+                                selectedColor={selectedColor}
+                                onColorChange={setSelectedColor}
+                            />
+                        )}
+
+                        {/* Features (Stock, Brand) */}
+                        <div className="bg-gray-50 rounded-xl p-5 space-y-4 mb-6">
+                            {product.brand && (
+                                <>
+                                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                                        <ShieldCheck size={20} className="text-gray-400" />
+                                        <span>برند: {product.brand}</span>
+                                    </div>
+                                    <div className="h-px bg-gray-200 w-full" />
+                                </>
+                            )}
+                            <div className="flex items-center gap-3 text-sm text-gray-600">
+                                <Store size={20} className={viewProduct.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
+                                <span>
+                                    {viewProduct.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Low Stock Warning */}
+                        {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (
+                            <div className="mb-6 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex items-center gap-3 animate-pulse">
+                                <div className="p-2 bg-amber-100 rounded-lg">
+                                    <AlertTriangle size={22} className="text-amber-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-base font-bold text-amber-800">
+                                        تنها {viewProduct.countInStock} عدد باقی مانده!
+                                    </span>
+                                    <span className="text-sm text-amber-600">
+                                        قبل از اتمام موجودی اقدام کنید
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Desktop Price & Add to Cart Box */}
+                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+                            <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop={true} />
+                        </div>
+
+                        {/* Product Tabs */}
+                        <ProductTabs product={product} />
+                    </div>
+                </div>
+            </div>
+
         </div>
     );
 }

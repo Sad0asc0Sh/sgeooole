@@ -6,15 +6,18 @@ import HomeProductRail from "./HomeProductRail";
 import { useNewestProducts, useBestSellers } from "@/hooks/useProducts";
 import { getServerNow } from "@/lib/serverClock";
 
+import type { Product } from "@/types/product";
+
 interface ProductRailContainerProps {
   title: string;
   fetchType: "newest" | "bestSellers" | "discounted" | "all";
   limit?: number;
+  initialProducts?: Product[];
 }
 
-function ProductRailContainer({ title, fetchType, limit = 10 }: ProductRailContainerProps) {
-  const newest = useNewestProducts(fetchType === "newest" ? limit : 0);
-  const bestSellers = useBestSellers(fetchType === "bestSellers" ? limit : 0);
+function ProductRailContainer({ title, fetchType, limit = 10, initialProducts }: ProductRailContainerProps) {
+  const newest = useNewestProducts(fetchType === "newest" ? limit : 0, fetchType === "newest" ? initialProducts : undefined);
+  const bestSellers = useBestSellers(fetchType === "bestSellers" ? limit : 0, fetchType === "bestSellers" ? initialProducts : undefined);
   const source = fetchType === "newest" ? newest : fetchType === "bestSellers" ? bestSellers : null;
   if (!source) return null;
 

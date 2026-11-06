@@ -7,7 +7,7 @@ import { updateServerClock, updateServerClockFromPayload } from "./serverClock";
 const baseURL =
   typeof window === "undefined"
     ? process.env.INTERNAL_API_URL || "http://localhost:5000/api"
-    : process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:5000/api";
+    : process.env.NEXT_PUBLIC_API_URL || "/api";
 
 // Fail fast during `next build` prerender to avoid build timeouts when the backend is unavailable.
 const isBuildPhase = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";

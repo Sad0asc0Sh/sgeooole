@@ -15,6 +15,8 @@ import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
 import { resolveImageUrl } from "@/lib/image";
+import { mapBackendProduct } from "@/lib/productData";
+import type { Product } from "@/types/product";
 
 export const revalidate = 60;
 
@@ -79,55 +81,51 @@ async function fetchBanners(): Promise<Banner[]> {
 }
 
 
-type RailProduct = {
-  _id?: string;
-  id?: string;
-  slug?: string;
-  productCode?: string;
-  name?: string;
-  title?: string;
+type HomeRailsData = {
+  newest: Product[];
+  bestSellers: Product[];
+  merged: Product[];
 };
 
-// ─── Server-rendered crawlable rail links (SEO) ──────────────────────────
-// The homepage rails (ProductRailContainer newest/best-sellers) fetch on the
-// client via SWR, so the initial HTML of / contained ZERO product links
-// (verified live) and the homepage's authority never reached the products it
-// showcases. Mirror the rails' own data sources on the server (newest =
-// /products?sort=-createdAt, best-sellers = /bestsellers — the same calls
-// productService.getNewest/getBestSellers make) and render the links in a
-// visually-hidden nav. Failure-safe: any API error yields an empty list and
-// the homepage renders exactly as before.
-async function fetchHomeRailProducts(): Promise<RailProduct[]> {
+// ─── Server-rendered homepage product rails + crawlable links/images (SEO) ───
+// Mirror the rails' own data sources on the server so ProductRailContainer
+// renders real product cards and <img> tags directly in the initial SSR HTML
+// (just like HeroSection does for banners).
+async function fetchHomeRailProducts(): Promise<HomeRailsData> {
   const timeout = IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000;
   try {
     const [newestJson, bestJson] = await Promise.all([
-      fetchJsonWithTimeout<ApiResponse<RailProduct[]> & { success?: boolean }>(
+      fetchJsonWithTimeout<ApiResponse<any[]> & { success?: boolean }>(
         `${API_BASE}/products?sort=-createdAt&limit=10&facets=false`,
         { next: { revalidate } },
         timeout
       ),
-      fetchJsonWithTimeout<ApiResponse<RailProduct[]> & { success?: boolean }>(
+      fetchJsonWithTimeout<ApiResponse<any[]> & { success?: boolean }>(
         `${API_BASE}/bestsellers?limit=10&in_stock=true`,
         { next: { revalidate } },
         timeout
       ),
     ]);
+    const newest = Array.isArray(newestJson?.data)
+      ? newestJson.data.map((item) => mapBackendProduct(item, API_BASE))
+      : [];
+    const bestSellers = Array.isArray(bestJson?.data)
+      ? bestJson.data.map((item) => mapBackendProduct(item, API_BASE))
+      : [];
     const seen = new Set<string>();
-    const merged: RailProduct[] = [];
-    for (const list of [newestJson?.data, bestJson?.data]) {
-      if (!Array.isArray(list)) continue;
+    const merged: Product[] = [];
+    for (const list of [newest, bestSellers]) {
       for (const item of list) {
-        if (!item || (!item.slug && !item.productCode && !item._id && !item.id)) continue;
-        const key = item.productCode || item.slug || item._id || item.id || "";
+        const key = item.productCode || item.slug || item.id || "";
         if (!key || seen.has(key)) continue;
         seen.add(key);
         merged.push(item);
       }
     }
-    return merged;
+    return { newest, bestSellers, merged };
   } catch (error) {
     logBuildFetchWarning("[home] Failed to fetch rail products", error);
-    return [];
+    return { newest: [], bestSellers: [], merged: [] };
   }
 }
 
@@ -196,11 +194,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function Home() {
-  const [homepageCats, banners, railProducts] = await Promise.all([
+  const [homepageCats, banners, railData] = await Promise.all([
     fetchHomeCategories(),
     fetchBanners(),
     fetchHomeRailProducts(),
   ]);
+  const railProducts = railData.merged;
 
   // Never publish a fabricated phone number as factual data: contactPoint
   // uses NEXT_PUBLIC_CONTACT_PHONE when configured, and otherwise falls back
@@ -378,7 +377,7 @@ export default async function Home() {
   const heroMobileUrl = firstHero
     ? resolveImageUrl(firstHero.mobileImage, "") ||
       (firstHero.image && typeof firstHero.image === "object" && (firstHero.image as any).cardUrl
-        ? String((firstHero.image as any).cardUrl)
+        ? resolveImageUrl(String((firstHero.image as any).cardUrl), "")
         : "")
     : "";
   const seenPreload = new Set<string>();
@@ -426,19 +425,29 @@ export default async function Home() {
       {railProducts.length > 0 && (
         <nav aria-label="محصولات منتخب فروشگاه" className="sr-only">
           <ul>
-            {railProducts.map((item) => (
-              <li key={item.productCode || item.slug || item._id || item.id}>
-                <Link
-                  href={buildProductUrl({
-                    id: item._id || item.id || "",
-                    slug: item.slug,
-                    productCode: item.productCode,
-                  } as any)}
-                >
-                  {item.name || item.title || item.slug}
-                </Link>
-              </li>
-            ))}
+            {railProducts.map((item) => {
+              const label = item.title || item.name || item.slug || "محصول";
+              const imgUrl =
+                item.image && /^https?:\/\//i.test(item.image) && !item.image.toLowerCase().includes("placeholder")
+                  ? item.image
+                  : null;
+              return (
+                <li key={item.productCode || item.slug || item.id}>
+                  <Link href={buildProductUrl(item)}>
+                    {imgUrl && (
+                      <img
+                        src={imgUrl}
+                        alt={`خرید ${label}${item.brand ? ` برند ${item.brand}` : ""} | ای کا جی کالا`}
+                        width={600}
+                        height={600}
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{label}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         </nav>
       )}
@@ -470,13 +479,13 @@ export default async function Home() {
 
       <HomeSection variant="products">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} />
+          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} initialProducts={railData.bestSellers} />
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="products">
         <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} />
+          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} initialProducts={railData.newest} />
         </Suspense>
       </HomeSection>
 

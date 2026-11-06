@@ -142,7 +142,7 @@ export default function ProductCard({ product, priority = false }: ProductCardPr
                         <ResilientImage
                             src={product.cardImage || product.image || "/placeholder.svg"}
                             backupSrc={product.image}
-                            alt={product.title}
+                            alt={`خرید ${product.title || product.name}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
                             fill
                             className={`${styles.productImage} ${isOutOfStock ? styles.outOfStockImage : ""} transition-transform duration-500 ${isOutOfStock ? "" : "group-hover:scale-105"}`}
                             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1536px) 20vw, 16vw"

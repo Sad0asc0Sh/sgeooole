@@ -210,28 +210,47 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     campaignLabel: backend.campaignLabel,
   });
 
+  // images/cardImages are built in ONE pass so the two arrays stay strictly
+  // parallel: cardImages[i] is always the card variant of images[i] (or the
+  // main URL itself when no card variant exists). Filtering the two arrays
+  // independently shifted indexes and showed the wrong photo in galleries.
+  const pairImage = (img: BackendImage): { main: string; card: string } | null => {
+    const main = normalizeImage(img, assetBase);
+    if (!main) return null;
+    return { main, card: normalizeCardImage(img, assetBase) || main };
+  };
+
   let images: string[] = [];
   let cardImages: string[] = [];
   if (backend.images && backend.images.length > 0) {
-    images = backend.images
-      .map((img) => normalizeImage(img, assetBase))
-      .filter((value): value is string => Boolean(value));
-    cardImages = backend.images
-      .map((img) => normalizeCardImage(img, assetBase))
-      .filter((value): value is string => Boolean(value));
-  }
-
-  if (images.length === 0 && backend.image) {
-    const normalized = normalizeImage(backend.image, assetBase);
-    if (normalized) {
-      images = [normalized];
+    for (const img of backend.images) {
+      const pair = pairImage(img);
+      if (pair) {
+        images.push(pair.main);
+        cardImages.push(pair.card);
+      }
     }
   }
 
-  if (cardImages.length === 0 && backend.image) {
-    const normalized = normalizeCardImage(backend.image, assetBase);
-    if (normalized) {
-      cardImages = [normalized];
+  if (images.length === 0 && backend.image) {
+    const pair = pairImage(backend.image);
+    if (pair) {
+      images = [pair.main];
+      cardImages = [pair.card];
+    }
+  }
+
+  // Fallback for variable products whose images live inside variants[].images
+  if (images.length === 0 && Array.isArray(backend.variants)) {
+    for (const v of backend.variants) {
+      if (!v || !Array.isArray(v.images)) continue;
+      for (const img of v.images) {
+        const pair = pairImage(img);
+        if (pair && !images.includes(pair.main)) {
+          images.push(pair.main);
+          cardImages.push(pair.card);
+        }
+      }
     }
   }
 
@@ -272,12 +291,19 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
           options: Array.isArray(v.options) ? v.options : [],
           price: vp.finalPrice,
           oldPrice: vp.oldPrice,
-          images: (v.images ?? [])
-            .map((img) => normalizeImage(img, assetBase))
-            .filter((x): x is string => Boolean(x)),
-          cardImages: (v.images ?? [])
-            .map((img) => normalizeCardImage(img, assetBase))
-            .filter((x): x is string => Boolean(x)),
+          // Paired in one pass (see pairImage): cardImages[i] ↔ images[i].
+          ...(() => {
+            const vImages: string[] = [];
+            const vCardImages: string[] = [];
+            for (const img of v.images ?? []) {
+              const pair = pairImage(img);
+              if (pair) {
+                vImages.push(pair.main);
+                vCardImages.push(pair.card);
+              }
+            }
+            return { images: vImages, cardImages: vCardImages };
+          })(),
           ...(excluded ? { excludeFromPromotion: true as const } : {}),
         };
       })

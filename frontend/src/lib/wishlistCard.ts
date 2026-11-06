@@ -23,6 +23,25 @@ const variantImageUrl = (img: string | { url?: string } | null | undefined): str
 };
 
 /**
+ * Card variants strictly parallel to a variant's `images`: entry i is the
+ * card variant of images[i], falling back to the main URL itself. Building
+ * the two arrays with independent filters shifted indexes and paired the
+ * wrong thumbnail with an image.
+ */
+const pairedCardImages = (
+  images: Array<string | { url?: string; cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } }> | undefined
+): string[] => {
+  const cards: string[] = [];
+  for (const img of Array.isArray(images) ? images : []) {
+    const main = variantImageUrl(img);
+    if (!main) continue;
+    const card = typeof img === "object" && img ? cardImageUrlOf(img) : null;
+    cards.push(card || main);
+  }
+  return cards;
+};
+
+/**
  * نمای Product-شکل یک آیتم ویش‌لیست برای کارت علاقه‌مندی‌ها.
  *
  * قرارداد واحد کارت‌ها: قیمت/بج/خط‌خورده از `resolveCardPricing` می‌آید، پس
@@ -73,9 +92,7 @@ export function wishlistItemToProduct(item: WishlistItem, now: number = getServe
         images: (Array.isArray(v.images) ? v.images : [])
           .map(variantImageUrl)
           .filter((x): x is string => Boolean(x)),
-        cardImages: (Array.isArray(v.images) ? v.images : [])
-          .map((img) => (typeof img === "object" && img ? cardImageUrlOf(img as { cardUrl?: string; sizes?: { card?: string; small?: string; thumbnail?: string } }) : null))
-          .filter((x): x is string => Boolean(x)),
+        cardImages: pairedCardImages(v.images),
         ...(excluded ? { excludeFromPromotion: true as const } : {}),
       };
     });
@@ -92,10 +109,9 @@ export function wishlistItemToProduct(item: WishlistItem, now: number = getServe
     image: firstImageUrl(item.images),
     cardImage: cardImageUrlOf(item.images?.[0]) || firstImageUrl(item.images),
     images: item.images ? item.images.map((img) => img.url) : [],
+    // Parallel to `images` above: card variant per image, else the image URL.
     cardImages: item.images
-      ? item.images
-          .map((img) => cardImageUrlOf(img))
-          .filter((x): x is string => Boolean(x))
+      ? item.images.map((img) => cardImageUrlOf(img) || img.url)
       : [],
     category: item.category || "",
     rating: item.rating || 0,

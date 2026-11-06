@@ -66,12 +66,15 @@ export function useSpecialOffers(limit: number = 10) {
 /**
  * Hook for fetching Newest Products with SWR caching
  */
-export function useNewestProducts(limit: number = 10) {
+export function useNewestProducts(limit: number = 10, initialData?: Product[]) {
+    const hasInitial = Array.isArray(initialData) && initialData.length > 0;
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         limit > 0 ? `newest-products-${limit}` : null,
         () => productService.getNewest(limit),
         {
             ...swrConfig,
+            fallbackData: hasInitial ? initialData : undefined,
+            revalidateOnMount: !hasInitial,
             // A newest product may receive a time-limited promotion after it is
             // already visible in this rail.
             revalidateOnFocus: true,
@@ -81,11 +84,12 @@ export function useNewestProducts(limit: number = 10) {
         }
     );
 
+    const products = data || initialData || [];
     return {
-        products: data || [],
-        isLoading,
+        products,
+        isLoading: isLoading && products.length === 0,
         isValidating,
-        error,
+        error: products.length === 0 ? error : undefined,
         refresh: mutate,
     };
 }
@@ -93,12 +97,15 @@ export function useNewestProducts(limit: number = 10) {
 /**
  * Hook for fetching Best Sellers with SWR caching
  */
-export function useBestSellers(limit: number = 10) {
+export function useBestSellers(limit: number = 10, initialData?: Product[]) {
+    const hasInitial = Array.isArray(initialData) && initialData.length > 0;
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         limit > 0 ? `best-sellers-${limit}` : null,
         () => productService.getBestSellers(limit),
         {
             ...swrConfig,
+            fallbackData: hasInitial ? initialData : undefined,
+            revalidateOnMount: !hasInitial,
             // Ranking can remain cached elsewhere, but card-level promotion
             // state must follow the same freshness policy as flash deals.
             revalidateOnFocus: true,
@@ -108,11 +115,12 @@ export function useBestSellers(limit: number = 10) {
         }
     );
 
+    const products = data || initialData || [];
     return {
-        products: data || [],
-        isLoading,
+        products,
+        isLoading: isLoading && products.length === 0,
         isValidating,
-        error,
+        error: products.length === 0 ? error : undefined,
         refresh: mutate,
     };
 }

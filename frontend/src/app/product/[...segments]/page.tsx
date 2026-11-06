@@ -94,11 +94,14 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
     const canonicalPath = buildProductUrl(product);
     const canonicalUrl = siteUrl ? `${siteUrl}${canonicalPath}` : canonicalPath;
-    // Only a real absolute photo may be the OG image: productData's fallback
-    // for image-less products is the relative "/placeholder.svg".
-    const coverImage = product.images?.find(
-        (img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")
-    );
+    // Collect all real absolute product + variant photos for OG/Twitter metadata
+    const validImages = Array.from(
+        new Set([
+            ...(product.images ?? []),
+            ...((product.variants ?? []).flatMap((v) => v?.images ?? [])),
+        ])
+    ).filter((img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder"));
+    const coverImage = validImages[0];
 
     // Phase 1 SEO: sanitized Persian meta description (no raw HTML/entities)
     // and no «بدون برند» fallback in the title.
@@ -120,13 +123,13 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
             description,
             url: canonicalUrl,
             type: "website",
-            images: coverImage ? [{ url: coverImage, alt: seoTitle }] : undefined,
+            images: validImages.length > 0 ? validImages.map((url) => ({ url, alt: seoTitle })) : undefined,
         },
         twitter: {
             card: "summary_large_image",
             title: seoTitle,
             description,
-            images: coverImage ? [coverImage] : undefined,
+            images: validImages.length > 0 ? validImages : undefined,
         },
         robots: {
             index: indexable,
@@ -158,9 +161,20 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         `KY-${(product.sku?.replace(/\D/g, '').slice(-7) || product.id.slice(-7)).padStart(7, '0')}`;
 
     const categoryPath = product.categoryPath || [];
+    const primaryImage = product.images?.find(
+        (img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")
+    );
 
     return (
         <>
+            {primaryImage && (
+                <link
+                    rel="preload"
+                    as="image"
+                    href={primaryImage}
+                    fetchPriority="high"
+                />
+            )}
             <ProductStructuredData product={product} relatedProducts={[]} />
             <ProductDetailClient product={product} />
 

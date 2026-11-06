@@ -5,6 +5,8 @@ import ProductsPageClient from "./ProductsPageClient";
 import { buildProductUrl } from "@/lib/paths";
 import { parseProductFilters, appendPropertyFilters } from "@/lib/productFilters";
 import { productService } from "@/services/productService";
+import { mapBackendProduct } from "@/lib/productData";
+import type { ProductListingResult } from "@/hooks/useProductListing";
 import { brandService } from "@/services/brandService";
 
 export const revalidate = 300;
@@ -73,18 +75,9 @@ const resolveBrandName = cache(async (slug?: string): Promise<string | null> => 
 const API_BASE = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 const SERVER_PAGE_SIZE = 24; // = useProductListing ITEMS_PER_PAGE
 
-type ServerListingProduct = {
-  _id?: string;
-  id?: string;
-  slug?: string;
-  productCode?: string;
-  name?: string;
-  title?: string;
-};
-
 async function fetchServerListing(
   params: SearchParams
-): Promise<{ products: ServerListingProduct[]; totalPages: number; currentPage: number } | null> {
+): Promise<ProductListingResult | null> {
   try {
     const raw = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -106,19 +99,26 @@ async function fetchServerListing(
     if (filters.onSale) query.set("onSale", "true");
     if (filters.minRating !== undefined) query.set("minRating", String(filters.minRating));
     appendPropertyFilters(query, filters.properties);
-    query.set("facets", "false"); // links/schema only — facet counts are the client's job
+    query.set("facets", "false");
 
     const res = await fetch(`${API_BASE}/products?${query.toString()}`, {
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
     const json = await res.json().catch(() => null);
-    const products: ServerListingProduct[] = Array.isArray(json?.data) ? json.data : [];
+    const rawItems: any[] = Array.isArray(json?.data) ? json.data : [];
+    const products = rawItems.map((item) => mapBackendProduct(item, API_BASE));
     const pagination = json?.pagination || {};
     const total = Number(pagination.totalItems) || products.length;
     const totalPages =
       Number(pagination.totalPages) || Math.max(1, Math.ceil(total / SERVER_PAGE_SIZE));
-    return { products, totalPages, currentPage: filters.page };
+    return {
+      products,
+      total,
+      totalPages,
+      currentPage: filters.page,
+      priceRange: json?.priceRange,
+    };
   } catch {
     return null;
   }
@@ -222,9 +222,9 @@ export default async function ProductListingPage({
 
   // Crawlable server copy of the current listing (see fetchServerListing).
   const listing = await fetchServerListing(params);
-  const listingHref = (product: ServerListingProduct) =>
+  const listingHref = (product: { id?: string; slug?: string; productCode?: string }) =>
     buildProductUrl({
-      id: product._id || product.id || "",
+      id: product.id || "",
       slug: product.slug,
       productCode: product.productCode,
     } as any);
@@ -243,12 +243,19 @@ export default async function ProductListingPage({
       ? {
           "@context": "https://schema.org",
           "@type": "ItemList",
-          itemListElement: listing.products.map((product, index) => ({
-            "@type": "ListItem",
-            position: (listing.currentPage - 1) * SERVER_PAGE_SIZE + index + 1,
-            url: `${SITE_URL}${listingHref(product)}`,
-            name: product.name || product.title || product.slug || "",
-          })),
+          itemListElement: listing.products.map((product, index) => {
+            const imgUrl =
+              product.image && /^https?:\/\//i.test(product.image) && !product.image.toLowerCase().includes("placeholder")
+                ? product.image
+                : undefined;
+            return {
+              "@type": "ListItem",
+              position: (listing.currentPage - 1) * SERVER_PAGE_SIZE + index + 1,
+              url: `${SITE_URL}${listingHref(product)}`,
+              name: product.title || product.name || product.slug || "",
+              ...(imgUrl ? { image: imgUrl } : {}),
+            };
+          }),
         }
       : null;
 
@@ -275,13 +282,29 @@ export default async function ProductListingPage({
       {listing && listing.products.length > 0 && (
         <nav aria-label="فهرست محصولات" className="sr-only">
           <ul>
-            {listing.products.map((product) => (
-              <li key={product._id || product.id || product.slug}>
-                <Link href={listingHref(product)}>
-                  {product.name || product.title || product.slug}
-                </Link>
-              </li>
-            ))}
+            {listing.products.map((product) => {
+              const prodLabel = product.title || product.name || product.slug || "محصول";
+              const imgUrl =
+                product.image && /^https?:\/\//i.test(product.image) && !product.image.toLowerCase().includes("placeholder")
+                  ? product.image
+                  : null;
+              return (
+                <li key={product.id || product.slug}>
+                  <Link href={listingHref(product)}>
+                    {imgUrl && (
+                      <img
+                        src={imgUrl}
+                        alt={`خرید ${prodLabel}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
+                        width={600}
+                        height={600}
+                        loading="lazy"
+                      />
+                    )}
+                    <span>{prodLabel}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
           {listing.totalPages > 1 && (
             <ul>
@@ -295,7 +318,7 @@ export default async function ProductListingPage({
         </nav>
       )}
       <Suspense fallback={null}>
-        <ProductsPageClient />
+        <ProductsPageClient initialListing={listing} />
       </Suspense>
     </>
   );

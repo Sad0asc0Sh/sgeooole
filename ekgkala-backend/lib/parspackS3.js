@@ -200,10 +200,10 @@ const shouldConvertToWebp = (extLower) => {
 };
 
 /** Derived object key for the lightweight card variant of a main image. */
-const cardKeyFor = (objectKey) =>
-  objectKey.endsWith(".webp") && !objectKey.endsWith("-card.webp")
-    ? objectKey.replace(/\.webp$/, "-card.webp")
-    : null;
+const cardKeyFor = (objectKey) => { if (/-card\.webp$/i.test(objectKey)) return null; return /\.(webp|jpe?g|png)$/i.test(objectKey) ? objectKey.replace(/\.(webp|jpe?g|png)$/i, "-card.webp") : null; };
+
+/** True when the buffer really is WebP (RIFF....WEBP), whatever its name. */
+const isWebpBuffer = (buf) => Buffer.isBuffer(buf) && buf.length > 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP";
 
 const MIME_MAP = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
@@ -463,7 +463,10 @@ const uploadToParsPack = async (buffer, originalName, options = {}) => {
   if (wantsCard) {
     const cardObjKey = cardKeyFor(objectKey);
     if (cardObjKey) {
-      let cardBuf = Buffer.isBuffer(cardBuffer) ? cardBuffer : null;
+      // Trust a client-supplied card only when it really is WebP — it is
+      // stored under a `-card.webp` key with an image/webp content type, so
+      // JPEG bytes here would ship a mislabeled, possibly broken, image.
+      let cardBuf = isWebpBuffer(cardBuffer) ? cardBuffer : null;
       if (!cardBuf) {
         cardBuf = await convertToWebp(uploadBuffer, {
           maxWidth: cardMaxWidth,
@@ -598,6 +601,7 @@ module.exports = {
   putObject,
   convertToWebp,
   cardKeyFor,
+  isWebpBuffer,
   getPublicUrl,
   extractImageInfo,
   validateFile,

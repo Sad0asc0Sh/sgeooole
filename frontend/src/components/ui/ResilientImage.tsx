@@ -102,7 +102,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       style,
       ...rest
     },
-    _ref
+    ref
   ) {
     const originalSrc = src;
     const [currentSrc, setCurrentSrc] = useState<ImageProps["src"]>(src);
@@ -239,20 +239,24 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
         // skeleton below is only an overlay behind the (always visible) image.
         opacity: 1,
       }),
-      [style, transitionDuration, phase]
+      [style, transitionDuration]
     );
 
     const shouldPrioritize = Boolean(rest.priority);
+    const isUnoptimized = rest.unoptimized ?? true;
     const imageProps: ImageProps = {
       ...rest,
       src: currentSrc,
       alt: alt ?? "",
       className,
       style: imageStyle,
-      placeholder: rest.placeholder ?? "blur",
-      blurDataURL: rest.blurDataURL ?? DEFAULT_BLUR_SVG,
+      // Direct S3 delivery: avoid injecting inline base64 SVG background-image
+      // on SSR <img> tags (which hurts Googlebot-Image indexing) since the
+      // skeleton <span> behind the image already provides the loading state.
+      placeholder: isUnoptimized ? "empty" : (rest.placeholder ?? "blur"),
+      blurDataURL: isUnoptimized ? undefined : (rest.blurDataURL ?? DEFAULT_BLUR_SVG),
       // Direct S3 delivery — never route through the server optimizer.
-      unoptimized: rest.unoptimized ?? true,
+      unoptimized: isUnoptimized,
       decoding: rest.decoding ?? "async",
       loading: rest.loading ?? (shouldPrioritize ? "eager" : "lazy"),
       fetchPriority: rest.fetchPriority ?? (shouldPrioritize ? "high" : "auto"),
@@ -272,7 +276,7 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
             }}
           />
         )}
-        <Image {...imageProps} alt={alt || ""} />
+        <Image {...imageProps} ref={ref} alt={alt || ""} />
       </span>
     );
   }
