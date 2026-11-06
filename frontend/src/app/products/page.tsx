@@ -215,19 +215,22 @@ export default async function ProductListingPage({
 }) {
   // Phase 2 SEO: ProductsPageClient reads useSearchParams() (filter state).
   // It must suspend inside its own boundary so the route renders a real
-  // server shell (header/nav/footer + H1 + intro + metadata) instead of
+  // server shell (header/nav/footer + H1 + metadata) instead of
   // bailing out to a CSR shell.
   //
   // The client renders its own H1 for search results and brand views, so the
-  // server header is shown only for the base and category views (no duplicate H1).
+  // server H1 is rendered only for the base and category views (no duplicate H1).
+  // It is sr-only: the visible heading/intro block above the listing was
+  // removed by design — the listing starts directly with the toolbar/grid,
+  // and the SEO copy lives on in the page <title>/meta description.
   const params = await searchParams;
   const category = firstString(params.category);
   const brand = singleBrandSlug(params);
   const search = firstString(params.search);
-  const showServerHeader = !search && !brand;
+  const showServerH1 = !search && !brand;
 
-  // نام فارسی واقعی (نه اسلاگ) برای H1 و متن سئو
-  const categoryName = showServerHeader ? await resolveCategoryName(category) : null;
+  // نام فارسی واقعی (نه اسلاگ) برای H1
+  const categoryName = showServerH1 ? await resolveCategoryName(category) : null;
   const label = categoryName || (category ? humanizeSlug(category) : null);
 
   // Crawlable server copy of the current listing (see fetchServerListing).
@@ -271,17 +274,8 @@ export default async function ProductListingPage({
 
   return (
     <>
-      {showServerHeader && (
-        <div className="mx-auto w-full max-w-7xl px-4 pt-6 md:px-6">
-          <h1 className="text-xl md:text-2xl font-extrabold text-gray-900">
-            {label ? `محصولات ${label}` : "همه محصولات"}
-          </h1>
-          <p className="mt-2 text-sm leading-7 text-gray-500">
-            {label
-              ? `مشاهده و خرید محصولات دسته‌بندی ${label} در فروشگاه ای کا جی کالا؛ با فیلترهای قیمت، برند و موجودی، انتخابی مطمئن و دقیق داشته باشید.`
-              : "مشاهده و خرید آنلاین طیف گسترده‌ای از کالاهای تکنولوژی، دیجیتال، الکترونیک و هوشمند در فروشگاه اینترنتی ای کا جی کالا؛ با تضمین اصالت، قیمت به‌روز و گارانتی معتبر."}
-          </p>
-        </div>
+      {showServerH1 && (
+        <h1 className="sr-only">{label ? `محصولات ${label}` : "همه محصولات"}</h1>
       )}
       {itemListSchema && (
         <script
