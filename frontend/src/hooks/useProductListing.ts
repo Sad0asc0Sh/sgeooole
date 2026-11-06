@@ -4,7 +4,14 @@ import { useMemo } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import type { Cache } from "swr";
 import { productService, Product } from "@/services/productService";
-import { appendPropertyFilters, type ProductFilterFacets, type ProductFilterProperties } from "@/lib/productFilters";
+import {
+  appendPropertyFilters,
+  appendStableAttrAndRangeFilters,
+  type ProductFilterAttrValues,
+  type ProductFilterFacets,
+  type ProductFilterProperties,
+  type ProductFilterRanges,
+} from "@/lib/productFilters";
 import { getProductListingReadiness, PRODUCT_LISTING_CACHE_POLICY } from "@/lib/productListingState";
 
 const ITEMS_PER_PAGE = 24;
@@ -39,6 +46,8 @@ export type ProductListingQuery = {
   onSale?: boolean;
   minRating?: number;
   properties?: ProductFilterProperties;
+  attrFilters?: ProductFilterAttrValues;
+  ranges?: ProductFilterRanges;
 };
 
 export type ProductListingResult = {
@@ -64,6 +73,7 @@ function buildListingCacheKey(query: ProductListingQuery): string {
   if (query.onSale) params.set("onSale", "true");
   if (query.minRating !== undefined) params.set("minRating", String(query.minRating));
   appendPropertyFilters(params, query.properties, "prop_");
+  appendStableAttrAndRangeFilters(params, query.attrFilters, query.ranges);
   return `product-listing:${params.toString()}`;
 }
 
@@ -84,6 +94,14 @@ async function fetchProductListing(query: ProductListingQuery): Promise<ProductL
     properties:
       query.properties && Object.keys(query.properties).length > 0
         ? query.properties
+        : undefined,
+    attrFilters:
+      query.attrFilters && Object.keys(query.attrFilters).length > 0
+        ? query.attrFilters
+        : undefined,
+    ranges:
+      query.ranges && Object.keys(query.ranges).length > 0
+        ? query.ranges
         : undefined,
   });
 

@@ -25,6 +25,7 @@ const {
   normalizeBucketValue,
   normalizeFacetValue,
   canonicalizeSpecLabel,
+  inferProductTypeFromText,
   isNonFilterableKey,
   NON_FILTERABLE_KEYS_BASE,
   PREVIOUSLY_BLOCKED_KEYS,
@@ -355,6 +356,22 @@ function isExplicitlyEnabledByAdmin(label, categoryRules) {
 }
 
 /**
+ * مقدار مقصد valueAliases برای یک مقدار خام (یا null اگر نگاشتی نبود).
+ * هم شیء ساده و هم Map (فیلد Map در Mongoose) پشتیبانی می‌شود.
+ */
+function applyValueAlias(valueAliases, rawValue) {
+  if (!valueAliases || typeof valueAliases !== 'object') return null
+  const entries = valueAliases instanceof Map ? [...valueAliases.entries()] : Object.entries(valueAliases)
+  if (!entries.length) return null
+  const rawKey = normCompareKey(rawValue)
+  if (!rawKey) return null
+  for (const [aliasKey, targetVal] of entries) {
+    if (targetVal && normCompareKey(aliasKey) === rawKey) return String(targetVal)
+  }
+  return null
+}
+
+/**
  * تصمیم نهایی «قابل فیلتر بودن» یک ویژگی + ساخت جفت (label, value) استاندارد.
  *
  * دو لایه:
@@ -375,12 +392,15 @@ function normalizeFilterFacetPair({ label, value, categoryRules } = {}) {
     isExplicitlyEnabledByAdmin(canonicalLabel, categoryRules) ||
     isExplicitlyEnabledByAdmin(rawLabel, categoryRules)
 
-  const { bucket, filterable: bucketFilterable } = normalizeFacetValue(canonicalLabel, value)
-  if (bucket === null) return null
-
   const rule = Array.isArray(categoryRules)
     ? categoryRules.find((item) => item && normCompareKey(item.name) === normCompareKey(canonicalLabel))
     : null
+
+  // اعمال valueAliases تعریف‌شده در دسته‌بندی (مثلاً «۱۲۸ گیگ» ← «128GB») پیش از باکت‌سازی
+  const effectiveValue = applyValueAlias(rule && rule.valueAliases, rawValue) ?? value
+
+  const { bucket, filterable: bucketFilterable } = normalizeFacetValue(canonicalLabel, effectiveValue)
+  if (bucket === null) return null
 
   return {
     label: canonicalLabel,
@@ -487,6 +507,16 @@ function prepareProductSpecsAndDescription(product, categoryRules = [], options 
     for (const pair of extractedFromDesc) add(pair.label, pair.value, 'description')
   }
 
+  // (۵.۵) تشخیص خودکار «نوع کاربری» از عنوان کالا یا تیتر توضیحات (فقط برای فست سایدبار)
+  const TYPE_KEYS = new Set([normCompareKey('نوع کاربری'), normCompareKey('نوع محصول')])
+  const hasExplicitProductType = collected.some((item) => TYPE_KEYS.has(normCompareKey(item.label)))
+  if (!hasExplicitProductType) {
+    const firstHeadingMatch = descriptionInput.match(/<h[12][^>]*>([\s\S]*?)<\/h[12]>/i)
+    const headingText = firstHeadingMatch ? stripTagsToText(firstHeadingMatch[1]) : ''
+    const inferredType = inferProductTypeFromText(source.name, headingText)
+    if (inferredType) add('نوع کاربری', inferredType, 'inferred_title')
+  }
+
   // ترتیب: ابتدا ترتیب دسته‌بندی، سپس الفبایی برای بقیه (پایدار)
   const orderOf = (label) => {
     const key = normCompareKey(label)
@@ -508,6 +538,8 @@ function prepareProductSpecsAndDescription(product, categoryRules = [], options 
   // در لایه‌ی دوم (properties) استفاده می‌شود.
   const specifications = {}
   for (const item of collected) {
+    // نوع استنتاج‌شده از عنوان فقط فست سایدبار است؛ جدول خام و فید ترب آلوده نمی‌شوند
+    if (item.source === 'inferred_title') continue
     const label = item.rawLabel || item.label
     if (!(label in specifications)) specifications[label] = item.value
   }
@@ -606,6 +638,7 @@ module.exports = {
   variantOptionPairs,
   attributePairs,
   normalizeFilterFacetPair,
+  applyValueAlias,
   isExplicitlyEnabledByAdmin,
   NEGATION_GUARD,
   GUARANTEE_LABEL_KEYS,

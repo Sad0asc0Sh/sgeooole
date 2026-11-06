@@ -183,3 +183,38 @@ it("renders a colour swatch for colour properties", async () => {
   expect(swatch).toBeTruthy();
   expect((swatch as HTMLElement).style.backgroundColor).toBeTruthy();
 });
+
+it("honors backend defaultOpen flag on property facet sections", async () => {
+  listingState = {
+    ...baseListing,
+    total: 10,
+    facets: {
+      brands: [],
+      properties: [
+        {
+          name: "رزولوشن تصویر",
+          defaultOpen: true,
+          values: [{ value: "4 مگاپیکسل", count: 6, isSelected: false }],
+        },
+        {
+          name: "جنس بدنه",
+          defaultOpen: false,
+          values: [{ value: "فلزی", count: 4, isSelected: false }],
+        },
+      ],
+    },
+  };
+  await act(async () => { render(<ProductsPageClient />); });
+
+  const sidebar = document.querySelector("aside") as HTMLElement;
+  expect(sidebar).toBeTruthy();
+
+  const openHeader = within(sidebar).getByRole("button", { name: "رزولوشن تصویر" });
+  const closedHeader = within(sidebar).getByRole("button", { name: "جنس بدنه" });
+  expect(openHeader).toHaveAttribute("aria-expanded", "true");
+  expect(closedHeader).toHaveAttribute("aria-expanded", "false");
+
+  expect(within(sidebar).getByRole("button", { name: /4 مگاپیکسل/ })).toBeInTheDocument();
+  expect(within(sidebar).queryByRole("button", { name: /فلزی/ })).toBeNull();
+});
+

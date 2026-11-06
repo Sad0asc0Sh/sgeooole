@@ -1,4 +1,12 @@
-import { parsePriceInput, parseProductFilters, appendPropertyFilters } from "@/lib/productFilters";
+import {
+  parsePriceInput,
+  parseRangeInput,
+  parseProductFilters,
+  appendPropertyFilters,
+  appendStableAttrAndRangeFilters,
+  resolveAttrKeyToLabel,
+  resolveLabelToAttrKey,
+} from "@/lib/productFilters";
 import { normalizeProductSort } from "@/lib/productSorting";
 
 describe("normalizeProductSort", () => {
@@ -105,5 +113,25 @@ describe("appendPropertyFilters", () => {
     appendPropertyFilters(params, { رنگ: ["", "آبی"], خالی: [] });
     expect(params.getAll("properties[رنگ]")).toEqual(["آبی"]);
     expect(params.has("properties[خالی]")).toBe(false);
+  });
+
+  it("parses and serializes stable f.<key> and r.<key> parameters alongside legacy prop_ filters", () => {
+    const query = new URLSearchParams(
+      "category=ip-camera&f.brand=dahua,hikvision&f.resolution_mp=4,8&r.ir_range_m=۳۰-۶۰&prop_رنگ=سفید"
+    );
+    const parsed = parseProductFilters(query);
+    expect(parsed.brand).toBe("dahua,hikvision");
+    expect(parsed.attrFilters["resolution_mp"]).toEqual(["4", "8"]);
+    expect(parsed.ranges["ir_range_m"]).toEqual({ min: 30, max: 60 });
+    expect(parsed.properties["رنگ"]).toEqual(["سفید"]);
+
+    const out = new URLSearchParams();
+    appendStableAttrAndRangeFilters(out, parsed.attrFilters, parsed.ranges);
+    expect(out.get("f.resolution_mp")).toBe("4,8");
+    expect(out.get("r.ir_range_m")).toBe("30-60");
+
+    expect(parseRangeInput("60-20")).toEqual({ min: 20, max: 60 });
+    expect(resolveAttrKeyToLabel("resolution_mp")).toBe("رزولوشن تصویر");
+    expect(resolveLabelToAttrKey("رزولوشن تصویر")).toBe("resolution_mp");
   });
 });

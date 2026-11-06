@@ -470,7 +470,9 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
         params.set("category", slug);
         params.set("includeChildren", "true");
       }
-      Array.from(params.keys()).filter((key) => key.startsWith("prop_")).forEach((key) => params.delete(key));
+      Array.from(params.keys())
+        .filter((key) => key.startsWith("prop_") || key.startsWith("f.") || key.startsWith("r."))
+        .forEach((key) => params.delete(key));
     });
   }, [updateFilters]);
 
@@ -534,7 +536,10 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
 
   const activeFilterCount = (categorySlug ? 1 : 0) + selectedBrands.length + (hasPriceFilter ? 1 : 0)
     + (inStockParam ? 1 : 0) + (listingQuery.onSale ? 1 : 0) + (listingQuery.minRating ? 1 : 0)
-    + (searchQuery ? 1 : 0) + Object.values(selectedProperties).reduce((sum, values) => sum + values.length, 0);
+    + (searchQuery ? 1 : 0)
+    + Object.values(selectedProperties).reduce((sum, values) => sum + values.length, 0)
+    + Object.values(listingQuery.attrFilters || {}).reduce((sum, values) => sum + values.length, 0)
+    + Object.keys(listingQuery.ranges || {}).length;
 
   const availableBrands = useMemo(() => {
     const brands: Array<{ slug: string; name: string; logo?: Brand["logo"]; count?: number }> = facets?.brands
@@ -552,8 +557,8 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
 
   const propertyOptions = useMemo(() => {
     const metadata = categoryDetails?.slug === categorySlug ? categoryDetails.properties.filter((prop) => prop.isFilterable !== false) : [];
-    const properties: Array<{ name: string; unit?: string; isPinned?: boolean; isConfigured?: boolean; values: Array<{ value: string; count?: number; isSelected?: boolean }> }> = facets?.properties
-      ? facets.properties.map((prop) => ({ ...prop, unit: metadata.find((item) => item.name === prop.name)?.unit, values: [...prop.values] }))
+    const properties: Array<{ name: string; key?: string; unit?: string; isPinned?: boolean; isConfigured?: boolean; defaultOpen?: boolean; values: Array<{ value: string; count?: number; isSelected?: boolean }> }> = facets?.properties
+      ? facets.properties.map((prop) => ({ ...prop, unit: prop.unit || metadata.find((item) => item.name === prop.name)?.unit, values: [...prop.values] }))
       : metadata.map((prop) => ({ name: prop.name, unit: prop.unit, values: (prop.options || []).map((value) => ({ value })) }));
     Object.entries(selectedProperties).forEach(([name, selected]) => {
       let property = properties.find((prop) => prop.name === name);
@@ -875,7 +880,7 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
           : prop.values;
         const colorProperty = isColorProperty(prop.name);
         return (
-        <FilterSection key={`${categorySlug}-${prop.name}`} title={`${prop.name}${prop.unit ? ` (${prop.unit})` : ""}`} defaultOpen={index < 3 || !!selectedProperties[prop.name]?.length} badge={selectedProperties[prop.name]?.length}>
+        <FilterSection key={`${categorySlug}-${prop.name}`} title={`${prop.name}${prop.unit ? ` (${prop.unit})` : ""}`} defaultOpen={prop.defaultOpen ?? (index < 5 || !!selectedProperties[prop.name]?.length)} badge={selectedProperties[prop.name]?.length}>
           {prop.values.length > 6 && (
             <div className="relative mb-3">
               <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -890,8 +895,8 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
             </div>
           )}
           <div className="flex flex-wrap gap-2">
-            {visibleValues.map(({ value, count }) => {
-              const selected = !!selectedProperties[prop.name]?.includes(value);
+            {visibleValues.map(({ value, count, isSelected }) => {
+              const selected = Boolean(isSelected) || !!selectedProperties[prop.name]?.includes(value);
               const color = colorProperty ? swatchFor(value) : null;
               return <button type="button" key={value} aria-pressed={selected} onClick={() => handlePropertyFilter(prop.name, value)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${selected ? "bg-kala-500 text-white shadow-sm shadow-kala-200" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>

@@ -16,7 +16,14 @@
 import api from "@/lib/api";
 import { resolvePricing } from "@/lib/pricing";
 import { buildProductSpecs } from "@/lib/productSpecs";
-import { appendPropertyFilters, type ProductFilterProperties, type ProductFilterFacets } from "@/lib/productFilters";
+import {
+  appendPropertyFilters,
+  appendStableAttrAndRangeFilters,
+  type ProductFilterAttrValues,
+  type ProductFilterProperties,
+  type ProductFilterFacets,
+  type ProductFilterRanges,
+} from "@/lib/productFilters";
 
 // Re-export types from the SSR-safe types file for backward compatibility
 // This allows existing client components to continue using `import { Product } from "@/services/productService"`
@@ -730,6 +737,8 @@ export const productService = {
     minPrice?: number;
     maxPrice?: number;
     properties?: ProductFilterProperties;
+    attrFilters?: ProductFilterAttrValues;
+    ranges?: ProductFilterRanges;
     includeChildren?: boolean;
     inStock?: boolean;
     onSale?: boolean;
@@ -757,6 +766,9 @@ export const productService = {
 
       if (params.properties) {
         appendPropertyFilters(queryParams, params.properties);
+      }
+      if (params.attrFilters || params.ranges) {
+        appendStableAttrAndRangeFilters(queryParams, params.attrFilters, params.ranges);
       }
 
       // توجه: عمداً `nocache=true` فرستاده نمی‌شود.

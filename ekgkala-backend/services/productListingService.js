@@ -13,6 +13,11 @@ const {
   rankAndFormatPropertyFacets,
 } = require('./listingFacets')
 const { normCompareKey } = require('./specNormalization')
+const {
+  resolveAttributeDef,
+  expandAttributeQueryValues,
+  parseNumericRangeParam,
+} = require('./attributeDictionary')
 
 const MAX_PAGE = 100000
 const MAX_LIMIT = 100
@@ -116,6 +121,9 @@ function parseListingQuery(query = {}) {
     conditions: [],
     priceConditions: [],
     properties: new Map(),
+    attrFilters: new Map(),
+    attrMeta: new Map(),
+    ranges: [],
     brands: [],
   }
   let includeInactive = query.includeInactive
@@ -162,7 +170,7 @@ function parseListingQuery(query = {}) {
     else options.conditions.push({ [field]: { [`$${op}`]: value } })
   }
   for (const [field, value] of Object.entries(query)) {
-    if (field !== 'properties' && value && typeof value === 'object' && !Array.isArray(value)) {
+    if (field !== 'properties' && field !== 'f' && field !== 'r' && value && typeof value === 'object' && !Array.isArray(value)) {
       for (const [op, raw] of Object.entries(value)) advanced(field, op, raw)
     }
     const match = field.match(/^([^\[\]]+)\[(eq|lt|gt|gte|lte)\]$/)
@@ -170,10 +178,14 @@ function parseListingQuery(query = {}) {
   }
   if (active !== undefined) options.conditions.push({ isActive: active })
   if (query.category !== undefined && (typeof query.category !== 'object' || Array.isArray(query.category))) options.category = text(query.category, 'category')
+  const appendBrands = (rawInput) => {
+    const rawBrands = Array.isArray(rawInput) ? rawInput.map((value) => text(value, 'brand')).join(',') : rawInput
+    const parsed = [...new Set([...options.brands, ...text(rawBrands, 'brand', 6000).split(',').map((v) => v.trim()).filter(Boolean)])]
+    if (!parsed.length || parsed.length > 30) throw new ListingQueryError('Between 1 and 30 brands are allowed')
+    options.brands = parsed
+  }
   if (query.brand !== undefined && (typeof query.brand !== 'object' || Array.isArray(query.brand))) {
-    const rawBrands = Array.isArray(query.brand) ? query.brand.map((value) => text(value, 'brand')).join(',') : query.brand
-    options.brands = [...new Set(text(rawBrands, 'brand', 6000).split(',').map((v) => v.trim()).filter(Boolean))]
-    if (!options.brands.length || options.brands.length > 30) throw new ListingQueryError('Between 1 and 30 brands are allowed')
+    appendBrands(query.brand)
   }
   const addProperty = (name, raw) => {
     name = text(name, 'property name', 100)
@@ -183,13 +195,110 @@ function parseListingQuery(query = {}) {
     if (!combined.length || combined.length > 30) throw new ListingQueryError('At most 30 values per property are allowed')
     options.properties.set(name, combined)
   }
+  const addStableAttrFilter = (attrKeyRaw, rawValue) => {
+    const attrKey = text(attrKeyRaw, 'attribute key', 64)
+    if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(attrKey) || ['__proto__', 'constructor', 'prototype'].includes(attrKey)) {
+      throw new ListingQueryError('Invalid attribute key')
+    }
+    const tokens = (Array.isArray(rawValue) ? rawValue : [rawValue])
+      .flatMap((v) => text(v, 'attribute value', 600).split(','))
+      .map((v) => v.trim())
+      .filter(Boolean)
+    if (!tokens.length || tokens.length > 30) {
+      throw new ListingQueryError('Between 1 and 30 values per attribute filter are allowed')
+    }
+    const lowerKey = attrKey.toLowerCase()
+    if (lowerKey === 'brand' || lowerKey === 'manufacturer_brand' || lowerKey === 'manufacturer-brand') {
+      appendBrands(tokens.join(','))
+      return
+    }
+    const expanded = expandAttributeQueryValues(attrKey, tokens)
+    const prevTokens = options.attrFilters.get(expanded.attr) || []
+    options.attrFilters.set(expanded.attr, [...new Set([...prevTokens, ...tokens])])
+    addProperty(expanded.label, tokens)
+
+    const existingMeta = options.attrMeta.get(expanded.label)
+    if (existingMeta) {
+      existingMeta.expandedValues = [...new Set([...existingMeta.expandedValues, ...expanded.expandedValues])]
+      existingMeta.facetKeys = [...new Set([...existingMeta.facetKeys, ...expanded.facetKeys])]
+      existingMeta.labelCandidates = [...new Set([...existingMeta.labelCandidates, ...expanded.labelCandidates])]
+    } else {
+      options.attrMeta.set(expanded.label, expanded)
+    }
+  }
+  const addRangeFilter = (attrKeyRaw, rawRange) => {
+    const attrKey = text(attrKeyRaw, 'range attribute key', 64)
+    if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(attrKey) || ['__proto__', 'constructor', 'prototype'].includes(attrKey)) {
+      throw new ListingQueryError('Invalid range attribute key')
+    }
+    const parsed = parseNumericRangeParam(rawRange)
+    if (!parsed) throw new ListingQueryError(`Invalid range value for ${attrKey}`)
+    if (parsed.invalidOrder) throw new ListingQueryError(`min must not exceed max for ${attrKey}`)
+
+    if (attrKey.toLowerCase() === 'price') {
+      if (parsed.min !== undefined) {
+        options.minPrice = parsed.min
+        options.priceConditions.push({ [`${INTERNAL}.price`]: { $gte: parsed.min } })
+      }
+      if (parsed.max !== undefined) {
+        options.maxPrice = parsed.max
+        options.priceConditions.push({ [`${INTERNAL}.price`]: { $lte: parsed.max } })
+      }
+      if (options.minPrice !== undefined && options.maxPrice !== undefined && options.minPrice > options.maxPrice) {
+        throw new ListingQueryError('minPrice must not exceed maxPrice')
+      }
+      return
+    }
+
+    const def = resolveAttributeDef(attrKey)
+    const canonicalAttr = def ? def.key : attrKey.toLowerCase().replace(/-/g, '_')
+    const displayLabel = def ? def.label : attrKey
+    const labelCandidates = def
+      ? [...new Set([def.label, ...(def.aliases || []), def.key])]
+      : [attrKey]
+    const labelKeys = [...new Set(labelCandidates.map((l) => normCompareKey(l)).filter(Boolean))]
+
+    options.ranges.push({
+      attr: canonicalAttr,
+      label: displayLabel,
+      labelKeys,
+      rawLabelCandidates: labelCandidates,
+      min: parsed.min,
+      max: parsed.max,
+    })
+    if (options.ranges.length > 15) throw new ListingQueryError('At most 15 range filters are allowed')
+  }
+
   if (query.properties !== undefined) {
     if (!query.properties || typeof query.properties !== 'object' || Array.isArray(query.properties)) throw new ListingQueryError('Invalid properties')
     for (const [name, value] of Object.entries(query.properties)) addProperty(name, value)
   }
+  if (query.f !== undefined) {
+    if (!query.f || typeof query.f !== 'object' || Array.isArray(query.f)) throw new ListingQueryError('Invalid attribute filters')
+    for (const [attrKey, value] of Object.entries(query.f)) addStableAttrFilter(attrKey, value)
+  }
+  if (query.r !== undefined) {
+    if (!query.r || typeof query.r !== 'object' || Array.isArray(query.r)) throw new ListingQueryError('Invalid range filters')
+    for (const [attrKey, value] of Object.entries(query.r)) addRangeFilter(attrKey, value)
+  }
   for (const [key, value] of Object.entries(query)) {
     const match = key.match(/^properties\[([^\[\]]+)\](?:\[\])?$/)
-    if (match) addProperty(match[1], value)
+    if (match) {
+      addProperty(match[1], value)
+      continue
+    }
+    if (key.startsWith('prop_')) {
+      const propName = key.slice(5).trim()
+      if (propName) addProperty(propName, value)
+      continue
+    }
+    if (key.startsWith('f.')) {
+      addStableAttrFilter(key.slice(2), value)
+      continue
+    }
+    if (key.startsWith('r.')) {
+      addRangeFilter(key.slice(2), value)
+    }
   }
   if (options.properties.size > 30) throw new ListingQueryError('At most 30 properties are allowed')
   // توجه: تطبیق ویژگی‌ها عمداً اینجا ساخته نمی‌شود. تطبیق آگاه از متغیر
@@ -244,6 +353,8 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
     .map((value) => objectId(value) || value)
   const categoryIds = async (id) => withSelf(id, (await categoryGraph(id)).ids)
   let categoryRules = []
+  let directRuleKeys = null
+  let isLeafCategory = true
   let brandMatch = null
   if (options.category) {
     const id = objectId(options.category)
@@ -251,12 +362,17 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
       .select('_id').lean()
     if (category) {
       const graph = await categoryGraph(category._id)
-      const ids = options.includeChildren ? withSelf(category._id, graph.ids) : [category._id]
+      const allIds = withSelf(category._id, graph.ids)
+      isLeafCategory = allIds.length <= 1
+      const ids = options.includeChildren ? allIds : [category._id]
       conditions.push({ category: { $in: ids } })
-      // ترتیب ادغام: خودِ دسته (نزدیک‌ترین) → والدها → زیرشاخه‌ها.
-      // نزدیک‌ترین سطح برای unit/order برنده است و گزینه‌ها اجتماع می‌شوند.
-      const chain = [{ properties: graph.selfProperties }]
-      for (const properties of graph.ancestorProperties || []) chain.push({ properties })
+      // قواعد مستقیم (خود دسته + والدها) برای تشخیص ویژگی‌های پیکربندی‌شده‌ی همین سطح
+      const directChain = [{ properties: graph.selfProperties }]
+      for (const properties of graph.ancestorProperties || []) directChain.push({ properties })
+      const directRules = mergeCategoryRules(directChain)
+      directRuleKeys = new Set(directRules.map((rule) => rule.key))
+      // ترتیب ادغام کل: خودِ دسته (نزدیک‌ترین) → والدها → زیرشاخه‌ها.
+      const chain = [...directChain]
       if (options.includeChildren) {
         for (const properties of graph.descendantProperties || []) chain.push({ properties })
       }
@@ -290,7 +406,7 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
     }
     conditions.push({ $or: featuredOr })
   }
-  return { conditions, brandMatch, campaigns, categoryRules }
+  return { conditions, brandMatch, campaigns, categoryRules, directRuleKeys, isLeafCategory }
 }
 
 const literal = (value) => ({ $literal: value })
@@ -424,7 +540,10 @@ function buildListingPipeline(options, {
   categoryRules = [],
   criteria = null,
 } = {}, now = new Date()) {
-  const propertyCriteria = criteria || buildPropertyCriteria(options.properties, categoryRules)
+  const propertyCriteria = criteria || buildPropertyCriteria(options.properties, categoryRules, {
+    attrMeta: options.attrMeta,
+    ranges: options.ranges,
+  })
   const includeFacets = options.facets !== false
   // شرط‌های ویژگی با `$elemMatch` استاندارد (ایندکس‌پذیر، بدون $expr/$map)
   const criteriaConditions = propertyMatchConditions(propertyCriteria)
@@ -636,15 +755,20 @@ async function buildFacets({ raw, criteria, context, options, models }) {
     )
   })
 
-  // ویژگی‌های تعریف‌شده در دسته حتی بدون محصول هم در سایدبار دیده شوند
+  // ویژگی‌های تعریف‌شده‌ی مستقیم در دسته (نه زیرشاخه‌های بی‌ربط در دسته‌ی مادر)
   for (const rule of filterableRules(context.categoryRules)) {
-    if (!bucketsByLabel.has(rule.name)) bucketsByLabel.set(rule.name, [])
+    const isDirect = !context.directRuleKeys || context.directRuleKeys.has(rule.key)
+    if (isDirect && !bucketsByLabel.has(rule.name)) bucketsByLabel.set(rule.name, [])
   }
 
+  const totalItems = raw?.total?.[0]?.count || 0
   const properties = rankAndFormatPropertyFacets({
     bucketsByLabel,
     rules: context.categoryRules,
+    directRuleKeys: context.directRuleKeys,
     selected: options.properties,
+    totalItems,
+    isLeafCategory: context.isLeafCategory !== false,
     // سقف ویژگی‌های خودکار: در صفحه‌ی دسته ۱۰، در جستجوی آزاد ۶
     maxAutoFacets: context.categoryRules.length ? 10 : 6,
   })
@@ -652,10 +776,36 @@ async function buildFacets({ raw, criteria, context, options, models }) {
   return { brands, categories, properties }
 }
 
+/**
+ * بازیابی امن کلیدهای نقطه‌دار `f.<key>` و `r.<key>` از `req.originalUrl`
+ * (چون `express-mongo-sanitize` کلیدهای دارای `.` را از `req.query` حذف می‌کند).
+ * فقط کلیدهای строго ASCII مطابق الگوی مجاز استخراج می‌شوند تا تزریق عملگر غیرممکن باشد.
+ */
+function extractScopedFilterParamsFromUrl(originalUrl) {
+  const extracted = Object.create(null)
+  if (!originalUrl || typeof originalUrl !== 'string') return extracted
+  const qIndex = originalUrl.indexOf('?')
+  if (qIndex === -1) return extracted
+  const searchParams = new URLSearchParams(originalUrl.slice(qIndex + 1))
+  for (const [key, value] of searchParams.entries()) {
+    if (!/^(?:f|r)\.[a-zA-Z][a-zA-Z0-9_-]{0,63}$/.test(key)) continue
+    if (key in extracted) {
+      const prev = extracted[key]
+      extracted[key] = Array.isArray(prev) ? [...prev, value] : [prev, value]
+    } else {
+      extracted[key] = value
+    }
+  }
+  return extracted
+}
+
 async function listProducts(query, models, now = new Date()) {
   const options = parseListingQuery(query)
   const context = await resolveListingContext(options, models, now)
-  const criteria = buildPropertyCriteria(options.properties, context.categoryRules)
+  const criteria = buildPropertyCriteria(options.properties, context.categoryRules, {
+    attrMeta: options.attrMeta,
+    ranges: options.ranges,
+  })
   const [result] = await models.Product.aggregate(
     buildListingPipeline(options, { ...context, criteria }, now),
   ).allowDiskUse(true)
@@ -672,4 +822,11 @@ async function listProducts(query, models, now = new Date()) {
   }
 }
 
-module.exports = { listProducts, parseListingQuery, buildListingPipeline, resolveListingContext, ListingQueryError }
+module.exports = {
+  listProducts,
+  parseListingQuery,
+  buildListingPipeline,
+  resolveListingContext,
+  extractScopedFilterParamsFromUrl,
+  ListingQueryError,
+}

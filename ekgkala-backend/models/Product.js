@@ -351,6 +351,50 @@ const ProductSchema = new mongoose.Schema(
         bucket: { type: String, trim: true },
       }
     ],
+
+    // ============================================
+    // Typed Specs & Derived Facet Keys (V2 Dual-Write)
+    // در کنار properties[] نگهداری می‌شوند تا مهاجرت تدریجی بدون شکست انجام شود.
+    // ============================================
+    specs: {
+      type: [
+        new mongoose.Schema(
+          {
+            attr: { type: String, required: true, trim: true, lowercase: true },
+            key: { type: String, trim: true, lowercase: true },
+            keys: [{ type: String, trim: true, lowercase: true }],
+            num: { type: Number },
+            min: { type: Number },
+            max: { type: Number },
+            bool: { type: Boolean },
+            text: { type: String, trim: true },
+            unit: { type: String, trim: true },
+            raw: { type: String, trim: true },
+            src: { type: String, enum: ['form', 'html', 'import', 'ai', 'legacy', 'variant'], default: 'form' },
+            conf: { type: Number, min: 0, max: 1, default: 1 },
+          },
+          { _id: false },
+        ),
+      ],
+      default: undefined,
+    },
+    facetKeys: {
+      type: [{ type: String, trim: true }],
+      default: undefined,
+    },
+    specCompleteness: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
+    templateVersion: {
+      type: Number,
+      min: 1,
+    },
+    specsStale: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -398,6 +442,9 @@ ProductSchema.index({ isActive: 1, category: 1, 'properties.label': 1, 'properti
 ProductSchema.index({ isActive: 1, category: 1, 'properties.normLabel': 1, 'properties.normValue': 1 })
 // فیلترینگ آگاه از متغیر روی گزینه‌های متغیرها (رنگ/گارانتی/ظرفیت).
 ProductSchema.index({ 'variants.options.normLabel': 1, 'variants.options.normValue': 1 })
+// ایندکس‌های چندکلیدی و بازه‌ای داده‌ی تایپ‌دار مشخصات (V2)
+ProductSchema.index({ isActive: 1, category: 1, facetKeys: 1 })
+ProductSchema.index({ 'specs.attr': 1, 'specs.num': 1 })
 
 // ============================================
 // Pre-save Hook: Generate slug and productCode

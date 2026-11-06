@@ -849,3 +849,234 @@ test('bestSelling sorts by salesCount and is distinct from popularity', () => {
   const popularity = buildSort({ sortMode: 'popularity', skipDiscount: false }, new Set())
   assert.deepEqual(Object.keys(popularity)[0], '__listing.sort.views')
 })
+
+// ------------------------------------------------------------
+// ۸) Commit 48.4 — استنتاج خودکار نوع محصول از عنوان، آنتروپی شانون و جلوگیری از نشت زیرشاخه‌ها در دسته مادر
+// ------------------------------------------------------------
+test('inferProductTypeFromText automatically extracts device identity from product name or H1 without polluting raw specifications', () => {
+  const { inferProductTypeFromText } = require('../services/specNormalization')
+  assert.equal(inferProductTypeFromText('دوربین مداربسته دام داهوا مدل DH-IPC-HDW1230T1'), 'دوربین مداربسته دام')
+  assert.equal(inferProductTypeFromText('جک درب پارکینگی سیماران مدل فراز 4S'), 'جک درب پارکینگی')
+  assert.equal(inferProductTypeFromText('قفل برقی یوتاب مدل 1093'), 'قفل برقی')
+
+  const prepared = prepareProductSpecsAndDescription({
+    name: 'دوربین مداربسته دام داهوا مدل DH-IPC-HDW1230T1',
+    description: '<table><tr><th>رزولوشن</th><td>2MP</td></tr></table>',
+  })
+
+  // در specifications فقط همان ۱ ردیف جدول اصلی وجود دارد (ردیف ساختگی اضافه نمی‌شود)
+  assert.equal(Object.keys(prepared.specifications).length, 1)
+  assert.equal(prepared.specifications['رزولوشن'], '2MP')
+
+  // اما در properties سایدبار، هم «نوع کاربری» استنتاج‌شده و هم «رزولوشن تصویر» حضور دارند
+  const byLabel = new Map(prepared.properties.map((p) => [p.label, p.value]))
+  assert.equal(byLabel.get('نوع کاربری'), 'دوربین مداربسته دام')
+  assert.equal(byLabel.get('رزولوشن تصویر'), '2 مگاپیکسل')
+})
+
+test('parent category governance prevents low-coverage descendant facets from polluting parent sidebar', () => {
+  const bucketsByLabel = new Map([
+    ['نوع کاربری', [
+      { value: 'دوربین مداربسته دام', bucket: 'دوربین مداربسته دام', count: 6 },
+      { value: 'جک درب پارکینگی', bucket: 'جک درب پارکینگی', count: 4 },
+    ]],
+    // ویژگی اختصاصی یکی از زیرشاخه‌ها که فقط روی ۱ محصول از ۱۰ محصول دسته مادر وجود دارد
+    ['حداکثر عرض هر لنگه', [
+      { value: '3 متر', bucket: '3 متر', count: 1 },
+    ]],
+  ])
+
+  const descendantRules = [
+    { name: 'حداکثر عرض هر لنگه', order: 1, isFilterable: true, options: ['3 متر'] },
+  ]
+
+  // در نمای دسته مادر (isLeafCategory: false و directRuleKeys خالی)، قانون زیرشاخه نباید تحمیل شود
+  const parentFacets = rankAndFormatPropertyFacets({
+    bucketsByLabel,
+    rules: descendantRules,
+    directRuleKeys: new Set(),
+    totalItems: 10,
+    isLeafCategory: false,
+  })
+
+  assert.equal(parentFacets.some((f) => f.name === 'نوع کاربری'), true)
+  assert.equal(parentFacets.some((f) => f.name === 'حداکثر عرض هر لنگه'), false)
+  assert.equal(parentFacets[0].defaultOpen, true)
+
+  // اما در نمای خودِ زیرشاخه برگ (isLeafCategory: true و directRuleKeys شامل قانون)، نمایش داده می‌شود
+  const leafFacets = rankAndFormatPropertyFacets({
+    bucketsByLabel,
+    rules: descendantRules,
+    directRuleKeys: new Set([normCompareKey('حداکثر عرض هر لنگه')]),
+    totalItems: 4,
+    isLeafCategory: true,
+  })
+  assert.equal(leafFacets.some((f) => f.name === 'حداکثر عرض هر لنگه'), true)
+})
+
+// ------------------------------------------------------------
+// ۹) رفع ۴ رخنه‌ی دقت نرمال‌ساز و اعمال valueAliases
+// ------------------------------------------------------------
+test('normalizer precision fixes: Persian decimal/thousand separators, DC/tolerance stripping, boolean tokens, and valueAliases', () => {
+  const { normalizeDigits } = require('../services/specNormalization')
+
+  // ۱. ممیز فارسی (٫) و جداکننده‌ی هزارگان (٬ و ,)
+  assert.equal(normalizeDigits('۲٫۸ میلی‌متر'), '2.8 میلی‌متر')
+  assert.equal(normalizeDigits('۱٬۲۰۰ کیلوگرم'), '1200 کیلوگرم')
+  assert.equal(normalizeDigits('1,500 وات'), '1500 وات')
+
+  // ۲. پیشوند DC/AC و تلورانس ±10% در parseQuantity
+  const qDc = parseQuantity('DC12V ± 10%')
+  assert.ok(qDc)
+  assert.equal(qDc.value, 12)
+  assert.equal(qDc.unit, 'ولت')
+
+  // ۳. عبارت‌های مثبت بولین («پشتیبانی می‌شود»، «دارای») در کنار نگهبان نفی
+  assert.equal(normalizeBooleanValue('پشتیبانی می‌شود'), 'دارد')
+  assert.equal(normalizeBooleanValue('پشتیبانی میشود'), 'دارد')
+  assert.equal(normalizeBooleanValue('دارای میکروفون داخلی'), 'دارد')
+  assert.equal(normalizeBooleanValue('فاقد میکروفون داخلی'), 'ندارد')
+
+  // ۴. اعمال valueAliases تعریف‌شده در قوانین دسته (هم Object و هم Map در Mongoose) پیش از باکت‌سازی
+  const rules = [
+    {
+      name: 'رنگ',
+      isFilterable: true,
+      valueAliases: { 'سفید صدفی': 'سفید' },
+    },
+    {
+      name: 'رزولوشن تصویر',
+      isFilterable: true,
+      valueAliases: new Map([['تمام اچ‌دی', '2MP']]),
+    },
+  ]
+  const prepared = prepareProductSpecsAndDescription(
+    { specifications: { 'رنگ': 'سفید صدفی', 'رزولوشن تصویر': 'تمام اچ‌دی' } },
+    rules,
+  )
+  const colorProp = prepared.properties.find((p) => p.label === 'رنگ')
+  const resProp = prepared.properties.find((p) => p.label === 'رزولوشن تصویر')
+  assert.ok(colorProp)
+  assert.equal(colorProp.value, 'سفید')
+  assert.ok(resProp)
+  assert.equal(resProp.value, '2 مگاپیکسل')
+})
+
+// ------------------------------------------------------------
+// ۱۰) بذرگذاری دیکشنری (AttributeDef/SpecTemplate) و پارامترهای پایدار f.<key> / r.<key>
+// ------------------------------------------------------------
+test('dictionary seed payloads enforce snake_case ASCII keys, valid types, and non-filterable model_code guard', () => {
+  const { buildDictionarySeedPayloads } = require('../scripts/seedAttributeDictionary')
+  const { buildDraftTemplateForCategory } = require('../scripts/seedSpecTemplates')
+
+  const { attrDocs, valueDocs, summary } = buildDictionarySeedPayloads()
+  assert.ok(summary.totalAttributes >= 35)
+  assert.ok(summary.totalEnumValues >= 80)
+
+  const validTypes = new Set(['enum', 'number', 'boolean', 'multi', 'text'])
+  for (const doc of attrDocs) {
+    assert.match(doc.key, /^[a-z][a-z0-9_]*$/, `invalid ASCII key: ${doc.key}`)
+    assert.equal(validTypes.has(doc.type), true, `invalid type for ${doc.key}: ${doc.type}`)
+  }
+
+  // ضداگوی دکاشاپ (pa_model با ۳۲۳۳ ترم) باید صراحتاً غیرقابل‌فیلتر باشد
+  const modelDef = attrDocs.find((d) => d.key === 'model_code')
+  assert.ok(modelDef)
+  assert.equal(modelDef.filterable, false)
+
+  // بررسی برچسب‌های دوزبانه‌ی رزولوشن و کدینگ از کاتالوگ دکاشاپ
+  const res4 = valueDocs.find((v) => v.attr === 'resolution_mp' && v.key === '4')
+  assert.ok(res4 && res4.label.includes('2K'))
+  const hop = valueDocs.find((v) => v.attr === 'code_type' && v.key === 'hopping')
+  assert.ok(hop && hop.label.includes('Hopping'))
+
+  // پیش‌نویس قالب دسته همیشه product_type و brand را در جایگاه ۱ و ۲ سنجاق می‌کند
+  const { template, unmappedRules } = buildDraftTemplateForCategory({
+    _id: id(77),
+    name: 'دوربین مداربسته تحت شبکه',
+    slug: 'ip-camera',
+    properties: [
+      { name: 'رزولوشن', isFilterable: true, order: 1 },
+      { name: 'ویژگی آزمایشی ناشناخته', isFilterable: true, order: 2 },
+    ],
+  })
+  assert.equal(template.fields[0].attr, 'product_type')
+  assert.equal(template.fields[0].importance, 'pin')
+  assert.equal(template.fields[1].attr, 'brand')
+  assert.equal(template.fields[1].importance, 'pin')
+  assert.deepEqual(unmappedRules, ['ویژگی آزمایشی ناشناخته'])
+})
+
+test('f.<key> and r.<key> filter both legacy properties[] and typed specs[] while preserving prop_ backward compatibility', () => {
+  const { extractScopedFilterParamsFromUrl } = require('../services/productListingService')
+
+  const sampleProducts = [
+    {
+      _id: id(201),
+      name: 'Cam 4MP 40m Legacy',
+      isActive: true,
+      productType: 'simple',
+      price: 2_500_000,
+      stock: 5,
+      properties: [
+        { label: 'رزولوشن تصویر', value: '4 مگاپیکسل', normLabel: normCompareKey('رزولوشن تصویر'), normValue: '4 مگاپیکسل' },
+        { label: 'برد دید در شب', value: '40 متر', normLabel: normCompareKey('برد دید در شب'), normValue: '40 متر' },
+        { label: 'پشتیبانی از PoE', value: 'دارد', normLabel: normCompareKey('پشتیبانی از PoE'), normValue: 'دارد' },
+      ],
+    },
+    {
+      _id: id(202),
+      name: 'Cam 8MP 60m Typed V2',
+      isActive: true,
+      productType: 'simple',
+      price: 4_800_000,
+      stock: 3,
+      properties: [],
+      facetKeys: ['resolution_mp:8', 'poe:1'],
+      specs: [
+        { attr: 'resolution_mp', key: '8', num: 8 },
+        { attr: 'ir_range_m', num: 60, unit: 'm' },
+        { attr: 'poe', key: '1', bool: true },
+      ],
+    },
+    {
+      _id: id(203),
+      name: 'Cam 2MP 20m Basic',
+      isActive: true,
+      productType: 'simple',
+      price: 1_400_000,
+      stock: 8,
+      properties: [
+        { label: 'رزولوشن تصویر', value: '2 مگاپیکسل', normLabel: normCompareKey('رزولوشن تصویر'), normValue: '2 مگاپیکسل' },
+        { label: 'برد دید در شب', value: '۲۰ متر', normLabel: normCompareKey('برد دید در شب'), normValue: '20 متر' },
+        { label: 'پشتیبانی از PoE', value: 'ندارد', normLabel: normCompareKey('پشتیبانی از PoE'), normValue: 'ندارد' },
+      ],
+    },
+  ]
+
+  // ۱. تطبیق هم‌زمان چند مقدار در f.resolution_mp روی هر دو ساختار قدیمی و تایپ‌دار جدید
+  const byRes = run(sampleProducts, { 'f.resolution_mp': '4,8' })
+  assert.deepEqual(ids(byRes).sort(), [String(id(201)), String(id(202))].sort())
+
+  // ۲. بازه‌ی عددی r.ir_range_m=30-60 روی هر دو ساختار properties[] و specs[]
+  const byRange = run(sampleProducts, { 'r.ir_range_m': '30-60' })
+  assert.deepEqual(ids(byRange).sort(), [String(id(201)), String(id(202))].sort())
+
+  // ۳. ترکیب هم‌زمان f.<key> + r.<key> + prop_<نام فارسی> (سازگاری برگشتی ۱۰۰٪)
+  const combined = run(sampleProducts, {
+    'f.poe': '1',
+    'r.ir_range_m': '30-50',
+    'prop_رزولوشن تصویر': '4 مگاپیکسل',
+  })
+  assert.deepEqual(ids(combined), [String(id(201))])
+
+  // ۴. بازیابی امن کلیدهای نقطه‌دار از originalUrl و مسدودسازی کلیدهای غیرمجاز
+  const extracted = extractScopedFilterParamsFromUrl(
+    '/api/products?category=ip-camera&f.resolution_mp=4,8&r.ir_range_m=30-60&f.$gt=bad&__proto__.polluted=1',
+  )
+  assert.equal(extracted['f.resolution_mp'], '4,8')
+  assert.equal(extracted['r.ir_range_m'], '30-60')
+  assert.equal(extracted['f.$gt'], undefined)
+  assert.equal(Object.prototype.polluted, undefined)
+})
+

@@ -10,7 +10,7 @@ const Product = require('../models/Product')
 const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
-const { listProducts, ListingQueryError } = require('../services/productListingService')
+const { listProducts, extractScopedFilterParamsFromUrl, ListingQueryError } = require('../services/productListingService')
 const { prepareProductSpecsAndDescription } = require('../services/specAndDescriptionService')
 const { mergeCategoryRules } = require('../services/listingFacets')
 const { autoEvolveCategoryFacets, loadCategoryRulesWithAncestors } = require('../services/categoryFacetEvolution')
@@ -794,7 +794,8 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
 router.get('/', cacheMiddleware(300), async (req, res) => {
   try {
     const now = new Date()
-    const result = await listProducts(req.query, { Product, Category, Brand, Sale }, now)
+    const mergedQuery = { ...req.query, ...extractScopedFilterParamsFromUrl(req.originalUrl) }
+    const result = await listProducts(mergedQuery, { Product, Category, Brand, Sale }, now)
     // ساعت سرور برای اصلاح اختلاف ساعت کلاینت (فرانت آفست را از serverNow/هدر Date می‌سازد)
     result.serverNow = now.toISOString()
     // TTL کش لیست هم مثل جزئیات تا نزدیک‌ترین پایان پروموشن کوتاه می‌شود تا

@@ -4,7 +4,7 @@ jest.mock("@/app/products/ProductsPageClient", () => ({ __esModule: true, defaul
 
 it.each([
   { inStock: "true" }, { onSale: "true" }, { minRating: "4" },
-  { prop_رنگ: ["آبی", "قرمز"] }, { brand: "a,b" },
+  { prop_رنگ: ["آبی", "قرمز"] }, { "f.resolution_mp": "4" }, { "r.ir_range_m": "30-60" }, { brand: "a,b" },
   { category: "cameras", brand: "a" }, { search: "دوربین" },
 ])("does not index combinations of product filters: %j", async (query) => {
   const metadata = await generateMetadata({ searchParams: Promise.resolve(query) });

@@ -3,7 +3,11 @@ import { Suspense, cache } from "react";
 import Link from "next/link";
 import ProductsPageClient from "./ProductsPageClient";
 import { buildProductUrl } from "@/lib/paths";
-import { parseProductFilters, appendPropertyFilters } from "@/lib/productFilters";
+import {
+  parseProductFilters,
+  appendPropertyFilters,
+  appendStableAttrAndRangeFilters,
+} from "@/lib/productFilters";
 import { productService } from "@/services/productService";
 import { mapBackendProduct } from "@/lib/productData";
 import type { ProductListingResult } from "@/hooks/useProductListing";
@@ -81,8 +85,13 @@ async function fetchServerListing(
   try {
     const raw = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
-      const first = firstString(value as string | string[] | undefined);
-      if (first !== undefined) raw.set(key, first);
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (item !== undefined) raw.append(key, item);
+        });
+      } else if (value !== undefined) {
+        raw.set(key, value);
+      }
     }
     const filters = parseProductFilters(raw);
     const query = new URLSearchParams();
@@ -99,6 +108,7 @@ async function fetchServerListing(
     if (filters.onSale) query.set("onSale", "true");
     if (filters.minRating !== undefined) query.set("minRating", String(filters.minRating));
     appendPropertyFilters(query, filters.properties);
+    appendStableAttrAndRangeFilters(query, filters.attrFilters, filters.ranges);
     query.set("facets", "false");
 
     const res = await fetch(`${API_BASE}/products?${query.toString()}`, {
@@ -158,7 +168,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const hasFilters = pageNumber > 1 || Boolean(sort) || Boolean(minPrice) || Boolean(maxPrice)
     || Boolean(search) || brandValues.length > 1 || Boolean(category && brand)
     || params.inStock === "true" || params.onSale === "true" || Boolean(params.minRating)
-    || Object.keys(params).some((key) => key.startsWith("prop_"));
+    || Object.keys(params).some((key) => key.startsWith("prop_") || key.startsWith("f.") || key.startsWith("r."));
   const indexable = !hasFilters;
 
   let title = "همه محصولات | فروشگاه اینترنتی ای کا جی کالا";

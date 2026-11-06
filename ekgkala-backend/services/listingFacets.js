@@ -19,6 +19,7 @@ const {
   isNonFilterableKey,
   isCoreIdentityKey,
 } = require('./specNormalization')
+const { resolveAttributeDef, expandAttributeQueryValues } = require('./attributeDictionary')
 
 const INTERNAL = '__listing'
 
@@ -93,81 +94,232 @@ function filterableRules(rules = []) {
  * (بدون normValue) و هم داده‌ی جدید و هم گزینه‌ی تعریف‌شده‌ی ادمین
  * (مثلاً `2MP`) با مقدار محصول (مثلاً `۲ مگاپیکسل`) تطبیق پیدا کند.
  */
-function buildPropertyCriteria(properties, rules = []) {
-  if (!properties || typeof properties.entries !== 'function') return []
+function buildPropertyCriteria(properties, rules = [], { attrMeta = null, ranges = [] } = {}) {
   const criteria = []
-  for (const [label, values] of properties) {
-    if (!label || !Array.isArray(values) || !values.length) continue
-    const displayLabel = String(label).trim()
-    const rawValues = new Set()
-    const buckets = new Set()
-    for (const value of values) {
-      if (value === undefined || value === null) continue
-      const raw = String(value).trim()
-      if (!raw) continue
-      rawValues.add(raw)
-      const bucket = normalizeBucketValue(displayLabel, raw)
-      if (bucket) {
-        buckets.add(toValueKey(bucket))
-        rawValues.add(bucket)
+  if (properties && typeof properties.entries === 'function') {
+    for (const [label, values] of properties) {
+      if (!label || !Array.isArray(values) || !values.length) continue
+      const displayLabel = String(label).trim()
+      const meta = attrMeta instanceof Map ? attrMeta.get(displayLabel) : null
+      const attrDef = meta?.def || resolveAttributeDef(displayLabel)
+
+      const rawValues = new Set()
+      const buckets = new Set()
+      const facetKeys = new Set(meta?.facetKeys || [])
+
+      const allInputValues = meta?.expandedValues?.length
+        ? [...new Set([...values, ...meta.expandedValues])]
+        : values
+
+      for (const value of allInputValues) {
+        if (value === undefined || value === null) continue
+        const raw = String(value).trim()
+        if (!raw) continue
+        rawValues.add(raw)
+        const bucket = normalizeBucketValue(displayLabel, raw)
+        if (bucket) {
+          buckets.add(toValueKey(bucket))
+          rawValues.add(bucket)
+        }
       }
+      if (attrDef && !meta) {
+        const expanded = expandAttributeQueryValues(attrDef, values)
+        for (const fk of expanded.facetKeys) facetKeys.add(fk)
+      }
+
+      if (!buckets.size && !rawValues.size && !facetKeys.size) continue
+
+      const extraLabels = meta?.labelCandidates || []
+      const labelKeys = [...new Set([
+        normCompareKey(displayLabel),
+        displayLabel,
+        ...extraLabels.map((l) => normCompareKey(l)),
+        ...extraLabels,
+      ].filter(Boolean))]
+      const matchValues = [...new Set([...buckets, ...[...rawValues].map(toValueKey), ...rawValues])]
+
+      criteria.push({
+        kind: 'discrete',
+        attr: meta?.attr || (attrDef ? attrDef.key : null),
+        label: displayLabel,
+        labelKeys,
+        // برچسب‌های خام برای تطبیق با داده‌ی قدیمی (بدون normLabel)
+        rawLabelCandidates: [...new Set([displayLabel, ...extraLabels, ...labelKeys])],
+        matchValues,
+        buckets: [...buckets],
+        rawValues: [...rawValues],
+        facetKeys: [...facetKeys],
+        rule: rules.find((rule) => rule && rule.key === normCompareKey(displayLabel)) || null,
+      })
     }
-    if (!buckets.size && !rawValues.size) continue
-    const labelKeys = [...new Set([normCompareKey(displayLabel), displayLabel].filter(Boolean))]
-    const matchValues = [...new Set([...buckets, ...[...rawValues].map(toValueKey), ...rawValues])]
+  }
+
+  for (const r of Array.isArray(ranges) ? ranges : []) {
+    if (!r || (r.min === undefined && r.max === undefined)) continue
     criteria.push({
-      label: displayLabel,
-      labelKeys,
-      // برچسب‌های خام برای تطبیق با داده‌ی قدیمی (بدون normLabel)
-      rawLabelCandidates: [...new Set([displayLabel, ...labelKeys])],
-      matchValues,
-      buckets: [...buckets],
-      rawValues: [...rawValues],
-      rule: rules.find((rule) => rule && rule.key === normCompareKey(displayLabel)) || null,
+      kind: 'range',
+      attr: r.attr,
+      label: r.label,
+      labelKeys: r.labelKeys,
+      rawLabelCandidates: r.rawLabelCandidates,
+      min: r.min,
+      max: r.max,
+      rule: rules.find((rule) => rule && rule.key === normCompareKey(r.label)) || null,
     })
   }
+
   return criteria
+}
+
+const DIGIT_REPLACEMENTS = [
+  ['۰', '0'], ['۱', '1'], ['۲', '2'], ['۳', '3'], ['۴', '4'],
+  ['۵', '5'], ['۶', '6'], ['۷', '7'], ['۸', '8'], ['۹', '9'],
+  ['٠', '0'], ['١', '1'], ['٢', '2'], ['٣', '3'], ['٤', '4'],
+  ['٥', '5'], ['٦', '6'], ['٧', '7'], ['٨', '8'], ['٩', '9'],
+  ['٫', '.'], ['٬', ''],
+]
+
+function asciiDigitsExpr(strExpr) {
+  return DIGIT_REPLACEMENTS.reduce(
+    (acc, [find, replacement]) => ({ $replaceAll: { input: acc, find, replacement } }),
+    strExpr,
+  )
+}
+
+/**
+ * شرط تطبیق بازه‌ی عددی (`r.<key>=min-max`):
+ *  ۱) مسیر ایندکس‌پذیر روی داده‌ی تایپ‌دار `specs[]` (`specs.attr` + `specs.num` یا همپوشانی `[min, max]`)
+ *  ۲) مسیر سازگار با داده‌ی قدیمی روی `properties[]` بدون نیاز به مهاجرت اجباری
+ */
+function rangeMatchQuery(criterion) {
+  const { attr, labelKeys, rawLabelCandidates, min, max } = criterion
+  const numBounds = {}
+  if (min !== undefined) numBounds.$gte = min
+  if (max !== undefined) numBounds.$lte = max
+
+  const specElemOr = [{ num: numBounds }]
+  const intervalMatch = {
+    min: { $type: 'number', ...(max !== undefined ? { $lte: max } : {}) },
+    max: { $type: 'number', ...(min !== undefined ? { $gte: min } : {}) },
+  }
+  specElemOr.push(intervalMatch)
+
+  const legacyPropCond = {
+    $expr: {
+      $anyElementTrue: [
+        {
+          $map: {
+            input: { $ifNull: ['$properties', []] },
+            as: 'p',
+            in: {
+              $and: [
+                {
+                  $or: [
+                    { $in: ['$$p.normLabel', labelKeys] },
+                    { $in: ['$$p.label', rawLabelCandidates] },
+                  ],
+                },
+                {
+                  $let: {
+                    vars: {
+                      rx: {
+                        $regexFind: {
+                          input: asciiDigitsExpr({
+                            $ifNull: ['$$p.normValue', { $ifNull: ['$$p.value', ''] }],
+                          }),
+                          regex: '\\d+(?:\\.\\d+)?',
+                        },
+                      },
+                    },
+                    in: {
+                      $cond: [
+                        { $eq: ['$$rx', null] },
+                        false,
+                        {
+                          $let: {
+                            vars: {
+                              parsedNum: {
+                                $convert: {
+                                  input: '$$rx.match',
+                                  to: 'double',
+                                  onNull: null,
+                                  onError: null,
+                                },
+                              },
+                            },
+                            in: {
+                              $and: [
+                                { $ne: ['$$parsedNum', null] },
+                                ...(min !== undefined ? [{ $gte: ['$$parsedNum', min] }] : []),
+                                ...(max !== undefined ? [{ $lte: ['$$parsedNum', max] }] : []),
+                              ],
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  }
+
+  return {
+    $or: [
+      { specs: { $elemMatch: { attr, $or: specElemOr } } },
+      legacyPropCond,
+    ],
+  }
 }
 
 /**
  * شرط تطبیق یک ویژگی — با `$elemMatch` استاندارد (نه `$expr`/`$map`).
  *
- * چرا مهم است: `$elemMatch` روی آرایه‌ی `properties`/`variants.options` از
- * ایندکس Multikey استفاده می‌کند، در حالی که `$expr` + `$map` کل سند را در
- * حافظه اسکن می‌کند.
+ * چرا مهم است: `$elemMatch` روی آرایه‌ی `properties`/`variants.options` و
+ * ایندکس چندکلیدی `facetKeys` از ایندکس Multikey استفاده می‌کند.
  *
  * هر آیتم `properties` می‌تواند `{ label, value, normLabel, normValue }` باشد؛
  * شاخه‌ی دوم برای داده‌ی قدیمی (فقط label/value) است.
  */
 function propertyMatchQuery(criterion) {
+  if (criterion && criterion.kind === 'range') {
+    return rangeMatchQuery(criterion)
+  }
   const normLabel = { $in: criterion.labelKeys }
   const normValue = { $in: criterion.matchValues }
   const rawLabel = { $in: criterion.rawLabelCandidates }
   const rawValue = { $in: criterion.matchValues }
-  return {
-    $or: [
-      {
-        properties: {
-          $elemMatch: {
-            $or: [
-              { normLabel, normValue },
-              { label: rawLabel, value: rawValue },
-            ],
-          },
-        },
-      },
-      {
-        'variants.options': {
-          $elemMatch: {
-            $or: [
-              { normLabel, normValue },
-              { name: rawLabel, value: rawValue },
-            ],
-          },
-        },
-      },
-    ],
+  const branches = []
+  if (Array.isArray(criterion.facetKeys) && criterion.facetKeys.length) {
+    branches.push({ facetKeys: { $in: criterion.facetKeys } })
   }
+  branches.push(
+    {
+      properties: {
+        $elemMatch: {
+          $or: [
+            { normLabel, normValue },
+            { label: rawLabel, value: rawValue },
+          ],
+        },
+      },
+    },
+    {
+      'variants.options': {
+        $elemMatch: {
+          $or: [
+            { normLabel, normValue },
+            { name: rawLabel, value: rawValue },
+          ],
+        },
+      },
+    },
+  )
+  return { $or: branches }
 }
 
 /**
@@ -225,7 +377,7 @@ const optionMatchExpr = (criterion) => anyTrue({
  * `properties` همچنان با `$elemMatch` ایندکس‌پذیر انجام می‌شود.
  */
 function needsVariantCoupling(criteria) {
-  return Array.isArray(criteria) && criteria.length > 0
+  return Array.isArray(criteria) && criteria.some((c) => c && c.kind !== 'range')
 }
 
 /**
@@ -237,7 +389,9 @@ function needsVariantCoupling(criteria) {
  *  - `__listing.matchedVariants`  : همان متغیرهای منطبق
  *  - قیمت/موجودی نمایشی از میان متغیرهای منطبق بازنویسی می‌شوند
  */
-function variantCouplingStages(criteria, options = {}) {
+function variantCouplingStages(rawCriteria, options = {}) {
+  const criteria = (Array.isArray(rawCriteria) ? rawCriteria : []).filter((c) => c && c.kind !== 'range')
+  if (!criteria.length) return []
   const fields = {}
   const variantBackedExprs = []
   criteria.forEach((criterion, index) => {
@@ -495,25 +649,64 @@ function basePropertiesFacetBranch({ definiteMatches = [], priceMatch = [], maxB
  *  ۳) گزینه‌های تعریف‌شده‌ی ادمین حتی با count=0 نمایش داده می‌شوند
  *  ۴) دو مقدار که به یک باکت نرمال می‌شوند ادغام شده و شمارش جمع می‌شود
  *  ۵) رشته‌ی نمایش (`displayValue`) نیم‌فاصله را حفظ می‌کند
+ *  ۶) در دسته‌ی مادر (غیربرگ) قواعد زیرشاخه‌ها «پیکربندی‌شده» حساب نمی‌شوند و
+ *     فست کم‌پوشش یا تک‌مقداری زیرشاخه به سایدبار مادر نشت نمی‌کند
  */
+
+/**
+ * امتیاز ریاضی فست بر پایه‌ی پوشش (Coverage)، آنتروپی نرمال‌شده‌ی شانون با
+ * تصحیح میلر-مادو (Miller-Madow) و ضریب کاردینالیتی S(k).
+ */
+function computeFacetUtilityScore(values, totalItems, { isCore = false, isConfigured = false, isPinned = false } = {}) {
+  const live = (Array.isArray(values) ? values : []).filter((v) => (Number(v.count) || 0) > 0)
+  const k = live.length
+  if (k === 0) return 0
+  const n = live.reduce((sum, v) => sum + (Number(v.count) || 0), 0)
+  const denom = Math.max(Number(totalItems) || 0, n, 1)
+  const coverage = Math.min(1, n / denom)
+
+  if (k === 1) {
+    return (isPinned ? 2.0 : isCore ? 1.5 : isConfigured ? 1.2 : 0.5) * coverage
+  }
+
+  let H = 0
+  for (const item of live) {
+    const p = (Number(item.count) || 0) / n
+    if (p > 0) H -= p * Math.log2(p)
+  }
+  const mmCorrection = (k - 1) / (2 * n * Math.LN2)
+  const hNorm = Math.min(1, (H + mmCorrection) / Math.log2(k))
+  const sCard = k <= 12 ? 1.0 : Math.max(0.2, 1 - (k - 12) / 10)
+  const boost = isPinned ? 2.5 : isConfigured ? 1.8 : isCore ? 1.5 : 1.0
+
+  return boost * Math.pow(coverage, 1.2) * (0.65 * hNorm + 0.35 * sCard)
+}
+
 function rankAndFormatPropertyFacets({
   bucketsByLabel = new Map(),
   rules = [],
+  directRuleKeys = null,
   selected = new Map(),
+  totalItems = 0,
+  isLeafCategory = true,
   maxValues = 40,
   maxAutoFacets = 10,
+  openCount = 5,
 } = {}) {
   // `mergeCategoryRules` برچسب نرمال‌شده (`key`) را می‌سازد، اما این تابع نباید
   // به آن وابسته باشد: قواعد خام (مثلاً از تست یا فراخوانی مستقیم) هم باید کار کنند.
   const ruleByKey = new Map(
     filterableRules(rules).map((rule) => [rule.key || normCompareKey(rule.name), rule]),
   )
+  // قواعد «مستقیم» = خود دسته + والدها. بدون این مجموعه همه‌ی قواعد مستقیم‌اند (رفتار قبلی).
+  const directSet = directRuleKeys instanceof Set ? directRuleKeys : new Set(ruleByKey.keys())
   const labels = new Set([...bucketsByLabel.keys(), ...selected.keys()])
 
   const result = []
   for (const label of labels) {
     const labelKey = normCompareKey(label)
     const rule = ruleByKey.get(labelKey) || null
+    const isDirectRule = Boolean(rule && directSet.has(labelKey))
     const selectedValues = selected.get(label) || []
     // ویژگی‌ای که ادمین صراحتاً غیرقابل‌فیلتر کرده حذف می‌شود — مگر کاربر
     // خودش آن را انتخاب کرده باشد (باید بتواند تیک را بردارد).
@@ -531,8 +724,9 @@ function rankAndFormatPropertyFacets({
       else merged.set(key, { key, value: display, count: Number(entry.count) || 0 })
     }
 
-    // گزینه‌های تعریف‌شده‌ی ادمین (به شکل استانداردشده‌ی خودشان نمایش داده می‌شوند)
-    for (const option of rule ? rule.options : []) {
+    // گزینه‌های تعریف‌شده‌ی ادمین (فقط برای قواعد مستقیم همین دسته/والدها)
+    const ruleOptions = isDirectRule && rule ? rule.options : []
+    for (const option of ruleOptions) {
       const key = keyOfValue(option)
       if (!merged.has(key)) merged.set(key, { key, value: normalizeBucketValue(label, option) || option, count: 0 })
     }
@@ -554,24 +748,37 @@ function rankAndFormatPropertyFacets({
     // سقف نمایش: گزینه‌های انتخاب‌شده و تعریف‌شده‌ی ادمین همیشه می‌مانند
     const pinned = new Set([
       ...values.filter((v) => v.isSelected).map((v) => keyOfValue(v.value)),
-      ...(rule ? rule.options : []).map(keyOfValue),
+      ...ruleOptions.map(keyOfValue),
     ])
     const trimmed = values.filter((v, index) => index < maxValues || pinned.has(keyOfValue(v.value)))
+    const liveValues = trimmed.filter((item) => (Number(item.count) || 0) > 0)
+    const totalCoverage = trimmed.reduce((sum, item) => sum + (Number(item.count) || 0), 0)
+    const isCore = isCoreIdentityKey(label)
+    const isPinned = Boolean(isDirectRule && rule && rule.isPinned)
+    const attrDef = resolveAttributeDef(label)
 
     result.push({
       name: label,
-      unit: rule ? rule.unit : '',
-      isConfigured: Boolean(rule),
-      isPinned: Boolean(rule && rule.isPinned),
-      order: rule ? rule.order : Number.MAX_SAFE_INTEGER,
+      ...(attrDef ? { key: attrDef.key } : {}),
+      unit: rule ? rule.unit : (attrDef?.unit?.label || ''),
+      isConfigured: isDirectRule,
+      isPinned,
+      order: isDirectRule && rule ? rule.order : Number.MAX_SAFE_INTEGER,
       hasUserSelection: selectedValues.length > 0,
-      totalCoverage: trimmed.reduce((sum, item) => sum + (Number(item.count) || 0), 0),
+      liveValueCount: liveValues.length,
+      isCoreIdentity: isCore,
+      totalCoverage,
+      utilityScore: computeFacetUtilityScore(trimmed, totalItems || totalCoverage, {
+        isCore,
+        isConfigured: isDirectRule,
+        isPinned,
+      }),
       values: trimmed,
     })
   }
 
   // ------------------------------------------------------------
-  // حاکمیت ضدشلوغی سایدبار (Anti-Clutter Governance)
+  // حاکمیت ضدشلوغی سایدبار (Anti-Clutter Governance + Shannon Entropy)
   // ------------------------------------------------------------
   // ویژگی‌های تعریف‌شده‌ی ادمین و ویژگی‌هایی که کاربر انتخاب کرده همیشه
   // می‌مانند. ویژگی‌های «کشف‌شده‌ی خودکار» فقط اگر واقعاً فیلترپذیر باشند
@@ -591,31 +798,39 @@ function rankAndFormatPropertyFacets({
     }
     // کلیدهای صرفاً جدولی هرگز به‌صورت خودکار وارد سایدبار نمی‌شوند
     if (isNonFilterableKey(entry.name)) continue
-    const liveValues = entry.values.filter((item) => (Number(item.count) || 0) > 0)
     // هیچ مقدار زنده‌ای ندارد ⇒ بی‌فایده؛ بیش از ۱۸ مقدار ⇒ سایدبار غیرقابل استفاده.
     //
-    // نکته‌ی مهم (Single-Product Identity): ویژگی تک‌مقداره حذف نمی‌شود. اگر یک
-    // دسته فقط یک محصول داشته باشد، همان یک مقدار «هویت» آن کالاست و باید در
-    // سایدبار دیده شود تا کالا قابل پیدا شدن باشد.
-    if (liveValues.length === 0 || liveValues.length > 18) continue
-    entry.liveValueCount = liveValues.length
-    entry.isCoreIdentity = isCoreIdentityKey(entry.name)
+    // نکته‌ی مهم (Single-Product Identity): در دسته‌ی برگ ویژگی تک‌مقداره حذف
+    // نمی‌شود؛ اگر دسته فقط یک محصول داشته باشد، همان یک مقدار «هویت» کالاست.
+    if (entry.liveValueCount === 0 || entry.liveValueCount > 18) continue
+
+    // در دسته‌ی مادر (غیربرگ) با چند محصول، فست‌های کم‌پوشش یا تک‌گزینه‌ای
+    // زیرشاخه‌ها نباید به سایدبار مادر نشت کنند.
+    if (!isLeafCategory && totalItems >= 4) {
+      const cov = entry.totalCoverage / totalItems
+      if (entry.liveValueCount < 2 || cov < 0.5) continue
+    }
     autos.push(entry)
   }
 
   configured.sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name, 'fa'))
   userSelected.sort((a, b) => a.name.localeCompare(b.name, 'fa'))
   // رتبه‌بندی: چندمقداره‌ی هویتی > هویتیِ تک‌مقداره > چندمقداره > بقیه؛
-  // سپس بر اساس پوشش و الفبا.
+  // سپس امتیاز آنتروپی، پوشش و الفبا.
   autos.sort((a, b) => {
-    const aScore = (a.liveValueCount >= 2 ? 2 : 0) + (a.isCoreIdentity ? 1 : 0)
-    const bScore = (b.liveValueCount >= 2 ? 2 : 0) + (b.isCoreIdentity ? 1 : 0)
-    if (bScore !== aScore) return bScore - aScore
+    const aTier = (a.liveValueCount >= 2 ? 2 : 0) + (a.isCoreIdentity ? 1 : 0)
+    const bTier = (b.liveValueCount >= 2 ? 2 : 0) + (b.isCoreIdentity ? 1 : 0)
+    if (bTier !== aTier) return bTier - aTier
+    if (b.utilityScore !== a.utilityScore) return b.utilityScore - a.utilityScore
     return (b.totalCoverage - a.totalCoverage) || a.name.localeCompare(b.name, 'fa')
   })
 
   const limit = Number.isFinite(Number(maxAutoFacets)) ? Math.max(0, Number(maxAutoFacets)) : 10
-  return [...configured, ...userSelected, ...autos.slice(0, limit)]
+  const open = Number.isFinite(Number(openCount)) ? Math.max(0, Number(openCount)) : 5
+  return [...configured, ...userSelected, ...autos.slice(0, limit)].map((entry, idx) => ({
+    ...entry,
+    defaultOpen: entry.hasUserSelection || idx < open,
+  }))
 }
 
 module.exports = {
@@ -631,5 +846,6 @@ module.exports = {
   basePropertiesFacetBranch,
   facetBaseStages,
   rankAndFormatPropertyFacets,
+  computeFacetUtilityScore,
   INTERNAL,
 }
