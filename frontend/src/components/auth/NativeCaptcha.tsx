@@ -42,7 +42,7 @@ const NativeCaptcha = forwardRef<NativeCaptchaRef, NativeCaptchaProps>(
         } else {
           setError(true);
         }
-      } catch (err) {
+      } catch {
         setError(true);
       } finally {
         setLoading(false);

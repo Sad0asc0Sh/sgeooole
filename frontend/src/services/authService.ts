@@ -347,6 +347,7 @@ export const authService = {
 
     // Redirect to home
     if (typeof window !== "undefined") {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- logout must fully reload to clear in-memory auth state
       window.location.href = "/";
     }
   },

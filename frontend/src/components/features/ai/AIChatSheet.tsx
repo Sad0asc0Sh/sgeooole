@@ -151,7 +151,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
-    const [actionLoading, setActionLoading] = useState<boolean>(false);
+    const [actionLoading] = useState<boolean>(false);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -202,7 +202,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         } finally {
             setCacheReady(true);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // cache is loaded once on mount; state setters and module helpers are stable
     }, []);
 
     // --- ذخیره debounced تاریخچه در کش محلی ---
@@ -828,7 +828,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                             className="flex gap-3 p-2.5 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.05)] hover:border-kala-300 hover:shadow-md transition-all cursor-pointer"
                                                         >
                                                             <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-50 shrink-0">
-                                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                {/* plain img: chat thumbnails come from arbitrary remote hosts */}
                                                                 <img
                                                                     src={resolveChatImage(p.image)}
                                                                     alt={p.name}

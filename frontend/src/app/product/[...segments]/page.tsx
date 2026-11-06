@@ -101,8 +101,6 @@ export async function generateMetadata({ params }: { params: Promise<PageParams>
             ...((product.variants ?? []).flatMap((v) => v?.images ?? [])),
         ])
     ).filter((img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder"));
-    const coverImage = validImages[0];
-
     // Phase 1 SEO: sanitized Persian meta description (no raw HTML/entities)
     // and no «بدون برند» fallback in the title.
     const description = buildProductMetaDescription(product);

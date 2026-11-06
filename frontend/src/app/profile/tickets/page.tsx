@@ -156,7 +156,7 @@ function SupportMessenger() {
         if (!chatLoading && selectedTicket?.messages) {
             bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
         }
-    }, [chatLoading, selectedTicket?.messages?.length]);
+    }, [chatLoading, selectedTicket?.messages]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();

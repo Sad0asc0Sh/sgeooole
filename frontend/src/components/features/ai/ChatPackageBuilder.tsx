@@ -165,7 +165,7 @@ export default function ChatPackageBuilder({ pkg }: { pkg: ChatPackage }) {
                                                 <span className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${isSel ? "border-kala-500" : "border-gray-300"}`}>
                                                     {isSel && <span className="w-2 h-2 rounded-full bg-kala-500" />}
                                                 </span>
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                {/* plain img: option thumbnails come from arbitrary remote hosts */}
                                                 <img
                                                     src={img(o.image)}
                                                     alt={o.name}

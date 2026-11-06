@@ -219,7 +219,7 @@ export default function ChatPackageCard({ pkg, onViewCart }: ChatPackageCardProp
                 {lines.map((l) => (
                     <li key={l.key} className="flex items-center gap-2.5 px-3 py-2.5">
                         <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shrink-0">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            {/* plain img: line thumbnails come from arbitrary remote hosts */}
                             <img
                                 src={resolveChatImage(l.opt.image)}
                                 alt={l.opt.name}

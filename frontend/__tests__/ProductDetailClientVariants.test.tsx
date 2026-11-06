@@ -48,7 +48,7 @@ jest.mock("framer-motion", () => ({
         {},
         {
             get: (_target, prop: string) => {
-                return ({ children, whileTap, whileHover, transition, initial, animate, exit, ...props }: any) =>
+                return ({ children, whileTap: _whileTap, whileHover: _whileHover, transition: _transition, initial: _initial, animate: _animate, exit: _exit, ...props }: any) =>
                     React.createElement(prop as any, props, children);
             },
         },
@@ -72,7 +72,12 @@ jest.mock("swiper/modules", () => ({
     FreeMode: {},
 }));
 
-jest.mock("@/components/ui/CountdownTimer", () => () => <div data-testid="countdown-timer" />);
+jest.mock("@/components/ui/CountdownTimer", () => {
+    function MockCountdownTimer() {
+        return <div data-testid="countdown-timer" />;
+    }
+    return MockCountdownTimer;
+});
 jest.mock("@/components/product/ProductTabs", () => () => null);
 jest.mock("@/app/product/[...segments]/ProductHistoryTracker", () => () => null);
 jest.mock("@/app/product/[...segments]/ProductHeader", () => () => null);

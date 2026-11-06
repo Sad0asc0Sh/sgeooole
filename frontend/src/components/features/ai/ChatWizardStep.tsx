@@ -166,7 +166,7 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                                         key={o.id}
                                         className={`flex items-center gap-2 p-1.5 rounded-xl border bg-white ${out ? "opacity-55 border-gray-100" : "border-gray-200"}`}
                                     >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        {/* plain img: option thumbnails come from arbitrary remote hosts */}
                                         <img
                                             src={img(o.image)}
                                             alt={o.name}

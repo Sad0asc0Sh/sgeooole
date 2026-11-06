@@ -28,7 +28,7 @@ jest.mock("@/components/product/ProductListingSkeleton", () => ({
 jest.mock("rc-slider", () => ({ __esModule: true, default: () => <div /> }));
 jest.mock("framer-motion", () => {
   const React = require("react");
-  const Div = React.forwardRef(({ children, initial, animate, exit, transition, layout, ...props }: any, ref: any) => (
+  const Div = React.forwardRef(({ children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, layout: _layout, ...props }: any, ref: any) => (
     <div ref={ref} {...props}>{children}</div>
   ));
   Div.displayName = "MotionDiv";

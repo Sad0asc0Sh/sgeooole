@@ -92,6 +92,7 @@ api.interceptors.response.use(
             const isAuthPage = pathname.startsWith("/login");
             if (!isAuthPage && isProtectedRoute(pathname)) {
               const redirectTo = `${pathname}${search}${hash}`;
+              // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- axios interceptor (outside React): a full reload is required to drop stale auth state
               window.location.href = `/login?redirect=${encodeURIComponent(redirectTo)}`;
             }
           }
