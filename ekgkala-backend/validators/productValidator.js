@@ -85,8 +85,11 @@ const categoryRule = body('category')
     .isMongoId()
     .withMessage('شناسه دسته‌بندی نامعتبر است')
 
+// برند اختیاری است: محصول می‌تواند بدون برند ثبت شود و در ویرایش هم برندش
+// پاک شود؛ پس نبودن مقدار، null و رشته‌ی خالی همگی معتبرند و فقط یک مقدار
+// غیرخالی باید شناسه‌ی معتبر باشد.
 const brandRule = body('brand')
-    .optional()
+    .optional({ values: 'falsy' })
     .isMongoId()
     .withMessage('شناسه برند نامعتبر است')
 
