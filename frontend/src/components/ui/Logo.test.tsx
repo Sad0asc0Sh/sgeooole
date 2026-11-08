@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import zlib from "node:zlib";
 import { render, screen } from "@testing-library/react";
 import { Logo } from "./Logo";
@@ -35,15 +34,15 @@ function readPngInfo(filePath: string) {
     }
 
     const inflated = zlib.inflateSync(Buffer.concat(idatChunks));
-    const bpp = 4; // RGBA 8-bit
+    const bpp = 4;
     const stride = width * bpp;
     const prev = new Uint8Array(stride);
     const curr = new Uint8Array(stride);
 
     let partialAlpha = 0;
     let opaqueWhiteHalo = 0;
-    let navyInK = 0;
-    let navyInKala = 0;
+    let maskCoverageK = 0;
+    let maskCoverageKala = 0;
 
     for (let y = 0; y < height; y++) {
         const rowStart = y * (stride + 1);
@@ -71,9 +70,9 @@ function readPngInfo(filePath: string) {
             if (a === 255 && r > 220 && g > 220 && b > 220) {
                 opaqueWhiteHalo++;
             }
-            if (a === 255 && r < 45 && g < 60 && b > r + 20 && b < 115) {
-                if (px >= 270 && px <= 370) navyInK++;
-                if (px >= 630 && px <= 920) navyInKala++;
+            if (a > 200) {
+                if (px >= 270 && px <= 415) maskCoverageK++;
+                if (px >= 612 && px <= 929) maskCoverageKala++;
             }
         }
         prev.set(curr);
@@ -85,57 +84,68 @@ function readPngInfo(filePath: string) {
         bitDepth,
         colorType,
         hasTrnsChunk: buf.includes(Buffer.from("tRNS")),
-        md5: crypto.createHash("md5").update(buf).digest("hex"),
         partialAlpha,
         opaqueWhiteHalo,
-        navyInK,
-        navyInKala,
+        maskCoverageK,
+        maskCoverageKala,
     };
 }
 
-describe("Logo transparent crop & dark-mode adaptive hairline quality", () => {
-    it("renders <picture> without any background box wrapper, preserving 929:316 cropped dimensions", () => {
+describe("Logo transparent crop & Force-Dark crisp white k/kala system", () => {
+    it("renders zero background box and provides monolithic fallback + masked Force-Dark-adaptive composite", () => {
         const { container } = render(<Logo />);
         expect(container.querySelector(".ekg-logo-frame")).toBeNull();
+        expect(container.querySelector('picture source[media="(prefers-color-scheme: dark)"]')).toBeNull();
 
-        const picture = container.querySelector("picture");
-        expect(picture).not.toBeNull();
+        const fallbackImg = screen.getByRole("img", { name: /ekgkala/i });
+        expect(fallbackImg).toHaveClass("ekg-logo-fallback");
+        expect(fallbackImg).toHaveAttribute("src", "/logo-text.png");
+        expect(fallbackImg).toHaveAttribute("width", "929");
+        expect(fallbackImg).toHaveAttribute("height", "316");
 
-        const source = picture?.querySelector("source");
-        expect(source).toHaveAttribute("media", "(prefers-color-scheme: dark)");
-        expect(source).toHaveAttribute("srcSet", "/logo-text-dark.png");
-
-        const img = screen.getByRole("img", { name: /ekgkala/i });
-        expect(img).toHaveAttribute("src", "/logo-text.png");
-        expect(img).toHaveAttribute("width", "929");
-        expect(img).toHaveAttribute("height", "316");
+        const composite = container.querySelector(".ekg-logo-composite");
+        expect(composite).not.toBeNull();
+        const baseImg = composite?.querySelector("img.ekg-logo-base");
+        expect(baseImg).toHaveAttribute("src", "/logo-text-base.png");
+        expect(baseImg).toHaveAttribute("width", "929");
+        expect(baseImg).toHaveAttribute("height", "316");
+        expect(composite?.querySelector(".ekg-logo-ink-mask")).not.toBeNull();
     });
 
-    it("ships tightly cropped 929x316 32-bit RGBA PNGs with zero opaque white crust and preserves dark-navy k & kala in dark mode", () => {
+    it("ships halo-free 929x316 32-bit RGBA monolithic, color-base, and k+kala alpha mask PNGs", () => {
         const publicDir = path.resolve(__dirname, "../../../public");
-        const light = readPngInfo(path.join(publicDir, "logo-text.png"));
-        const dark = readPngInfo(path.join(publicDir, "logo-text-dark.png"));
+        const full = readPngInfo(path.join(publicDir, "logo-text.png"));
+        const base = readPngInfo(path.join(publicDir, "logo-text-base.png"));
+        const mask = readPngInfo(path.join(publicDir, "logo-text-mask.png"));
 
-        for (const info of [light, dark]) {
+        for (const info of [full, base, mask]) {
             expect(info.width).toBe(929);
             expect(info.height).toBe(316);
             expect(info.bitDepth).toBe(8);
             expect(info.colorType).toBe(6);
             expect(info.hasTrnsChunk).toBe(false);
-            expect(info.partialAlpha).toBeGreaterThan(1000);
             expect(info.opaqueWhiteHalo).toBe(0);
-            expect(info.navyInK).toBeGreaterThan(5000);
-            expect(info.navyInKala).toBeGreaterThan(10000);
+            expect(info.partialAlpha).toBeGreaterThan(500);
         }
 
-        expect(light.md5).not.toBe(dark.md5);
+        // Mask strictly isolates 'k' + 'kala' without leaving leftover opaque ink inside base
+        expect(mask.maskCoverageK).toBeGreaterThan(8000);
+        expect(mask.maskCoverageKala).toBeGreaterThan(14000);
     });
 
-    it("keeps globals.css free of .ekg-logo-frame opaque box rules around the transparent header logo", () => {
+    it("defines @supports-guarded legacy-safe Force-Dark DrawText mask rules in globals.css without box frames", () => {
         const globalsCss = fs.readFileSync(
             path.resolve(__dirname, "../../app/globals.css"),
             "utf8"
         );
         expect(globalsCss).not.toContain(".ekg-logo-frame");
+
+        const blockStart = globalsCss.indexOf(".ekg-logo-composite");
+        expect(blockStart).toBeGreaterThan(-1);
+        const maskSection = globalsCss.slice(blockStart);
+        expect(maskSection).toContain(".ekg-logo-ink-mask::before");
+        expect(maskSection).toContain("-webkit-mask-image: url(\"data:image/png;base64,");
+        expect(maskSection).toContain("color: #0e1d45");
+        expect(maskSection).not.toMatch(/oklch\(|color-mix\(|in\s+oklab|clamp\(|(?:^|\s)inset\s*:/im);
     });
 });

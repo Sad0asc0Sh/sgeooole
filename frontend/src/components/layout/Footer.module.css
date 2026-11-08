@@ -530,12 +530,6 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .logoCapsule {
-    background-color: #161412;
-    border-color: rgba(251, 191, 36, 0.34);
-  }
-}
 
 .brandMetaDesktop {
   display: none;

@@ -413,21 +413,27 @@ function Footer() {
                                         className={styles.logoCapsule}
                                         aria-label="صفحه اصلی ای‌کا‌جی کالا"
                                     >
-                                        <picture className={styles.logoPicture}>
-                                            <source
-                                                srcSet="/logo-text-dark.png"
-                                                media="(prefers-color-scheme: dark)"
-                                            />
+                                        <img
+                                            src="/logo-text.png"
+                                            alt="ای‌کا‌جی کالا | EKG KALA"
+                                            width={168}
+                                            height={57}
+                                            className={`ekg-logo-fallback ${styles.logoImg}`}
+                                            loading="lazy"
+                                            decoding="async"
+                                        />
+                                        <span className="ekg-logo-composite" style={{ display: "none" }}>
                                             <img
-                                                src="/logo-text.png"
+                                                src="/logo-text-base.png"
                                                 alt="ای‌کا‌جی کالا | EKG KALA"
                                                 width={168}
                                                 height={57}
-                                                className={styles.logoImg}
+                                                className={`ekg-logo-base ${styles.logoImg}`}
                                                 loading="lazy"
                                                 decoding="async"
                                             />
-                                        </picture>
+                                            <span aria-hidden="true" className="ekg-logo-ink-mask" />
+                                        </span>
                                     </Link>
 
                                     <div className={styles.brandMetaDesktop}>

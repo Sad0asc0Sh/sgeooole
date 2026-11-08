@@ -176,13 +176,13 @@ describe("Footer architectural widescreen & brand positioning", () => {
         });
     });
 
-    it("serves dark-mode logo variant inside the Footer capsule", async () => {
+    it("renders Force-Dark-adaptive masked logo composite with monolithic fallback inside Footer capsule", async () => {
         const { container } = render(<Footer />);
         await waitFor(() => expect(settingsService.getPublicSettings).toHaveBeenCalled());
 
-        const source = container.querySelector('picture source[media="(prefers-color-scheme: dark)"]');
-        expect(source).not.toBeNull();
-        expect(source).toHaveAttribute("srcSet", "/logo-text-dark.png");
+        expect(container.querySelector(".ekg-logo-fallback")).toHaveAttribute("src", "/logo-text.png");
+        expect(container.querySelector(".ekg-logo-base")).toHaveAttribute("src", "/logo-text-base.png");
+        expect(container.querySelector(".ekg-logo-ink-mask")).not.toBeNull();
     });
 
     it("keeps Footer.module.css widescreen-ready and strictly legacy-browser-safe", () => {
