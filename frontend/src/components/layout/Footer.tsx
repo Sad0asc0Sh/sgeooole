@@ -29,6 +29,7 @@ import api from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategoryTree } from "@/hooks/useCategories";
 import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
+import { LOGO_RATIO_PLACEHOLDER } from "@/components/ui/Logo";
 import styles from "./Footer.module.css";
 
 // Verified Enamad trust seal — kept static outside the component to avoid re-creation on render
@@ -410,6 +411,7 @@ function Footer() {
                                 <div className={styles.brandCluster}>
                                     <Link
                                         href="/"
+                                        draggable={false}
                                         className={styles.logoCapsule}
                                         aria-label="صفحه اصلی ای‌کا‌جی کالا"
                                     >
@@ -418,19 +420,20 @@ function Footer() {
                                             alt="ای‌کا‌جی کالا | EKG KALA"
                                             width={168}
                                             height={57}
+                                            draggable={false}
                                             className={`ekg-logo-fallback ${styles.logoImg}`}
                                             loading="lazy"
-                                            decoding="async"
+                                            decoding="sync"
                                         />
                                         <span className="ekg-logo-composite" style={{ display: "none" }}>
                                             <img
-                                                src="/logo-text-base.png"
+                                                src={LOGO_RATIO_PLACEHOLDER}
                                                 alt="ای‌کا‌جی کالا | EKG KALA"
                                                 width={168}
                                                 height={57}
+                                                draggable={false}
                                                 className={`ekg-logo-base ${styles.logoImg}`}
-                                                loading="lazy"
-                                                decoding="async"
+                                                decoding="sync"
                                             />
                                             <span aria-hidden="true" className="ekg-logo-ink-mask" />
                                         </span>

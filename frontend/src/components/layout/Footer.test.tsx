@@ -6,6 +6,7 @@ import { settingsService } from "@/services/settingsService";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategoryTree } from "@/hooks/useCategories";
 import api from "@/lib/api";
+import { LOGO_RATIO_PLACEHOLDER } from "@/components/ui/Logo";
 
 jest.mock("@/services/settingsService", () => ({
     settingsService: {
@@ -176,12 +177,21 @@ describe("Footer architectural widescreen & brand positioning", () => {
         });
     });
 
-    it("renders Force-Dark-adaptive masked logo composite with monolithic fallback inside Footer capsule", async () => {
+    it("renders atomic, non-draggable Force-Dark-adaptive masked logo composite with monolithic fallback inside Footer capsule", async () => {
         const { container } = render(<Footer />);
         await waitFor(() => expect(settingsService.getPublicSettings).toHaveBeenCalled());
 
-        expect(container.querySelector(".ekg-logo-fallback")).toHaveAttribute("src", "/logo-text.png");
-        expect(container.querySelector(".ekg-logo-base")).toHaveAttribute("src", "/logo-text-base.png");
+        const capsule = container.querySelector(".ekg-logo-composite")?.closest("a");
+        expect(capsule).toHaveAttribute("draggable", "false");
+
+        const fallback = container.querySelector(".ekg-logo-fallback");
+        expect(fallback).toHaveAttribute("src", "/logo-text.png");
+        expect(fallback).toHaveAttribute("loading", "lazy");
+        expect(fallback).toHaveAttribute("draggable", "false");
+
+        const base = container.querySelector(".ekg-logo-base");
+        expect(base).toHaveAttribute("src", LOGO_RATIO_PLACEHOLDER);
+        expect(base).toHaveAttribute("draggable", "false");
         expect(container.querySelector(".ekg-logo-ink-mask")).not.toBeNull();
     });
 

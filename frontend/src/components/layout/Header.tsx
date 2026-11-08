@@ -82,7 +82,12 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
             {/* MOBILE HEADER */}
             <div data-header-variant="mobile" className="md:hidden mobile-container flex h-16 items-center gap-3">
                 {/* Right: Brand Logo */}
-                <Link href="/" onClick={handleHomeClick} className="shrink-0">
+                <Link
+                    href="/"
+                    onClick={handleHomeClick}
+                    draggable={false}
+                    className="ekg-logo-link shrink-0 select-none rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-kala-500 focus-visible:ring-offset-2"
+                >
                     <Logo />
                 </Link>
 
@@ -118,7 +123,12 @@ export default function Header({ isAIOpen, setIsAIOpen }: HeaderProps) {
                     {/* Top Row: Logo - Search - Actions */}
                     <div className="flex items-center h-20 gap-4 px-4 lg:px-6">
                         {/* Right: Logo */}
-                        <Link href="/" onClick={handleHomeClick} className="flex-shrink-0 flex items-center">
+                        <Link
+                            href="/"
+                            onClick={handleHomeClick}
+                            draggable={false}
+                            className="ekg-logo-link flex-shrink-0 flex items-center select-none rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-kala-500 focus-visible:ring-offset-2"
+                        >
                             <Logo />
                         </Link>
 

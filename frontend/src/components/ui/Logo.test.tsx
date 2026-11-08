@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
-import { render, screen } from "@testing-library/react";
-import { Logo } from "./Logo";
+import { render } from "@testing-library/react";
+import { Logo, LOGO_RATIO_PLACEHOLDER } from "./Logo";
 
 function paethPredictor(a: number, b: number, c: number) {
     const p = a + b - c;
@@ -91,25 +91,40 @@ function readPngInfo(filePath: string) {
     };
 }
 
-describe("Logo transparent crop & Force-Dark crisp white k/kala system", () => {
-    it("renders zero background box and provides monolithic fallback + masked Force-Dark-adaptive composite", () => {
+describe("Logo unified atomic loading, non-drag interaction & Force-Dark adaptive system", () => {
+    it("renders zero background box, non-draggable atomic placeholder carrier, and lazy monolithic fallback", () => {
         const { container } = render(<Logo />);
         expect(container.querySelector(".ekg-logo-frame")).toBeNull();
         expect(container.querySelector('picture source[media="(prefers-color-scheme: dark)"]')).toBeNull();
 
-        const fallbackImg = screen.getByRole("img", { name: /ekgkala/i });
-        expect(fallbackImg).toHaveClass("ekg-logo-fallback");
+        const fallbackImg = container.querySelector("img.ekg-logo-fallback");
+        expect(fallbackImg).not.toBeNull();
         expect(fallbackImg).toHaveAttribute("src", "/logo-text.png");
         expect(fallbackImg).toHaveAttribute("width", "929");
         expect(fallbackImg).toHaveAttribute("height", "316");
+        expect(fallbackImg).toHaveAttribute("loading", "lazy");
+        expect(fallbackImg).toHaveAttribute("draggable", "false");
+        expect(fallbackImg).toHaveClass("pointer-events-none", "select-none");
 
         const composite = container.querySelector(".ekg-logo-composite");
         expect(composite).not.toBeNull();
         const baseImg = composite?.querySelector("img.ekg-logo-base");
-        expect(baseImg).toHaveAttribute("src", "/logo-text-base.png");
+        expect(baseImg).toHaveAttribute("src", LOGO_RATIO_PLACEHOLDER);
+        expect(baseImg).toHaveAttribute("alt", "ای کا جی کالا | ekgkala");
         expect(baseImg).toHaveAttribute("width", "929");
         expect(baseImg).toHaveAttribute("height", "316");
+        expect(baseImg).toHaveAttribute("draggable", "false");
+        expect(baseImg).toHaveClass("pointer-events-none", "select-none");
         expect(composite?.querySelector(".ekg-logo-ink-mask")).not.toBeNull();
+
+        // Placeholder PNG matches exact 929x316 intrinsic dimensions
+        const placeholderPng = Buffer.from(
+            LOGO_RATIO_PLACEHOLDER.replace("data:image/png;base64,", ""),
+            "base64"
+        );
+        expect(placeholderPng.subarray(0, 8).toString("hex")).toBe("89504e470d0a1a0a");
+        expect(placeholderPng.readUInt32BE(16)).toBe(929);
+        expect(placeholderPng.readUInt32BE(20)).toBe(316);
     });
 
     it("ships halo-free 929x316 32-bit RGBA monolithic, color-base, and k+kala alpha mask PNGs", () => {
@@ -133,19 +148,48 @@ describe("Logo transparent crop & Force-Dark crisp white k/kala system", () => {
         expect(mask.maskCoverageKala).toBeGreaterThan(14000);
     });
 
-    it("defines @supports-guarded legacy-safe Force-Dark DrawText mask rules in globals.css without box frames", () => {
+    it("inlines BOTH base e+G+| and Force-Dark DrawText mask in globals.css for single-frame atomic paint and anti-drag safety", () => {
         const globalsCss = fs.readFileSync(
             path.resolve(__dirname, "../../app/globals.css"),
             "utf8"
         );
         expect(globalsCss).not.toContain(".ekg-logo-frame");
 
-        const blockStart = globalsCss.indexOf(".ekg-logo-composite");
+        const blockStart = globalsCss.indexOf(".ekg-logo-link");
         expect(blockStart).toBeGreaterThan(-1);
-        const maskSection = globalsCss.slice(blockStart);
-        expect(maskSection).toContain(".ekg-logo-ink-mask::before");
-        expect(maskSection).toContain("-webkit-mask-image: url(\"data:image/png;base64,");
-        expect(maskSection).toContain("color: #0e1d45");
-        expect(maskSection).not.toMatch(/oklch\(|color-mix\(|in\s+oklab|clamp\(|(?:^|\s)inset\s*:/im);
+        const logoSection = globalsCss.slice(blockStart);
+
+        expect(logoSection).toContain("-webkit-user-drag: none");
+        expect(logoSection).toContain(".ekg-logo-link:focus:not(:focus-visible)");
+        expect(logoSection).toContain("background-image: url(\"data:image/png;base64,");
+        expect(logoSection).toContain("-webkit-mask-image: url(\"data:image/png;base64,");
+        expect(logoSection).toContain(".ekg-logo-ink-mask::before");
+        expect(logoSection).toContain("color: #0e1d45");
+        expect(logoSection).not.toMatch(/oklch\(|color-mix\(|in\s+oklab|clamp\(|(?:^|\s)inset\s*:/im);
+
+        // Both embedded PNGs in globals.css must have identical 929x316 geometry so e+G+| and k+kala align 1:1
+        const baseMatch = logoSection.match(/background-image: url\("data:image\/png;base64,([A-Za-z0-9+/=]+)"\)/);
+        const maskMatch = logoSection.match(/-webkit-mask-image: url\("data:image\/png;base64,([A-Za-z0-9+/=]+)"\)/);
+        expect(baseMatch).not.toBeNull();
+        expect(maskMatch).not.toBeNull();
+
+        const inlineBaseBuf = Buffer.from(baseMatch![1], "base64");
+        const inlineMaskBuf = Buffer.from(maskMatch![1], "base64");
+        expect(inlineBaseBuf.readUInt32BE(16)).toBe(929);
+        expect(inlineBaseBuf.readUInt32BE(20)).toBe(316);
+        expect(inlineMaskBuf.readUInt32BE(16)).toBe(929);
+        expect(inlineMaskBuf.readUInt32BE(20)).toBe(316);
+    });
+
+    it("prevents Header logo links from dragging apart or showing a black focus rectangle on mouse hold", () => {
+        const headerTsx = fs.readFileSync(
+            path.resolve(__dirname, "../layout/Header.tsx"),
+            "utf8"
+        );
+        const logoLinks = headerTsx.match(/className="ekg-logo-link[^"]*"/g) || [];
+        expect(logoLinks.length).toBe(2);
+        const draggableFalseLinks = headerTsx.match(/draggable=\{false\}/g) || [];
+        expect(draggableFalseLinks.length).toBeGreaterThanOrEqual(2);
+        expect(headerTsx).toContain("focus:outline-none focus-visible:ring-2");
     });
 });
