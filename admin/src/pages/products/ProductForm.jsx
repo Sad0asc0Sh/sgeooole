@@ -732,7 +732,12 @@ function ProductForm() {
         name: values.name,
         sku: values.sku,
         category: values.category,
-        brand: values.brand,
+        // برند اختیاری است: وقتی برند انتخاب نشده یا در ویرایش پاک شده، مقدار
+        // فرم undefined می‌شود و undefined در JSON اصلاً ارسال نمی‌شود؛ در نتیجه
+        // سرور فیلد برند را «بدون تغییر» می‌دید و برند قبلی محصول پاک نمی‌شد.
+        // با ارسال صریح null، سرور برند را حذف می‌کند (محصول بدون برند) و در
+        // ساخت محصول جدید هم محصول بدون نیاز به ثبت برند ذخیره می‌شود.
+        brand: values.brand || null,
         description: values.description,
         productType,
         discount,
