@@ -696,3 +696,39 @@
     transition-duration: 0ms !important;
   }
 }
+
+/* ---------- Dark-mode header logo capsule ----------
+   When mobile/desktop browsers enter dark mode (either Force Dark darkening
+   bg-white/85 headers or OS prefers-color-scheme: dark keeping light headers),
+   <Logo /> switches to the high-contrast silver-white /logo-text-dark.png
+   inside a dark obsidian capsule so typography stays crisp and legible on any
+   header surface with zero fringe artifacts. Unlayered rules (0,2,1) beat
+   CRITICAL_CSS (0,1,1) cleanly, using hex/rgba for full legacy compat. */
+@media (prefers-color-scheme: dark) {
+  .ekg-logo-frame {
+    height: 2.625rem;
+    padding: 0.1875rem 0.5625rem;
+    border-radius: 0.75rem;
+    background-color: #161412;
+    border: 1px solid rgba(251, 191, 36, 0.24);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+  }
+
+  [data-header-variant] .ekg-logo-frame img {
+    height: 2.125rem;
+    width: auto;
+    object-position: center;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (min-width: 48rem) {
+  .ekg-logo-frame {
+    height: 3.5rem;
+    padding: 0.3125rem 0.75rem;
+    border-radius: 0.875rem;
+  }
+
+  [data-header-variant] .ekg-logo-frame img {
+    height: 2.75rem;
+  }
+}

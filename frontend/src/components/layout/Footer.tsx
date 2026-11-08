@@ -413,15 +413,21 @@ function Footer() {
                                         className={styles.logoCapsule}
                                         aria-label="صفحه اصلی ای‌کا‌جی کالا"
                                     >
-                                        <img
-                                            src="/logo-text.png"
-                                            alt="ای‌کا‌جی کالا | EKG KALA"
-                                            width={168}
-                                            height={60}
-                                            className={styles.logoImg}
-                                            loading="lazy"
-                                            decoding="async"
-                                        />
+                                        <picture className={styles.logoPicture}>
+                                            <source
+                                                srcSet="/logo-text-dark.png"
+                                                media="(prefers-color-scheme: dark)"
+                                            />
+                                            <img
+                                                src="/logo-text.png"
+                                                alt="ای‌کا‌جی کالا | EKG KALA"
+                                                width={168}
+                                                height={60}
+                                                className={styles.logoImg}
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
+                                        </picture>
                                     </Link>
 
                                     <div className={styles.brandMetaDesktop}>

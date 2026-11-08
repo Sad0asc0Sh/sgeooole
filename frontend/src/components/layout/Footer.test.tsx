@@ -176,6 +176,15 @@ describe("Footer architectural widescreen & brand positioning", () => {
         });
     });
 
+    it("serves dark-mode logo variant inside the Footer capsule", async () => {
+        const { container } = render(<Footer />);
+        await waitFor(() => expect(settingsService.getPublicSettings).toHaveBeenCalled());
+
+        const source = container.querySelector('picture source[media="(prefers-color-scheme: dark)"]');
+        expect(source).not.toBeNull();
+        expect(source).toHaveAttribute("srcSet", "/logo-text-dark.png");
+    });
+
     it("keeps Footer.module.css widescreen-ready and strictly legacy-browser-safe", () => {
         const cssPath = path.join(__dirname, "Footer.module.css");
         const rawCss = fs.readFileSync(cssPath, "utf8");
