@@ -273,8 +273,8 @@ export default async function Home() {
           "@id": `${SITE_URL}/#logo`,
           url: `${SITE_URL}/logo-text.png`,
           contentUrl: `${SITE_URL}/logo-text.png`,
-          width: 977,
-          height: 347,
+          width: 929,
+          height: 316,
           caption: "فروشگاه اینترنتی ای کا جی کالا (ekgkala)",
         },
         image: [

@@ -422,7 +422,7 @@ function Footer() {
                                                 src="/logo-text.png"
                                                 alt="ای‌کا‌جی کالا | EKG KALA"
                                                 width={168}
-                                                height={60}
+                                                height={57}
                                                 className={styles.logoImg}
                                                 loading="lazy"
                                                 decoding="async"
