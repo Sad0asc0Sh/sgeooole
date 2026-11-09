@@ -277,6 +277,92 @@ async function runFailoverTest() {
   }
 }
 
+test('پاسخ خالی ارائه‌دهنده برای failover قابل تلاش مجدد شمرده می‌شود', () => {
+  const emptyErr = new Error('ارائه‌دهنده پاسخ خالی برگرداند.');
+  emptyErr.isEmptyProviderResponse = true;
+  assert.equal(ai.isRetryableProviderError(emptyErr), true);
+});
+
+test('متن پاسخ از content آرایه‌ای هم استخراج می‌شود', () => {
+  assert.equal(
+    ai.extractMessageText({ content: [{ type: 'text', text: 'پاسخ ' }, { type: 'text', text: 'آرایه‌ای' }] }),
+    'پاسخ آرایه‌ای',
+  );
+  assert.equal(ai.extractMessageText({ content: 'متن ساده' }), 'متن ساده');
+  assert.equal(ai.extractMessageText({ content: null }), '');
+  assert.equal(ai.extractMessageText({}), '');
+});
+
+test('سقف توکنِ تلاش مجدد پاسخ خالی بالاتر از سقف فعلی است و سقف‌دار است', () => {
+  assert.ok(ai.boostedMaxTokens(500) > 500);
+  assert.ok(ai.boostedMaxTokens(500) <= 8192);
+  assert.ok(ai.boostedMaxTokens(8000) <= 8192);
+});
+
+const twoProviders = [
+  {
+    _id: 'primary-provider', name: 'اصلی', baseUrl: 'https://primary.example/v1', apiKey: 'primary-key',
+    model: 'primary-model', maxTokens: 500, temperature: 0.5, isActive: true, isDefault: true, priority: 1,
+  },
+  {
+    _id: 'fallback-provider', name: 'جایگزین', baseUrl: 'https://fallback.example/v1', apiKey: 'fallback-key',
+    model: 'fallback-model', maxTokens: 500, temperature: 0.5, isActive: true, isDefault: false, priority: 2,
+  },
+];
+
+async function runEmptyFailoverTest() {
+  const primaryCalls = [];
+  const restore = mockAiStack(twoProviders, async (url, body) => {
+    if (url.includes('primary.example')) {
+      primaryCalls.push(body.max_tokens);
+      return { data: { choices: [{ message: { content: '' }, finish_reason: 'length' }], usage: { completion_tokens: body.max_tokens } } };
+    }
+    return { data: { choices: [{ message: { content: 'پاسخ از ارائه‌دهنده جایگزین' } }] } };
+  });
+  try {
+    const result = await aiService.generateExpertResponse('سلام', '', [], '');
+    assert.equal(result.message, 'پاسخ از ارائه‌دهنده جایگزین');
+    assert.equal(result.provider.name, 'جایگزین');
+    // ارائه‌دهنده اصلی: یک تلاش عادی + یک تلاش با سقف توکن بالاتر، بعد failover
+    assert.equal(primaryCalls.length, 2);
+    assert.ok(primaryCalls[1] > primaryCalls[0], 'تلاش دوم باید سقف توکن بالاتری داشته باشد');
+  } finally {
+    restore();
+  }
+}
+
+async function runBoostRetrySuccessTest() {
+  const calls = [];
+  const restore = mockAiStack([twoProviders[0]], async (url, body) => {
+    calls.push(body.max_tokens);
+    if (calls.length === 1) {
+      // خروجی فقط «فکر» ناتمام است — بعد از حذف <think> چیزی نمی‌ماند
+      return { data: { choices: [{ message: { content: '<think>در حال تحلیل درخواست کاربر…' }, finish_reason: 'length' }] } };
+    }
+    return { data: { choices: [{ message: { content: 'پاسخ نهایی' }, finish_reason: 'stop' }] } };
+  });
+  try {
+    const result = await aiService.generateExpertResponse('سلام', '', [], '');
+    assert.equal(result.message, 'پاسخ نهایی');
+    assert.equal(calls.length, 2);
+    assert.ok(calls[1] > calls[0]);
+  } finally {
+    restore();
+  }
+}
+
+async function runArrayContentTest() {
+  const restore = mockAiStack([twoProviders[0]], async () => ({
+    data: { choices: [{ message: { content: [{ type: 'text', text: 'پاسخ ' }, { type: 'text', text: 'آرایه‌ای' }] } }] },
+  }));
+  try {
+    const result = await aiService.generateExpertResponse('سلام', '', [], '');
+    assert.equal(result.message, 'پاسخ آرایه‌ای');
+  } finally {
+    restore();
+  }
+}
+
 test('درخواست پک دوربین تشخیص داده می‌شود و غیرپک نه', () => {
   const r1 = chatRetrieval.detectPackRequest('میخوام یه پک کامل دوربین مداربسته بخرم', []);
   assert.equal(r1.isPack, true);
@@ -800,6 +886,9 @@ test('forwardBuildOptions همه فلگ‌های ویزارد و مشاوره ر
 
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
+  await asyncTest('پاسخ خالی: اول تلاش با سقف توکن بالاتر، بعد failover به جایگزین', runEmptyFailoverTest);
+  await asyncTest('پاسخ think-only با سقف توکن بالاتر روی همان ارائه‌دهنده نجات پیدا می‌کند', runBoostRetrySuccessTest);
+  await asyncTest('content آرایه‌ای به متن تبدیل می‌شود', runArrayContentTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
   await asyncTest('مدل ناشناخته (404) پیام راهنمای تنظیمات می‌دهد', runUnknownModel404Test);
   await asyncTest('پاک‌سازی گفتگو برای مهمان و کاربر با هویت درست انجام می‌شود', runClearMyHistoryTest);

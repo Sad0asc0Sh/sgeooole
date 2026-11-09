@@ -32,8 +32,15 @@ import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import { LOGO_RATIO_PLACEHOLDER } from "@/components/ui/Logo";
 import styles from "./Footer.module.css";
 
-// Verified Enamad trust seal — kept static outside the component to avoid re-creation on render
-const ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' rel='noopener noreferrer' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی ای‌کا‌جی کالا' onload="this.parentElement.style.backgroundColor='#ffffff';this.style.opacity='1';" onerror="this.style.opacity='0';" style='cursor:pointer;width:58px;height:58px;object-fit:contain;opacity:0;transition:opacity 0.2s ease;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
+// Verified Enamad trust seal — kept static outside the component to avoid re-creation on render.
+// IMPORTANT: this anchor must stay exactly as Enamad issues it — no `rel` attribute.
+// Enamad verifies the click by the origin Referer (hence referrerpolicy='origin');
+// rel='noreferrer' strips the Referer entirely, and the verification page then
+// renders only its shell (heading + complaint/back buttons) without the business
+// details. That regression came in with 3994d5f (2026-10-29); before it, the seal
+// worked in this exact form. target='_blank' already gets an implicit noopener
+// from every modern browser, so dropping `rel` loses no opener protection.
+const ENAMAD_HTML = `<a referrerpolicy='origin' target='_blank' href='https://trustseal.enamad.ir/?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' style='display:flex;align-items:center;justify-content:center;width:100%;height:100%;'><img referrerpolicy='origin' src='https://trustseal.enamad.ir/logo.aspx?id=693453&Code=VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6' alt='نماد اعتماد الکترونیکی ای‌کا‌جی کالا' onload="this.parentElement.style.backgroundColor='#ffffff';this.style.opacity='1';" onerror="this.style.opacity='0';" style='cursor:pointer;width:58px;height:58px;object-fit:contain;opacity:0;transition:opacity 0.2s ease;' code='VuZGjZtO8BiFnf2XEAVxrE7Y2cr4mDZ6'></a>`;
 
 interface StoreInfo {
     storeName?: string;
