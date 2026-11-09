@@ -247,6 +247,11 @@ app.use('/api/auth/admin/forgot-password', passwordResetLimiter)
 const { responseOptimizer } = require('./middleware/cache')
 app.use(responseOptimizer)
 
+// SECURITY (۴.۲.۰): فیلدهای محرمانهٔ قیمت‌گذاری (costPrice / hardFloorPrice / supplierQuotes) هرگز در پاسخ‌های API نمی‌آیند.
+// باید قبل از تمام routeهای /api نصب شود تا res.json همهٔ آن‌ها (و کش) پاک‌سازی‌شده را بفرستد.
+const { hideInternalPricingFields } = require('./middleware/hideInternalPricingFields')
+app.use('/api', hideInternalPricingFields)
+
 // Compression for all responses
 app.use(compression({
   level: 6, // Good balance between speed and compression

@@ -160,21 +160,26 @@ const ProductSchema = new mongoose.Schema(
     // ============================================
     // قیمت خرید و تامین از لیست همکاران و خط قرمز فروش (اولویت اول قیمت‌گذاری خودکار)
     // ============================================
+    // محرمانه: select:false → در کوئری‌های عادی خوانده نمی‌شوند؛ فقط مسیرهای داخلی با .select('+costPrice ...') صریحاً می‌خوانند.
+    // (فیلتر خروجی مرکزی middleware/hideInternalPricingFields.js هم آن‌ها را از پاسخ‌های API حذف می‌کند)
     costPrice: {
       type: Number,
       min: 0,
       default: 0,
+      select: false,
     },
 
     hardFloorPrice: {
       type: Number,
       min: 0,
       default: 0,
+      select: false,
     },
 
     supplierQuotes: {
       type: [mongoose.Schema.Types.Mixed],
       default: [],
+      select: false,
     },
 
     pricingMeta: {

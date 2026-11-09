@@ -20,6 +20,7 @@ const { applyOwnPromotionRules, deactivateCampaign } = require('../services/prom
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
+const { authorizePricingSync } = require('../utils/pricingSyncAuth')
 
 // ============================================
 // Persian/Arabic Character Normalization for Search
@@ -2981,12 +2982,14 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
 // ============================================
 router.post('/pricing-sync', async (req, res) => {
   try {
-    const expectedSecret = process.env.SGEOOOLE_PRICING_SECRET || process.env.STORE_WEBHOOK_SECRET || ''
-    const incomingSecret = req.headers['x-pricing-secret'] || ''
-    if (expectedSecret && incomingSecret !== expectedSecret) {
-      return res.status(401).json({
+    // امنیت (۴.۲.۰): fail-closed + مقایسهٔ زمان‌ثابت. قبلاً اگر کلید محیطی تنظیم نشده بود، اندپوینت
+    // تغییر قیمت بدون هیچ احراز هویتی باز بود. جزئیات در utils/pricingSyncAuth.js
+    const auth = authorizePricingSync(req.headers)
+    if (!auth.ok) {
+      return res.status(auth.status).json({
         success: false,
-        message: 'کلید امنیتی همگام‌سازی قیمت (X-Pricing-Secret) نامعتبر است',
+        code: auth.code,
+        message: auth.message,
       })
     }
 
@@ -3015,7 +3018,8 @@ router.post('/pricing-sync', async (req, res) => {
       })
     }
 
-    const existingProduct = await Product.findOne({ $or: query }).lean()
+    // costPrice / hardFloorPrice / supplierQuotes در مدل select:false هستند؛ گارد کف قطعی به مقدار ذخیره‌شده نیاز دارد
+    const existingProduct = await Product.findOne({ $or: query }).select('+costPrice +hardFloorPrice +supplierQuotes').lean()
     if (!existingProduct) {
       return res.status(404).json({
         success: false,
@@ -3110,8 +3114,6 @@ router.post('/pricing-sync', async (req, res) => {
         price: updated.price,
         compareAtPrice: updated.compareAtPrice,
         discount: updated.discount,
-        costPrice: updated.costPrice,
-        hardFloorPrice: updated.hardFloorPrice,
         finalPrice: check.finalPrice,
         basePrice: check.basePrice,
         discountPct: check.discountPct,

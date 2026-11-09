@@ -627,7 +627,8 @@ function buildListingPipeline(options, {
     isFlashDeal: { $cond: [ref('suppressed'), false, '$isFlashDeal'] },
     flashDealEndTime: { $cond: [ref('suppressed'), '$$REMOVE', '$flashDealEndTime'] },
   } })
-  data.push({ $project: { [INTERNAL]: 0 } })
+  // محرمانگی (۴.۲.۰): aggregate از select:false مدل پیروی نمی‌کند؛ فیلدهای تمام‌شده/کف/لیست همکار صریحاً حذف می‌شوند.
+  data.push({ $project: { [INTERNAL]: 0, costPrice: 0, hardFloorPrice: 0, supplierQuotes: 0, 'pricingMeta.hardFloorPrice': 0 } })
   if (options.projection) data.push({ $project: options.projection })
 
   // ---- شاخه‌های فست ----
