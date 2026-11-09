@@ -5,7 +5,8 @@ import { Camera, Send, X, RefreshCw, Sparkles, Box, Wrench, ShoppingBag, Phone, 
 import { useState, useRef, useEffect, type ChangeEvent, type KeyboardEvent } from "react";
 import { authService } from "@/services/authService";
 import ChatPackageCard from "./ChatPackageCard";
-import { buildChatCacheKey, loadChatCache, saveChatCache, clearChatCache } from "./chatCache";
+import ChatWizardStep, { type ChatWizard } from "./ChatWizardStep";
+import { buildChatCacheKey, loadChatCache, saveChatCache, clearChatCache, clearAllChatCaches } from "./chatCache";
 
 export interface QuickReply {
     label: string;
@@ -82,6 +83,7 @@ export interface Message {
     isError?: boolean;
     products?: ChatProduct[];
     package?: ChatPackage | null;
+    wizard?: ChatWizard | null;
     /** چیپ‌های پاسخ سریع (از cctvFlow یا [[CHOICE:]]) */
     quickReplies?: QuickReply[];
 }
@@ -151,7 +153,8 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     const [input, setInput] = useState<string>("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [isTyping, setIsTyping] = useState<boolean>(false);
-    const [actionLoading] = useState<boolean>(false);
+    const [actionLoading, setActionLoading] = useState<boolean>(false);
+    const cacheTimerRef = useRef<number | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -208,10 +211,13 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
     // --- ذخیره debounced تاریخچه در کش محلی ---
     useEffect(() => {
         if (!cacheReady || typeof window === "undefined") return;
-        const id = window.setTimeout(() => {
+        if (cacheTimerRef.current) window.clearTimeout(cacheTimerRef.current);
+        cacheTimerRef.current = window.setTimeout(() => {
             saveChatCache(resolveChatCacheKey(), messages, usage);
         }, 400);
-        return () => window.clearTimeout(id);
+        return () => {
+            if (cacheTimerRef.current) window.clearTimeout(cacheTimerRef.current);
+        };
     }, [messages, usage, cacheReady]);
 
     // --- Body Scroll Lock ---
@@ -389,6 +395,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                     products?: ChatProduct[];
                     package?: ChatPackage | null;
                     cctvFlow?: CctvFlowView | null;
+                    wizard?: ChatWizard | null;
                     meta?: { requestId?: string };
                 };
                 try {
@@ -408,6 +415,16 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                             ...last,
                             products: [...(last.products || []), ...incoming].slice(0, 6),
                         };
+                        return updated;
+                    });
+                }
+                if (payload.wizard !== undefined) {
+                    const incomingWizard = payload.wizard;
+                    setMessages((prev: Message[]) => {
+                        const last = prev[prev.length - 1];
+                        if (last?.role !== 'ai') return prev;
+                        const updated = [...prev];
+                        updated[updated.length - 1] = { ...last, wizard: incomingWizard };
                         return updated;
                     });
                 }
@@ -635,38 +652,79 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
         }
     };
 
+    // --- اکشن‌های ویزارد پک (انتخاب/رد/برگشت/شروع دوباره) ---
+    const handlePackAction = async (action: "select" | "skip" | "back" | "restart" | "skip-needs", productId?: string, qty?: number) => {
+        if (actionLoading || isTyping) return;
+        setActionLoading(true);
+        try {
+            const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+            headers["x-session-id"] = getSessionId();
+            const res = await fetch(`${getBaseUrl()}/api/chat/pack/action`, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ action, productId, qty, requestId: createRequestId() }),
+            });
+            const payload = await res.json().catch(() => null);
+            if (!res.ok || !payload?.success) throw new Error(payload?.message || "خطا در انجام عملیات پک.");
+            const data = payload.data || {};
+            setMessages((prev: Message[]) => [
+                ...prev,
+                ...(data.userMessage ? [{ role: "user", content: String(data.userMessage) } as Message] : []),
+                {
+                    role: "ai",
+                    content: String(data.message || "انجام شد."),
+                    wizard: data.wizard || null,
+                    package: data.package || null,
+                } as Message,
+            ]);
+            if (data.usage) setUsage(data.usage);
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : "خطا در انجام عملیات پک.";
+            setMessages((prev: Message[]) => [...prev, { role: "ai", content: msg, isError: true }]);
+        } finally {
+            setActionLoading(false);
+        }
+    };
     // --- پاک‌سازی گفتگو ---
     const handleClearChat = async () => {
         if (abortRef.current) {
             abortRef.current.abort();
             abortRef.current = null;
         }
-        // ریست کامل حالت محلی: پیام‌ها، ورودی، سهمیه نمایشی، بافر پاسخ و موقعیت اسکرول
+        if (cacheTimerRef.current && typeof window !== "undefined") {
+            window.clearTimeout(cacheTimerRef.current);
+            cacheTimerRef.current = null;
+        }
+        const oldSessionId = getSessionId();
+        const oldCacheKey = resolveChatCacheKey();
+        pendingRequestRef.current = false;
+        fullReplyRef.current = '';
+        setIsTyping(false);
         setMessages([]);
         setInput("");
         setUsage(null);
-        setIsTyping(false);
-        fullReplyRef.current = '';
         setSticky(true);
-        clearChatCache(resolveChatCacheKey());
+        clearChatCache(oldCacheKey);
+        clearAllChatCaches();
+        rotateSessionId();
         if (textareaRef.current) textareaRef.current.style.height = "40px";
         requestAnimationFrame(() => {
             const el = scrollRef.current;
             if (el) el.scrollTop = 0;
         });
-
-        // پاک‌سازی واقعی تاریخچه در سرور — برای مهمان (x-session-id) و کاربر لاگین‌کرده (توکن)
         try {
             const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-            const headers: Record<string, string> = {};
+            const headers: Record<string, string> = {
+                'Cache-Control': 'no-cache',
+                'x-session-id': oldSessionId,
+            };
             if (token) headers['Authorization'] = `Bearer ${token}`;
-            headers['x-session-id'] = getSessionId();
-
-            const baseUrl = getBaseUrl();
-
-            await fetch(`${baseUrl}/api/chat/history`, {
+            await fetch(`${getBaseUrl()}/api/chat/history`, {
                 method: 'DELETE',
                 headers,
+                cache: 'no-store',
             });
         } catch (error) {
             console.error('[AI Chat] Error clearing history:', error);
@@ -816,6 +874,10 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                             {msg.role === 'ai' && !streamActive && msg.package && Array.isArray(msg.package.sections) && msg.package.sections.length > 0 ? (
                                                 <ChatPackageCard pkg={msg.package} />
                                             ) : null}
+                                            {/* پنل ویزارد پک مرحله‌به‌مرحله */}
+                                            {msg.role === 'ai' && !streamActive && isLastAi && msg.wizard && msg.wizard.active ? (
+                                                <ChatWizardStep wizard={msg.wizard} disabled={isTyping} loading={actionLoading} onAction={handlePackAction} />
+                                            ) : null}
                                             {/* کارت محصولات مرتبط از دیتابیس (بعد از اتمام استریم + انیمیشن ورود) */}
                                             {msg.role === 'ai' && !streamActive && !msg.package && msg.products && msg.products.length > 0 && (
                                                 <div className="grid grid-cols-1 gap-2 w-full animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -855,7 +917,7 @@ export default function AIChatSheet({ open, onOpenChange }: AIChatSheetProps) {
                                                                         {formatFaPrice(p.price)} <span className="text-[10px] font-medium text-gray-500">تومان</span>
                                                                     </span>
                                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${p.inStock ? "bg-green-50 text-green-700 border border-green-200" : "bg-gray-100 text-gray-500 border border-gray-200"}`}>
-                                                                        {p.inStock ? `موجود (${Number(p.countInStock).toLocaleString("fa-IR")})` : "ناموجود"}
+                                                                        {p.inStock ? "موجود" : "ناموجود"}
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -964,6 +1026,16 @@ function createRequestId(): string {
         return crypto.randomUUID();
     }
     return `chat_${Date.now()}_${Math.random().toString(36).slice(2, 14)}`;
+}
+
+function rotateSessionId(): string {
+    try {
+        const newId = `sess_${createRequestId()}`;
+        localStorage.setItem('ekgkala_session_id', newId);
+        return newId;
+    } catch {
+        return 'sess_fallback_' + Date.now();
+    }
 }
 
 function getSessionId(): string {

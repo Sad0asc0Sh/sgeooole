@@ -20,6 +20,7 @@ const {
   normalizeFa,
   formatPackageContext,
 } = require('../utils/chatRetrieval');
+const { classifyChatIntent, advanceConsultation, buildConsultationPrompt } = require('../utils/chatRetrieval');
 const {
   startWizard,
   enterStepsPhase,
@@ -269,16 +270,117 @@ async function preparePackWizard(message, chatSession, history = []) {
   return out;
 }
 
-async function buildChatContext(message, settings, userId = null, history = [], wizardView = null) {
+function plainConsultation(session) {
+  const c = (session && session.consultation) || {};
+  const slots = c.collectedSlots || {};
+  return {
+    active: Boolean(c.active),
+    categoryHint: c.categoryHint || '',
+    collectedSlots: {
+      environment: slots.environment || null,
+      techOrQuality: slots.techOrQuality || null,
+      scaleOrUsage: slots.scaleOrUsage || null,
+    },
+    questionsAsked: Number(c.questionsAsked) || 0,
+    readyToRecommend: Boolean(c.readyToRecommend),
+  };
+}
+
+function consultationSearchQuery(state, message) {
+  const s = (state && state.collectedSlots) || {};
+  const parts = [];
+  if (state && state.categoryHint === 'camera') parts.push('دوربین مداربسته');
+  if (s.environment === 'outdoor') parts.push('فضای باز ضدآب');
+  if (s.environment === 'indoor') parts.push('داخلی');
+  if (s.techOrQuality === 'ip') parts.push('تحت شبکه');
+  if (s.techOrQuality === 'ahd' || s.techOrQuality === 'economic') parts.push('اقتصادی آنالوگ');
+  if (s.techOrQuality === 'pro') parts.push('حرفه‌ای کیفیت بالا');
+  if (s.scaleOrUsage === 'shop') parts.push('مغازه');
+  if (s.scaleOrUsage === 'home') parts.push('منزل');
+  parts.push(String(message || ''));
+  return parts.filter(Boolean).join(' ');
+}
+
+/** پیش‌برد مشاوره مرحله‌ای؛ null یعنی این نوبت مشاوره‌ای نیست */
+function prepareConsultation(chatSession, message, wizardView = null) {
+  if (!chatSession || wizardView) return null;
+  const prev = plainConsultation(chatSession);
+  const baseIntent = classifyChatIntent(message, [], prev);
+  if (['GREETING', 'SUPPORT_FAQ', 'ORDER_TRACKING', 'PACKAGE_WIZARD'].includes(baseIntent) && !prev.active) {
+    return { intent: baseIntent, state: prev, consultationPrompt: '' };
+  }
+  const next = advanceConsultation(prev, message);
+  next.searchQuery = consultationSearchQuery(next, message);
+  chatSession.consultation = next;
+  if (next.readyToRecommend) {
+    return { intent: 'SPECIFIC_PRODUCT_SEARCH', state: next, consultationPrompt: '' };
+  }
+  if (next.active || baseIntent === 'CONSULTATION_NEEDED') {
+    next.active = true;
+    chatSession.consultation = next;
+    return { intent: 'CONSULTATION_NEEDED', state: next, consultationPrompt: buildConsultationPrompt(next) };
+  }
+  return { intent: baseIntent, state: next, consultationPrompt: '' };
+}
+
+/** کارت‌ها فقط برای محصولاتی که در پاسخ نهایی واقعاً معرفی شده‌اند */
+function filterCardsForReply(cards, reply, options = {}) {
+  const list = Array.isArray(cards) ? cards : [];
+  if (!list.length) return [];
+  const text = String(reply || '');
+  if (/\[\[CHOICE:[^\]]+\]\]/.test(text)) return [];
+  const normReply = normalizeFa(text);
+  const matched = list.filter((card) => {
+    const normName = normalizeFa(card.name || '');
+    const byName = normName && normReply.includes(normName.slice(0, 18));
+    const byCode = card.productCode && normReply.includes(normalizeFa(String(card.productCode)));
+    return byName || byCode;
+  });
+  if (matched.length) return matched.slice(0, 3);
+  if (options.advisoryHint || options.intent === 'CONSULTATION_NEEDED') return [];
+  return list.slice(0, 2);
+}
+
+function buildChatResetUpdate(now = new Date()) {
+  return {
+    $set: {
+      messages: [],
+      cctvFlow: null,
+      'packWizard.active': false,
+      'packWizard.phase': 'needs',
+      'packWizard.needsCredit': 0,
+      'packWizard.needsAnswers': 0,
+      'packWizard.requirements': {},
+      'packWizard.steps': [],
+      'packWizard.currentIndex': 0,
+      'packWizard.selections': [],
+      'consultation.active': false,
+      'consultation.categoryHint': '',
+      'consultation.collectedSlots.environment': null,
+      'consultation.collectedSlots.techOrQuality': null,
+      'consultation.collectedSlots.scaleOrUsage': null,
+      'consultation.questionsAsked': 0,
+      'consultation.readyToRecommend': false,
+      lastUpdated: now,
+      lastResetAt: now,
+    },
+  };
+}
+
+async function buildChatContext(message, settings, userId = null, history = [], wizardView = null, consultationInfo = null) {
   const priorUserCount = (Array.isArray(history) ? history : []).filter((h) => h && h.role === 'user').length;
   // فاز نیازسنجی: هیچ محصولی — نه جست‌وجو، نه کانتکست، نه کارت — تا سوالات تمام شود
   const needsPhase = Boolean(wizardView && wizardView.phase === 'needs');
   const stepsPhase = Boolean(wizardView && wizardView.phase === 'steps');
+  const intent = wizardView ? 'PACKAGE_WIZARD' : (consultationInfo && consultationInfo.intent) || classifyChatIntent(message, history, consultationInfo && consultationInfo.state);
+  const allowSearch = Boolean(wizardView) || intent === 'SPECIFIC_PRODUCT_SEARCH';
+  const searchMessage = consultationInfo && consultationInfo.state && consultationInfo.state.searchQuery ? consultationInfo.state.searchQuery : message;
 
   let products = [];
-  if (!needsPhase) {
+  /* allowSearch گیت نیت است */
+  if (!needsPhase && allowSearch) {
     try {
-      const result = await searchProducts(message, history);
+      const result = await searchProducts(searchMessage, history);
       products = result.products || [];
     } catch (err) {
       console.warn('[chat] product retrieval failed:', err?.message);
@@ -291,8 +393,10 @@ async function buildChatContext(message, settings, userId = null, history = [], 
   if (!needsPhase) {
     if (products.length > 0) {
       productContext = formatProductContext(products);
-    } else if (!stepsPhase) {
+    } else if (!stepsPhase && allowSearch) {
       productContext = formatProductContext([]);
+    } else if (!stepsPhase) {
+      productContext = 'برای این نوبت محصولی جست‌وجو نشده است؛ محصولی معرفی نکن و فقط به سوال کاربر پاسخ بده.';
     }
   }
 
@@ -300,10 +404,10 @@ async function buildChatContext(message, settings, userId = null, history = [], 
     const wizText = formatWizardContext(wizardView);
     if (wizText) productContext = productContext ? `${productContext}\n\n${wizText}` : wizText;
   }
-  const advisoryHint = isAdvisoryRequest(message);
+  const advisoryHint = intent === 'CONSULTATION_NEEDED' || isAdvisoryRequest(message);
   // در نوبت اول نیازسنجی کارت نشان نده؛ وقتی ویزارد فعال است هم پنل مرحله کافی است (عدم تکرار).
   const firstNeedTurn = priorUserCount < 1 && advisoryHint;
-  const productCards = (firstNeedTurn || wizardView) ? [] : products.map(toCardPayload);
+  const productCards = (firstNeedTurn || wizardView || !allowSearch) ? [] : products.map(toCardPayload);
 
   const orderStatusMap = {
     Pending: 'در انتظار بررسی یا پرداخت',
@@ -378,12 +482,24 @@ async function buildChatContext(message, settings, userId = null, history = [], 
     products: productCards,
     advisoryHint,
     wizard: wizardView,
+    intent,
+    consultationPrompt: (consultationInfo && consultationInfo.consultationPrompt) || '',
+    consultation: consultationInfo ? consultationInfo.state : null,
   };
 }
 
-async function saveCompletedTurn(chatSession, userMessage, reply) {
+async function saveCompletedTurn(chatSession, userMessage, reply, turnStartedAt = Date.now()) {
   const cleanReply = stripThinkingTags(reply);
   if (!cleanReply) return;
+  try {
+    if (chatSession && chatSession._id) {
+      const freshDoc = await ChatHistory.findById(chatSession._id).select('lastResetAt').lean();
+      if (freshDoc && freshDoc.lastResetAt && new Date(freshDoc.lastResetAt).getTime() > turnStartedAt) {
+        console.info('[chat] Turn discarded because conversation was reset during generation.');
+        return;
+      }
+    }
+  } catch { /* بررسی ریست نباید ذخیره عادی را بشکند */ }
   chatSession.messages.push({ role: 'user', content: userMessage });
   chatSession.messages.push({ role: 'assistant', content: cleanReply });
   if (chatSession.messages.length > MAX_STORED_MESSAGES) {
@@ -518,7 +634,7 @@ async function handleCctvTurn(message, chatSession, options = {}) {
     flow = qr.flow;
     if (!qr.ok) {
       const prompt = buildPrompt(flow);
-      await saveCompletedTurn(chatSession, message, prompt.message);
+      await saveCompletedTurn(chatSession, message, prompt.message, options.turnStartedAt || Date.now());
       return {
         message: prompt.message,
         cctvFlow: toFlowView(flow),
@@ -533,7 +649,7 @@ async function handleCctvTurn(message, chatSession, options = {}) {
     if (applied.cancelled) {
       const msg = 'گفت‌وگوی پک دوربین لغو شد. هر وقت خواستید دوباره بگویید «پک دوربین».';
       chatSession.cctvFlow = flow;
-      await saveCompletedTurn(chatSession, message, msg);
+      await saveCompletedTurn(chatSession, message, msg, options.turnStartedAt || Date.now());
       return {
         message: msg,
         cctvFlow: toFlowView(flow),
@@ -578,7 +694,7 @@ async function handleCctvTurn(message, chatSession, options = {}) {
   }
 
   chatSession.cctvFlow = flow;
-  await saveCompletedTurn(chatSession, message, reply);
+  await saveCompletedTurn(chatSession, message, reply, options.turnStartedAt || Date.now());
 
   return {
     message: reply,
@@ -610,6 +726,7 @@ exports.handleChatMessage = async (req, res) => {
   let requestId;
   try {
     conversation = await loadConversation(req);
+    const turnStartedAt = Date.now();
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
@@ -619,6 +736,7 @@ exports.handleChatMessage = async (req, res) => {
     const cctvResult = await handleCctvTurn(effectiveMessage, conversation.chatSession, {
       slot,
       value,
+      turnStartedAt,
     });
     if (cctvResult) {
       return res.json({
@@ -638,12 +756,14 @@ exports.handleChatMessage = async (req, res) => {
 
     // ۲) مسیر عمومی (LLM) — همان handleMessage
     const pack = await preparePackWizard(effectiveMessage, conversation.chatSession, conversation.history);
+    const consult = prepareConsultation(conversation.chatSession, effectiveMessage, pack.view);
     const context = await buildChatContext(
       effectiveMessage,
       conversation.settings,
       conversation.identity.query?.userId,
       conversation.history,
       pack.view,
+      consult,
     );
     const result = await generateExpertResponse(
       effectiveMessage,
@@ -652,6 +772,7 @@ exports.handleChatMessage = async (req, res) => {
       context.storeInfoContext,
       {
         advisoryHint: context.advisoryHint,
+        consultationPrompt: context.consultationPrompt || '',
         wizardCreated: pack.wizardCreated,
         wizardStepsBegun: pack.wizardStepsBegun,
         wizardRestarted: pack.wizardRestarted,
@@ -659,13 +780,13 @@ exports.handleChatMessage = async (req, res) => {
         packNotViable: pack.packNotViable,
       },
     );
-    await saveCompletedTurn(conversation.chatSession, effectiveMessage, result.message);
+    await saveCompletedTurn(conversation.chatSession, effectiveMessage, result.message, turnStartedAt);
 
     return res.json({
       success: true,
       data: {
         message: result.message,
-        products: context.products || [],
+        products: filterCardsForReply(context.products, result.message, context),
         package: null,
         wizard: context.wizard || null,
         cctvFlow: null,
@@ -703,6 +824,7 @@ exports.handleMessage = async (req, res) => {
   let requestId;
   try {
     conversation = await loadConversation(req);
+    const turnStartedAt = Date.now();
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
@@ -712,6 +834,7 @@ exports.handleMessage = async (req, res) => {
     const cctvResult = await handleCctvTurn(message, conversation.chatSession, {
       slot: req.body?.slot,
       value: req.body?.value,
+      turnStartedAt,
     });
     if (cctvResult) {
       return res.json({
@@ -730,12 +853,14 @@ exports.handleMessage = async (req, res) => {
     }
 
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
+    const consult = prepareConsultation(conversation.chatSession, message, pack.view);
     const context = await buildChatContext(
       message,
       conversation.settings,
       conversation.identity.query?.userId,
       conversation.history,
       pack.view,
+      consult,
     );
     const result = await generateExpertResponse(
       message,
@@ -744,6 +869,7 @@ exports.handleMessage = async (req, res) => {
       context.storeInfoContext,
       {
         advisoryHint: context.advisoryHint,
+        consultationPrompt: context.consultationPrompt || '',
         wizardCreated: pack.wizardCreated,
         wizardStepsBegun: pack.wizardStepsBegun,
         wizardRestarted: pack.wizardRestarted,
@@ -751,13 +877,13 @@ exports.handleMessage = async (req, res) => {
         packNotViable: pack.packNotViable,
       },
     );
-    await saveCompletedTurn(conversation.chatSession, message, result.message);
+    await saveCompletedTurn(conversation.chatSession, message, result.message, turnStartedAt);
 
     return res.json({
       success: true,
       data: {
         message: result.message,
-        products: context.products || [],
+        products: filterCardsForReply(context.products, result.message, context),
         package: null,
         wizard: context.wizard || null,
         cctvFlow: null,
@@ -799,6 +925,7 @@ exports.handleStreamMessage = async (req, res) => {
 
   try {
     conversation = await loadConversation(req);
+    const turnStartedAt = Date.now();
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
@@ -808,6 +935,7 @@ exports.handleStreamMessage = async (req, res) => {
     const cctvResult = await handleCctvTurn(message, conversation.chatSession, {
       slot: req.body?.slot,
       value: req.body?.value,
+      turnStartedAt,
     });
     if (cctvResult) {
       res.status(200);
@@ -834,12 +962,14 @@ exports.handleStreamMessage = async (req, res) => {
     }
 
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
+    const consult = prepareConsultation(conversation.chatSession, message, pack.view);
     const context = await buildChatContext(
       message,
       conversation.settings,
       conversation.identity.query?.userId,
       conversation.history,
       pack.view,
+      consult,
     );
 
     res.status(200);
@@ -850,10 +980,7 @@ exports.handleStreamMessage = async (req, res) => {
     res.setHeader('Content-Encoding', 'identity');
     res.flushHeaders?.();
     res.write(`data: ${JSON.stringify({ meta: { requestId } })}\n\n`);
-    // ارسال فوری کارت محصولات تا فرانت بدون انتظار برای LLM رندر کند
-    if (context.products && context.products.length > 0) {
-      res.write(`data: ${JSON.stringify({ products: context.products })}\n\n`);
-    }
+    // کارت‌ها فقط پس از اتمام پاسخ LLM و فیلتر نهایی ارسال می‌شوند (پایین)
     // نمای ویزارد هم ساخت‌یافته ارسال می‌شود (فرانت بعد از اتمام متن نمایشش می‌دهد)
     if (context.wizard) {
       res.write(`data: ${JSON.stringify({ wizard: context.wizard })}\n\n`);
@@ -881,6 +1008,7 @@ exports.handleStreamMessage = async (req, res) => {
       {
         signal: abortController.signal,
         advisoryHint: context.advisoryHint,
+        consultationPrompt: context.consultationPrompt || '',
         wizardCreated: pack.wizardCreated,
         wizardStepsBegun: pack.wizardStepsBegun,
         wizardRestarted: pack.wizardRestarted,
@@ -890,7 +1018,7 @@ exports.handleStreamMessage = async (req, res) => {
     );
 
     if (streamResult.message) {
-      await saveCompletedTurn(conversation.chatSession, message, streamResult.message);
+      await saveCompletedTurn(conversation.chatSession, message, streamResult.message, turnStartedAt);
     }
 
     if (!clientClosed && !res.writableEnded) {
@@ -898,7 +1026,7 @@ exports.handleStreamMessage = async (req, res) => {
         usage: getUsageInfo(conversation.chatSession, conversation.userLimit),
         provider: streamResult.provider,
         partial: streamResult.partial || false,
-        products: context.products || [],
+        products: filterCardsForReply(context.products, streamResult.message, context),
         package: null,
         wizard: context.wizard || null,
       })}\n\n`);
@@ -948,10 +1076,10 @@ exports.clearHistory = async (req, res) => {
       return res.status(403).json({ success: false, message: 'شما مجاز به پاک کردن این گفتگو نیستید.' });
     }
 
-    await ChatHistory.findOneAndUpdate(
-      { userId },
-      { $set: { messages: [], lastUpdated: new Date() } },
-    );
+    const userKey = `user:${userId}`;
+    const activeUser = activeConversations.get(userKey);
+    if (activeUser) { clearTimeout(activeUser.watchdog); activeConversations.delete(userKey); }
+    await ChatHistory.findOneAndUpdate({ userId }, buildChatResetUpdate());
     return res.json({ success: true, message: 'تاریخچه گفتگو پاک شد.' });
   } catch (error) {
     return res.status(500).json({ success: false, message: 'خطا در پاک کردن تاریخچه گفتگو.' });
@@ -970,11 +1098,11 @@ exports.clearMyHistory = async (req, res) => {
       return res.status(400).json({ success: false, message: 'شناسه گفت‌وگو معتبر نیست.' });
     }
 
-    await ChatHistory.findOneAndUpdate(
-      identity.query,
-      { $set: { messages: [], lastUpdated: new Date() } },
-    );
-    return res.json({ success: true, message: 'گفتگوی جدید شروع شد. تاریخچه قبلی پاک شد.' });
+    const active = activeConversations.get(identity.key);
+    if (active) { clearTimeout(active.watchdog); activeConversations.delete(identity.key); }
+    await ChatHistory.findOneAndUpdate(identity.query, buildChatResetUpdate());
+    if (typeof res.setHeader === 'function') res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    return res.json({ success: true, message: 'گفتگوی جدید شروع شد و تمام حافظه قبلی پاک‌سازی گردید.' });
   } catch (error) {
     console.error('[chat] clearMyHistory failed:', error?.message);
     return res.status(500).json({ success: false, message: 'خطا در پاک کردن تاریخچه گفتگو.' });
@@ -997,6 +1125,7 @@ exports.handlePackAction = async (req, res) => {
   let requestId;
   try {
     conversation = await loadConversation(req);
+    const turnStartedAt = Date.now();
     requestId = getRequestId(req);
     if (!acquireConversation(conversation.identity.key, requestId)) {
       return res.status(409).json({ success: false, message: 'درخواست قبلی شما هنوز در حال پردازش است.' });
@@ -1087,7 +1216,7 @@ exports.handlePackAction = async (req, res) => {
     }
     if (!reply) reply = fallbackPackMessage(action, view, finalPackage);
 
-    await saveCompletedTurn(conversation.chatSession, userMessage, reply);
+    await saveCompletedTurn(conversation.chatSession, userMessage, reply, turnStartedAt);
 
     return res.json({
       success: true,
@@ -1154,4 +1283,8 @@ exports.__private__ = {
   buildChatContext,
   preparePackWizard,
   detectPackTextCommand,
+  filterCardsForReply,
+  prepareConsultation,
+  buildChatResetUpdate,
+  saveCompletedTurn,
 };

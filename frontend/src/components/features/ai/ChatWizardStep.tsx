@@ -202,7 +202,7 @@ export default function ChatWizardStep({ wizard, disabled, loading, onAction }: 
                                         </span>
                                         <span className="flex flex-col items-stretch gap-1 shrink-0">
                                             <span className={`text-[9px] font-bold px-1.5 py-px rounded-full whitespace-nowrap text-center ${o.inStock ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                                                {o.inStock ? `موجود (${fa(o.countInStock)})` : "ناموجود"}
+                                                {o.inStock ? "موجود" : "ناموجود"}
                                             </span>
                                             <a
                                                 href={o.url}

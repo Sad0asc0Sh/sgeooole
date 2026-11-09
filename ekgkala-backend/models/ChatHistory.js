@@ -55,6 +55,20 @@ const chatHistorySchema = new mongoose.Schema({
         selections: { type: [selectionSchema], default: [] },
         updatedAt: { type: Date, default: Date.now },
     },
+    lastResetAt: { type: Date, default: null },
+    // وضعیت مشاوره و نیازسنجی مرحله‌به‌مرحله برای سوالات خرید
+    consultation: {
+        active: { type: Boolean, default: false },
+        categoryHint: { type: String, default: '' },
+        collectedSlots: {
+            environment: { type: String, default: null },
+            techOrQuality: { type: String, default: null },
+            scaleOrUsage: { type: String, default: null },
+        },
+        questionsAsked: { type: Number, default: 0 },
+        readyToRecommend: { type: Boolean, default: false },
+        updatedAt: { type: Date, default: Date.now },
+    },
     // فلو قطعی اسمبل پک دوربین (cctvChatFlow) — اسلات‌ها بدون LLM
     cctvFlow: {
         type: mongoose.Schema.Types.Mixed,

@@ -654,6 +654,150 @@ async function runCctvEngineeringRulesTest() {
   }
 }
 
+/* ---------- RAG remediation (task-plan) ---------- */
+
+test('محرمانگی موجودی: متن و کارت عدد دقیق انبار را لو نمی‌دهند', () => {
+  const p = { _id: 's1', name: 'دوربین تست', productType: 'simple', price: 1000000, stock: 25, images: [], specifications: {}, properties: [], category: { name: 'دوربین' }, brand: null, rating: 4, numReviews: 1, guarantee: '' };
+  const ctx = chatRetrieval.formatProductContext([p]);
+  assert.ok(!/موجودی دقیق/.test(ctx), 'برچسب موجودی دقیق نباید باشد');
+  assert.ok(!/\(۲۵ عدد\)|\(25 عدد\)/.test(ctx), 'عدد موجودی نباید در پرامپت باشد');
+  assert.ok(/موجود/.test(ctx));
+  const card = chatRetrieval.toCardPayload(p);
+  assert.equal(card.inStock, true);
+  assert.ok(card.countInStock <= 10, 'countInStock باید سقف‌دار باشد، نه موجودی واقعی');
+  const empty = chatRetrieval.toCardPayload({ ...p, stock: 0 });
+  assert.equal(empty.inStock, false);
+  assert.equal(empty.countInStock, 0);
+});
+
+test('استخراج کلیدواژه تاریخچه را کورکورانه قاطی پیام فعلی نمی‌کند', () => {
+  const kws = chatRetrieval.extractKeywords('سلام', [{ role: 'user', content: 'دوربین هایک ویژن DS-2CD1023' }]);
+  assert.ok(!kws.some((k) => /دوربین|هایک/.test(k)), `نباید از تاریخچه بیاید: ${kws}`);
+});
+
+test('گیت نیت: سلام/پشتیبانی/پیگیری مشاوره یا جستجو از هم جدا می‌شوند', () => {
+  assert.equal(chatRetrieval.classifyChatIntent('سلام', []), 'GREETING');
+  assert.equal(chatRetrieval.classifyChatIntent('شرایط ارسال به شهرستان چطوره؟', []), 'SUPPORT_FAQ');
+  assert.equal(chatRetrieval.classifyChatIntent('سفارش من کجاست؟', []), 'ORDER_TRACKING');
+  assert.equal(chatRetrieval.classifyChatIntent('پک کامل دوربین مداربسته میخوام', []), 'PACKAGE_WIZARD');
+  assert.equal(chatRetrieval.classifyChatIntent('دوربین چی خوبه؟', []), 'CONSULTATION_NEEDED');
+  assert.equal(chatRetrieval.classifyChatIntent('قیمت دوربین هایک ویژن DS-2CD1023 چقدره؟', []), 'SPECIFIC_PRODUCT_SEARCH');
+  assert.equal(
+    chatRetrieval.classifyChatIntent('داخل منزل', [], { active: true, readyToRecommend: false, collectedSlots: {} }),
+    'CONSULTATION_NEEDED',
+  );
+});
+
+test('موتور مشاوره: با دو اسلات آماده پیشنهاد می‌شود', () => {
+  let st = chatRetrieval.advanceConsultation(null, 'برای مغازه دوربین میخوام');
+  assert.equal(st.active, true);
+  assert.equal(st.readyToRecommend, false);
+  st = chatRetrieval.advanceConsultation(st, 'اقتصادی باشه');
+  assert.ok(st.collectedSlots.scaleOrUsage);
+  assert.ok(st.collectedSlots.techOrQuality);
+  assert.equal(st.readyToRecommend, true);
+});
+
+async function runRelevanceGateTest() {
+  const canned = [
+    { _id: 'strong', name: 'دوربین هایک ویژن DS-2CD1023', productCode: 'DS-2CD1023', productType: 'simple', price: 100, stock: 5, images: [], specifications: {}, properties: [], category: { name: 'دوربین مداربسته' }, brand: { name: 'هایک ویژن' }, rating: 4, numReviews: 1, guarantee: '', salesCount: 1 },
+    { _id: 'descOnly', name: 'محصول عمومی الف', productType: 'simple', price: 100, stock: 5, description: 'این متن شامل دوربین هایک ویژن است', images: [], specifications: {}, properties: [], category: null, brand: null, rating: 4, numReviews: 1, guarantee: '', salesCount: 99 },
+    { _id: 'oos', name: 'دوربین هایک ویژن DS-2CD9999', productCode: 'DS-2CD9999', productType: 'simple', price: 100, stock: 0, images: [], specifications: {}, properties: [], category: { name: 'دوربین مداربسته' }, brand: { name: 'هایک ویژن' }, rating: 4, numReviews: 1, guarantee: '', salesCount: 50 },
+  ];
+  const originals = { productFind: Product.find, categoryFind: Category.find, brandFind: Brand.find };
+  const norm = chatRetrieval.normalizeFa;
+  Category.find = () => ({ select: () => ({ lean: async () => [] }) });
+  Brand.find = () => ({ select: () => ({ lean: async () => [] }) });
+  Product.find = (filter) => {
+    const conds = (filter && filter.$or) || [];
+    const hits = canned.filter((p) => conds.some((cond) => Object.entries(cond).some(([field, v]) => {
+      if (!v || typeof v !== 'object' || !v.$regex) return false;
+      const term = norm(String(v.$regex));
+      if (field === 'name') return norm(p.name).includes(term);
+      if (field === 'description') return norm(p.description || '').includes(term);
+      if (field === 'productCode' || field === 'sku') return norm(String(p.productCode || '')).includes(term);
+      if (field === 'properties.value') return (p.properties || []).some((x) => norm(String(x.value || '')).includes(term));
+      if (field === 'properties.label') return (p.properties || []).some((x) => norm(String(x.label || '')).includes(term));
+      return false;
+    })));
+    const chain = { populate: () => chain, select: () => chain, limit: () => chain, lean: async () => hits };
+    return chain;
+  };
+  try {
+    const { products } = await chatRetrieval.searchProducts('دوربین هایک ویژن DS-2CD1023', []);
+    const ids = products.map((p) => String(p._id));
+    assert.ok(ids.includes('strong'), 'تطابق قوی باید برگردد');
+    assert.ok(!ids.includes('descOnly'), 'تطابق صرف در توضیحات نباید برگردد');
+    assert.ok(!ids.includes('oos'), 'ناموجود نباید در کارت چت برگردد');
+    assert.ok(products.length <= 3, 'حداکثر ۳ کارت دقیق');
+  } finally {
+    Product.find = originals.productFind; Category.find = originals.categoryFind; Brand.find = originals.brandFind;
+  }
+}
+
+async function runWizardFlagForwardingTest() {
+  let seenBody = null;
+  const restore = mockAiStack(singleOldProvider, async (url, body) => {
+    seenBody = body;
+    return { data: { choices: [{ message: { content: 'پاسخ' } }] } };
+  });
+  try {
+    await aiService.generateExpertResponse('سلام', '', [], '', { wizardCreated: true });
+    const sys = seenBody.messages[0].content;
+    assert.ok(/ویزارد پک تازه ساخته شد/.test(sys), 'فلگ wizardCreated باید به پرامپت برسد');
+  } finally { restore(); }
+}
+
+test('فیلتر کارت پس از تولید: حین سوال مشاوره کارتی نیست', () => {
+  const cards = [{ name: 'دوربین هایک ویژن DS-2CD1023 مدل تست', productCode: 'DS-2CD1023' }];
+  assert.deepEqual(chat.filterCardsForReply(cards, 'محل نصب کجاست؟\n[[CHOICE:داخل منزل|فضای بیرونی]]', {}), []);
+  const matched = chat.filterCardsForReply(cards, 'پیشنهاد من دوربین هایک ویژن DS-2CD1023 است.', {});
+  assert.equal(matched.length, 1);
+  assert.deepEqual(chat.filterCardsForReply(cards, 'کدام را ترجیح می‌دهید؟', { advisoryHint: true }), []);
+});
+
+async function runResetGuardTest() {
+  const original = ChatHistory.findById;
+  ChatHistory.findById = () => ({ select: () => ({ lean: async () => ({ lastResetAt: new Date(Date.now() + 60000) }) }) });
+  try {
+    const session = { _id: 'x1', messages: [], usage: { dailyCount: 0, lastReset: new Date() }, save: async () => {} };
+    await chat.saveCompletedTurn(session, 'سلام', 'پاسخ', Date.now() - 1000);
+    assert.equal(session.messages.length, 0, 'نوبت قبل از ریست نباید بعد از ریست ذخیره شود');
+  } finally { ChatHistory.findById = original; }
+}
+
+async function runFullResetUpdateTest() {
+  const original = ChatHistory.findOneAndUpdate;
+  let captured = null;
+  ChatHistory.findOneAndUpdate = async (q, u) => { captured = { q, u }; return {}; };
+  const res = { statusCode: 200, payload: null, headers: {} };
+  res.status = (c) => { res.statusCode = c; return res; };
+  res.json = (p) => { res.payload = p; return res; };
+  res.setHeader = (k, v) => { res.headers[k] = v; };
+  try {
+    await chatController.clearMyHistory({ headers: { 'x-session-id': 'sess_test123' }, body: {}, user: null }, res);
+    assert.equal(res.payload?.success, true);
+    assert.deepEqual(captured.u.$set.messages, []);
+    assert.equal(captured.u.$set.cctvFlow, null);
+    assert.equal(captured.u.$set['packWizard.active'], false);
+    assert.equal(captured.u.$set['consultation.active'], false);
+    assert.ok(captured.u.$set.lastResetAt instanceof Date);
+  } finally { ChatHistory.findOneAndUpdate = original; }
+}
+
+test('forwardBuildOptions همه فلگ‌های ویزارد و مشاوره را نگه می‌دارد', () => {
+  const fwd = ai.forwardBuildOptions({
+    advisoryHint: 1, consultationPrompt: 'سوال بپرس', wizardCreated: true,
+    wizardStepsBegun: false, wizardRestarted: true, wizardCancelled: false,
+    packNotViable: { reason: 'x', missing: [] }, brief: true,
+  });
+  assert.equal(fwd.wizardCreated, true);
+  assert.equal(fwd.wizardRestarted, true);
+  assert.equal(fwd.consultationPrompt, 'سوال بپرس');
+  assert.equal(fwd.brief, true);
+  assert.deepEqual(fwd.packNotViable, { reason: 'x', missing: [] });
+});
+
 (async () => {
   await asyncTest('خطای موقت ارائه‌دهنده اصلی به جایگزین سالم failover می‌شود', runFailoverTest);
   await asyncTest('مدل منسوخ‌شده پیام دقیق «منسوخ» می‌دهد نه خطای generic', runDecommissionedModelTest);
@@ -664,6 +808,10 @@ async function runCctvEngineeringRulesTest() {
   await asyncTest('ویزارد پک: فاز نیازسنجی، کردیت، رد سوالات و تطابق اسمی سخت‌گیرانه', runWizardNeedsTest);
   await asyncTest('ویزارد پک: گیتینگ نوبت‌ها — حین نیازسنجی محصولی نیست، بعدش قدم اول', runWizardNeedsGatingTest);
   await asyncTest('قوانین مهندسی مداربسته: محاسبه مقادیر، سازگاری قطعی اقلام و پکیج نهایی', runCctvEngineeringRulesTest);
+  await asyncTest('گیت ارتباط: فقط تطابق قوی و موجود برمی‌گردد', runRelevanceGateTest);
+  await asyncTest('فلگ‌های ویزارد به پرامپت LLM می‌رسند', runWizardFlagForwardingTest);
+  await asyncTest('نوبت تولیدشده قبل از ریست بعد از ریست ذخیره نمی‌شود', runResetGuardTest);
+  await asyncTest('ریست کامل همه وضعیت‌های چت را پاک می‌کند', runFullResetUpdateTest);
   console.log('آزمون‌های معماری چت‌بات با موفقیت انجام شد.');
 })().catch((error) => {
   console.error(error);

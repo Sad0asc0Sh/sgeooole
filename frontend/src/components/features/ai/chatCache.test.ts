@@ -3,6 +3,7 @@ import {
     loadChatCache,
     saveChatCache,
     clearChatCache,
+    clearAllChatCaches,
 } from "./chatCache";
 import type { Message } from "./AIChatSheet";
 
@@ -87,6 +88,23 @@ test("JSON خراب و کلید خالی امن هستند", () => {
     expect(loadChatCache("")).toBeNull();
     expect(() => saveChatCache("", [], null)).not.toThrow();
     expect(() => clearChatCache("")).not.toThrow();
+});
+
+test("ذخیره آرایه خالی کلید کش را حذف می‌کند", () => {
+    saveChatCache(KEY, sampleMessages(), null);
+    expect(window.localStorage.getItem(KEY)).not.toBeNull();
+    saveChatCache(KEY, [], null);
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+});
+
+test("پاک‌سازی همه کش‌های چت، کلیدهای دیگر را نگه می‌دارد", () => {
+    saveChatCache(KEY, sampleMessages(), null);
+    saveChatCache(buildChatCacheKey("guest-2"), sampleMessages(), null);
+    window.localStorage.setItem("token", "keep-me");
+    clearAllChatCaches();
+    expect(window.localStorage.getItem(KEY)).toBeNull();
+    expect(window.localStorage.getItem(buildChatCacheKey("guest-2"))).toBeNull();
+    expect(window.localStorage.getItem("token")).toBe("keep-me");
 });
 
 test("پاک‌سازی کش", () => {

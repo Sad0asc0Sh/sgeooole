@@ -607,7 +607,7 @@ function formatWizardContext(view) {
     lines.push('تأییدشده توسط کاربر (قطعی، دوباره پیشنهاد نده):');
     view.selections.forEach((s) => {
       const priceFa = Number(s.product.price || 0).toLocaleString('fa-IR');
-      const stockFa = s.product.inStock ? `موجود (${Number(s.product.countInStock || 0).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
+      const stockFa = s.product.inStock ? 'موجود' : 'ناموجود';
       const qtyFa = Number(s.qty || 1).toLocaleString('fa-IR');
       lines.push(`  - [${s.stepTitle}] «${s.product.name}» (تعداد: ${qtyFa} عدد) | قیمت واحد: ${priceFa} تومان | ${stockFa} | شناسه: ${s.product.id}`);
     });
@@ -620,7 +620,7 @@ function formatWizardContext(view) {
       const priceFa = Number(o.price || 0).toLocaleString('fa-IR');
       const hintStr = o.compatibilityHint ? ` [علت انتخاب مهندسی: ${o.compatibilityHint}]` : '';
       const qtyStr = o.recommendedQty && o.recommendedQty > 1 ? ` (تعداد پیشنهادی: ${Number(o.recommendedQty).toLocaleString('fa-IR')} عدد)` : '';
-      lines.push(`  - ${i === 0 ? '(پیشنهاد اصلی مهندسی هوش مصنوعی) ' : ''}«${o.name}»${qtyStr} | قیمت واحد: ${priceFa} تومان | موجودی: ${Number(o.countInStock || 0).toLocaleString('fa-IR')} عدد${hintStr}`);
+      lines.push(`  - ${i === 0 ? '(پیشنهاد اصلی مهندسی هوش مصنوعی) ' : ''}«${o.name}»${qtyStr} | قیمت واحد: ${priceFa} تومان | وضعیت: موجود${hintStr}`);
     });
   } else {
     lines.push('همه مرحله‌ها تمام شده‌اند؛ بسته نهایی جداگانه نمایش داده می‌شود. تبریک بگو و خلاصه کن.');

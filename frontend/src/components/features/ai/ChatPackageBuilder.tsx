@@ -193,7 +193,7 @@ export default function ChatPackageBuilder({ pkg }: { pkg: ChatPackage }) {
                                                         <span className="text-[8px] font-black text-kala-700 bg-kala-100 rounded-full px-1.5 py-px whitespace-nowrap">پیشنهاد هوش مصنوعی</span>
                                                     )}
                                                     <span className={`text-[9px] font-bold px-1.5 py-px rounded-full whitespace-nowrap ${o.inStock ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
-                                                        {o.inStock ? `موجود (${fa(o.countInStock)})` : "ناموجود"}
+                                                        {o.inStock ? "موجود" : "ناموجود"}
                                                     </span>
                                                 </span>
                                             </button>

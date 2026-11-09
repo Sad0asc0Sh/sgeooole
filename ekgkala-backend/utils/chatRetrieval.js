@@ -22,7 +22,8 @@ const {
 // نام مستعار سازگاری (تعریف اصلی دامنه‌ها در packDomains.js است)
 const PACK_DOMAINS = WIZARD_DOMAINS;
 
-const MAX_PRODUCTS = 6;
+const MAX_PRODUCTS = 3;
+const MIN_RELEVANCE_SCORE = 4;
 
 // استاپ‌واژه‌های فارسی — این‌ها نباید وارد کوئری جست‌وجو شوند
 const FA_STOPWORDS = new Set([
@@ -37,6 +38,8 @@ const FA_STOPWORDS = new Set([
   'قیمت', 'خرید', 'موجود', 'موجوده', 'ناموجود', 'دارد', 'دارید', 'هستش',
   'بهم', 'بهترین', 'معرفی', 'پیشنهاد', 'راهنمایی', 'کمک', 'دنبال',
   'درباره', 'راجب', 'مورد', 'اطلاعات', 'توضیح', 'بده', 'بگید', 'بگو',
+  'نصب', 'شرایط', 'ارسال', 'سفارش', 'گارانتی', 'شرکت', 'تومان', 'فروش',
+  'سیستم', 'دستگاه', 'مدل', 'خوب', 'عالی', 'ارزان', 'گران', 'جدیدترین', 'پرفروش', 'کجاست',
 ]);
 
 function escapeRegex(value) {
@@ -57,8 +60,8 @@ function normalizeFa(text) {
 }
 
 /** استخراج کلیدواژه‌های معنادار از پیام + تاریخچه اخیر */
-function extractKeywords(message, history = []) {
-  const recentUser = (Array.isArray(history) ? history : [])
+function extractKeywords(message, history = [], options = {}) {
+  const recentUser = !(options && options.includeHistory) ? '' : (Array.isArray(history) ? history : [])
     .filter((h) => h && h.role === 'user' && h.content)
     .slice(-2)
     .map((h) => String(h.content))
@@ -186,8 +189,8 @@ function buildProductUrl(p) {
  * جست‌وجوی اصلی محصولات.
  * @returns {Promise<Array>} لیست محصولات lean + populate شده
  */
-async function searchProducts(message, history = []) {
-  const keywords = extractKeywords(message, history);
+async function searchProducts(message, history = [], options = {}) {
+  const keywords = extractKeywords(message, history, options);
   if (keywords.length === 0) return { keywords, products: [] };
 
   // 1) دسته‌های منطبق (مثلاً «دوربین» → دسته دوربین مداربسته)
@@ -213,9 +216,9 @@ async function searchProducts(message, history = []) {
     fieldOr.push({ name: rx });
     fieldOr.push({ productCode: rx });
     fieldOr.push({ sku: rx });
-    fieldOr.push({ description: rx });
+    // description و properties.label عمداً نیستند: تطابق واژه عمومی در متن طولانی، محصول رندوم می‌سازد
     fieldOr.push({ 'properties.value': rx });
-    fieldOr.push({ 'properties.label': rx });
+    /* properties.label حذف شده است */
   }
 
   const selectFields = 'name slug productCode sku description productType price compareAtPrice discount '
@@ -263,30 +266,28 @@ async function searchProducts(message, history = []) {
   const scored = raw.map((p) => {
     const normName = normalizeFa(p.name || '');
     const normCode = normalizeFa(String(p.productCode || p.sku || ''));
-    const normDesc = normalizeFa(p.description || '');
     const catName = normalizeFa((p.category && p.category.name) || '');
     const brandName = normalizeFa((p.brand && p.brand.name) || '');
     const specsText = normalizeFa(specList(p, 20).map((s) => `${s.label} ${s.value}`).join(' '));
     let score = 0;
+    let matchedKeywordsCount = 0;
     for (const kw of keywords) {
-      if (normCode.includes(kw)) score += 5; // تطابق کد کالا
-      if (normName.includes(kw)) score += 4;
-      if (catName.includes(kw)) score += 2;
-      if (brandName.includes(kw)) score += 2;
-      if (specsText.includes(kw)) score += 1;
-      if (normDesc.includes(kw)) score += 1;
+      let kwMatched = false;
+      if (normCode.includes(kw)) { score += 6; kwMatched = true; }
+      if (normName.includes(kw)) { score += 4; kwMatched = true; }
+      if (catName.includes(kw)) { score += 2; kwMatched = true; }
+      if (brandName.includes(kw)) { score += 2; kwMatched = true; }
+      if (specsText.includes(kw)) { score += 1; kwMatched = true; }
+      if (kwMatched) matchedKeywordsCount += 1;
     }
     // عبارت کامل هم بیاید → امتیاز ویژه
     if (keywords.length >= 2 && normName.includes(normMsg.slice(0, 40))) score += 4;
+    if (!options.relaxedCoverage && keywords.length >= 2 && matchedKeywordsCount < Math.ceil(keywords.length / 2)) score = 0;
     return { p, score };
   })
-    .filter((s) => s.score > 0)
+    .filter((s) => s.score >= MIN_RELEVANCE_SCORE && effectiveStock(s.p) > 0)
     .sort((a, b) => {
-      // اول کالاهای موجود
-      const sb = effectiveStock(b.p);
-      const sa = effectiveStock(a.p);
-      if ((sb > 0) !== (sa > 0)) return sb > 0 ? 1 : -1;
-      // سپس امتیاز تطابق
+      // امتیاز تطابق، سپس پرفروش‌ها (فقط موجودها از فیلتر بالا رد شده‌اند)
       if (b.score !== a.score) return b.score - a.score;
       // سپس پرفروش‌ها
       return (b.p.salesCount || 0) - (a.p.salesCount || 0);
@@ -321,7 +322,7 @@ function formatProductContext(products, now = new Date()) {
     const view = resolveProductDisplay(p, { now, activeSale: p.__activeSale || null });
     const price = view.price;
     const priceFa = Number(price || 0).toLocaleString('fa-IR');
-    const stockFa = stock > 0 ? `موجود (${Number(stock).toLocaleString('fa-IR')} عدد)` : 'ناموجود';
+    const stockFa = stock > 0 ? 'موجود در انبار' : 'ناموجود';
     const catName = (p.category && p.category.name) || '—';
     const brandName = (p.brand && p.brand.name) || '—';
     const specs = specList(p, 8);
@@ -333,7 +334,7 @@ function formatProductContext(products, now = new Date()) {
     const oldPrice = prevPrice
       ? `\n  قیمت قبل تخفیف: ${Number(prevPrice).toLocaleString('fa-IR')} تومان`
       : '';
-    return `[محصول ${i + 1} | شناسه: ${p._id}]\n  نام دقیق: ${p.name}\n  دسته: ${catName}\n  برند: ${brandName}\n  قیمت فعلی: ${priceFa} تومان${oldPrice}\n  موجودی دقیق: ${stockFa}\n  لینک: ${buildProductUrl(p)}\n  گارانتی: ${p.guarantee || '—'}\n  امتیاز: ${p.rating || 0} از ۵ (${p.numReviews || 0} دیدگاه)\n  مشخصات فنی:\n${specsText}\n  توضیح کوتاه: ${desc}`;
+    return `[محصول ${i + 1} | شناسه: ${p._id}]\n  نام دقیق: ${p.name}\n  دسته: ${catName}\n  برند: ${brandName}\n  قیمت فعلی: ${priceFa} تومان${oldPrice}\n  وضعیت موجودی: ${stockFa}\n  لینک: ${buildProductUrl(p)}\n  گارانتی: ${p.guarantee || '—'}\n  امتیاز: ${p.rating || 0} از ۵ (${p.numReviews || 0} دیدگاه)\n  مشخصات فنی:\n${specsText}\n  توضیح کوتاه: ${desc}`;
   }).join('\n------------------\n');
 }
 
@@ -363,7 +364,7 @@ function toCardPayload(p, extra = {}) {
     brand: (p.brand && p.brand.name) || undefined,
     rating: Number(p.rating) || 0,
     reviewCount: Number(p.numReviews) || 0,
-    countInStock: stock,
+    countInStock: stock > 0 ? Math.min(stock, 10) : 0,
     inStock: stock > 0,
     url: buildProductUrl(p),
     specs: specList(p, 6),
@@ -429,7 +430,7 @@ async function buildPackage(message, history = []) {
 
   const results = await Promise.all(domain.components.map(async (component) => {
     try {
-      const { products } = await searchProducts(component.keywords.join(' '), history);
+      const { products } = await searchProducts(component.keywords.join(' '), history, { relaxedCoverage: true });
       // فیلتر ارتباط معنایی: حداقل یکی از عبارت‌های جزء باید در نام/توضیح/دسته/مشخصات باشد
       // (جلوگیری از قاطی‌شدن، مثلاً دوربینِ «تحت شبکه» نباید در بخش «سوئیچ شبکه» بیاید)
       const phrases = component.keywords.map((k) => normalizeFa(k)).filter((k) => k.length >= 2);
@@ -476,14 +477,90 @@ function formatPackageContext(pkg) {
     lines.push(`[بخش: ${s.title}]${s.optional ? ' (اختیاری)' : ''}`);
     s.options.forEach((o, i) => {
       const priceFa = Number(o.price || 0).toLocaleString('fa-IR');
-      const stockFa = Number(o.countInStock || 0).toLocaleString('fa-IR');
-      lines.push(`  - ${i === 0 ? '(پیشنهاد پیش‌فرض) ' : ''}«${o.name}» | قیمت: ${priceFa} تومان | موجودی: ${stockFa} عدد | شناسه: ${o.id}`);
+      const stockFa = o.inStock ? 'موجود' : 'ناموجود';
+      lines.push(`  - ${i === 0 ? '(پیشنهاد پیش‌فرض) ' : ''}«${o.name}» | قیمت: ${priceFa} تومان | وضعیت: ${stockFa} | شناسه: ${o.id}`);
     });
   });
   if (Array.isArray(pkg.missing) && pkg.missing.length > 0) {
     lines.push(`اجزای بدون موجودی فعلاً (صادقانه اعلام کن، جایگزین اختراع نکن): ${pkg.missing.join('، ')}`);
   }
   return lines.join('\n');
+}
+
+/** اسلات‌های نیازسنجی از متن کاربر (خالص و بدون DB) */
+function extractConsultationSlots(message) {
+  const norm = normalizeFa(message || '');
+  const slots = {};
+  const hasIn = /(داخل|داخلی|منزل|خانه|indoor)/.test(norm);
+  const hasOut = /(فضای باز|بیرون|حیاط|باغ|ضداب|ضدآب|outdoor)/.test(norm);
+  if (hasIn && hasOut) slots.environment = 'mixed';
+  else if (hasOut) slots.environment = 'outdoor';
+  else if (hasIn) slots.environment = 'indoor';
+  if (/(تحت شبکه|ای پی|\bip\b|poe)/i.test(norm)) slots.techOrQuality = 'ip';
+  else if (/(انالوگ|آنالوگ|\bahd\b|ای اچ دی)/i.test(norm)) slots.techOrQuality = 'ahd';
+  else if (/(حرفه ای|حرفه‌ای|کیفیت بالا|\bpro\b)/i.test(norm)) slots.techOrQuality = 'pro';
+  else if (/(اقتصادی|ارزان|باصرفه|با صرفه|بودجه کم)/.test(norm)) slots.techOrQuality = 'economic';
+  if (/(کارخانه|انبار بزرگ|صنعتی|سوله)/.test(norm)) slots.scaleOrUsage = 'industrial';
+  else if (/(مغازه|فروشگاه|دفتر|محل کار|شرکت)/.test(norm)) slots.scaleOrUsage = 'shop';
+  else if (/(منزل|خانه|اپارتمان|آپارتمان|ویلا|باغ)/.test(norm)) slots.scaleOrUsage = 'home';
+  else if (/\d+\s*(تا|عدد|دوربین|کانال)/.test(norm)) slots.scaleOrUsage = 'count';
+  return slots;
+}
+
+function consultationSlotCount(state) {
+  const s = (state && state.collectedSlots) || {};
+  return ['environment', 'techOrQuality', 'scaleOrUsage'].filter((k) => s[k]).length;
+}
+
+/** پیش‌برد ماشین وضعیت مشاوره؛ با حداقل ۲ اسلات آماده پیشنهاد است */
+function advanceConsultation(prev, message) {
+  const wasActive = Boolean(prev && prev.active);
+  const slots = { ...((prev && prev.collectedSlots) || {}), ...extractConsultationSlots(message) };
+  const norm = normalizeFa(message || '');
+  const categoryHint = /(دوربین|camera)/i.test(norm) ? 'camera' : ((prev && prev.categoryHint) || '');
+  const next = {
+    active: wasActive || isAdvisoryRequest(message) || Object.keys(extractConsultationSlots(message)).length > 0,
+    categoryHint,
+    collectedSlots: slots,
+    questionsAsked: (Number(prev && prev.questionsAsked) || 0) + (wasActive ? 1 : 0),
+    readyToRecommend: false,
+    updatedAt: new Date(),
+  };
+  next.readyToRecommend = consultationSlotCount(next) >= 2;
+  if (next.readyToRecommend) next.active = false;
+  return next;
+}
+
+function buildConsultationPrompt(state) {
+  const s = (state && state.collectedSlots) || {};
+  const missing = [];
+  if (!s.environment) missing.push('محل نصب کجاست؟\n[[CHOICE:فضای داخلی (منزل/مغازه)|فضای باز و حیاط (ضدآب)]]');
+  if (!s.techOrQuality) missing.push('چه سطحی از کیفیت و بودجه را در نظر دارید؟\n[[CHOICE:اقتصادی و باصرفه (آنالوگ AHD)|حرفه‌ای و کیفیت بالا (تحت شبکه IP)]]');
+  if (!s.scaleOrUsage) missing.push('کاربری اصلی کجاست؟\n[[CHOICE:منزل/آپارتمان|مغازه/محل کار]]');
+  return 'کاربر در حال نیازسنجی است و هنوز مشخصات کافی نداده است. یک نکته فنی کوتاه (حداکثر ۲ جمله) بگو، بعد فقط سوال بعدی را با دکمه دوگزینه‌ای بپرس و هیچ محصولی معرفی نکن:\n'
+    + (missing[0] || missing.join('\n'));
+}
+
+/**
+ * طبقه‌بندی نیت قبل از RAG
+ * @returns {'GREETING'|'SUPPORT_FAQ'|'ORDER_TRACKING'|'CONSULTATION_NEEDED'|'SPECIFIC_PRODUCT_SEARCH'|'PACKAGE_WIZARD'}
+ */
+function classifyChatIntent(message, history = [], consultationState = null) {
+  const norm = normalizeFa(message || '');
+  if (!norm) return 'GREETING';
+  if (/^(سلام|درود|خسته نباشید|وقت بخیر|صبح بخیر|عصر بخیر|شب بخیر|ممنون|مرسی|متشکرم|تشکر|خداحافظ|بای|خوبی|چطوری)(\s|$)/.test(norm) && norm.split(' ').length <= 4) return 'GREETING';
+  if (/(سفارش من|پیگیری سفارش|کد رهگیری|بسته من|سفارشم کجاست|وضعیت سفارش)/.test(norm) || /\b[a-z]{2,4}-?\d{5,8}\b/i.test(norm)) return 'ORDER_TRACKING';
+  const hasProductModel = /[a-zA-Z]{2,}[0-9]{2,}|[0-9]{3,}/.test(norm);
+  const supportPatterns = /(شرایط ارسال|زمان ارسال|هزینه ارسال|پست|تیپاکس|پیک|تحویل حضوری|ادرس فروشگاه|آدرس فروشگاه|شماره تماس|تلفن پشتیبانی|ساعت کاری|شرایط مرجوعی|ضمانت بازگشت|نحوه پرداخت|درگاه پرداخت|اقساطی|چکی|نصب در محل|هزینه نصب|ارسال به شهرستان|ارسال چطور|ارسال چگونه)/;
+  if (supportPatterns.test(norm) && !hasProductModel) return 'SUPPORT_FAQ';
+  try {
+    const packCheck = detectPackRequest(message, history);
+    if (packCheck && packCheck.isPack) return 'PACKAGE_WIZARD';
+  } catch { /* ignore */ }
+  const hasSpecificSpecs = /(\d+\s*(مگاپیکسل|mp|کانال|ترابایت|tb|گیگ|امپر|آمپر|متر|میلیون|تومان))|(hikvision|dahua|هایک ویژن|داهوا|تیاندی|اپتینا|وسترن|سیگیت|بنفش|اسکای هاوک)/i.test(norm) || hasProductModel;
+  if (consultationState && consultationState.active && !consultationState.readyToRecommend) return 'CONSULTATION_NEEDED';
+  if (!hasSpecificSpecs && (isAdvisoryRequest(message) || /(چی|کدام|کدوم|بهتر|خوب|مناسب|معرفی|راهنمایی|مشاوره)/.test(norm))) return 'CONSULTATION_NEEDED';
+  return 'SPECIFIC_PRODUCT_SEARCH';
 }
 
 module.exports = {
@@ -498,6 +575,13 @@ module.exports = {
   oldPriceOf,
   defaultVariantOptions,
   isAdvisoryRequest,
+  classifyChatIntent,
+  extractConsultationSlots,
+  advanceConsultation,
+  buildConsultationPrompt,
+  consultationSlotCount,
+  MIN_RELEVANCE_SCORE,
+  MAX_PRODUCTS,
   detectPackRequest,
   buildPackage,
   formatPackageContext,

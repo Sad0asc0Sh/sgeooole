@@ -56,6 +56,7 @@ function sanitizeMessages(input: unknown): Message[] {
         if (msg.role === "ai") {
             if (Array.isArray(msg.products)) clean.products = msg.products as Message["products"];
             if (msg.package && typeof msg.package === "object") clean.package = msg.package as Message["package"];
+            if (msg.wizard && typeof msg.wizard === "object") clean.wizard = msg.wizard as Message["wizard"];
             if (Array.isArray(msg.quickReplies)) clean.quickReplies = msg.quickReplies as Message["quickReplies"];
         }
         // پیام خالیِ بدون هیچ پیوستی (مثلاً استریم ناتمام) به‌درد بازسازی نمی‌خورد
@@ -63,6 +64,7 @@ function sanitizeMessages(input: unknown): Message[] {
             clean.content.trim().length > 0 ||
             (clean.products && clean.products.length > 0) ||
             Boolean(clean.package) ||
+            Boolean(clean.wizard) ||
             Boolean(clean.quickReplies?.length);
         if (!hasPayload) continue;
         out.push(clean);
@@ -99,11 +101,30 @@ export function loadChatCache(cacheKey: string): CachedChat | null {
     }
 }
 
+export function clearAllChatCaches(): void {
+    try {
+        const store = storage();
+        if (!store) return;
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < store.length; i++) {
+            const k = store.key(i);
+            if (k && k.startsWith("ekgkala_ai_chat_")) keysToRemove.push(k);
+        }
+        keysToRemove.forEach((k) => store.removeItem(k));
+    } catch {
+        // ignore
+    }
+}
+
 export function saveChatCache(cacheKey: string, messages: Message[], usage: ChatCacheUsage | null): void {
     try {
         const store = storage();
         if (!store || !cacheKey) return;
         const clean = sanitizeMessages(messages);
+        if (clean.length === 0) {
+            store.removeItem(cacheKey);
+            return;
+        }
         store.setItem(
             cacheKey,
             JSON.stringify({ messages: clean, usage: isValidUsage(usage) ? usage : null, savedAt: Date.now() }),
