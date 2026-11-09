@@ -143,6 +143,8 @@ function markProviderFailure(providerId) {
 
 function isRetryableProviderError(error) {
   if (error?.code === 'ERR_CANCELED') return false;
+  // پاسخ خالی (۲۰۰ بدون متن) موقت/وابسته به ارائه‌دهنده تلقی می‌شود تا failover انجام شود.
+  if (error?.isEmptyProviderResponse) return true;
   const status = error?.response?.status;
   if (status) return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
   return [
@@ -341,22 +343,106 @@ function requestOptions(provider, signal, responseType) {
   };
 }
 
-async function requestCompletion(provider, messages, signal) {
+/**
+ * متن پاسخ را از شیء message/delta بیرون می‌کشد: رشته، یا آرایه قطعه‌های متنی
+ * (قالب بعضی ارائه‌دهنده‌های OpenAI-compatible که content را آرایه برمی‌گردانند).
+ */
+function extractMessageText(holder) {
+  const content = holder?.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content.map((part) => {
+      if (typeof part === 'string') return part;
+      if (part && typeof part.text === 'string') return part.text;
+      return '';
+    }).join('');
+  }
+  return '';
+}
+
+function emptyResponseError() {
+  const error = new AIServiceError('ارائه‌دهنده پاسخ خالی برگرداند.', 502);
+  error.isEmptyProviderResponse = true;
+  return error;
+}
+
+/**
+ * لاگ تشخیصی پاسخ خالی (HTTP 200 بدون متن نهایی) — فقط فراداده (finish_reason،
+ * توکن‌ها، حضور/طول فیلد استدلال، نوع content)؛ متن خام پاسخ و کلید هرگز لاگ نمی‌شود.
+ * هدف: دفعه بعد از روی لاگ سرور معلوم باشد مدل به سقف توکن خورده (length)،
+ * استدلالش را در فیلد جدا فرستاده، یا اصلاً متنی برنگشته است.
+ */
+function logEmptyResponse(stage, provider, info = {}) {
+  try {
+    console.error(
+      `[AI] empty response (${stage}) | provider="${provider?.name || '?'}" model="${provider?.model || '?'}" `
+      + `finish_reason=${info.finishReason || '-'} completion_tokens=${info.usage?.completion_tokens ?? '-'} `
+      + `reasoning_chars=${info.reasoningChars ?? 0} content_type=${info.contentType || '-'}`,
+    );
+  } catch { /* logging must never throw */ }
+}
+
+function reasoningCharsOf(holder) {
+  const reasoning = holder?.reasoning_content ?? holder?.reasoning ?? '';
+  return typeof reasoning === 'string' ? reasoning.length : 0;
+}
+
+/** یک پله افزایش سقف توکن برای تلاش مجدد پس از پاسخ خالی (مدل‌های استدلالی اول «فکر» می‌کنند و بعد جواب می‌دهند). */
+function boostedMaxTokens(current) {
+  const base = Number(current) || 1500;
+  return Math.min(Math.max(base * 2, base + 1024), 8192);
+}
+
+async function requestCompletion(provider, messages, signal, maxTokensOverride) {
   const response = await axios.post(
     `${provider.baseUrl}/chat/completions`,
     {
       model: provider.model,
       messages,
       temperature: provider.temperature,
-      max_tokens: provider.maxTokens,
+      max_tokens: maxTokensOverride || provider.maxTokens,
     },
     requestOptions(provider, signal),
   );
-  const rawMessage = response.data?.choices?.[0]?.message?.content?.trim();
-  if (!rawMessage) throw new AIServiceError('ارائه‌دهنده پاسخ خالی برگرداند.', 502);
+  const choice = response.data?.choices?.[0];
+  const rawMessage = extractMessageText(choice?.message).trim();
+  if (!rawMessage) {
+    logEmptyResponse('request', provider, {
+      finishReason: choice?.finish_reason,
+      usage: response.data?.usage,
+      reasoningChars: reasoningCharsOf(choice?.message),
+      contentType: Array.isArray(choice?.message?.content) ? 'array' : typeof choice?.message?.content,
+    });
+    throw emptyResponseError();
+  }
   const message = stripThinkingTags(rawMessage);
-  if (!message) throw new AIServiceError('ارائه‌دهنده پاسخ خالی برگرداند.', 502);
+  if (!message) {
+    // کل خروجی داخل <think> بوده و پاسخ نهایی نرسیده — معمولاً یعنی سقف توکن وسط استدلال تمام شده.
+    logEmptyResponse('request-think-only', provider, {
+      finishReason: choice?.finish_reason,
+      usage: response.data?.usage,
+      reasoningChars: reasoningCharsOf(choice?.message),
+      contentType: typeof rawMessage,
+    });
+    throw emptyResponseError();
+  }
   return message;
+}
+
+/**
+ * تلاش روی یک ارائه‌دهنده؛ اگر پاسخ خالی برگشت، یک بار با سقف توکن بالاتر تکرار می‌شود
+ * (درمان مستقیمِ تمام‌شدن بودجه توکن وسط استدلال مدل‌های reasoning) و بعد نوبت failover است.
+ */
+async function requestWithBoostRetry(provider, messages, signal) {
+  try {
+    return await requestCompletion(provider, messages, signal);
+  } catch (error) {
+    if (!error?.isEmptyProviderResponse) throw error;
+    const boosted = boostedMaxTokens(provider.maxTokens);
+    if (boosted <= (Number(provider.maxTokens) || 0)) throw error;
+    console.warn(`[AI] empty response from "${provider.name}"; retrying once with max_tokens=${boosted}`);
+    return requestCompletion(provider, messages, signal, boosted);
+  }
 }
 
 /**
@@ -390,7 +476,7 @@ exports.generateExpertResponse = async (userMessage, productContext, chatHistory
 
   for (const provider of candidates) {
     try {
-      const message = await requestCompletion(provider, messages, options.signal);
+      const message = await requestWithBoostRetry(provider, messages, options.signal);
       markProviderSuccess(provider.id);
       return { message, provider: { name: provider.name, source: provider.source } };
     } catch (error) {
@@ -425,7 +511,7 @@ async function consumeProviderStream(provider, messages, res, options = {}) {
       model: provider.model,
       messages,
       temperature: provider.temperature,
-      max_tokens: provider.maxTokens,
+      max_tokens: options.maxTokensOverride || provider.maxTokens,
       stream: true,
       stream_options: { include_usage: true },
     },
@@ -436,6 +522,9 @@ async function consumeProviderStream(provider, messages, res, options = {}) {
   let buffer = '';
   let tokenSent = false;
   let providerError = null;
+  let finishReason = null;
+  let streamUsage = null;
+  let reasoningChars = 0;
   const filter = new ThinkingFilter();
 
   try {
@@ -453,7 +542,10 @@ async function consumeProviderStream(provider, messages, res, options = {}) {
           providerError.response = { status: event.error.status || 502 };
           throw providerError;
         }
-        const token = event.choices?.[0]?.delta?.content;
+        if (event.choices?.[0]?.finish_reason) finishReason = event.choices[0].finish_reason;
+        if (event.usage) streamUsage = event.usage;
+        reasoningChars += reasoningCharsOf(event.choices?.[0]?.delta);
+        const token = extractMessageText(event.choices?.[0]?.delta);
         if (token) {
           const cleanToken = filter.process(token);
           if (cleanToken) {
@@ -467,7 +559,10 @@ async function consumeProviderStream(provider, messages, res, options = {}) {
 
     if (buffer.trim()) {
       const event = parseSseBlock(buffer);
-      const token = event?.choices?.[0]?.delta?.content;
+      if (event?.choices?.[0]?.finish_reason) finishReason = event.choices[0].finish_reason;
+      if (event?.usage) streamUsage = event.usage;
+      reasoningChars += reasoningCharsOf(event?.choices?.[0]?.delta);
+      const token = extractMessageText(event?.choices?.[0]?.delta);
       if (token) {
         const cleanToken = filter.process(token);
         if (cleanToken) {
@@ -492,8 +587,36 @@ async function consumeProviderStream(provider, messages, res, options = {}) {
 
   if (providerError) throw providerError;
   const finalMessage = stripThinkingTags(content);
-  if (!finalMessage) throw new AIServiceError('ارائه‌دهنده پاسخ خالی برگرداند.', 502);
+  if (!finalMessage) {
+    // استریم تمام شد ولی هیچ متن نهایی‌ای نرسید: یا استدلال مدل کل سقف توکن را خورد،
+    // یا ارائه‌دهنده متن را فقط در فیلد استدلال (reasoning) فرستاد که به کاربر نشان داده نمی‌شود.
+    logEmptyResponse('stream', provider, {
+      finishReason,
+      usage: streamUsage,
+      reasoningChars,
+      contentType: 'stream',
+    });
+    const error = emptyResponseError();
+    error.tokenSent = tokenSent;
+    throw error;
+  }
   return { message: finalMessage, tokenSent };
+}
+
+/**
+ * تلاش استریم روی یک ارائه‌دهنده؛ اگر پیش از ارسال نخستین توکن پاسخ خالی برگشت،
+ * یک بار با سقف توکن بالاتر تکرار می‌شود و بعد نوبت failover است.
+ */
+async function consumeWithBoostRetry(provider, messages, res, options = {}) {
+  try {
+    return await consumeProviderStream(provider, messages, res, options);
+  } catch (error) {
+    if (!error?.isEmptyProviderResponse || error?.tokenSent) throw error;
+    const boosted = boostedMaxTokens(provider.maxTokens);
+    if (boosted <= (Number(provider.maxTokens) || 0)) throw error;
+    console.warn(`[AI] empty stream from "${provider.name}"; retrying once with max_tokens=${boosted}`);
+    return consumeProviderStream(provider, messages, res, { ...options, maxTokensOverride: boosted });
+  }
 }
 
 /**
@@ -512,7 +635,7 @@ exports.streamExpertResponse = async (res, userMessage, productContext, chatHist
 
   for (const provider of candidates) {
     try {
-      const result = await consumeProviderStream(provider, messages, res, options);
+      const result = await consumeWithBoostRetry(provider, messages, res, options);
       markProviderSuccess(provider.id);
       return {
         message: result.message,
@@ -556,4 +679,6 @@ exports.__private__ = {
   forwardBuildOptions,
   stripThinkingTags,
   ThinkingFilter,
+  extractMessageText,
+  boostedMaxTokens,
 };

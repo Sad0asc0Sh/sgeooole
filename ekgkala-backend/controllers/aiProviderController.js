@@ -151,7 +151,9 @@ exports.testConnection = async (req, res) => {
       {
         model,
         messages: [{ role: 'user', content: 'سلام' }],
-        max_tokens: 10,
+        // ۱۰ توکن برای مدل‌های استدلالی کافی نیست و تست را گمراه‌کننده می‌کرد؛
+        // مدل اول «فکر» می‌کند و با سقف خیلی کم، متن نهایی اصلاً تولید نمی‌شود.
+        max_tokens: 512,
       },
       {
         headers: {
@@ -164,13 +166,25 @@ exports.testConnection = async (req, res) => {
       }
     )
     if (response.data?.choices?.[0]) {
+      // موفقیت واقعی یعنی متن نهاییِ غیرخالی؛ وجود choice به‌تنهایی کافی نیست —
+      // دقیقاً همین حالت (۲۰۰ با content خالی) چت‌بات را با خطای «پاسخ خالی» از کار می‌انداخت
+      // درحالی‌که تست اتصال سبز نشان داده می‌شد.
+      const rawContent = response.data.choices[0].message?.content
+      const replyText = (typeof rawContent === 'string'
+        ? rawContent
+        : Array.isArray(rawContent)
+          ? rawContent.map((part) => (typeof part?.text === 'string' ? part.text : '')).join('')
+          : '').trim()
+      if (!replyText) {
+        throw new Error('مدل پاسخ خالی برگرداند؛ اتصال برقرار است اما متن نهایی تولید نشد (برای مدل‌های استدلالی سقف توکن خروجی ارائه‌دهنده را بالاتر ببرید یا مدل را عوض کنید).')
+      }
       if (req.params.id) {
         await AiProvider.findByIdAndUpdate(req.params.id, {
           lastTestedAt: new Date(),
           lastTestResult: 'success',
         })
       }
-      return res.json({ success: true, message: 'اتصال موفق! مدل پاسخ داد.', data: { reply: response.data.choices[0].message?.content } })
+      return res.json({ success: true, message: 'اتصال موفق! مدل پاسخ داد.', data: { reply: replyText } })
     }
     throw new Error('پاسخ نامعتبر از API')
   } catch (error) {
