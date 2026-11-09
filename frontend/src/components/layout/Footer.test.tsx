@@ -82,9 +82,17 @@ describe("Footer architectural widescreen & brand positioning", () => {
         fireEvent.click(backToTopBtn);
         expect(scrollSpy).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
 
-        // Enamad seal preserved
+        // Enamad seal preserved — and in the exact form Enamad issues it:
+        // referrerpolicy='origin' and NO rel. rel='noreferrer' strips the
+        // Referer Enamad verifies the click by, and its verification page
+        // then shows only its shell without the business details.
         const enamadAnchor = container.querySelector('a[href*="trustseal.enamad.ir/?id=693453"]');
         expect(enamadAnchor).not.toBeNull();
+        expect(enamadAnchor).toHaveAttribute("referrerpolicy", "origin");
+        expect(enamadAnchor?.getAttribute("rel")).toBeNull();
+        expect(enamadAnchor?.querySelector("img")?.getAttribute("src")).toContain(
+            "trustseal.enamad.ir/logo.aspx?id=693453"
+        );
 
         // Dynamic settings fetched & rendered cleanly
         await waitFor(() => {
