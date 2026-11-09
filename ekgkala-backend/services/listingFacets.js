@@ -499,6 +499,22 @@ function propertyFacetBranch(index, { criteria = [], ...context } = {}) {
 }
 
 /**
+ * منبع حقیقتِ شمارش فست‌ها = `properties` (باکت‌شده در زمان ذخیره).
+ *
+ * `prepareProductSpecsAndDescription` گزینه‌های متغیر را هم نرمال‌شده وارد
+ * `properties` می‌کند، اما خودِ `variants[].options` با مقدار *خام* می‌ماند. اگر
+ * هر دو منبع با هم شمرده شوند، یک واقعیت دو بار می‌آید («بدون ریموت» خام +
+ * «ندارد» باکت‌شده، یا «پلاستیک فشرده (ABS)» + «پلاستیک»). برای برچسب
+ * چندکلمه‌ای هم کلید برچسب دو منبع فرق دارد (`normLabel` بدون فاصله، `name` خام
+ * با فاصله) و در ادغام نهایی شمارش‌ها جمع می‌شوند و از تعداد واقعی محصولات
+ * بیشتر می‌شود.
+ *
+ * بنابراین گزینه‌های خام متغیر فقط برای محصولی شمرده می‌شوند که هنوز هیچ
+ * `properties` ندارد (داده‌ی قدیمیِ نرمال‌نشده).
+ */
+const hasNormalizedProperties = { $gt: [{ $size: { $ifNull: ['$properties', []] } }, 0] }
+
+/**
  * شاخه‌ی شمارش مقادیر یک ویژگی برای فست.
  *
  * نکته‌ی مهم (Phase Hardening ۱): گروه‌بندی روی «کلید مقایسه‌ای» انجام می‌شود
@@ -554,7 +570,7 @@ function propertyFacetBranchWithCounts(criterion, index, context = {}) {
 
   return [
     ...propertyFacetBranch(index, context),
-    { $project: { pairs: { $setUnion: [propPairs, variantPairs] } } },
+    { $project: { pairs: { $cond: [hasNormalizedProperties, propPairs, variantPairs] } } },
     { $unwind: '$pairs' },
     { $match: { 'pairs.k': { $nin: [null, ''] } } },
     // یک‌بار برای هر سند یکتا می‌شود (یک محصول، یک شمارش به ازای هر مقدار)
@@ -575,7 +591,9 @@ function propertyFacetBranchWithCounts(criterion, index, context = {}) {
  * نوار Quick Filter Pills خالی می‌ماند.
  *
  * این شاخه یک‌بار روی کل نتایج منطبق اجرا می‌شود و همه‌ی جفت‌های
- * (برچسب، مقدار) را از `properties` و `variants.options` می‌شمارد.
+ * (برچسب، مقدار) را از `properties` می‌شمارد؛ `variants.options` فقط برای
+ * محصولِ بدون `properties` (داده‌ی قدیمی) جایگزین می‌شود — توضیح در
+ * `hasNormalizedProperties`.
  */
 function basePropertiesFacetBranch({ definiteMatches = [], priceMatch = [], maxBuckets = 500 } = {}) {
   const labelKey = { $ifNull: ['$$p.normLabel', '$$p.label'] }
@@ -613,7 +631,7 @@ function basePropertiesFacetBranch({ definiteMatches = [], priceMatch = [], maxB
   return [
     ...definiteMatches,
     ...priceMatch,
-    { $project: { pairs: { $setUnion: [propPairs, variantPairs] } } },
+    { $project: { pairs: { $cond: [hasNormalizedProperties, propPairs, variantPairs] } } },
     { $unwind: '$pairs' },
     { $match: { 'pairs.valKey': { $nin: [null, ''] }, 'pairs.labelKey': { $nin: [null, ''] } } },
     // یک محصول برای یک (برچسب، مقدار) فقط یک بار شمرده می‌شود
@@ -666,7 +684,8 @@ function computeFacetUtilityScore(values, totalItems, { isCore = false, isConfig
   const coverage = Math.min(1, n / denom)
 
   if (k === 1) {
-    return (isPinned ? 2.0 : isCore ? 1.5 : isConfigured ? 1.2 : 0.5) * coverage
+    // ویژگی تک‌مقداره (Entropy = 0) قدرت تفکیک ندارد و نباید بالاتر از ویژگی‌های چندمقداره‌ی تفکیک‌کننده بنشیند
+    return (isPinned ? 0.85 : isCore ? 0.65 : isConfigured ? 0.35 : 0.15) * coverage
   }
 
   let H = 0

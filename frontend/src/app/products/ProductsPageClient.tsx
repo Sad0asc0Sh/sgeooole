@@ -36,6 +36,7 @@ import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import ProductListingSkeleton from "@/components/product/ProductListingSkeleton";
 import { useRouteLoadingState } from "@/providers/RouteLoadingProvider";
 import { parsePriceInput, parseProductFilters } from "@/lib/productFilters";
+import { buildQuickFilters } from "@/lib/quickFilters";
 
 // ─── Sort Options ────────────────────────────────────────────────
 const SORT_OPTIONS = [
@@ -557,7 +558,7 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
 
   const propertyOptions = useMemo(() => {
     const metadata = categoryDetails?.slug === categorySlug ? categoryDetails.properties.filter((prop) => prop.isFilterable !== false) : [];
-    const properties: Array<{ name: string; key?: string; unit?: string; isPinned?: boolean; isConfigured?: boolean; defaultOpen?: boolean; values: Array<{ value: string; count?: number; isSelected?: boolean }> }> = facets?.properties
+    const properties: Array<{ name: string; key?: string; unit?: string; isPinned?: boolean; isConfigured?: boolean; utilityScore?: number; defaultOpen?: boolean; values: Array<{ value: string; count?: number; isSelected?: boolean }> }> = facets?.properties
       ? facets.properties.map((prop) => ({ ...prop, unit: prop.unit || metadata.find((item) => item.name === prop.name)?.unit, values: [...prop.values] }))
       : metadata.map((prop) => ({ name: prop.name, unit: prop.unit, values: (prop.options || []).map((value) => ({ value })) }));
     Object.entries(selectedProperties).forEach(([name, selected]) => {
@@ -570,39 +571,14 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
     return properties;
   }, [categoryDetails, categorySlug, facets?.properties, selectedProperties]);
 
-  // ─── فیلترهای سریع بالای لیست (Quick Filter Pills) — Phase 4.2 ───
-  // ۳ تا ۴ ویژگی برتر: اول پین‌شده‌ها، بعد بیشترین پوشش. از هر ویژگی
-  // حداکثر دو مقدار پرتکرار به‌صورت چیپ نمایش داده می‌شود تا کاربر بدون
-  // اسکرول در سایدبار، کلیدترین فیلترها را با یک کلیک اعمال کند.
-  const quickFilters = useMemo(() => {
-    if (!propertyOptions.length) return [] as Array<{ property: string; value: string; count: number; selected: boolean }>;
-    const coverage = (prop: (typeof propertyOptions)[number]) =>
-      prop.values.reduce((sum, item) => sum + (item.count ?? 0), 0);
-    const ranked = propertyOptions
-      .filter((prop) => prop.values.some((item) => (item.count ?? 0) > 0 || (item.isSelected ?? false)))
-      .sort((a, b) => {
-        if (Boolean(b.isPinned) !== Boolean(a.isPinned)) return b.isPinned ? 1 : -1;
-        return coverage(b) - coverage(a);
-      })
-      .slice(0, 4);
-
-    const pills: Array<{ property: string; value: string; count: number; selected: boolean }> = [];
-    for (const prop of ranked) {
-      const top = [...prop.values]
-        .filter((item) => (item.count ?? 0) > 0 || selectedProperties[prop.name]?.includes(item.value))
-        .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-        .slice(0, 2);
-      for (const item of top) {
-        pills.push({
-          property: prop.name,
-          value: item.value,
-          count: item.count ?? 0,
-          selected: Boolean(selectedProperties[prop.name]?.includes(item.value)),
-        });
-      }
-    }
-    return pills.slice(0, 8);
-  }, [propertyOptions, selectedProperties]);
+  // ─── فیلترهای سریع بالای لیست (Quick Filter Pills) ───
+  // منطق انتخاب در `@/lib/quickFilters` است (قابل تست بدون React). هر چیپ
+  // «نام ویژگی: مقدار» نشان داده می‌شود، مقدار منفیِ ساده («ندارد») و مقداری که
+  // همه‌ی نتایج دارند چیپ نمی‌شود و دو املای یک مقدار یکی می‌شوند.
+  const quickFilters = useMemo(
+    () => buildQuickFilters(propertyOptions, selectedProperties, { total }),
+    [propertyOptions, selectedProperties, total],
+  );
 
   // Find active category name for chips
   const activeCategoryName = useMemo(() => {
@@ -1170,7 +1146,12 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
                           style={{ backgroundColor: color }}
                         />
                       )}
-                      <span>{pill.value}</span>
+                      <span>
+                        {pill.prefix && (
+                          <span className={pill.selected ? "text-white/75" : "text-gray-400"}>{pill.prefix}: </span>
+                        )}
+                        {pill.value}
+                      </span>
                       {pill.count > 0 && (
                         <span className={`tabular-nums ${pill.selected ? "text-white/80" : "text-gray-400"}`}>
                           {pill.count.toLocaleString("fa-IR")}

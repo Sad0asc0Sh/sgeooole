@@ -713,12 +713,25 @@ const sanitizeVariantsForSave = (variants) => {
       const n = Number(copy.stock)
       if (!Number.isFinite(n)) copy.stock = 0
     }
-    // اطمینان از رشته بودن name/value در options (اگر آبجکت آمده باشد رشته می‌شود)
+    // اطمینان از رشته بودن name/value در options + محاسبه normLabel/normValue برای تطبیق دقیق فست و فیلتر متغیرها
     if (Array.isArray(copy.options)) {
+      const { canonicalizeSpecLabel, normalizeBucketValue, normCompareKey, toValueKey } = require('../services/specNormalization')
       copy.options = copy.options
         .filter((o) => o && o.name != null && o.value != null)
-        .map((o) => ({ name: String(o.name).trim(), value: String(o.value).trim() }))
-        .filter((o) => o.name !== '' && o.value !== '')
+        .map((o) => {
+          const name = String(o.name).trim()
+          const value = String(o.value).trim()
+          if (!name || !value) return null
+          const canonicalLabel = canonicalizeSpecLabel(name) || name
+          const bucketVal = normalizeBucketValue(canonicalLabel, value) || value
+          return {
+            name,
+            value,
+            normLabel: normCompareKey(canonicalLabel),
+            normValue: toValueKey(bucketVal),
+          }
+        })
+        .filter(Boolean)
     }
     // تیک تخفیف وariant: فقط true واقعی مستثنی می‌کند؛ بقیه (false/undefined/رشته) => شامل تخفیف.
     // نرمال‌سازی به boolean تا ورودی‌های آلوده ذخیره نشوند؛ رفتار داده‌های قدیمی حفظ می‌شود.

@@ -83,9 +83,32 @@ async function main() {
       continue
     }
 
+    const { canonicalizeSpecLabel, normalizeBucketValue, normCompareKey, toValueKey } = require('../services/specNormalization')
     const setFields = {
       properties: prepared.properties,
       specifications: prepared.specifications,
+    }
+    if (Array.isArray(product.variants) && product.variants.length > 0) {
+      setFields.variants = product.variants.map((v) => {
+        if (!v || !Array.isArray(v.options)) return v
+        return {
+          ...v,
+          options: v.options.map((o) => {
+            if (!o || !o.name || !o.value) return o
+            const name = String(o.name).trim()
+            const value = String(o.value).trim()
+            const canonicalLabel = canonicalizeSpecLabel(name) || name
+            const bucketVal = normalizeBucketValue(canonicalLabel, value) || value
+            return {
+              ...o,
+              name,
+              value,
+              normLabel: normCompareKey(canonicalLabel),
+              normValue: toValueKey(bucketVal),
+            }
+          }),
+        }
+      })
     }
     if (typeof product.description === 'string' && product.description.trim()) {
       setFields.description = prepared.description

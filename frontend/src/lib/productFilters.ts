@@ -19,6 +19,8 @@ export type ProductFilterFacetProperty = {
   isConfigured?: boolean;
   /** در دسته‌بندی پین شده است (فیلتر سریع) */
   isPinned?: boolean;
+  /** امتیاز مفید بودن ویژگی در نتایج فعلی (آنتروپی/پوشش) از `rankAndFormatPropertyFacets` */
+  utilityScore?: number;
   defaultOpen?: boolean;
   values: ProductFilterFacetValue[];
 };

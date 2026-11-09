@@ -108,10 +108,15 @@ const NEGATION_RE = new RegExp(NEGATION_PATTERNS.map((re) => re.source).join('|'
 // «بدون آینه» / «دارای» را هم بگیرد: نفی فارسی اغلب به‌صورت پیشوندی است
 const NEGATION_PREFIX_RE = /^(?:بدون|فاقد|عدم|غیر)[\s_\-]*/iu
 
+// عبارات مثبتی که با «بدون» شروع می‌شوند اما مفهوم ایجابی دارند («بدون سیم» = بی‌سیم، «بدون محدودیت»، «بدون نیاز به ...»)
+const POSITIVE_WITHOUT_RE =
+  /بدون[\s‌]*سیم|بدون[\s‌]*نیاز|بدون[\s‌]*محدودیت|بدون[\s‌]*نویز|بدون[\s‌]*تداخل|بدون[\s‌]*خطا|بدون[\s‌]*مانع/iu
+
 function isNegated(raw) {
   if (raw === null || raw === undefined) return false
   const text = normalizeText(raw)
   if (!text) return false
+  if (POSITIVE_WITHOUT_RE.test(text)) return false
   if (NEGATION_RE.test(text)) return true
   return NEGATION_PREFIX_RE.test(text)
 }
@@ -128,7 +133,7 @@ function normalizeBooleanValue(raw) {
   const text = normalizeText(raw)
   if (!text) return null
   if (FALSE_TOKENS.test(text)) return 'ندارد'
-  if (NEGATION_RE.test(text)) return 'ندارد'
+  if (!POSITIVE_WITHOUT_RE.test(text) && NEGATION_RE.test(text)) return 'ندارد'
   if (TRUE_TOKENS.test(text)) return 'دارد'
   if (!/\d/.test(text) && TRUE_PHRASE_RE.test(text)) return 'دارد'
   return null
@@ -596,13 +601,13 @@ const KEY_RULES = [
     match: /(برد\s*(عملکرد|کاری|حرکت|تشخیص)|range|coverage)/iu,
     map: (text) => {
       if (isNegated(text)) return null
-      if (/(حرکت|motion|pir)/iu.test(text)) return 'تشخیص حرکت'
-      if (/(نور|light|photocell)/iu.test(text)) return 'تشخیص نور'
-      if (/(صدا|sound|audio|acoustic)/iu.test(text)) return 'تشخیص صدا'
-      if (/(لرزش|vibration|shock)/iu.test(text)) return 'تشخیص لرزش'
-      if (/(دود|smoke)/iu.test(text)) return 'تشخیص دود'
-      if (/(حرارت|گرما|heat|thermal)/iu.test(text)) return 'تشخیص حرارت'
-      if (/(مغناطیس|magnetic|reed)/iu.test(text)) return 'تشخیص مغناطیسی'
+      if (/(?<!\p{L})(?:حرکت|motion|pir)(?!\p{L})/iu.test(text)) return 'تشخیص حرکت'
+      if (/(?<!\p{L})(?:نور|light|photocell)(?!\p{L})/iu.test(text)) return 'تشخیص نور'
+      if (/(?<!\p{L})(?:صدا|sound|audio|acoustic)(?!\p{L})/iu.test(text)) return 'تشخیص صدا'
+      if (/(?<!\p{L})(?:لرزش|vibration|shock)(?!\p{L})/iu.test(text)) return 'تشخیص لرزش'
+      if (/(?<!\p{L})(?:دود|smoke)(?!\p{L})/iu.test(text)) return 'تشخیص دود'
+      if (/(?<!\p{L})(?:حرارت|گرما|heat|thermal)(?!\p{L})/iu.test(text)) return 'تشخیص حرارت'
+      if (/(?<!\p{L})(?:مغناطیس|مغناطیسی|magnetic|reed)(?!\p{L})/iu.test(text)) return 'تشخیص مغناطیسی'
       return null
     },
   },
@@ -685,6 +690,9 @@ function isNonFilterableKey(label) {
 function normalizeBucketValue(label, rawValue) {
   const text = normalizeText(rawValue)
   if (!text) return null
+
+  // هم‌ارزی مستقیم «بدون سیم» با «بی‌سیم» پیش از بررسی نفی
+  if (/^(?:بدون[\s‌]*سیم)$/iu.test(text)) return 'بی‌سیم'
 
   // نفی همیشه اول
   if (isNegated(text)) return 'ندارد'
