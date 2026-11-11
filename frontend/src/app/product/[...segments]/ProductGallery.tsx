@@ -9,7 +9,8 @@ import "swiper/css/navigation";
 
 import ResilientImage from "@/components/ui/ResilientImage";
 import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { X, Heart, Share2, Printer, Check, MoreHorizontal } from "lucide-react";
+import { useWishlist } from "@/hooks/useWishlist";
 import { Product } from "@/services/productService";
 import type { Swiper as SwiperType } from "swiper";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -27,6 +28,38 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [initialSlide, setInitialSlide] = useState(0);
     const [activeIndex, setActiveIndex] = useState(0);
+    const { toggleWishlist, isInWishlist } = useWishlist();
+    const [copied, setCopied] = useState(false);
+
+    const isFavorite = isInWishlist(product.id);
+
+    const handleShare = async () => {
+        const productUrl = typeof window !== "undefined" ? window.location.href : "";
+        if (!productUrl) return;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: product.title,
+                    text: product.title,
+                    url: productUrl,
+                });
+                return;
+            } catch {
+                // Fall through to copy-link when share is dismissed.
+            }
+        }
+        try {
+            await navigator.clipboard.writeText(productUrl);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            try {
+                window.prompt("لینک محصول را کپی کنید:", productUrl);
+            } catch {
+                // Clipboard unavailable; nothing to do.
+            }
+        }
+    };
 
     // Preload the next slide in the background while the current one is shown.
     useEffect(() => {
@@ -297,11 +330,42 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 </SwiperSlide>
                             ))}
                         </Swiper>
+
+                        {/* Vertical action rail (mobile140 PDP parity): wishlist / share / print */}
+                        <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5">
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleWishlist(product); }}
+                                aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+                                className={`flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition-colors ${isFavorite
+                                    ? "bg-red-50 text-red-500"
+                                    : "bg-white/85 text-gray-700 hover:bg-white"
+                                    }`}
+                            >
+                                <Heart size={18} className={isFavorite ? "fill-red-500" : ""} />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                                aria-label={copied ? "لینک کپی شد" : "اشتراک‌گذاری"}
+                                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-gray-700 backdrop-blur hover:bg-white transition-colors"
+                            >
+                                {copied ? <Check size={18} /> : <Share2 size={18} />}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); window.print(); }}
+                                aria-label="چاپ مشخصات"
+                                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/85 text-gray-700 backdrop-blur hover:bg-white transition-colors"
+                            >
+                                <Printer size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div className="shrink-0 min-w-0 flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
-                    {product.images.map((img, index) => (
+                    {(product.images.length > 5 ? product.images.slice(0, 5) : product.images).map((img, index) => (
                         <button
                             key={index}
                             onClick={() => swiperRef.current?.slideTo(index)}
@@ -324,6 +388,27 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             />
                         </button>
                     ))}
+                    {product.images.length > 5 && (
+                        <button
+                            type="button"
+                            onClick={() => openGallery(5)}
+                            aria-label={`مشاهده ${product.images.length} تصویر`}
+                            className="relative w-12 h-12 lg:w-14 lg:h-14 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0 bg-white shadow-sm flex items-center justify-center"
+                        >
+                            <ResilientImage
+                                src={product.cardImages?.[5] || product.images[5]}
+                                alt={thumbnailAlt(5)}
+                                fill
+                                className="object-cover blur-sm opacity-50"
+                                sizes="(min-width: 1024px) 56px, 48px"
+                                loading="lazy"
+                                quality={60}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-gray-800">
+                                <MoreHorizontal size={20} aria-hidden />
+                            </span>
+                        </button>
+                    )}
                 </div>
             </div>
 

@@ -20,7 +20,7 @@ const { applyOwnPromotionRules, deactivateCampaign } = require('../services/prom
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
-const { authorizePricingSync } = require('../utils/pricingSyncAuth')
+const { authorizePricingSync, verifyPricingSyncSignature } = require('../utils/pricingSyncAuth')
 
 // ============================================
 // Persian/Arabic Character Normalization for Search
@@ -2988,12 +2988,42 @@ router.post('/pricing-sync', async (req, res) => {
     if (!auth.ok) {
       return res.status(auth.status).json({
         success: false,
+        ok: false,
+        valid: false,
         code: auth.code,
         message: auth.message,
       })
     }
 
-    const body = req.body || {}
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      return res.status(400).json({
+        success: false,
+        ok: false,
+        valid: false,
+        code: 'MALFORMED_PAYLOAD',
+        message: 'ساختار بدنه درخواست (JSON body) نامعتبر است',
+      })
+    }
+
+    const headerIdemKey = req.headers['x-idempotency-key']
+    const body = {
+      ...req.body,
+      ...(headerIdemKey && !req.body.idempotencyKey
+        ? { idempotencyKey: String(Array.isArray(headerIdemKey) ? headerIdemKey[0] : headerIdemKey).trim() }
+        : {}),
+    }
+
+    const sigAuth = verifyPricingSyncSignature(req.headers, body)
+    if (!sigAuth.ok) {
+      return res.status(sigAuth.status).json({
+        success: false,
+        ok: false,
+        valid: false,
+        code: sigAuth.code,
+        message: sigAuth.message,
+      })
+    }
+
     const {
       validatePricingSyncPayload,
       syncProductTimedSaleMembership,
@@ -3014,6 +3044,9 @@ router.post('/pricing-sync', async (req, res) => {
     if (query.length === 0) {
       return res.status(400).json({
         success: false,
+        ok: false,
+        valid: false,
+        code: 'MISSING_PRODUCT_IDENTIFIER',
         message: 'ارسال یکی از شناسه‌های sku، productCode یا productId الزامی است',
       })
     }
@@ -3023,6 +3056,9 @@ router.post('/pricing-sync', async (req, res) => {
     if (!existingProduct) {
       return res.status(404).json({
         success: false,
+        ok: false,
+        valid: false,
+        code: 'PRODUCT_NOT_FOUND',
         message: 'محصول مورد نظر در فروشگاه sgeooole یافت نشد',
       })
     }
@@ -3039,12 +3075,15 @@ router.post('/pricing-sync', async (req, res) => {
           success: false,
           ok: false,
           valid: false,
+          dryRun: true,
           code: check.code || 'INVALID_PRICING',
           message: check.error,
         })
       }
       return res.status(422).json({
         success: false,
+        ok: false,
+        valid: false,
         code: check.code || 'INVALID_PRICING',
         message: check.error,
       })
@@ -3056,6 +3095,7 @@ router.post('/pricing-sync', async (req, res) => {
         ok: true,
         valid: true,
         dryRun: true,
+        idempotentReplay: Boolean(check.idempotentReplay),
         message: 'dryRun انجام شد؛ payload قابل پذیرش است و هیچ تغییری اعمال نشد',
         data: {
           _id: existingProduct._id,
@@ -3065,6 +3105,33 @@ router.post('/pricing-sync', async (req, res) => {
           basePrice: check.basePrice,
           discountPct: check.discountPct,
           campaignType: check.campaignType,
+          decisionId: check.decisionId,
+          idempotencyKey: check.idempotencyKey,
+        },
+      })
+    }
+
+    if (check.idempotentReplay) {
+      return res.json({
+        success: true,
+        ok: true,
+        valid: true,
+        idempotentReplay: true,
+        message: 'این تصمیم قبلاً با همین کلید یکتا (idempotencyKey) اعمال شده است',
+        data: {
+          _id: existingProduct._id,
+          sku: existingProduct.sku,
+          productCode: existingProduct.productCode,
+          price: existingProduct.price,
+          compareAtPrice: existingProduct.compareAtPrice,
+          discount: existingProduct.discount,
+          finalPrice: check.finalPrice,
+          basePrice: check.basePrice,
+          discountPct: check.discountPct,
+          campaignType: check.campaignType,
+          decisionId: check.decisionId,
+          idempotencyKey: check.idempotencyKey,
+          confirmedAt: new Date().toISOString(),
         },
       })
     }
@@ -3106,6 +3173,9 @@ router.post('/pricing-sync', async (req, res) => {
 
     return res.json({
       success: true,
+      ok: true,
+      valid: true,
+      idempotentReplay: false,
       message: 'قیمت محصول و سیستم تخفیف با رعایت خط قرمز تامین همکار بروزرسانی شد و فید ترب همگام‌سازی گردید',
       data: {
         _id: updated._id,
@@ -3118,13 +3188,19 @@ router.post('/pricing-sync', async (req, res) => {
         basePrice: check.basePrice,
         discountPct: check.discountPct,
         campaignType: check.campaignType,
+        decisionId: check.decisionId,
+        idempotencyKey: check.idempotencyKey,
         timedSaleId: syncedSale ? syncedSale._id : null,
+        confirmedAt: new Date().toISOString(),
       },
     })
   } catch (error) {
     console.error('Error in POST /api/products/pricing-sync:', error)
     return res.status(500).json({
       success: false,
+      ok: false,
+      valid: false,
+      code: 'INTERNAL_SYNC_ERROR',
       message: 'خطا در همگام‌سازی قیمت محصول',
       error: error.message,
     })

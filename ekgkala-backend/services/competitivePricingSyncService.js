@@ -64,6 +64,14 @@ const calibrateCeilingForExactFloor = (rawCeiling, targetFloor, preferredDiscoun
 }
 
 const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return {
+      valid: false,
+      code: 'MALFORMED_PAYLOAD',
+      error: 'ساختار داده ارسالی (payload) نامعتبر است',
+    }
+  }
+
   const finalPrice = Number(payload.finalPrice ?? payload.price ?? 0)
   const rawBasePrice = Number(payload.basePrice ?? payload.compareAtPrice ?? finalPrice)
   const incomingCost = Number(payload.costPrice ?? 0)
@@ -82,12 +90,32 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
   if (!Number.isFinite(finalPrice) || finalPrice <= 0) {
     return {
       valid: false,
+      code: 'INVALID_FINAL_PRICE',
       error: 'قیمت نهایی فروش (finalPrice) نامعتبر یا صفر است',
     }
   }
 
-  // خط قرمز اول سیستم: قیمت فروش هرگز نباید کمتر یا مساوی قیمت خرید/تامین باشد!
-  if (effectiveCostPrice > 0 && finalPrice <= effectiveCostPrice) {
+  if (!Number.isFinite(rawBasePrice) || rawBasePrice <= 0) {
+    return {
+      valid: false,
+      code: 'INVALID_BASE_PRICE',
+      error: 'قیمت سقف/پایه (basePrice) نامعتبر یا صفر است',
+    }
+  }
+
+  const rawOverride = payload.belowCostOverride || payload.pricingMeta?.belowCostOverride || null
+  const hasValidBelowCostOverride = Boolean(
+    rawOverride &&
+      typeof rawOverride === 'object' &&
+      rawOverride.allowBelowCost === true &&
+      typeof rawOverride.reason === 'string' &&
+      rawOverride.reason.trim().length >= 5 &&
+      typeof rawOverride.authorizedBy === 'string' &&
+      rawOverride.authorizedBy.trim().length >= 2
+  )
+
+  // خط قرمز اول سیستم: قیمت فروش هرگز نباید کمتر یا مساوی قیمت خرید/تامین باشد (مگر با مجوز صریح و ممیزی‌شده)
+  if (!hasValidBelowCostOverride && effectiveCostPrice > 0 && finalPrice <= effectiveCostPrice) {
     return {
       valid: false,
       code: 'BELOW_COST_PRICE',
@@ -95,13 +123,22 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
     }
   }
 
-  if (effectiveHardFloor > 0 && finalPrice < effectiveHardFloor) {
+  if (!hasValidBelowCostOverride && effectiveHardFloor > 0 && finalPrice < effectiveHardFloor) {
     return {
       valid: false,
       code: 'BELOW_HARD_FLOOR',
       error: `خطای کف سود: قیمت فروش (${finalPrice.toLocaleString('fa-IR')}) کمتر از خط قرمز کف سود (${effectiveHardFloor.toLocaleString('fa-IR')}) است`,
     }
   }
+
+  const rawDecisionId = payload.decisionId ?? payload.pricingMeta?.decisionId ?? null
+  const decisionId = rawDecisionId != null && String(rawDecisionId).trim() !== '' ? String(rawDecisionId).trim() : null
+  const rawIdempotencyKey =
+    payload.idempotencyKey ??
+    payload.pricingMeta?.idempotencyKey ??
+    (decisionId ? `decision-${decisionId}` : null)
+  const idempotencyKey =
+    rawIdempotencyKey != null && String(rawIdempotencyKey).trim() !== '' ? String(rawIdempotencyKey).trim() : null
 
   // تشخیص نوع سیستم تخفیف از بین ۳ سیستم sgeooole:
   // 1) flash (پیشنهاد لحظه‌ای صفحه اصلی)
@@ -165,14 +202,29 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
         enabled: false,
       }
 
+  const targetDocPrice = activeCampaignType !== 'none' ? calibrated.calibratedCeiling : Math.round(finalPrice)
+  const existingMeta = existingProduct?.pricingMeta || {}
+  const idempotentReplay = Boolean(
+    existingProduct &&
+      ((idempotencyKey && existingMeta.idempotencyKey === idempotencyKey) ||
+        (decisionId && String(existingMeta.decisionId || '') === decisionId)) &&
+      Number(existingMeta.exactFloorPrice) === calibrated.exactFloorPrice &&
+      Number(existingProduct.price) === targetDocPrice &&
+      String(existingMeta.campaignType || 'none') === activeCampaignType
+  )
+
   return {
     valid: true,
     campaignType: activeCampaignType,
     timedSaleSpec,
+    decisionId,
+    idempotencyKey,
+    belowCostAuthorized: hasValidBelowCostOverride,
+    idempotentReplay,
     updateDoc: {
       // در هر ۳ حالت پروموشن (flash, featured, timed_sale)، فیلد price روی Product برابر سقف معیار (calibratedCeiling) قرار می‌گیرد
       // اما در حالت timed_sale، فیلدهای isFlashDeal, isSpecialOffer و discount روی Product صفر می‌شوند تا تخفیف از طریق مدل Sale اعمال گردد
-      price: activeCampaignType !== 'none' ? calibrated.calibratedCeiling : Math.round(finalPrice),
+      price: targetDocPrice,
       compareAtPrice: hasDirectProductPromo ? calibrated.calibratedCeiling : null,
       discount: hasDirectProductPromo ? calibrated.discountPct : 0,
       isFlashDeal,
@@ -183,8 +235,20 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
       ...(effectiveHardFloor > 0 ? { hardFloorPrice: Math.round(effectiveHardFloor) } : {}),
       ...(Array.isArray(payload.supplierQuotes) ? { supplierQuotes: payload.supplierQuotes } : {}),
       pricingMeta: {
-        ...(existingProduct?.pricingMeta || {}),
+        ...existingMeta,
         ...(payload.pricingMeta || {}),
+        ...(decisionId ? { decisionId } : {}),
+        ...(idempotencyKey ? { idempotencyKey } : {}),
+        ...(hasValidBelowCostOverride
+          ? {
+              belowCostOverride: {
+                allowBelowCost: true,
+                reason: rawOverride.reason.trim(),
+                authorizedBy: rawOverride.authorizedBy.trim(),
+                authorizedAt: new Date(),
+              },
+            }
+          : {}),
         campaignType: activeCampaignType,
         badgeTheme,
         showInFeatured: isSpecialOffer ? true : isTimedSale ? showInFeatured : false,
@@ -202,7 +266,7 @@ const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
     effectiveCostPrice,
     effectiveHardFloor,
     finalPrice: calibrated.exactFloorPrice,
-    basePrice: activeCampaignType !== 'none' ? calibrated.calibratedCeiling : Math.round(finalPrice),
+    basePrice: targetDocPrice,
     discountPct: calibrated.discountPct,
   }
 }

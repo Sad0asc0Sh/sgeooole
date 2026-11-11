@@ -1,0 +1,1 @@
+- [Chatbot Architecture Analysis](memory/chatbot-architecture-analysis.md) — بررسی کامل معماری چت‌بات، ۱۰+ ایراد UX کشف‌شده، شکاف‌های RAG/Vector، نقشه راه فازبندی

@@ -13,6 +13,12 @@ import VariantSelector from "./VariantSelector";
 import ProductActions from "./ProductActions";
 import ProductHistoryTracker from "./ProductHistoryTracker";
 import ProductSocialActions from "./ProductSocialActions";
+import ProductBreadcrumb from "./ProductBreadcrumb";
+import ProductFeatures from "./ProductFeatures";
+import ProductTrustRow from "./ProductTrustRow";
+import ProductTags from "./ProductTags";
+import ProductDisclaimer from "./ProductDisclaimer";
+import ProductStickyCard from "./ProductStickyCard";
 import { useLayoutState } from "@/providers/LayoutStateProvider";
 import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { stripExpiredPromotion } from "@/lib/promotions/productPromotion";
@@ -237,62 +243,28 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                 {/* Info Section - Seamless connection with gallery */}
                 <div className="px-4 py-2 relative bg-white z-10">
 
-                    {/* === Digikala-style Category Navigation === */}
-
-                    {/* Row 1: Full Category Path (EkgKala > Main Category > Subcategory) */}
-                    <div className="space-y-1.5 mb-2">
-                        {product.categoryPath && product.categoryPath.length > 0 && (
-                            <div className="flex items-center gap-1 text-xs font-medium text-gray-500 flex-wrap">
-                                {/* Site Name as first breadcrumb item */}
-                                <Link
-                                    href="/"
-                                    className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
-                                >
-                                    ای‌کا‌جی کالا
-                                </Link>
-                                {product.categoryPath.map((cat, index) => (
-                                    <span key={cat.id} className="flex items-center">
-                                        <span className="mx-1 text-gray-400">&lt;</span>
-                                        <Link
-                                            href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
-                                            className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
-                                                ? 'text-red-500 hover:text-red-600'
-                                                : 'text-gray-600 hover:text-kala-700'
-                                                }`}
-                                        >
-                                            {cat.name}
-                                        </Link>
-                                    </span>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Row 2: Brand + Product's Last Category */}
-                        {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
-                            <div className="flex items-center gap-1 text-xs font-medium text-gray-500">
-                                <Link
-                                    href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                    className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
-                                >
-                                    {product.brand}
-                                </Link>
-                                <span className="mx-1 text-gray-400">&lt;</span>
-                                <span className="text-gray-700 font-semibold">
-                                    {/* Product type in this category */}
-                                    {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
-                                </span>
-                            </div>
-                        )}
+                    {/* Breadcrumb (mobile140 slash trail) */}
+                    <div className="mb-2">
+                        <ProductBreadcrumb product={product} />
                     </div>
 
                     {/* Title & Rating */}
-                    <div className="flex justify-between items-start mb-1">
-                        <div className="flex flex-col">
-                            <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
-                            {product.enTitle && (
-                                <span className="text-xs text-gray-400 font-mono mt-1">{product.enTitle}</span>
-                            )}
-                        </div>
+                    <div className="mb-1">
+                        {product.brand && (
+                            <Link
+                                href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                className="text-sm font-bold leading-8 text-kala-600 hover:text-kala-700 hover:underline transition-colors"
+                            >
+                                {product.brand}
+                            </Link>
+                        )}
+                        <h1 className="text-base font-bold text-gray-900 leading-snug">{product.title}</h1>
+                        {product.enTitle && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-400 font-mono shrink-0">{product.enTitle}</span>
+                                <span className="h-px grow bg-gray-200" />
+                            </div>
+                        )}
                     </div>
 
                     {/* Countdown banner — same scheme source as the desktop banner
@@ -369,7 +341,36 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                         </div>
                     )}
 
-                    {/* Product Tabs (Description, Specs, Reviews) */}
+                    {/* Features preview (mobile140 PDP parity) */}
+                    <ProductFeatures specs={product.specs} />
+
+                    {/* Unboxing-video notice */}
+                    <ProductDisclaimer />
+
+                    {/* Guarantee / stock (mobile140 buy-card rows) — price lives in the sticky bottom bar */}
+                    <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-2">
+                        {product.guarantee && (
+                            <>
+                                <div className="flex items-center gap-3 text-sm text-gray-600">
+                                    <ShieldCheck size={18} className="text-gray-400" />
+                                    <span>{product.guarantee}</span>
+                                </div>
+                                <div className="h-px bg-gray-200 w-full" />
+                            </>
+                        )}
+                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                            <Store size={18} className={viewProduct.countInStock > 0 ? "text-kala-500" : "text-red-500"} />
+                            <span>
+                                {viewProduct.countInStock > 0 ? "موجود در انبار" : "ناموجود"}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Trust services + related tags */}
+                    <ProductTrustRow />
+                    <ProductTags product={product} />
+
+                    {/* Product Tabs (Description, Specs, Reviews, Questions) */}
                     <ProductTabs product={product} />
 
                 </div>
@@ -386,53 +387,26 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                         <ProductGallery product={viewProduct} />
 
                         {/* Breadcrumb - Below Gallery */}
-                        <div className="shrink-0 space-y-1.5 mt-5">
-                            {product.categoryPath && product.categoryPath.length > 0 && (
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500 flex-wrap">
-                                    <Link
-                                        href="/"
-                                        className="text-kala-600 hover:underline hover:text-kala-700 transition-colors"
-                                    >
-                                        ای‌کا‌جی کالا
-                                    </Link>
-                                    {product.categoryPath.map((cat, index) => (
-                                        <span key={cat.id} className="flex items-center">
-                                            <span className="mx-1 text-gray-400">&lt;</span>
-                                            <Link
-                                                href={`/products?category=${cat.slug}${index < product.categoryPath!.length - 1 ? '&includeChildren=true' : ''}`}
-                                                className={`hover:underline transition-colors ${index === product.categoryPath!.length - 1
-                                                    ? 'text-red-500 hover:text-red-600'
-                                                    : 'text-gray-600 hover:text-kala-700'
-                                                    }`}
-                                            >
-                                                {cat.name}
-                                            </Link>
-                                        </span>
-                                    ))}
-                                </div>
-                            )}
-
-                            {product.brand && product.categoryPath && product.categoryPath.length > 0 && (
-                                <div className="flex items-center gap-1 text-sm font-medium text-gray-500">
-                                    <Link
-                                        href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
-                                        className="text-gray-600 hover:underline hover:text-kala-700 transition-colors"
-                                    >
-                                        {product.brand}
-                                    </Link>
-                                    <span className="mx-1 text-gray-400">&lt;</span>
-                                    <span className="text-gray-700 font-semibold">
-                                        {product.categoryPath[product.categoryPath.length - 1].name} {product.brand}
-                                    </span>
-                                </div>
-                            )}
+                        <div className="shrink-0 mt-5">
+                            <ProductBreadcrumb product={product} />
                         </div>
 
                         {/* Title - Below Breadcrumb */}
                         <div className="shrink-0 mt-4">
+                            {product.brand && (
+                                <Link
+                                    href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}
+                                    className="text-sm font-bold leading-8 text-kala-600 hover:text-kala-700 hover:underline transition-colors"
+                                >
+                                    {product.brand}
+                                </Link>
+                            )}
                             <h1 className="text-xl font-bold text-gray-900 leading-snug mb-1">{product.title}</h1>
                             {product.enTitle && (
-                                <span className="text-sm text-gray-400 font-mono">{product.enTitle}</span>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-sm text-gray-400 font-mono shrink-0">{product.enTitle}</span>
+                                    <span className="h-px grow bg-gray-200" />
+                                </div>
                             )}
                         </div>
                     </div>
@@ -515,16 +489,29 @@ export default function ProductDetailClient({ product: initialProduct }: Product
                             </div>
                         )}
 
+                        {/* Features preview (mobile140 PDP parity) */}
+                        <ProductFeatures specs={product.specs} />
+
+                        {/* Unboxing-video notice */}
+                        <ProductDisclaimer />
+
                         {/* Desktop Price & Add to Cart Box */}
-                        <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8">
+                        <div id="product-buy-box-desktop" className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-6">
                             <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop={true} />
                         </div>
+
+                        {/* Trust services + related tags */}
+                        <ProductTrustRow />
+                        <ProductTags product={product} />
 
                         {/* Product Tabs */}
                         <ProductTabs product={product} />
                     </div>
                 </div>
             </div>
+
+            {/* Desktop sticky mini buy card (appears after the main buy box scrolls past) */}
+            <ProductStickyCard product={viewProduct} variantOptions={variantOptions} />
 
         </div>
     );

@@ -48,7 +48,15 @@ const stripSpecificationBlock = (html: string): string => {
 };
 
 export default function ProductTabs({ product }: ProductTabsProps) {
-    const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
+    const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews" | "questions">("desc");
+
+    // Deep link from the features preview: «مشاهده همه ویژگی‌ها» opens the
+    // specs tab (mobile140 PDP parity).
+    useEffect(() => {
+        const openSpecs = () => setActiveTab("specs");
+        window.addEventListener("product:open-specs", openSpecs);
+        return () => window.removeEventListener("product:open-specs", openSpecs);
+    }, []);
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });
@@ -193,7 +201,7 @@ export default function ProductTabs({ product }: ProductTabsProps) {
     };
 
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden my-6">
+        <div id="product-tabs" className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden my-6 scroll-mt-40">
             {/* Tabs Header */}
             <div className="flex border-b border-gray-100 overflow-x-auto no-scrollbar">
                 <button
@@ -223,6 +231,16 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                 >
                     دیدگاه‌ها ({product.reviewCount || 0})
                     {activeTab === "reviews" && (
+                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
+                    )}
+                </button>
+                <button
+                    onClick={() => setActiveTab("questions")}
+                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "questions" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
+                        }`}
+                >
+                    پرسش‌ها
+                    {activeTab === "questions" && (
                         <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
                     )}
                 </button>
@@ -459,6 +477,22 @@ export default function ProductTabs({ product }: ProductTabsProps) {
                                     )}
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "questions" && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <MessageSquare size={20} className="text-kala-600" /> پرسش و پاسخ
+                        </h3>
+                        <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                            <MessageSquare size={40} className="mx-auto text-gray-300 mb-3" />
+                            <p className="text-gray-500 font-medium">برای این محصول هنوز پرسشی ثبت نشده است.</p>
+                            <p className="text-gray-400 text-sm mt-1">پرسش‌های پرتکرار را در بخش سوالات متداول ببینید.</p>
+                            <Link href="/faq" className="inline-block mt-4 px-6 py-2 bg-kala-500 text-white rounded-lg text-sm font-bold hover:bg-kala-600 transition-colors">
+                                مشاهده سوالات متداول
+                            </Link>
                         </div>
                     </div>
                 )}

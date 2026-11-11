@@ -5,6 +5,8 @@ const path = require('node:path')
 
 const {
   authorizePricingSync,
+  verifyPricingSyncSignature,
+  computePricingSyncSignature,
   isPlaceholderSecret,
   timingSafeEqualString,
 } = require('../utils/pricingSyncAuth')
@@ -91,4 +93,62 @@ test('۸. رگرسیون منبع: مسیر pricing-sync از authorizePricingSy
   assert.ok(handler.includes('authorizePricingSync(req.headers)'))
   assert.ok(!/expectedSecret\s*&&/.test(handler), 'الگوی fail-open (expectedSecret && …) نباید برگردد')
   assert.ok(!/incomingSecret\s*!==\s*expectedSecret/.test(handler), 'مقایسهٔ غیرزمان‌ثابت نباید برگردد')
+})
+
+test('۹. HMAC signature verification: امضای معتبر پذیرفته می‌شود و امضای دستکاری‌شده یا تاریخ‌گذشته ۴۰۱ است', () => {
+  const env = { SGEOOOLE_PRICING_SECRET: STRONG }
+  const now = 1_750_000_000_000
+  const body = {
+    sku: 'CAM-101',
+    productCode: 'KY-101',
+    finalPrice: 2450000,
+    basePrice: 2700000,
+    campaignType: 'flash',
+    discount: 9,
+    decisionId: 42,
+    idempotencyKey: 'decision-42',
+  }
+  const sig = computePricingSyncSignature(STRONG, String(now), body)
+  const validRes = verifyPricingSyncSignature(
+    {
+      'x-pricing-secret': STRONG,
+      'x-pricing-timestamp': String(now),
+      'x-pricing-signature': `sha256=${sig}`,
+    },
+    body,
+    env,
+    now + 5_000,
+  )
+  assert.equal(validRes.ok, true)
+  assert.equal(validRes.hmacVerified, true)
+
+  // دستکاری قیمت در بدنه بدون تغییر امضا => 401
+  const tamperedRes = verifyPricingSyncSignature(
+    {
+      'x-pricing-secret': STRONG,
+      'x-pricing-timestamp': String(now),
+      'x-pricing-signature': `sha256=${sig}`,
+    },
+    { ...body, finalPrice: 1900000 },
+    env,
+    now + 5_000,
+  )
+  assert.equal(tamperedRes.ok, false)
+  assert.equal(tamperedRes.status, 401)
+  assert.equal(tamperedRes.code, 'PRICING_SYNC_INVALID_SIGNATURE')
+
+  // تاریخ‌گذشته (بیش از ۵ دقیقه اختلاف) => 401
+  const expiredRes = verifyPricingSyncSignature(
+    {
+      'x-pricing-secret': STRONG,
+      'x-pricing-timestamp': String(now - 10 * 60 * 1000),
+      'x-pricing-signature': `sha256=${sig}`,
+    },
+    body,
+    env,
+    now,
+  )
+  assert.equal(expiredRes.ok, false)
+  assert.equal(expiredRes.status, 401)
+  assert.equal(expiredRes.code, 'PRICING_SYNC_TIMESTAMP_EXPIRED')
 })

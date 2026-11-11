@@ -182,3 +182,83 @@ test('۳. sgeooole pricing-sync: سیستم سوم (فرصت‌های زمان�
   assert.equal(productObj.campaignLabel, 'فرصت ویژه مشهد')
   assert.equal(productObj.campaignTheme, 'green-orange')
 })
+
+test('۴. sgeooole pricing-sync: پشتیبانی از idempotencyKey و تشخیص تکرار تصمیم (idempotentReplay)', () => {
+  const first = validatePricingSyncPayload(
+    {
+      finalPrice: 2500000,
+      basePrice: 2800000,
+      costPrice: 2300000,
+      hardFloorPrice: 2400000,
+      campaignType: 'flash',
+      decisionId: 77,
+      idempotencyKey: 'decision-77-v1',
+    },
+    null,
+  )
+  assert.equal(first.valid, true)
+  assert.equal(first.decisionId, '77')
+  assert.equal(first.idempotencyKey, 'decision-77-v1')
+  assert.equal(first.idempotentReplay, false)
+
+  // شبیه‌سازی محصولی که همین تصمیم قبلاً رویش نشسته است
+  const existingAfterFirst = {
+    _id: '507f1f77bcf86cd799439011',
+    price: first.updateDoc.price,
+    costPrice: 2300000,
+    hardFloorPrice: 2400000,
+    pricingMeta: first.updateDoc.pricingMeta,
+  }
+
+  const replay = validatePricingSyncPayload(
+    {
+      finalPrice: 2500000,
+      basePrice: 2800000,
+      costPrice: 2300000,
+      hardFloorPrice: 2400000,
+      campaignType: 'flash',
+      decisionId: 77,
+      idempotencyKey: 'decision-77-v1',
+    },
+    existingAfterFirst,
+  )
+  assert.equal(replay.valid, true)
+  assert.equal(replay.idempotentReplay, true)
+})
+
+test('۵. sgeooole pricing-sync: رد کردن payload نامعتبر و پشتیبانی ممیزی‌شده از مجوز صریح زیر قیمت خرید (belowCostOverride)', () => {
+  assert.equal(validatePricingSyncPayload(null, null).valid, false)
+  assert.equal(validatePricingSyncPayload('bad', null).valid, false)
+  assert.equal(validatePricingSyncPayload({ finalPrice: -100 }, null).valid, false)
+
+  // بدون مجوز کامل (یا با دلیل کوتاه/بدون تاییدکننده) همچنان مسدود است
+  const incompleteOverride = validatePricingSyncPayload(
+    {
+      finalPrice: 2200000,
+      basePrice: 2500000,
+      costPrice: 2350000,
+      belowCostOverride: { allowBelowCost: true, reason: 'ok', authorizedBy: '' },
+    },
+    null,
+  )
+  assert.equal(incompleteOverride.valid, false)
+  assert.equal(incompleteOverride.code, 'BELOW_COST_PRICE')
+
+  // با مجوز صریح و کامل، در pricingMeta ثبت ممیزی می‌شود
+  const authorizedOverride = validatePricingSyncPayload(
+    {
+      finalPrice: 2200000,
+      basePrice: 2500000,
+      costPrice: 2350000,
+      belowCostOverride: {
+        allowBelowCost: true,
+        reason: 'تخلیه انبار مدل متوقف‌شده با تایید مدیریت مالی',
+        authorizedBy: 'admin@ekgkala.ir',
+      },
+    },
+    null,
+  )
+  assert.equal(authorizedOverride.valid, true)
+  assert.equal(authorizedOverride.belowCostAuthorized, true)
+  assert.equal(authorizedOverride.updateDoc.pricingMeta.belowCostOverride.authorizedBy, 'admin@ekgkala.ir')
+})
