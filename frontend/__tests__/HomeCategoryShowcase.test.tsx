@@ -120,7 +120,7 @@ test("hides only a successfully empty category feed", async () => {
   await waitFor(() => expect(container).toBeEmptyDOMElement());
 });
 
-test("renders first category images eagerly from cardUrl, never hidden", async () => {
+test("renders category images lazily from cardUrl, never hidden", async () => {
   const pictured = category("9", "دسته تصویری", "pictured", {
     image: {
       url: "https://s3.example/full.webp",
@@ -133,8 +133,8 @@ test("renders first category images eagerly from cardUrl, never hidden", async (
 
   const img = await screen.findByRole("img", { name: "دسته تصویری" });
   expect(img).toHaveAttribute("src", "https://s3.example/card.webp");
-  expect(img).toHaveAttribute("loading", "eager");
-  expect(img.getAttribute("fetchpriority")).toBe("high");
+  expect(img).toHaveAttribute("loading", "lazy");
+  expect(img.getAttribute("fetchpriority")).not.toBe("high");
   expect(img).toHaveStyle({ opacity: "1" });
   expect(fetchCategories).not.toHaveBeenCalled();
 });

@@ -21,7 +21,7 @@ const PARSPACK_ENDPOINT =
 
 export const resolveImageUrl = (
   source: unknown,
-  fallback: string = "/placeholder.png"
+  fallback: string = "/placeholder.svg"
 ): string => {
   if (!source) {
     return fallback;

@@ -149,7 +149,7 @@ export default function BrandsStrip() {
                       fill
                       className="object-contain"
                       sizes="96px"
-                      fallbackSrc="/placeholder.png"
+                      fallbackSrc="/placeholder.svg"
                     />
                   </div>
                 )}

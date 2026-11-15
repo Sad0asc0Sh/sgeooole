@@ -5,7 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import ResilientImage from "@/components/ui/ResilientImage";
+import DeferredImage from "@/components/ui/DeferredImage";
 import { useFlashDeals } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
@@ -115,7 +115,7 @@ function FlashOfferRail() {
           className="w-full !pb-2"
           grabCursor
         >
-          {activeFlashDeals.map((product, index) => {
+          {activeFlashDeals.map((product) => {
             // Single source: the card pricing resolver in promo context (all items
             // here are live by filter; the rep is the cheapest discounted variant).
             const pricing = resolveCardPricing(product, { now, context: "promo" });
@@ -142,20 +142,18 @@ function FlashOfferRail() {
                     </div>
 
                     <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
-                      <ResilientImage
-                        src={product.cardImage || product.image || "/placeholder.png"}
+                      <DeferredImage
+                        src={product.cardImage || product.image || "/placeholder.svg"}
                         backupSrc={product.image}
                         alt={product.name}
                         fill
                         className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : "group-hover:scale-105"}`}
                         sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
-                        loading={index < 2 ? "eager" : "lazy"}
-                        priority={index < 2}
-                        fetchPriority={index < 2 ? "high" : "auto"}
+                        loading="lazy"
                         quality={75}
                         placeholder="blur"
                         blurDataURL={getBlurDataURL()}
-                        fallbackSrc="/placeholder.png"
+                        fallbackSrc="/placeholder.svg"
                       />
 
                       {/* OUT OF STOCK OVERLAY */}

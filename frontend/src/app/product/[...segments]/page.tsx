@@ -159,13 +159,11 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         `KY-${(product.sku?.replace(/\D/g, '').slice(-7) || product.id.slice(-7)).padStart(7, '0')}`;
 
     const categoryPath = product.categoryPath || [];
-    const primaryImage = product.images?.find(
-        (img) => /^https?:\/\//i.test(img) && !img.toLowerCase().includes("placeholder")
-    );
+    const primaryImage = product.images?.[0];
 
     return (
         <>
-            {primaryImage && (
+            {primaryImage && /^https?:\/\//i.test(primaryImage) && !primaryImage.toLowerCase().includes("placeholder") && (
                 <link
                     rel="preload"
                     as="image"

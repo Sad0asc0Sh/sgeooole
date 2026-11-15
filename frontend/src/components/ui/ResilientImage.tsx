@@ -12,7 +12,7 @@ import {
 
 const MAX_RETRIES = 2; // Reduced from 5 to 2
 const RETRY_DELAYS_MS = [500, 1500]; // Simplified delays
-const PLACEHOLDER_SRC = "/placeholder.png";
+const PLACEHOLDER_SRC = "/placeholder.svg";
 
 /* ── Tiny inline SVG placeholder (gray-100) ────────────────── */
 const DEFAULT_BLUR_SVG =
@@ -34,22 +34,6 @@ function bustCache(src: string): string {
 }
 
 /* ── Connection warming (only on first failure) ────────────────────────────────────── */
-const warmedOrigins = new Set<string>();
-function warmConnection(src: string): void {
-  try {
-    const url = new URL(src, window.location.origin);
-    const origin = url.origin;
-    if (warmedOrigins.has(origin)) return;
-    warmedOrigins.add(origin);
-    // Simple HEAD request without aggressive retries
-    fetch(src, {
-      method: "HEAD",
-      mode: "no-cors",
-      credentials: "omit",
-      cache: "default", // Changed from "no-store" to allow CDN caching
-    }).catch(() => {});
-  } catch {}
-}
 
 /* ── Loading state enum ────────────────────────────────────── */
 type LoadPhase = "skeleton" | "loaded" | "error";
@@ -114,10 +98,13 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
     const wrapperRef = useRef<HTMLSpanElement>(null);
     const waitingForViewport = useRef(false);
     const triedBackup = useRef(false);
+    const scheduleRetryRef = useRef<() => void>(() => {});
 
     useEffect(() => {
       retryCount.current = 0;
       triedBackup.current = false;
+      waitingForViewport.current = false;
+      if (timerRef.current) clearTimeout(timerRef.current);
       setCurrentSrc(src);
 
       const node = wrapperRef.current;
@@ -144,9 +131,9 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
         isInViewport.current = true;
         if (waitingForViewport.current) {
           waitingForViewport.current = false;
-          scheduleRetry();
+          scheduleRetryRef.current();
         }
-        return;
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
       }
 
       const observer = new IntersectionObserver(
@@ -154,18 +141,18 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
           isInViewport.current = entry.isIntersecting;
           if (entry.isIntersecting && waitingForViewport.current) {
             waitingForViewport.current = false;
-            scheduleRetry();
+            scheduleRetryRef.current();
           }
         },
         { rootMargin: "200px" }
       );
 
-      observer.observe(node);
+      // A display:contents wrapper has no box; observe the image itself.
+      if (imgEl) observer.observe(imgEl);
       return () => {
         observer.disconnect();
         if (timerRef.current) clearTimeout(timerRef.current);
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Switch once to the full-res backup (card → main) before burning retries.
@@ -192,6 +179,8 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
           if (retryCount.current > 1) {
             setCurrentSrc(bustCache(originalSrc));
           } else {
+            const image = wrapperRef.current?.querySelector("img");
+            if (image?.getAttribute("src") === originalSrc) image.src = originalSrc;
             setCurrentSrc(originalSrc);
           }
         } else {
@@ -199,16 +188,13 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
         }
       }, delay);
     }, [maxRetries, fallbackSrc, onRetryExhausted, originalSrc]);
+    scheduleRetryRef.current = scheduleRetry;
 
     const handleError = useCallback(() => {
       if (phase === "error") return;
 
       // First failure of a card variant → full image, immediately.
       if (tryBackup()) return;
-
-      if (typeof originalSrc === "string" && retryCount.current === 0) {
-        warmConnection(originalSrc);
-      }
 
       if (retryCount.current >= maxRetries) {
         setPhase("error");
@@ -223,11 +209,11 @@ const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
       }
 
       scheduleRetry();
-    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, originalSrc, tryBackup]);
+    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, tryBackup]);
 
-    const handleLoad = useCallback(() => {
+    const handleLoad: NonNullable<ImageProps["onLoad"]> = useCallback((event) => {
       setPhase("loaded");
-      onLoadProp?.({} as any);
+      onLoadProp?.(event);
     }, [onLoadProp]);
 
     const imageStyle = useMemo(
@@ -299,10 +285,13 @@ export function useResilientImage(
   const waitingForViewport = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ref = useRef<HTMLImageElement>(null);
+  const doRetryRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     retryCount.current = 0;
     failed.current = false;
+    waitingForViewport.current = false;
+    if (timerRef.current) clearTimeout(timerRef.current);
     setCurrentSrc(originalSrc || fallbackSrc);
 
     if (ref.current && ref.current.complete && ref.current.naturalWidth > 0) {
@@ -323,9 +312,9 @@ export function useResilientImage(
       isInViewport.current = true;
       if (waitingForViewport.current) {
         waitingForViewport.current = false;
-        doRetry();
+        doRetryRef.current();
       }
-      return;
+      return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     }
 
     const observer = new IntersectionObserver(
@@ -333,7 +322,7 @@ export function useResilientImage(
         isInViewport.current = entry.isIntersecting;
         if (entry.isIntersecting && waitingForViewport.current) {
           waitingForViewport.current = false;
-          doRetry();
+          doRetryRef.current();
         }
       },
       { rootMargin: "200px" }
@@ -343,7 +332,6 @@ export function useResilientImage(
       observer.disconnect();
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function doRetry() {
@@ -361,6 +349,7 @@ export function useResilientImage(
         if (retryCount.current > 1) {
           setCurrentSrc(bustCache(originalSrc));
         } else {
+          if (ref.current?.getAttribute("src") === originalSrc) ref.current.src = originalSrc;
           setCurrentSrc(originalSrc);
         }
       } else {
@@ -368,12 +357,10 @@ export function useResilientImage(
       }
     }, delay);
   }
+  doRetryRef.current = doRetry;
 
   const onError = useCallback(() => {
     if (failed.current) return;
-    if (originalSrc && retryCount.current === 0) {
-      warmConnection(originalSrc);
-    }
     if (!isInViewport.current) {
       waitingForViewport.current = true;
       return;

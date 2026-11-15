@@ -315,7 +315,10 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
           // اسکلت اسلایدها همیشه در DOM می‌مانند (حلقه/initialSlide سالم
           // می‌ماند)؛ فقط تصویر اسلایدهای ثانویه تا هایدریت رندر نمی‌شود تا
           // مرورگر چند بنر سنگین را هم‌زمان دانلود نکند.
-          const shouldRenderImage = isPrimarySlide || hydrateSecondarySlides;
+          const isNearbySlide = realIndex === activeIndex ||
+            realIndex === (activeIndex + 1) % slideCount ||
+            realIndex === (activeIndex - 1 + slideCount) % slideCount;
+          const shouldRenderImage = isPrimarySlide || (hydrateSecondarySlides && isNearbySlide);
 
           return (
             <SwiperSlide

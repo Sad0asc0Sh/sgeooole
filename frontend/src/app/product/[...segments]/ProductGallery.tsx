@@ -28,15 +28,6 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [initialSlide, setInitialSlide] = useState(0);
     const [activeIndex, setActiveIndex] = useState(0);
 
-    // Preload the next slide in the background while the current one is shown.
-    useEffect(() => {
-        const next = product.images?.[activeIndex + 1];
-        if (next) {
-            const im = new window.Image();
-            im.src = next;
-        }
-    }, [activeIndex, product.images]);
-
     // Scroll Lock: Prevent body scroll when gallery modal is open
     useEffect(() => {
         if (isGalleryOpen) {
@@ -208,7 +199,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             className="object-contain"
                                             sizes="100vw"
                                             priority={index === initialSlide}
-                                            loading="eager"
+                                            loading={index === initialSlide ? "eager" : "lazy"}
                                             quality={85}
                                             maxRetries={2}
                                         />
@@ -275,10 +266,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             sizes="(max-width: 1023px) 100vw, 45vw"
                                             priority={index === 0}
                                             fetchPriority={index === 0 ? "high" : "auto"}
-                                            /* Phase 2 SEO #12: only the first image is eager/high-priority;
-                                               the rest lazy-load. Optimizer ON (no unoptimized) so Next.js
-                                               emits a real srcset (AVIF/WebP) — product images live on
-                                               Parspack, which is in next.config remotePatterns. */
+                                            /* Only the initial image competes for the first paint. */
                                             loading={index === 0 ? "eager" : "lazy"}
                                             quality={80}
                                             maxRetries={2}

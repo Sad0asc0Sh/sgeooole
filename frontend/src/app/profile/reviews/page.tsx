@@ -171,7 +171,7 @@ export default function ReviewsPage() {
                                         fill
                                         className="object-cover hover:scale-110 transition-transform duration-500"
                                         alt={getProductName(review)}
-                                        fallbackSrc="/placeholder.png"
+                                        fallbackSrc="/placeholder.svg"
                                     />
                                 </Link>
 

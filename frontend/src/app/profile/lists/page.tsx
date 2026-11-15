@@ -242,7 +242,7 @@ export default function ListsPage() {
                                             fill
                                             className={`object-cover hover:scale-110 transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : ""}`}
                                             alt={product.name}
-                                            fallbackSrc="/placeholder.png"
+                                            fallbackSrc="/placeholder.svg"
                                         />
                                         {isOutOfStock && (
                                             <div className="absolute inset-0 flex items-center justify-center bg-white/40">

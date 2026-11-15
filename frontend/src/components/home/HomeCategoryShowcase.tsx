@@ -30,15 +30,12 @@ function categoryHref(category: Category): string {
 function CircleImage({
   url,
   name,
-  priority = false,
 }: {
   url: string;
   name: string;
-  priority?: boolean;
 }) {
-  const { src, onError, onLoad, ref } = useResilientImage(url, "/placeholder.png");
+  const { src, onError, onLoad, ref } = useResilientImage(url, "/placeholder.svg");
   // هرگز opacity:0 در SSR — تصویر به‌محض رسیدن بایت‌های شبکه دیده می‌شود.
-  // ۸ دسته‌ی اول eager + fetchPriority بالا (بالای فولد).
   return (
     <img
       ref={ref}
@@ -46,8 +43,7 @@ function CircleImage({
       alt={name}
       onError={onError}
       onLoad={onLoad}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : "auto"}
+      loading="lazy"
       decoding="async"
       style={{ opacity: 1 }}
     />
@@ -157,7 +153,7 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
           </div>
         ) : (
           <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
-            {items.map((category, index) => {
+            {items.map((category) => {
               // cardUrl (320×320) بر url اصلی ارجح است — سبک‌تر برای دایره‌ی دسته.
               const cardUrl =
                 (category.image && typeof category.image === "object" && (category.image as { cardUrl?: string }).cardUrl) ||
@@ -175,7 +171,7 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
                       <span className={styles.disc}>
                         <span className={styles.hairline}>
                           {url ? (
-                            <CircleImage url={url} name={category.name} priority={index < 8} />
+                            <CircleImage url={url} name={category.name} />
                           ) : (
                             <Shapes className={styles.fallbackIcon} strokeWidth={1.5} aria-hidden="true" />
                           )}

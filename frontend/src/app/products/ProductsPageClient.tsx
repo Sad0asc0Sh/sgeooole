@@ -1215,7 +1215,7 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
                       exit={{ opacity: 0, scale: 0.9 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <ProductCard product={product} priority={index < 4} />
+                      <ProductCard product={product} priority={index === 0} />
                     </motion.div>
                   ))}
                 </AnimatePresence>

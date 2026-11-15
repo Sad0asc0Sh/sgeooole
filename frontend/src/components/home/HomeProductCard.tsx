@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import ResilientImage from "@/components/ui/ResilientImage";
+import DeferredImage from "@/components/ui/DeferredImage";
 import { AlertTriangle } from "lucide-react";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
@@ -49,8 +49,8 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
       </div>
 
       <div className={`${imageStyles.frame} ${styles.imageFrame}`}>
-        <ResilientImage
-          src={product.cardImage || product.image || "/placeholder.png"}
+        <DeferredImage
+          src={product.cardImage || product.image || "/placeholder.svg"}
           backupSrc={product.image}
           alt={`خرید ${product.name || product.title}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
           fill
@@ -60,7 +60,7 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
           quality={75}
           placeholder="blur"
           blurDataURL={getBlurDataURL()}
-          fallbackSrc="/placeholder.png"
+          fallbackSrc="/placeholder.svg"
         />
         {endTime && !isOutOfStock && (
           <ProductTimerBadge key={endTime} targetDate={endTime} color="" className={`${styles.cardTimer} ${styles[theme]}`} />

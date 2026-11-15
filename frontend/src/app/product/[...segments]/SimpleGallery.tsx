@@ -71,7 +71,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                     quality={85}
                     placeholder="blur"
                     blurDataURL={getBlurDataURL()}
-                    fallbackSrc="/placeholder.png"
+                    fallbackSrc="/placeholder.svg"
                 />
 
                 {/* Navigation Arrows */}
@@ -147,7 +147,7 @@ export default function SimpleGallery({ product }: SimpleGalleryProps) {
                                 quality={75}
                                 placeholder="blur"
                                 blurDataURL={getBlurDataURL()}
-                                fallbackSrc="/placeholder.png"
+                                fallbackSrc="/placeholder.svg"
                             />
                         </button>
                     ))}

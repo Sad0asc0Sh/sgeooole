@@ -3,7 +3,21 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { cardKeyFor, isWebpBuffer } = require('../lib/parspackS3');
+const sharp = require('sharp');
+const { cardKeyFor, isWebpBuffer, convertToWebp } = require('../lib/parspackS3');
+
+test('converts uploaded images into bounded WebP main and card variants', async () => {
+  const input = await sharp({ create: { width: 1800, height: 900, channels: 3, background: '#e36f32' } })
+    .png().toBuffer();
+  const main = await convertToWebp(input, { maxWidth: 1200, maxHeight: 1200 });
+  const card = await convertToWebp(input, { maxWidth: 420, maxHeight: 420 });
+  assert.ok(isWebpBuffer(main));
+  assert.ok(isWebpBuffer(card));
+  const mainInfo = await sharp(main).metadata();
+  const cardInfo = await sharp(card).metadata();
+  assert.deepEqual([mainInfo.width, mainInfo.height], [1200, 600]);
+  assert.deepEqual([cardInfo.width, cardInfo.height], [420, 210]);
+});
 
 test('cardKeyFor derives -card.webp for every raster main image', () => {
   assert.equal(cardKeyFor('uploads/abc.webp'), 'uploads/abc-card.webp');

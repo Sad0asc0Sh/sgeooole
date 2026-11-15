@@ -288,22 +288,9 @@ export default async function ProductListingPage({
           <ul>
             {listing.products.map((product) => {
               const prodLabel = product.title || product.name || product.slug || "محصول";
-              const imgUrl =
-                product.image && /^https?:\/\//i.test(product.image) && !product.image.toLowerCase().includes("placeholder")
-                  ? product.image
-                  : null;
               return (
                 <li key={product.id || product.slug}>
                   <Link href={listingHref(product)}>
-                    {imgUrl && (
-                      <img
-                        src={imgUrl}
-                        alt={`خرید ${prodLabel}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
-                        width={600}
-                        height={600}
-                        loading="lazy"
-                      />
-                    )}
                     <span>{prodLabel}</span>
                   </Link>
                 </li>

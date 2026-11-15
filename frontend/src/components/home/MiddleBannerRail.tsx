@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import ResilientImage from "@/components/ui/ResilientImage";
+import DeferredImage from "@/components/ui/DeferredImage";
 import HeroBannerLink from "./HeroBannerLink";
 import { Banner, bannerService } from "@/services/bannerService";
 import { generateBannerBlurPlaceholder, resolveImageUrl } from "@/lib/image";
@@ -105,7 +105,7 @@ export default function MiddleBannerRail({
               className="group relative aspect-[16/5] w-full overflow-hidden rounded-2xl border border-ekg-200/60 bg-ekg-50 shadow-sm transition-shadow duration-300 hover:shadow-[0_18px_40px_-30px_rgba(28,25,23,0.55)] md:w-[31%] xl:w-[32%]"
             >
               <HeroBannerLink banner={banner} className="absolute inset-0 block">
-                <ResilientImage
+                <DeferredImage
                   src={imageUrl}
                   backupSrc={backupSrc && backupSrc !== imageUrl ? backupSrc : undefined}
                   alt={label}

@@ -244,9 +244,7 @@ export default function BestSellers({
                         fill
                         className="object-cover group-hover:scale-110 transition-transform duration-300"
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                        priority={index < 4}
-                        fetchPriority={index < 4 ? 'high' : 'auto'}
-                        loading={index < 4 ? 'eager' : 'lazy'}
+                        loading="lazy"
                         decoding="async"
                         unoptimized
                         placeholder="blur"

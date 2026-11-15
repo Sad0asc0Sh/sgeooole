@@ -99,7 +99,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                 {/* Product Image */}
                 <div className={`${imageStyles.frame} mb-3 rounded-md`}>
                     <ResilientImage
-                        src={product.cardImage || product.image || "/placeholder.png"}
+                        src={product.cardImage || product.image || "/placeholder.svg"}
                         backupSrc={product.image}
                         alt={product.name}
                         fill
@@ -111,7 +111,7 @@ const OptimizedProductCard = memo(function OptimizedProductCard({
                         quality={75}
                         placeholder="blur"
                         blurDataURL={getBlurDataURL()}
-                        fallbackSrc="/placeholder.png"
+                        fallbackSrc="/placeholder.svg"
                     />
 
                     {/* Campaign Badge */}

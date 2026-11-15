@@ -366,9 +366,7 @@ export default async function Home() {
     ],
   };
 
-  // Preload تصاویر بالای فولد (LCP): بنر اول اسلایدر اصلی و ۶ دسته‌بندی اول —
-  // مرورگر بلافاصله پس از HTML دانلود را از پارس‌پک شروع می‌کند. preload بنر
-  // با media جدا می‌شود تا موبایل نسخه‌ی دسکتاپ (و برعکس) را دانلود نکند.
+  // Only preload the first hero, and select the same source as its picture.
   const mainSliderBanners = (banners || [])
     .filter((b) => b.position === "main-slider")
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -380,20 +378,6 @@ export default async function Home() {
         ? resolveImageUrl(String((firstHero.image as any).cardUrl), "")
         : "")
     : "";
-  const seenPreload = new Set<string>();
-  const categoryPreloadUrls = (homepageCats || [])
-    .slice(0, 6)
-    .map((cat) => {
-      const card =
-        (cat.image && typeof cat.image === "object" && (cat.image as any).cardUrl) ||
-        (cat.icon && typeof cat.icon === "object" && (cat.icon as any).cardUrl);
-      return resolveImageUrl(card || cat.image || cat.icon, "");
-    })
-    .filter((url) => {
-      if (!/^https?:\/\//i.test(url) || seenPreload.has(url)) return false;
-      seenPreload.add(url);
-      return true;
-    });
   return (
     <div className="flex flex-col pb-4">
       <script
@@ -409,9 +393,6 @@ export default async function Home() {
       ) : heroDesktopUrl ? (
         <link rel="preload" as="image" href={heroDesktopUrl} fetchPriority="high" />
       ) : null}
-      {categoryPreloadUrls.map((href) => (
-        <link key={href} rel="preload" as="image" href={href} />
-      ))}
       {/* Brand H1 for SEO: visually hidden (the design carries no visible
           heading here) but present in the rendered DOM for crawlers and
           assistive tech, carrying the exact brand spelling users search
@@ -427,22 +408,9 @@ export default async function Home() {
           <ul>
             {railProducts.map((item) => {
               const label = item.title || item.name || item.slug || "محصول";
-              const imgUrl =
-                item.image && /^https?:\/\//i.test(item.image) && !item.image.toLowerCase().includes("placeholder")
-                  ? item.image
-                  : null;
               return (
                 <li key={item.productCode || item.slug || item.id}>
                   <Link href={buildProductUrl(item)}>
-                    {imgUrl && (
-                      <img
-                        src={imgUrl}
-                        alt={`خرید ${label}${item.brand ? ` برند ${item.brand}` : ""} | ای کا جی کالا`}
-                        width={600}
-                        height={600}
-                        loading="lazy"
-                      />
-                    )}
                     <span>{label}</span>
                   </Link>
                 </li>

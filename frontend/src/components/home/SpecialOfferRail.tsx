@@ -7,7 +7,7 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import ResilientImage from "@/components/ui/ResilientImage";
+import DeferredImage from "@/components/ui/DeferredImage";
 import { useSpecialOffers } from "@/hooks/useProducts";
 import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
@@ -177,7 +177,7 @@ function SpecialOfferRail() {
           className="w-full !pb-2"
           grabCursor
         >
-          {activeProducts.map((product, index) => {
+          {activeProducts.map((product) => {
             const isOutOfStock = product.countInStock === 0;
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
             // Single source: the card pricing resolver in promo context — the rep
@@ -213,20 +213,18 @@ function SpecialOfferRail() {
 
                     {/* Product Image */}
                     <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
-                      <ResilientImage
-                        src={product.cardImage || product.image || "/placeholder.png"}
+                      <DeferredImage
+                        src={product.cardImage || product.image || "/placeholder.svg"}
                         backupSrc={product.image}
                         alt={product.name}
                         fill
                         className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : 'group-hover:scale-105'}`}
                         sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
-                        loading={index < 2 ? "eager" : "lazy"}
-                        priority={index < 2}
-                        fetchPriority={index < 2 ? "high" : "auto"}
+                        loading="lazy"
                         quality={70}
                         placeholder="blur"
                         blurDataURL={getBlurDataURL()}
-                        fallbackSrc="/placeholder.png"
+                        fallbackSrc="/placeholder.svg"
                       />
 
                       {/* Out of Stock Overlay */}
