@@ -10,6 +10,8 @@ import Link from "next/link";
 
 interface ProductTabsProps {
     product: Product;
+    activeTab?: "desc" | "specs" | "reviews";
+    onTabChange?: (tab: "desc" | "specs" | "reviews") => void;
 }
 
 // The storefront's structured product template (header / intro / 01..06 cards /
@@ -47,8 +49,13 @@ const stripSpecificationBlock = (html: string): string => {
     return out.trim();
 };
 
-export default function ProductTabs({ product }: ProductTabsProps) {
-    const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
+export default function ProductTabs({ product, activeTab: controlledTab, onTabChange }: ProductTabsProps) {
+    const [localTab, setLocalTab] = useState<"desc" | "specs" | "reviews">("desc");
+    const activeTab = controlledTab ?? localTab;
+    const setActiveTab = (tab: "desc" | "specs" | "reviews") => {
+        setLocalTab(tab);
+        onTabChange?.(tab);
+    };
     const [reviews, setReviews] = useState<Review[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
     const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });

@@ -15,9 +15,7 @@ export default function ProductSocialActions({ product }: ProductSocialActionsPr
 
     const isFavorite = isInWishlist(product.id);
 
-    const productUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/product/${product.slug || product.id}`
-        : "";
+    const productUrl = typeof window !== "undefined" ? window.location.href : "";
 
     const handleShare = async () => {
         if (!productUrl) return;

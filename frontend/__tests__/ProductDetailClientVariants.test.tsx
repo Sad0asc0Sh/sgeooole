@@ -118,8 +118,7 @@ describe("ProductDetailClient — محصول متغیر", () => {
 
     it("در شروع اولین رنگ موجود را انتخاب و قیمتش را نشان می‌دهد", () => {
         render(<ProductDetailClient product={variableProduct} />);
-        // دسکتاپ + موبایل
-        expect(screen.getAllByText("رنگ: مشکی")).toHaveLength(2);
+        expect(screen.getByText("رنگ: مشکی")).toBeInTheDocument();
         expect(screen.getAllByText(FA(500000))).toHaveLength(2);
     });
 
@@ -128,13 +127,13 @@ describe("ProductDetailClient — محصول متغیر", () => {
 
         fireEvent.click(screen.getAllByRole("button", { name: "رنگ قرمز" })[0]);
 
-        expect(screen.getAllByText("رنگ: قرمز")).toHaveLength(2);
+        expect(screen.getByText("رنگ: قرمز")).toBeInTheDocument();
         expect(screen.getAllByText(FA(520000))).toHaveLength(2);
         // تگ اختلاف +۲۰٬۰۰۰ زیر دایره‌ی قرمز
         expect(screen.getAllByText(`+${FA(20000)}`).length).toBeGreaterThan(0);
-        // گالری تصویر دوم قرمز را دارد (دسکتاپ + موبایل)
+        // گالری تصویر دوم قرمز را دارد
         await waitFor(() => {
-            expect(screen.getAllByLabelText("تی‌شرت - نمای ۲")).toHaveLength(2);
+            expect(screen.getByLabelText("تی‌شرت - نمای ۲")).toBeInTheDocument();
         });
     });
 
@@ -153,14 +152,24 @@ describe("ProductDetailClient — محصول متغیر", () => {
         });
     });
 
+    it("با تغییر به نوع دارای تصاویر کمتر، گالری به تصویر اول برمی‌گردد", () => {
+        render(<ProductDetailClient product={variableProduct} />);
+        fireEvent.click(screen.getByRole("button", { name: "رنگ قرمز" }));
+        fireEvent.click(screen.getByRole("button", { name: "نمایش تصویر ۲" }));
+        expect(screen.getByRole("button", { name: "نمایش تصویر ۲" })).toHaveAttribute("aria-pressed", "true");
+
+        fireEvent.click(screen.getByRole("button", { name: "رنگ مشکی" }));
+        expect(screen.getByRole("button", { name: "نمایش تصویر ۱" })).toHaveAttribute("aria-pressed", "true");
+        expect(screen.queryByRole("button", { name: "نمایش تصویر ۲" })).toBeNull();
+    });
+
     it("رنگ ناموجود قابل انتخاب است و «ناموجود» نشان می‌دهد", () => {
         render(<ProductDetailClient product={variableProduct} />);
 
         fireEvent.click(screen.getAllByRole("button", { name: "رنگ زرد" })[0]);
 
-        expect(screen.getAllByText("رنگ: زرد")).toHaveLength(2);
-        // باکس موجودی (×۲) + دکمه‌های خرید (×۲)
-        expect(screen.getAllByText("ناموجود").length).toBeGreaterThanOrEqual(4);
+        expect(screen.getByText("رنگ: زرد")).toBeInTheDocument();
+        expect(screen.getAllByText("ناموجود").length).toBeGreaterThanOrEqual(2);
         expect(screen.queryByRole("button", { name: "افزودن به سبد خرید" })).toBeNull();
     });
 });

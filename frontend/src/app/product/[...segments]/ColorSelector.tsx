@@ -21,6 +21,9 @@ export default function ColorSelector({ colors, selectedColor, onColorChange }: 
                 {colors.map((c) => (
                     <button
                         key={c.id}
+                        type="button"
+                        aria-label={`رنگ ${c.name}`}
+                        aria-pressed={selectedColor.id === c.id}
                         onClick={() => onColorChange(c)}
                         className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${selectedColor.id === c.id ? "border-kala-500" : "border-gray-200"
                             }`}

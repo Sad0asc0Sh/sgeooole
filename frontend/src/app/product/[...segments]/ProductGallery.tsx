@@ -27,39 +27,50 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const [isGalleryOpen, setIsGalleryOpen] = useState(false);
     const [initialSlide, setInitialSlide] = useState(0);
     const [activeIndex, setActiveIndex] = useState(0);
+    const dialogRef = useRef<HTMLDivElement>(null);
+    const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Scroll Lock: Prevent body scroll when gallery modal is open
+    // Keep the page in place while the full-screen gallery is open.
     useEffect(() => {
-        if (isGalleryOpen) {
-            const scrollY = window.scrollY;
-            document.body.style.overflow = 'hidden';
-            document.body.style.position = 'fixed';
-            document.body.style.top = `-${scrollY}px`;
-            document.body.style.left = '0';
-            document.body.style.right = '0';
-            document.body.style.width = '100%';
-            document.body.dataset.scrollY = String(scrollY);
-        } else {
-            const scrollY = document.body.dataset.scrollY;
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.width = '';
-            if (scrollY) {
-                window.scrollTo(0, parseInt(scrollY));
-                delete document.body.dataset.scrollY;
+        if (!isGalleryOpen) return;
+        const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        closeButtonRef.current?.focus();
+        const scrollY = window.scrollY;
+        const previous = {
+            overflow: document.body.style.overflow,
+            position: document.body.style.position,
+            top: document.body.style.top,
+            left: document.body.style.left,
+            right: document.body.style.right,
+            width: document.body.style.width,
+        };
+        Object.assign(document.body.style, {
+            overflow: "hidden", position: "fixed", top: `-${scrollY}px`,
+            left: "0", right: "0", width: "100%",
+        });
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") setIsGalleryOpen(false);
+            if (event.key === "Tab") {
+                const controls = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+                ) ?? []).filter((element) => element.getAttribute("aria-disabled") !== "true");
+                const first = controls[0];
+                const last = controls[controls.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last?.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first?.focus();
+                }
             }
-        }
-
+        };
+        window.addEventListener("keydown", onKeyDown);
         return () => {
-            document.body.style.overflow = '';
-            document.body.style.position = '';
-            document.body.style.top = '';
-            document.body.style.left = '';
-            document.body.style.right = '';
-            document.body.style.width = '';
+            Object.assign(document.body.style, previous);
+            window.removeEventListener("keydown", onKeyDown);
+            window.scrollTo(0, scrollY);
+            previousFocus?.focus({ preventScroll: true });
         };
     }, [isGalleryOpen]);
 
@@ -70,12 +81,14 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
     const openGallery = useCallback((index: number) => {
         setInitialSlide(index);
+        setActiveIndex(index);
         setIsGalleryOpen(true);
     }, []);
 
     const closeGallery = useCallback(() => {
+        swiperRef.current?.slideTo(activeIndex);
         setIsGalleryOpen(false);
-    }, []);
+    }, [activeIndex]);
 
     // Use refs instead of state to avoid re-renders
     const swiperRef = useRef<SwiperType | null>(null);
@@ -117,6 +130,10 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
     const modalContent = isGalleryOpen ? createPortal(
         <AnimatePresence>
             <motion.div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-label="گالری تصاویر محصول"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -139,6 +156,9 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                 }}
             >
                 <button
+                    ref={closeButtonRef}
+                    type="button"
+                    aria-label="بستن گالری تصاویر"
                     onClick={closeGallery}
                     style={{
                         position: 'absolute',
@@ -180,7 +200,10 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                             modules={[Pagination, Zoom, Navigation]}
                             initialSlide={initialSlide}
                             onSwiper={(swiper) => { modalSwiperRef.current = swiper; }}
-                            onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
+                            onSlideChange={(swiper) => {
+                                setActiveIndex(swiper.activeIndex);
+                                swiperRef.current?.slideTo(swiper.activeIndex);
+                            }}
                             style={{
                                 width: '100%',
                                 height: '100%',
@@ -213,6 +236,9 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                         {product.images.map((img, index) => (
                             <button
                                 key={index}
+                                type="button"
+                                aria-label={`نمایش تصویر ${faNum(index + 1)}`}
+                                aria-pressed={activeIndex === index}
                                 onClick={() => handleThumbnailClick(index)}
                                 className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all duration-200 ${activeIndex === index
                                     ? "border-white shadow-lg scale-110"
@@ -240,20 +266,28 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
 
     return (
         <>
-            <div className="w-full max-w-full min-w-0 bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 flex flex-col flex-1 min-h-0 h-full">
-                <div className="relative w-full max-w-full aspect-[4/3] max-h-[45vh] supports-[height:100dvh]:max-h-[45dvh] [@media(pointer:coarse)]:max-h-[42svh] md:aspect-square md:max-h-none [@media(pointer:coarse)]:md:max-h-[42svh] min-h-0 min-w-0 overflow-hidden bg-white">
+            <div className="w-full max-w-full min-w-0 bg-white flex flex-col min-h-0">
+                <div className="relative w-full max-w-full aspect-square max-h-[420px] lg:max-h-[460px] min-h-0 min-w-0 overflow-hidden bg-white">
                     <div className="absolute inset-0 min-h-0 min-w-0 max-w-full overflow-hidden">
                         <Swiper
                             spaceBetween={10}
                             slidesPerView={1}
                             pagination={{ clickable: true }}
-                            navigation={true}
                             loop={false}
-                            modules={[Pagination, Navigation]}
+                            modules={[Pagination]}
                             onSwiper={(swiper) => { swiperRef.current = swiper; }}
                             onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
                             onClick={() => openGallery(activeIndex)}
-                            className="!w-full !h-full !max-w-full cursor-pointer [&_.swiper-slide]:!h-full [&_.swiper-wrapper]:!max-w-full"
+                            role="button"
+                            tabIndex={0}
+                            aria-label="باز کردن گالری تصاویر محصول"
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                    event.preventDefault();
+                                    openGallery(activeIndex);
+                                }
+                            }}
+                            className="!w-full !h-full !max-w-full cursor-zoom-in [&_.swiper-slide]:!h-full [&_.swiper-wrapper]:!max-w-full [&_.swiper-pagination]:!bottom-1 lg:[&_.swiper-pagination]:hidden"
                         >
                             {product.images.map((img, index) => (
                                 <SwiperSlide key={index} className="!w-full !h-full">
@@ -262,7 +296,7 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                             src={img}
                                             alt={galleryAlt(index)}
                                             fill
-                                            className="object-contain object-center !p-4 mix-blend-multiply"
+                                            className="object-contain object-center !p-5 sm:!p-7"
                                             sizes="(max-width: 1023px) 100vw, 45vw"
                                             priority={index === 0}
                                             fetchPriority={index === 0 ? "high" : "auto"}
@@ -288,14 +322,17 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                     </div>
                 </div>
 
-                <div className="shrink-0 min-w-0 flex gap-2 lg:gap-2 px-4 overflow-x-auto no-scrollbar pt-2 pb-3 lg:pb-4 justify-center bg-white">
+                <div className="shrink-0 min-w-0 flex gap-2 px-2 overflow-x-auto no-scrollbar pt-3 pb-3 justify-start bg-white">
                     {product.images.map((img, index) => (
                         <button
                             key={index}
-                            onClick={() => swiperRef.current?.slideTo(index)}
-                            className={`relative w-12 h-12 lg:w-14 lg:h-14 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all duration-200 bg-white shadow-sm ${activeIndex === index
-                                ? "border-kala-500 shadow-md scale-110 ring-2 ring-kala-200"
-                                : "border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-300"
+                            type="button"
+                            aria-label={`نمایش تصویر ${faNum(index + 1)}`}
+                            aria-pressed={activeIndex === index}
+                            onClick={() => { setActiveIndex(index); swiperRef.current?.slideTo(index); }}
+                            className={`relative w-14 h-14 lg:w-16 lg:h-16 rounded-lg overflow-hidden border flex-shrink-0 transition-colors bg-white ${activeIndex === index
+                                ? "border-kala-500"
+                                : "border-gray-200 hover:border-gray-400"
                                 }`}
                         >
                             <ResilientImage
@@ -303,8 +340,8 @@ export default function ProductGallery({ product }: ProductGalleryProps) {
                                 backupSrc={img}
                                 alt={thumbnailAlt(index)}
                                 fill
-                                className="object-cover"
-                                sizes="(min-width: 1024px) 56px, 48px"
+                                className="object-contain !p-1"
+                                sizes="(min-width: 1024px) 64px, 56px"
                                 loading="lazy"
                                 quality={60}
                                 placeholder="blur"
