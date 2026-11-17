@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BadgeCheck, ChevronLeft, Headphones, ShieldCheck, Star, Store, Truck } from "lucide-react";
 import type { Product, ProductColor, ProductVariant, ProductVariantOption } from "@/types/product";
-import type { Selection } from "@/lib/variants";
+import { colorHexFor, isColorAttribute, type Selection } from "@/lib/variants";
 import ProductTabs from "@/components/product/ProductTabs";
 import ProductPromotionBanner from "@/components/promotion/ProductPromotionBanner";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -30,6 +30,8 @@ type Props = {
 
 export default function ProductDetailLayout({ product, viewProduct, selection, selectedVariant, selectedColor, variantOptions, onVariantChange, onColorChange }: Props) {
     const [detailsTab, setDetailsTab] = useState<"desc" | "specs" | "reviews">(product.specs?.length ? "specs" : "desc");
+    const inStock = viewProduct.countInStock > 0;
+    const colorAttribute = product.attributes?.find(isColorAttribute);
     return (
         <div className="product-detail" dir="rtl">
             <ProductHistoryTracker product={product} />
@@ -104,19 +106,24 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                                     <p>{product.title}</p>
                                     {variantOptions.length > 0 && (
                                         <ul className="product-details__purchase-options" aria-label="گزینه‌های انتخاب‌شده">
-                                            {variantOptions.map(({ name, value }) => (
-                                                <li key={name}>
-                                                    {name === "رنگ" && selectedColor?.hex && <span aria-hidden="true" style={{ backgroundColor: selectedColor.hex }} />}
-                                                    {value}
-                                                </li>
-                                            ))}
+                                            {variantOptions.map(({ name, value }) => {
+                                                const swatch = colorAttribute?.name === name
+                                                    ? colorHexFor(value, colorAttribute.swatches)
+                                                    : name === "رنگ" ? selectedColor?.hex : undefined;
+                                                return (
+                                                    <li key={name}>
+                                                        {swatch && <span className="product-details__purchase-swatch" aria-hidden="true" style={{ backgroundColor: swatch }} />}
+                                                        <span>{name}: <bdi>{value}</bdi></span>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     )}
                                 </div>
                             </div>
                             <div className="product-details__purchase-seller">
                                 <p><Store size={18} aria-hidden="true" /> ای‌کا‌جی کالا</p>
-                                <p><Truck size={16} aria-hidden="true" /> {viewProduct.countInStock > 0 ? "موجود در انبار" : "در حال حاضر ناموجود"}</p>
+                                <p data-in-stock={inStock}><Truck size={16} aria-hidden="true" /> {inStock ? "موجود در انبار" : "در حال حاضر ناموجود"}</p>
                             </div>
                             {product.guarantee && <p className="product-details__purchase-guarantee"><ShieldCheck size={18} aria-hidden="true" /> {product.guarantee}</p>}
                             {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (

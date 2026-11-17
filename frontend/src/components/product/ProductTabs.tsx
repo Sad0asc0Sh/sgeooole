@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
-import { Star, MessageSquare, Info, CheckCircle, AlertCircle, User, Calendar, Send, Loader2, ChevronDown, Plus } from "lucide-react";
+import { Star, MessageSquare, FileText, ListChecks, CheckCircle, AlertCircle, User, Calendar, Send, Loader2, ChevronDown, PenLine, X } from "lucide-react";
 import { Product } from "@/services/productService";
 import { reviewService, Review } from "@/services/reviewService";
 import { useAuth } from "@/hooks/useAuth";
@@ -106,7 +106,13 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
             const visibleSection = sectionsFromEnd.find(({ element }) => element && element.getBoundingClientRect().top <= threshold);
             const nearPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
             const atEnd = nearPageEnd && lastSection?.element && lastSection.element.getBoundingClientRect().top < window.innerHeight;
-            const active = atEnd ? lastSection : visibleSection ?? sections[0];
+            // The browser can clamp two nearby anchors to the same scroll position.
+            const linkedSection = atEnd && sections.find(({ element }) => {
+                if (!element || `#${element.id}` !== window.location.hash) return false;
+                const bounds = element.getBoundingClientRect();
+                return bounds.bottom > threshold && bounds.top < window.innerHeight;
+            });
+            const active = linkedSection || (atEnd ? lastSection : visibleSection ?? sections[0]);
             if (active) setCurrentSection(active.name);
         };
         const scheduleUpdate = () => {
@@ -114,11 +120,13 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
         };
         window.addEventListener("scroll", scheduleUpdate, { passive: true });
         window.addEventListener("resize", scheduleUpdate);
+        window.addEventListener("hashchange", scheduleUpdate);
         scheduleUpdate();
         return () => {
             window.cancelAnimationFrame(frame);
             window.removeEventListener("scroll", scheduleUpdate);
             window.removeEventListener("resize", scheduleUpdate);
+            window.removeEventListener("hashchange", scheduleUpdate);
         };
     }, [hasDescription, hasSpecs, specsExpanded]);
 
@@ -274,13 +282,13 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
 
     const desktopSections: { name: Section; label: string }[] = [];
     if (hasSpecs) desktopSections.push({ name: "specs", label: "مشخصات فنی" });
-    if (hasDescription) desktopSections.push({ name: "desc", label: "نقد و بررسی" });
-    desktopSections.push({ name: "reviews", label: "نظرات کاربران" });
+    if (hasDescription) desktopSections.push({ name: "desc", label: "توضیحات محصول" });
+    desktopSections.push({ name: "reviews", label: "دیدگاه‌ها" });
 
     const mobileTabs: { name: Section; label: string }[] = [
         { name: "desc", label: "توضیحات" },
         { name: "specs", label: "مشخصات فنی" },
-        { name: "reviews", label: `دیدگاه‌ها (${product.reviewCount || 0})` },
+        { name: "reviews", label: `دیدگاه‌ها (${reviewTotal.toLocaleString("fa-IR")})` },
     ];
     const handleSpecsToggle = () => {
         const previousTop = specToggleRef.current?.getBoundingClientRect().top ?? 0;
@@ -316,20 +324,20 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
             <div className="product-details__layout">
                 <div className="product-details__content">
                     <section id={sectionIds.specs} aria-labelledby="product-specs-heading" className="product-details__section" data-mobile-active={activeTab === "specs"} data-empty={!hasSpecs}>
-                        <h2 id="product-specs-heading" className="product-details__heading"><Info size={20} aria-hidden="true" /> مشخصات فنی</h2>
+                        <h2 id="product-specs-heading" className="product-details__heading"><ListChecks size={20} aria-hidden="true" /> مشخصات فنی</h2>
                         {hasSpecs ? (
                             <>
                                 <dl id="product-specs-list" className="product-details__specs" data-expanded={specsExpanded}>
                                     {specs.map((spec, index) => (
                                         <div key={`${spec.label}-${index}`} data-extra={index >= specPreviewCount}>
-                                            <dt>{spec.label}<span className="product-details__desktop-only">:</span></dt>
+                                            <dt>{spec.label}</dt>
                                             <dd dir="auto">{spec.value}</dd>
                                         </div>
                                     ))}
                                 </dl>
                                 {specs.length > specPreviewCount && (
                                     <button ref={specToggleRef} type="button" className="product-details__spec-toggle product-details__desktop-only" aria-expanded={specsExpanded} aria-controls="product-specs-list" onClick={handleSpecsToggle}>
-                                        {specsExpanded ? "بستن" : "نمایش بیشتر"}
+                                        {specsExpanded ? "نمایش کمتر" : "نمایش همهٔ مشخصات"}
                                         <ChevronDown size={18} aria-hidden="true" />
                                     </button>
                                 )}
@@ -341,13 +349,11 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
 
                     <section id={sectionIds.desc} aria-labelledby="product-description-heading" className="product-details__section" data-mobile-active={activeTab === "desc"} data-empty={!hasDescription}>
                         <h2 id="product-description-heading" className="product-details__heading">
-                            <Info size={20} aria-hidden="true" />
-                            <span className="product-details__mobile-only">توضیحات محصول</span>
-                            <span className="product-details__desktop-only">نقد و بررسی</span>
+                            <FileText size={20} aria-hidden="true" /> توضیحات محصول
                         </h2>
                         {product.description ? (
                             <div
-                                className="text-gray-600 leading-8 text-justify
+                                className="text-ekg-700 leading-8 text-start [overflow-wrap:anywhere] overflow-x-auto
                                 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mb-3 [&_h2]:mt-5
                                 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-gray-800 [&_h3]:mb-2 [&_h3]:mt-4
                                 [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-gray-800 [&_h4]:mb-2
@@ -374,32 +380,35 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
                     </section>
 
                     <section ref={reviewSectionRef} id={sectionIds.reviews} aria-labelledby="product-reviews-heading" className="product-details__section" data-mobile-active={activeTab === "reviews"}>
-                        <h2 id="product-reviews-heading" className="product-details__heading"><MessageSquare size={20} aria-hidden="true" /> نظرات کاربران</h2>
+                        <h2 id="product-reviews-heading" className="product-details__heading"><MessageSquare size={20} aria-hidden="true" /> دیدگاه‌های کاربران</h2>
                         <div className="product-details__review-summary product-details__desktop-only">
                             <div className="product-details__review-rating">
-                                <strong>{(product.rating || 0).toLocaleString("fa-IR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong>
+                                <strong data-rated={product.rating > 0}>
+                                    {product.rating > 0 ? product.rating.toLocaleString("fa-IR", { maximumFractionDigits: 1 }) : "بدون امتیاز"}
+                                </strong>
                                 <div>
-                                    <p>از {reviewTotal.toLocaleString("fa-IR")} نظر</p>
+                                    <p>{reviewTotal.toLocaleString("fa-IR")} دیدگاه</p>
                                     <div className="product-details__review-stars" aria-hidden="true">
                                         {[1, 2, 3, 4, 5].map((star) => <Star key={star} size={18} fill="currentColor" data-filled={star <= Math.round(product.rating || 0)} />)}
                                     </div>
                                 </div>
                             </div>
                             <button type="button" className="product-details__review-button" aria-expanded={reviewFormOpen} aria-controls="product-review-form" onClick={() => setReviewFormOpen(!reviewFormOpen)}>
-                                <Plus size={16} aria-hidden="true" /> {reviewFormOpen ? "بستن فرم" : "افزودن نظر"}
+                                {reviewFormOpen ? <X size={16} aria-hidden="true" /> : <PenLine size={16} aria-hidden="true" />}
+                                {reviewFormOpen ? "بستن فرم" : "نوشتن دیدگاه"}
                             </button>
                         </div>
                         <div className="product-details__reviews">
                             <div id="product-review-form" className="product-details__review-form" data-open={reviewFormOpen}>
-                                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                <div className="bg-white border border-ekg-200 rounded-2xl p-4 sm:p-6">
                                     <h3 className="font-bold text-gray-900 mb-4">ثبت دیدگاه جدید</h3>
 
                                     {!isAuthenticated ? (
-                                        <div className="bg-gray-50 rounded-xl p-6 text-center">
-                                            <p className="text-gray-600 text-sm mb-4">
-                                                برای ثبت نظر، لطفاً ابتدا وارد حساب کاربری خود شوید.
+                                        <div className="bg-ekg-50 rounded-xl p-4 sm:p-6 text-center">
+                                            <p className="text-ekg-700 text-sm mb-4">
+                                                برای ثبت دیدگاه وارد حساب کاربری‌تان شوید.
                                             </p>
-                                            <Link href="/login" className="inline-block px-6 py-2 bg-kala-500 text-white rounded-lg text-sm font-bold hover:bg-kala-600 transition-colors">
+                                            <Link href="/login" className="inline-block px-6 py-2 bg-kala-700 text-white rounded-lg text-sm font-bold hover:bg-kala-800 transition-colors">
                                                 ورود به حساب
                                             </Link>
                                         </div>
@@ -502,7 +511,7 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
                                 ) : reviews.length > 0 ? (
                                     <div className="space-y-4">
                                         {reviews.map((review) => (
-                                            <div key={review._id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                            <div key={review._id} className="bg-ekg-50 rounded-xl p-4 border border-ekg-100">
                                                 <div className="flex justify-between items-start mb-3">
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-gray-500">
@@ -547,8 +556,7 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
                                 ) : (
                                     <div className="product-details__review-empty text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
                                         <MessageSquare size={40} className="product-details__mobile-only mx-auto text-gray-300 mb-3" />
-                                        <p className="text-gray-500 font-medium">هنوز دیدگاهی برای این محصول ثبت نشده است.</p>
-                                        <p className="text-gray-400 text-sm mt-1">اولین نفری باشید که نظر می‌دهد!</p>
+                                        <p className="text-ekg-700 font-medium">هنوز دیدگاهی برای این محصول ثبت نشده است.</p>
                                     </div>
                                 )}
                             </div>
