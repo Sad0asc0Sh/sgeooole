@@ -6,6 +6,7 @@ import { Product } from "@/services/productService";
 import { reviewService, Review } from "@/services/reviewService";
 import { useAuth } from "@/hooks/useAuth";
 import { demoteH1ToH2 } from "@/lib/seo";
+import { normalizeDescriptionRoot } from "@/lib/productDescription";
 import Link from "next/link";
 import "./product-details.css";
 
@@ -157,8 +158,11 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
 
         // 1d. The storefront's structured product template must keep ALL inline
         // styles (backgrounds, colours, the 01..06 cards, table layout). The
-        // Quill-normalisation below would destroy them, so return as-is.
-        if (isStructuredTemplate(cleaned)) return cleaned;
+        // Quill-normalisation below would destroy them, so return as-is — after
+        // releasing any pixel width pinned on the article's root, which would
+        // otherwise shrink the whole description into a narrow centred card
+        // inside the (much wider) product-page column.
+        if (isStructuredTemplate(cleaned)) return normalizeDescriptionRoot(cleaned);
 
         // 2. Strip inline background-color and color styles completely
         cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
