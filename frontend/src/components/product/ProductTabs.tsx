@@ -1,17 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Star, MessageSquare, Info, CheckCircle, AlertCircle, User, Calendar, Send, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { Star, MessageSquare, Info, CheckCircle, AlertCircle, User, Calendar, Send, Loader2, ChevronDown, Plus } from "lucide-react";
 import { Product } from "@/services/productService";
 import { reviewService, Review } from "@/services/reviewService";
 import { useAuth } from "@/hooks/useAuth";
 import { demoteH1ToH2 } from "@/lib/seo";
 import Link from "next/link";
+import "./product-details.css";
+
+type Section = "desc" | "specs" | "reviews";
+
+const sectionIds: Record<Section, string> = {
+    specs: "product-info",
+    desc: "product-description",
+    reviews: "pdp-comments",
+};
+
+const specPreviewCount = 6;
 
 interface ProductTabsProps {
     product: Product;
-    activeTab?: "desc" | "specs" | "reviews";
-    onTabChange?: (tab: "desc" | "specs" | "reviews") => void;
+    activeTab: Section;
+    onTabChange: (tab: Section) => void;
+    purchaseSummary: ReactNode;
 }
 
 // The storefront's structured product template (header / intro / 01..06 cards /
@@ -49,17 +61,66 @@ const stripSpecificationBlock = (html: string): string => {
     return out.trim();
 };
 
-export default function ProductTabs({ product, activeTab: controlledTab, onTabChange }: ProductTabsProps) {
-    const [localTab, setLocalTab] = useState<"desc" | "specs" | "reviews">("desc");
-    const activeTab = controlledTab ?? localTab;
-    const setActiveTab = (tab: "desc" | "specs" | "reviews") => {
-        setLocalTab(tab);
-        onTabChange?.(tab);
-    };
+export default function ProductTabs({ product, activeTab, onTabChange, purchaseSummary }: ProductTabsProps) {
+    const specs = product.specs ?? [];
+    const hasSpecs = specs.length > 0;
+    const hasDescription = Boolean(product.description?.trim());
+    const [currentSection, setCurrentSection] = useState<Section>(hasSpecs ? "specs" : hasDescription ? "desc" : "reviews");
+    const [specsExpanded, setSpecsExpanded] = useState(false);
+    const [reviewFormOpen, setReviewFormOpen] = useState(false);
+    const desktopNavRef = useRef<HTMLElement>(null);
+    const reviewSectionRef = useRef<HTMLElement>(null);
+    const specToggleRef = useRef<HTMLButtonElement>(null);
     const [reviews, setReviews] = useState<Review[]>([]);
-    const [loadingReviews, setLoadingReviews] = useState(false);
-    const [reviewStats, setReviewStats] = useState({ total: 0, avg: 0 });
-    console.log("Review stats:", reviewStats);
+    const [loadingReviews, setLoadingReviews] = useState(Boolean(product.reviewCount));
+    const [reviewTotal, setReviewTotal] = useState(product.reviewCount ?? 0);
+    const [reviewLoadError, setReviewLoadError] = useState(false);
+    const reviewsRequested = useRef(false);
+
+    useEffect(() => {
+        const sectionId = window.location.hash.slice(1);
+        if (!Object.values(sectionIds).includes(sectionId)) return;
+        const frame = window.requestAnimationFrame(() => {
+            // The product route restores scroll during mount. Apply an explicit
+            // section link after that so shared desktop URLs open at the section.
+            const section = document.getElementById(sectionId);
+            if (desktopNavRef.current?.getClientRects().length && section?.getClientRects().length) {
+                section.scrollIntoView();
+            }
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+        const nav = desktopNavRef.current;
+        if (!nav) return;
+        const sections = Array.from(nav.querySelectorAll<HTMLAnchorElement>("a[data-section]"))
+            .map((link) => ({ name: link.dataset.section as Section, element: document.getElementById(link.hash.slice(1)) }));
+        const lastSection = sections[sections.length - 1];
+        const sectionsFromEnd = [...sections].reverse();
+        let frame = 0;
+        const updateSection = () => {
+            frame = 0;
+            if (!nav.getClientRects().length) return;
+            const threshold = nav.getBoundingClientRect().bottom + 32;
+            const visibleSection = sectionsFromEnd.find(({ element }) => element && element.getBoundingClientRect().top <= threshold);
+            const nearPageEnd = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2;
+            const atEnd = nearPageEnd && lastSection?.element && lastSection.element.getBoundingClientRect().top < window.innerHeight;
+            const active = atEnd ? lastSection : visibleSection ?? sections[0];
+            if (active) setCurrentSection(active.name);
+        };
+        const scheduleUpdate = () => {
+            if (!frame) frame = window.requestAnimationFrame(updateSection);
+        };
+        window.addEventListener("scroll", scheduleUpdate, { passive: true });
+        window.addEventListener("resize", scheduleUpdate);
+        scheduleUpdate();
+        return () => {
+            window.cancelAnimationFrame(frame);
+            window.removeEventListener("scroll", scheduleUpdate);
+            window.removeEventListener("resize", scheduleUpdate);
+        };
+    }, [hasDescription, hasSpecs, specsExpanded]);
 
     // Helper to format Quill/RichText HTML automatically into structured layout
     const transformQuillHtml = (html: string) => {
@@ -161,25 +222,37 @@ export default function ProductTabs({ product, activeTab: controlledTab, onTabCh
 
     const fetchReviews = useCallback(async () => {
         try {
+            reviewsRequested.current = true;
+            setReviewLoadError(false);
             setLoadingReviews(true);
             const res = await reviewService.getProductReviews(product.id);
             setReviews(res.data);
-            setReviewStats({
-                total: res.pagination.total,
-                avg: product.rating || 0 // Use product rating as source of truth for avg
-            });
+            setReviewTotal(res.pagination.total);
         } catch (err) {
+            setReviewLoadError(true);
             console.error("Error fetching reviews", err);
         } finally {
             setLoadingReviews(false);
         }
-    }, [product.id, product.rating]);
+    }, [product.id]);
 
     useEffect(() => {
-        if (activeTab === "reviews") {
-            fetchReviews();
-        }
+        if (activeTab === "reviews" && !reviewsRequested.current) void fetchReviews();
     }, [activeTab, fetchReviews]);
+
+    useEffect(() => {
+        const section = reviewSectionRef.current;
+        if (!section || reviewsRequested.current) return;
+        if (typeof IntersectionObserver === "undefined") {
+            if (desktopNavRef.current?.getClientRects().length) void fetchReviews();
+            return;
+        }
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting && !reviewsRequested.current) void fetchReviews();
+        }, { rootMargin: "0px 0px 200px" });
+        observer.observe(section);
+        return () => observer.disconnect();
+    }, [fetchReviews]);
 
     const handleSubmitReview = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -199,62 +272,92 @@ export default function ProductTabs({ product, activeTab: controlledTab, onTabCh
         }
     };
 
+    const desktopSections: { name: Section; label: string }[] = [];
+    if (hasSpecs) desktopSections.push({ name: "specs", label: "مشخصات فنی" });
+    if (hasDescription) desktopSections.push({ name: "desc", label: "نقد و بررسی" });
+    desktopSections.push({ name: "reviews", label: "نظرات کاربران" });
+
+    const mobileTabs: { name: Section; label: string }[] = [
+        { name: "desc", label: "توضیحات" },
+        { name: "specs", label: "مشخصات فنی" },
+        { name: "reviews", label: `دیدگاه‌ها (${product.reviewCount || 0})` },
+    ];
+    const handleSpecsToggle = () => {
+        const previousTop = specToggleRef.current?.getBoundingClientRect().top ?? 0;
+        setSpecsExpanded(!specsExpanded);
+        if (specsExpanded) {
+            requestAnimationFrame(() => {
+                const toggle = specToggleRef.current;
+                if (toggle && toggle.getBoundingClientRect().top < (desktopNavRef.current?.getBoundingClientRect().bottom ?? 0)) {
+                    toggle.scrollIntoView({ block: previousTop < window.innerHeight ? "center" : "nearest" });
+                }
+            });
+        }
+    };
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden my-6">
-            {/* Tabs Header */}
-            <div className="flex border-b border-gray-100 overflow-x-auto no-scrollbar">
-                <button
-                    onClick={() => setActiveTab("desc")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "desc" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
-                        }`}
-                >
-                    توضیحات
-                    {activeTab === "desc" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab("specs")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "specs" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
-                        }`}
-                >
-                    مشخصات فنی
-                    {activeTab === "specs" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
-                    )}
-                </button>
-                <button
-                    onClick={() => setActiveTab("reviews")}
-                    className={`flex-1 min-w-[120px] py-4 text-sm font-bold transition-colors relative ${activeTab === "reviews" ? "text-kala-600" : "text-gray-500 hover:text-gray-700"
-                        }`}
-                >
-                    دیدگاه‌ها ({product.reviewCount || 0})
-                    {activeTab === "reviews" && (
-                        <div className="absolute bottom-0 left-0 w-full h-0.5 bg-kala-500" />
-                    )}
-                </button>
+        <article id="product-details" className="product-details" aria-label="جزئیات محصول">
+            <nav ref={desktopNavRef} className="product-details__nav" aria-label="بخش‌های جزئیات محصول">
+                {desktopSections.map(({ name, label }) => (
+                    <a key={name} href={`#${sectionIds[name]}`} data-section={name} aria-current={currentSection === name ? "location" : undefined}>
+                        {label}
+                    </a>
+                ))}
+            </nav>
+
+            <div className="product-details__mobile-tabs" aria-label="بخش‌های جزئیات محصول">
+                {mobileTabs.map(({ name, label }) => (
+                    <button type="button" key={name} aria-pressed={activeTab === name} onClick={() => onTabChange(name)}>
+                        {label}
+                    </button>
+                ))}
             </div>
 
-            {/* Content */}
-            <div className="p-6 min-h-[300px]">
-                {activeTab === "desc" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Info size={20} className="text-kala-600" /> توضیحات محصول
-                        </h3>
+            <div className="product-details__layout">
+                <div className="product-details__content">
+                    <section id={sectionIds.specs} aria-labelledby="product-specs-heading" className="product-details__section" data-mobile-active={activeTab === "specs"} data-empty={!hasSpecs}>
+                        <h2 id="product-specs-heading" className="product-details__heading"><Info size={20} aria-hidden="true" /> مشخصات فنی</h2>
+                        {hasSpecs ? (
+                            <>
+                                <dl id="product-specs-list" className="product-details__specs" data-expanded={specsExpanded}>
+                                    {specs.map((spec, index) => (
+                                        <div key={`${spec.label}-${index}`} data-extra={index >= specPreviewCount}>
+                                            <dt>{spec.label}<span className="product-details__desktop-only">:</span></dt>
+                                            <dd dir="auto">{spec.value}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                                {specs.length > specPreviewCount && (
+                                    <button ref={specToggleRef} type="button" className="product-details__spec-toggle product-details__desktop-only" aria-expanded={specsExpanded} aria-controls="product-specs-list" onClick={handleSpecsToggle}>
+                                        {specsExpanded ? "بستن" : "نمایش بیشتر"}
+                                        <ChevronDown size={18} aria-hidden="true" />
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <p className="py-8 text-center text-gray-500">مشخصات فنی ثبت نشده است.</p>
+                        )}
+                    </section>
+
+                    <section id={sectionIds.desc} aria-labelledby="product-description-heading" className="product-details__section" data-mobile-active={activeTab === "desc"} data-empty={!hasDescription}>
+                        <h2 id="product-description-heading" className="product-details__heading">
+                            <Info size={20} aria-hidden="true" />
+                            <span className="product-details__mobile-only">توضیحات محصول</span>
+                            <span className="product-details__desktop-only">نقد و بررسی</span>
+                        </h2>
                         {product.description ? (
                             <div
-                                className="text-gray-600 leading-8 text-justify 
+                                className="text-gray-600 leading-8 text-justify
                                 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-gray-800 [&_h2]:mb-3 [&_h2]:mt-5
                                 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-gray-800 [&_h3]:mb-2 [&_h3]:mt-4
                                 [&_h4]:text-base [&_h4]:font-bold [&_h4]:text-gray-800 [&_h4]:mb-2
-                                [&_p]:mb-4 
-                                [&_ul]:list-disc [&_ul]:mr-6 [&_ul]:mb-4 
-                                [&_ol]:list-decimal [&_ol]:mr-6 [&_ol]:mb-4 
-                                [&_li]:mb-1 
+                                [&_p]:mb-4
+                                [&_ul]:list-disc [&_ul]:mr-6 [&_ul]:mb-4
+                                [&_ol]:list-decimal [&_ol]:mr-6 [&_ol]:mb-4
+                                [&_li]:mb-1
                                 [&_img]:rounded-xl [&_img]:max-w-full [&_img]:h-auto [&_img]:my-6 [&_img]:mx-auto [&_img]:shadow-sm
                                 [&_table]:w-full [&_table]:border-collapse [&_table]:mb-4 [&_table]:text-sm
-                                [&_td]:border [&_td]:border-gray-200 [&_td]:p-3 
+                                [&_td]:border [&_td]:border-gray-200 [&_td]:p-3
                                 [&_th]:border [&_th]:border-gray-200 [&_th]:p-3 [&_th]:bg-gray-50 [&_th]:font-bold [&_th]:text-right
                                 [&_a]:text-kala-600 [&_a]:underline [&_a]:font-medium hover:[&_a]:text-kala-700
                                 [&_blockquote]:border-r-4 [&_blockquote]:border-gray-200 [&_blockquote]:pr-4 [&_blockquote]:py-2 [&_blockquote]:my-4 [&_blockquote]:text-gray-500 [&_blockquote]:italic
@@ -268,52 +371,133 @@ export default function ProductTabs({ product, activeTab: controlledTab, onTabCh
                         ) : (
                             <p className="text-gray-400 text-center py-8">توضیحاتی ثبت نشده است.</p>
                         )}
-                    </div>
-                )}
+                    </section>
 
-                {activeTab === "specs" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Info size={20} className="text-kala-600" /> مشخصات فنی
-                        </h3>
-                        {product.specs && product.specs.length > 0 ? (
-                            <div className="grid gap-0 border border-gray-100 rounded-xl overflow-hidden">
-                                {product.specs.map((spec, i) => (
-                                    <div
-                                        key={i}
-                                        className={`flex flex-col sm:flex-row p-4 ${i !== product.specs!.length - 1 ? "border-b border-gray-100" : ""
-                                            } ${i % 2 === 0 ? "bg-gray-50/50" : "bg-white"}`}
-                                    >
-                                        <span className="text-gray-500 text-sm w-full sm:w-1/3 mb-1 sm:mb-0 font-medium">
-                                            {spec.label}
-                                        </span>
-                                        <span className="text-gray-800 text-sm w-full sm:w-2/3 font-bold">
-                                            {spec.value}
-                                        </span>
+                    <section ref={reviewSectionRef} id={sectionIds.reviews} aria-labelledby="product-reviews-heading" className="product-details__section" data-mobile-active={activeTab === "reviews"}>
+                        <h2 id="product-reviews-heading" className="product-details__heading"><MessageSquare size={20} aria-hidden="true" /> نظرات کاربران</h2>
+                        <div className="product-details__review-summary product-details__desktop-only">
+                            <div className="product-details__review-rating">
+                                <strong>{(product.rating || 0).toLocaleString("fa-IR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</strong>
+                                <div>
+                                    <p>از {reviewTotal.toLocaleString("fa-IR")} نظر</p>
+                                    <div className="product-details__review-stars" aria-hidden="true">
+                                        {[1, 2, 3, 4, 5].map((star) => <Star key={star} size={18} fill="currentColor" data-filled={star <= Math.round(product.rating || 0)} />)}
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                        ) : (
-                            <div className="text-center py-8 bg-gray-50 rounded-xl">
-                                <p className="text-gray-500">مشخصات فنی ثبت نشده است.</p>
+                            <button type="button" className="product-details__review-button" aria-expanded={reviewFormOpen} aria-controls="product-review-form" onClick={() => setReviewFormOpen(!reviewFormOpen)}>
+                                <Plus size={16} aria-hidden="true" /> {reviewFormOpen ? "بستن فرم" : "افزودن نظر"}
+                            </button>
+                        </div>
+                        <div className="product-details__reviews">
+                            <div id="product-review-form" className="product-details__review-form" data-open={reviewFormOpen}>
+                                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                    <h3 className="font-bold text-gray-900 mb-4">ثبت دیدگاه جدید</h3>
+
+                                    {!isAuthenticated ? (
+                                        <div className="bg-gray-50 rounded-xl p-6 text-center">
+                                            <p className="text-gray-600 text-sm mb-4">
+                                                برای ثبت نظر، لطفاً ابتدا وارد حساب کاربری خود شوید.
+                                            </p>
+                                            <Link href="/login" className="inline-block px-6 py-2 bg-kala-500 text-white rounded-lg text-sm font-bold hover:bg-kala-600 transition-colors">
+                                                ورود به حساب
+                                            </Link>
+                                        </div>
+                                    ) : submitSuccess ? (
+                                        <div className="bg-green-50 border border-green-100 rounded-xl p-6 text-center animate-in fade-in zoom-in duration-300">
+                                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                                                <CheckCircle size={24} />
+                                            </div>
+                                            <h4 className="font-bold text-green-800 mb-2">دیدگاه شما ثبت شد</h4>
+                                            <p className="text-green-600 text-sm">
+                                                نظر شما با موفقیت ثبت شد و پس از تأیید مدیر نمایش داده خواهد شد.
+                                            </p>
+                                            <button
+                                                onClick={() => setSubmitSuccess(false)}
+                                                className="mt-4 text-sm text-green-700 font-bold hover:underline"
+                                            >
+                                                ثبت نظر دیگر
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSubmitReview} className="space-y-4">
+                                            {submitError && (
+                                                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2">
+                                                    <AlertCircle size={16} />
+                                                    {submitError}
+                                                </div>
+                                            )}
+
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">امتیاز شما</label>
+                                                <div className="flex gap-2">
+                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                        <button
+                                                            key={star}
+                                                            type="button"
+                                                            onClick={() => setRating(star)}
+                                                            aria-label={`${star} ستاره`}
+                                                            aria-pressed={rating === star}
+                                                            className="transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-kala-500"
+                                                        >
+                                                            <Star
+                                                                size={28}
+                                                                className={`${star <= rating
+                                                                    ? "fill-amber-400 text-amber-400"
+                                                                    : "text-gray-200 hover:text-amber-200"
+                                                                    } transition-colors`}
+                                                            />
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                                <span className="text-xs text-gray-400 mt-1 block">
+                                                    {rating === 5 ? "عالی" : rating === 4 ? "خوب" : rating === 3 ? "معمولی" : rating === 2 ? "بد" : "خیلی بد"}
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <label htmlFor="product-review-comment" className="block text-sm font-bold text-gray-700 mb-2">متن دیدگاه</label>
+                                                <textarea
+                                                    id="product-review-comment"
+                                                    value={comment}
+                                                    onChange={(e) => setComment(e.target.value)}
+                                                    rows={4}
+                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-kala-500 focus:ring-2 focus:ring-kala-100 outline-none transition-all resize-none text-sm"
+                                                    placeholder="نقاط قوت و ضعف محصول را بنویسید..."
+                                                    required
+                                                />
+                                            </div>
+
+                                            <button
+                                                type="submit"
+                                                disabled={submitting}
+                                                className="w-full py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                                            >
+                                                {submitting ? (
+                                                    <>
+                                                        <Loader2 className="animate-spin" size={18} />
+                                                        در حال ثبت...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Send size={18} />
+                                                        ثبت دیدگاه
+                                                    </>
+                                                )}
+                                            </button>
+                                        </form>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {activeTab === "reviews" && (
-                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                        <div className="grid md:grid-cols-12 gap-8">
-                            {/* Reviews List */}
-                            <div className="md:col-span-7 space-y-6">
-                                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                    <MessageSquare size={20} className="text-kala-600" />
-                                    نظرات کاربران
-                                </h3>
-
+                            <div className="min-w-0">
                                 {loadingReviews ? (
                                     <div className="flex justify-center py-12">
                                         <Loader2 className="animate-spin text-kala-500" size={32} />
+                                    </div>
+                                ) : reviewLoadError ? (
+                                    <div role="status" className="product-details__review-empty">
+                                        <p>بارگیری دیدگاه‌ها انجام نشد.</p>
+                                        <button type="button" onClick={() => void fetchReviews()}>تلاش دوباره</button>
                                     </div>
                                 ) : reviews.length > 0 ? (
                                     <div className="space-y-4">
@@ -361,115 +545,21 @@ export default function ProductTabs({ product, activeTab: controlledTab, onTabCh
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                        <MessageSquare size={40} className="mx-auto text-gray-300 mb-3" />
+                                    <div className="product-details__review-empty text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                        <MessageSquare size={40} className="product-details__mobile-only mx-auto text-gray-300 mb-3" />
                                         <p className="text-gray-500 font-medium">هنوز دیدگاهی برای این محصول ثبت نشده است.</p>
                                         <p className="text-gray-400 text-sm mt-1">اولین نفری باشید که نظر می‌دهد!</p>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Add Review Form */}
-                            <div className="md:col-span-5">
-                                <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm sticky top-24">
-                                    <h3 className="font-bold text-gray-900 mb-4">ثبت دیدگاه جدید</h3>
-
-                                    {!isAuthenticated ? (
-                                        <div className="bg-gray-50 rounded-xl p-6 text-center">
-                                            <p className="text-gray-600 text-sm mb-4">
-                                                برای ثبت نظر، لطفاً ابتدا وارد حساب کاربری خود شوید.
-                                            </p>
-                                            <Link href="/login" className="inline-block px-6 py-2 bg-kala-500 text-white rounded-lg text-sm font-bold hover:bg-kala-600 transition-colors">
-                                                ورود به حساب
-                                            </Link>
-                                        </div>
-                                    ) : submitSuccess ? (
-                                        <div className="bg-green-50 border border-green-100 rounded-xl p-6 text-center animate-in fade-in zoom-in duration-300">
-                                            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                <CheckCircle size={24} />
-                                            </div>
-                                            <h4 className="font-bold text-green-800 mb-2">دیدگاه شما ثبت شد</h4>
-                                            <p className="text-green-600 text-sm">
-                                                نظر شما با موفقیت ثبت شد و پس از تأیید مدیر نمایش داده خواهد شد.
-                                            </p>
-                                            <button
-                                                onClick={() => setSubmitSuccess(false)}
-                                                className="mt-4 text-sm text-green-700 font-bold hover:underline"
-                                            >
-                                                ثبت نظر دیگر
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <form onSubmit={handleSubmitReview} className="space-y-4">
-                                            {submitError && (
-                                                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2">
-                                                    <AlertCircle size={16} />
-                                                    {submitError}
-                                                </div>
-                                            )}
-
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-2">امتیاز شما</label>
-                                                <div className="flex gap-2">
-                                                    {[1, 2, 3, 4, 5].map((star) => (
-                                                        <button
-                                                            key={star}
-                                                            type="button"
-                                                            onClick={() => setRating(star)}
-                                                            className="transition-transform hover:scale-110 focus:outline-none"
-                                                        >
-                                                            <Star
-                                                                size={28}
-                                                                className={`${star <= rating
-                                                                    ? "fill-amber-400 text-amber-400"
-                                                                    : "text-gray-200 hover:text-amber-200"
-                                                                    } transition-colors`}
-                                                            />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <span className="text-xs text-gray-400 mt-1 block">
-                                                    {rating === 5 ? "عالی" : rating === 4 ? "خوب" : rating === 3 ? "معمولی" : rating === 2 ? "بد" : "خیلی بد"}
-                                                </span>
-                                            </div>
-
-                                            <div>
-                                                <label className="block text-sm font-bold text-gray-700 mb-2">متن دیدگاه</label>
-                                                <textarea
-                                                    value={comment}
-                                                    onChange={(e) => setComment(e.target.value)}
-                                                    rows={4}
-                                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-kala-500 focus:ring-2 focus:ring-kala-100 outline-none transition-all resize-none text-sm"
-                                                    placeholder="نقاط قوت و ضعف محصول را بنویسید..."
-                                                    required
-                                                />
-                                            </div>
-
-                                            <button
-                                                type="submit"
-                                                disabled={submitting}
-                                                className="w-full py-3 bg-kala-500 text-white rounded-xl font-bold hover:bg-kala-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                                            >
-                                                {submitting ? (
-                                                    <>
-                                                        <Loader2 className="animate-spin" size={18} />
-                                                        در حال ثبت...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Send size={18} />
-                                                        ثبت دیدگاه
-                                                    </>
-                                                )}
-                                            </button>
-                                        </form>
-                                    )}
-                                </div>
-                            </div>
                         </div>
-                    </div>
-                )}
+                    </section>
+                </div>
+
+                <aside className="product-details__purchase" aria-label="خلاصهٔ خرید محصول">
+                    {purchaseSummary}
+                </aside>
             </div>
-        </div>
+        </article>
     );
 }

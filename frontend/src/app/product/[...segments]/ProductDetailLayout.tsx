@@ -7,6 +7,7 @@ import type { Product, ProductColor, ProductVariant, ProductVariantOption } from
 import type { Selection } from "@/lib/variants";
 import ProductTabs from "@/components/product/ProductTabs";
 import ProductPromotionBanner from "@/components/promotion/ProductPromotionBanner";
+import ResilientImage from "@/components/ui/ResilientImage";
 import ProductGallery from "./ProductGallery";
 import ProductHeader from "./ProductHeader";
 import ProductHistoryTracker from "./ProductHistoryTracker";
@@ -67,7 +68,12 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                             <div className="product-detail__highlights">
                                 <h2>ویژگی‌های محصول</h2>
                                 <dl>{product.specs.slice(0, 4).map((spec, index) => <div key={`${spec.label}-${index}`}><dt>{spec.label}:</dt><dd>{spec.value}</dd></div>)}</dl>
-                                <a href="#product-details" onClick={() => setDetailsTab("specs")}>مشاهده مشخصات محصول <ChevronLeft size={15} /></a>
+                                <a className="product-details__mobile-only" href="#product-details" onClick={() => setDetailsTab("specs")}>
+                                    مشاهده مشخصات محصول <ChevronLeft size={15} />
+                                </a>
+                                <a className="product-details__desktop-only" href="#product-info">
+                                    مشاهده مشخصات محصول <ChevronLeft size={15} />
+                                </a>
                             </div>
                         )}
                     </div>
@@ -85,7 +91,43 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                     <div><Headphones size={22} /><span>پشتیبانی خرید</span></div>
                     <div><BadgeCheck size={22} /><span>محصولات متنوع</span></div>
                 </div>
-                <div id="product-details" className="product-detail__details"><ProductTabs product={product} activeTab={detailsTab} onTabChange={setDetailsTab} /></div>
+                <ProductTabs
+                    key={product.id}
+                    product={product}
+                    activeTab={detailsTab}
+                    onTabChange={setDetailsTab}
+                    purchaseSummary={
+                        <div className="product-details__purchase-card">
+                            <div className="product-details__purchase-product">
+                                <ResilientImage src={viewProduct.image || "/placeholder.svg"} alt="" width={108} height={108} loading="lazy" />
+                                <div>
+                                    <p>{product.title}</p>
+                                    {variantOptions.length > 0 && (
+                                        <ul className="product-details__purchase-options" aria-label="گزینه‌های انتخاب‌شده">
+                                            {variantOptions.map(({ name, value }) => (
+                                                <li key={name}>
+                                                    {name === "رنگ" && selectedColor?.hex && <span aria-hidden="true" style={{ backgroundColor: selectedColor.hex }} />}
+                                                    {value}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="product-details__purchase-seller">
+                                <p><Store size={18} aria-hidden="true" /> ای‌کا‌جی کالا</p>
+                                <p><Truck size={16} aria-hidden="true" /> {viewProduct.countInStock > 0 ? "موجود در انبار" : "در حال حاضر ناموجود"}</p>
+                            </div>
+                            {product.guarantee && <p className="product-details__purchase-guarantee"><ShieldCheck size={18} aria-hidden="true" /> {product.guarantee}</p>}
+                            {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && (
+                                <p className="product-detail__stock">تنها {viewProduct.countInStock.toLocaleString("fa-IR")} عدد در انبار باقی مانده</p>
+                            )}
+                            <div className="product-detail__desktop-action product-details__purchase-action">
+                                <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop />
+                            </div>
+                        </div>
+                    }
+                />
             </div>
             <div className="product-detail__mobile-action lg:hidden"><ProductActions product={viewProduct} variantOptions={variantOptions} /></div>
         </div>
