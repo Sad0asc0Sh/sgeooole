@@ -1,12 +1,13 @@
 import React from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import ProductDetailClient from "@/app/product/[...segments]/ProductDetailClient";
-import type { Product } from "@/services/productService";
+import { productService, type Product } from "@/services/productService";
 
 const mockAddToCart = jest.fn();
 const mockUpdateQuantity = jest.fn();
 const mockRemoveFromCart = jest.fn();
+const mockFetchProduct = jest.mocked(productService.getById);
 
 jest.mock("@/providers/LayoutStateProvider", () => ({
     useLayoutState: () => ({ setIsProductPage: jest.fn() }),
@@ -58,7 +59,7 @@ jest.mock("framer-motion", () => ({
 
 jest.mock("@/components/ui/ResilientImage", () => ({
     __esModule: true,
-    default: ({ alt }: { alt: string }) => <span role="img" aria-label={alt} />,
+    default: ({ alt, src }: { alt: string; src: string }) => <span role="img" aria-label={alt} data-src={src} />,
 }));
 
 jest.mock("swiper/react", () => ({
@@ -114,6 +115,7 @@ describe("ProductDetailClient — محصول متغیر", () => {
         mockAddToCart.mockClear();
         mockUpdateQuantity.mockClear();
         mockRemoveFromCart.mockClear();
+        mockFetchProduct.mockReset().mockResolvedValue(variableProduct);
     });
 
     it("در شروع اولین رنگ موجود را انتخاب و قیمتش را نشان می‌دهد", () => {
@@ -171,5 +173,43 @@ describe("ProductDetailClient — محصول متغیر", () => {
         expect(screen.getByText("رنگ: زرد")).toBeInTheDocument();
         expect(screen.getAllByText("ناموجود").length).toBeGreaterThanOrEqual(2);
         expect(screen.queryByRole("button", { name: "افزودن به سبد خرید" })).toBeNull();
+    });
+
+    it("applies a gallery-only refresh to the selected variant and ignores an older response", async () => {
+        const catalogWithPhoto = (src: string) => ({
+            ...variableProduct,
+            variants: variableProduct.variants!.map((variant) => variant.id === "v2"
+                ? { ...variant, images: [src] }
+                : variant),
+        });
+        let finishEarlier: (p: Product) => void = () => {};
+        let finishLater: (p: Product) => void = () => {};
+
+        render(<ProductDetailClient product={variableProduct} />);
+        fireEvent.click(screen.getByRole("button", { name: "رنگ قرمز" }));
+        await waitFor(() => expect(mockFetchProduct).toHaveBeenCalledTimes(1));
+        mockFetchProduct
+            .mockImplementationOnce(() => new Promise((resolve) => { finishEarlier = resolve; }))
+            .mockImplementationOnce(() => new Promise((resolve) => { finishLater = resolve; }));
+        fireEvent(document, new Event("visibilitychange"));
+        fireEvent(document, new Event("visibilitychange"));
+        await waitFor(() => expect(mockFetchProduct).toHaveBeenCalledTimes(3));
+
+        await act(async () => finishLater(catalogWithPhoto("red-current.jpg")));
+        await act(async () => finishEarlier(catalogWithPhoto("red-stale.jpg")));
+
+        expect(screen.getByRole("img", { name: "خرید تی‌شرت" })).toHaveAttribute("data-src", "red-current.jpg");
+        expect(screen.getByText("رنگ: قرمز")).toBeInTheDocument();
+        expect(screen.getAllByText(FA(520000))).toHaveLength(2);
+    });
+
+    it("uses the first available catalog variant when a server refresh removes the selection", () => {
+        const { rerender } = render(<ProductDetailClient product={variableProduct} />);
+        fireEvent.click(screen.getByRole("button", { name: "رنگ قرمز" }));
+        rerender(<ProductDetailClient product={{ ...variableProduct, variants: variableProduct.variants!.filter((variant) => variant.id !== "v2") }} />);
+
+        expect(screen.getByText("رنگ: مشکی")).toBeInTheDocument();
+        expect(screen.getByRole("img", { name: "خرید تی‌شرت" })).toHaveAttribute("data-src", "black.jpg");
+        expect(screen.getAllByText(FA(500000))).toHaveLength(2);
     });
 });

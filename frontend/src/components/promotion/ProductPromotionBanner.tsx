@@ -6,7 +6,7 @@ import {
     getPromotionThemeScheme,
     type PromotionSurfaceKind,
 } from "@/lib/campaignTheme";
-import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveProductPromotion, type ProductPromotionState } from "@/lib/promotions/productPromotion";
 import { getServerNow } from "@/lib/serverClock";
 import type { Product } from "@/types/product";
 
@@ -29,15 +29,18 @@ const DEFAULT_LABEL: Record<Exclude<PromotionSurfaceKind, "none">, string> = {
 
 type ProductPromotionBannerProps = {
     product: Product;
+    promotion?: ProductPromotionState;
+    now?: number;
     /** Compact density for the mobile layout. */
     compact?: boolean;
 };
 
-export default function ProductPromotionBanner({ product, compact = false }: ProductPromotionBannerProps) {
-    // Same resolver the cards and the price box use: a promotion whose countdown
-    // already ended resolves to "none" and simply disappears here.
-    const now = getServerNow();
-    const promotion = resolveProductPromotion(product, now);
+export default function ProductPromotionBanner({
+    product,
+    now = getServerNow(),
+    promotion = resolveProductPromotion(product, now),
+    compact = false,
+}: ProductPromotionBannerProps) {
     // A named campaign can carry an end time without the special-offer flag, so
     // resolve a live boundary explicitly — never render an expired countdown.
     const endTime = promotion.endTime;

@@ -17,7 +17,7 @@ export default function ColorSelector({ colors, selectedColor, onColorChange }: 
             <span className="text-sm font-bold text-gray-800 block mb-3">
                 رنگ: {selectedColor.name}
             </span>
-            <div className="flex gap-3">
+            <div className="product-detail__legacy-colors flex gap-3">
                 {colors.map((c) => (
                     <button
                         key={c.id}

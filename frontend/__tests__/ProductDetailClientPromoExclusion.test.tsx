@@ -135,4 +135,12 @@ describe("ProductDetailClient — ظاهر تخفیف زمان‌دار و مت�
         fireEvent.click(screen.getAllByRole("button", { name: "رنگ مشکی" })[0]);
         expect(screen.getAllByText("فروش ویژه عید").length).toBeGreaterThan(0);
     });
+
+    it("shows current option price hints when the initial catalog promotion is already expired", () => {
+        render(<ProductDetailClient product={{ ...saleVariableProduct, specialOfferEndTime: "2000-01-01T00:00:00Z" }} />);
+
+        expect(screen.getAllByText((500000).toLocaleString("fa-IR")).length).toBeGreaterThan(0);
+        expect(screen.getByText(`قیمت از ${(500000).toLocaleString("fa-IR")} تا ${(520000).toLocaleString("fa-IR")} تومان متغیر است`)).toBeInTheDocument();
+        expect(screen.queryAllByTestId("countdown-timer")).toHaveLength(0);
+    });
 });

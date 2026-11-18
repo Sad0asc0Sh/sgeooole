@@ -161,8 +161,7 @@ const mapBackendToFrontend = (backendProduct: BackendProduct): Product => {
   // size buckets, then the main URL. Returns null when nothing usable.
   const normalizeCardImage = (img: any): string | null => {
     if (!img || typeof img !== "object") return null;
-    const url = img.cardUrl || img.sizes?.card || img.sizes?.small || img.sizes?.thumbnail;
-    return typeof url === "string" && url.trim() !== "" ? url.trim() : null;
+    return normalizeImage(img.cardUrl || img.sizes?.card || img.sizes?.small || img.sizes?.thumbnail);
   };
 
   // images/cardImages are built in ONE pass so the two arrays stay strictly

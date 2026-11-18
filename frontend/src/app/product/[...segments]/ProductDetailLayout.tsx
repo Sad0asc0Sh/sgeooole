@@ -5,6 +5,7 @@ import { useState } from "react";
 import { BadgeCheck, ChevronLeft, Headphones, ShieldCheck, Star, Store, Truck } from "lucide-react";
 import type { Product, ProductColor, ProductVariant, ProductVariantOption } from "@/types/product";
 import { colorHexFor, isColorAttribute, type Selection } from "@/lib/variants";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import ProductTabs from "@/components/product/ProductTabs";
 import ProductPromotionBanner from "@/components/promotion/ProductPromotionBanner";
 import ResilientImage from "@/components/ui/ResilientImage";
@@ -20,6 +21,7 @@ import "./product-detail.css";
 type Props = {
     product: Product;
     viewProduct: Product;
+    now: number;
     selection: Selection;
     selectedVariant: ProductVariant | undefined;
     selectedColor: ProductColor | null;
@@ -28,14 +30,15 @@ type Props = {
     onColorChange: (color: ProductColor) => void;
 };
 
-export default function ProductDetailLayout({ product, viewProduct, selection, selectedVariant, selectedColor, variantOptions, onVariantChange, onColorChange }: Props) {
+export default function ProductDetailLayout({ product, viewProduct, now, selection, selectedVariant, selectedColor, variantOptions, onVariantChange, onColorChange }: Props) {
     const [detailsTab, setDetailsTab] = useState<"desc" | "specs" | "reviews">(product.specs?.length ? "specs" : "desc");
     const inStock = viewProduct.countInStock > 0;
     const colorAttribute = product.attributes?.find(isColorAttribute);
+    const promotion = resolveProductPromotion(viewProduct, now);
     return (
         <div className="product-detail" dir="rtl">
             <ProductHistoryTracker product={product} />
-            <div className="lg:hidden"><ProductHeader product={product} /></div>
+            <div className="md:hidden"><ProductHeader /></div>
             <div className="product-detail__container">
                 {product.categoryPath && product.categoryPath.length > 0 && (
                     <nav className="product-detail__breadcrumbs" aria-label="مسیر محصول">
@@ -50,29 +53,38 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                 )}
                 <div className="product-detail__main">
                     <div className="product-detail__gallery">
-                        <ProductGallery key={`${product.id}-${selectedVariant?.id ?? "simple"}`} product={viewProduct} />
-                        <ProductSocialActions product={product} />
+                        <ProductGallery product={viewProduct} promotion={promotion} />
+                        <div className="product-detail__social"><ProductSocialActions product={product} /></div>
                     </div>
                     <div className="product-detail__info">
-                        {product.brand && <Link className="product-detail__brand" href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}>{product.brand}</Link>}
-                        <h1>{product.title}</h1>
-                        {product.enTitle && <p className="product-detail__english" dir="ltr">{product.enTitle}</p>}
-                        <div className="product-detail__rating">
-                            <Star size={16} fill="currentColor" />
-                            <span>{product.rating > 0 ? product.rating.toLocaleString("fa-IR") : "بدون امتیاز"}</span>
-                            <span className="product-detail__muted">({(product.reviewCount || 0).toLocaleString("fa-IR")} دیدگاه)</span>
+                        <div className="product-detail__brand-row">
+                            {product.brand && <Link className="product-detail__brand" href={`/products?brand=${product.brandSlug || encodeURIComponent(product.brand)}`}>{product.brand}</Link>}
                         </div>
-                        <div className="product-detail__divider" />
-                        <ProductPromotionBanner product={viewProduct} />
-                        <VariantSelector attributes={product.attributes ?? []} variants={product.variants ?? []} selection={selection} selectedVariant={selectedVariant} onChange={onVariantChange} />
-                        {(product.variants ?? []).length === 0 && <ColorSelector colors={product.colors || []} selectedColor={selectedColor} onColorChange={onColorChange} />}
+                        <div className="product-detail__identity">
+                            <h1>{product.title}</h1>
+                            {product.enTitle && <p className="product-detail__english" dir="ltr">{product.enTitle}</p>}
+                            <div className="product-detail__rating">
+                                <Star size={16} fill="currentColor" aria-hidden="true" />
+                                <span>{product.rating > 0 ? product.rating.toLocaleString("fa-IR") : "بدون امتیاز"}</span>
+                                <span className="product-detail__muted product-detail__rating-count">({(product.reviewCount || 0).toLocaleString("fa-IR")} دیدگاه)</span>
+                                <a className="product-detail__reviews-link" href="#product-details" onClick={() => setDetailsTab("reviews")}>
+                                    {(product.reviewCount || 0).toLocaleString("fa-IR")} دیدگاه <ChevronLeft size={14} aria-hidden="true" />
+                                </a>
+                            </div>
+                            <div className="product-detail__divider" />
+                        </div>
+                        <div className="product-detail__promotion"><ProductPromotionBanner product={viewProduct} promotion={promotion} now={now} /></div>
+                        <div className="product-detail__options">
+                            <VariantSelector attributes={product.attributes ?? []} variants={product.variants ?? []} selection={selection} selectedVariant={selectedVariant} onChange={onVariantChange} />
+                            {(product.variants ?? []).length === 0 && <ColorSelector colors={product.colors || []} selectedColor={selectedColor} onColorChange={onColorChange} />}
+                        </div>
                         {product.specs && product.specs.length > 0 && (
                             <div className="product-detail__highlights">
                                 <h2>ویژگی‌های محصول</h2>
-                                <dl>{product.specs.slice(0, 4).map((spec, index) => <div key={`${spec.label}-${index}`}><dt>{spec.label}:</dt><dd>{spec.value}</dd></div>)}</dl>
                                 <a className="product-details__mobile-only" href="#product-details" onClick={() => setDetailsTab("specs")}>
-                                    مشاهده مشخصات محصول <ChevronLeft size={15} />
+                                    مشاهده مشخصات محصول <ChevronLeft size={15} aria-hidden="true" />
                                 </a>
+                                <dl>{product.specs.slice(0, 4).map((spec, index) => <div key={`${spec.label}-${index}`}><dt>{spec.label}<span className="product-detail__spec-separator">:</span></dt><dd dir="auto">{spec.value}</dd></div>)}</dl>
                                 <a className="product-details__desktop-only" href="#product-info">
                                     مشاهده مشخصات محصول <ChevronLeft size={15} />
                                 </a>
@@ -80,11 +92,14 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                         )}
                     </div>
                     <aside className="product-detail__purchase" aria-label="اطلاعات فروش و خرید">
-                        <div className="product-detail__seller"><Store size={20} /><div><strong>ای‌کا‌جی کالا</strong><span>فروشنده</span></div></div>
-                        <div className="product-detail__purchase-row"><Truck size={19} /><span>{viewProduct.countInStock > 0 ? "موجود در انبار" : "در حال حاضر ناموجود"}</span></div>
-                        {product.guarantee && <div className="product-detail__purchase-row"><ShieldCheck size={19} /><span>{product.guarantee}</span></div>}
-                        {viewProduct.countInStock > 0 && viewProduct.countInStock <= 3 && <p className="product-detail__stock">تنها {viewProduct.countInStock.toLocaleString("fa-IR")} عدد در انبار باقی مانده</p>}
-                        <div className="product-detail__desktop-action"><ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop /></div>
+                        <h2 className="product-detail__seller-heading">فروشنده</h2>
+                        <div className="product-detail__offer">
+                            <div className="product-detail__seller"><Store size={20} aria-hidden="true" /><div><strong>ای‌کا‌جی کالا</strong><span>فروشنده</span></div></div>
+                            <div className="product-detail__purchase-row" data-in-stock={inStock}><Truck size={19} aria-hidden="true" /><span>{inStock ? "موجود در انبار" : "در حال حاضر ناموجود"}</span></div>
+                            {product.guarantee && <div className="product-detail__purchase-row"><ShieldCheck size={19} aria-hidden="true" /><span>{product.guarantee}</span></div>}
+                            {inStock && viewProduct.countInStock <= 3 && <p className="product-detail__stock">تنها {viewProduct.countInStock.toLocaleString("fa-IR")} عدد در انبار باقی مانده</p>}
+                        </div>
+                        <div className="product-detail__desktop-action"><ProductActions product={viewProduct} promotion={promotion} variantOptions={variantOptions} isDesktop /></div>
                     </aside>
                 </div>
                 <div className="product-detail__services" aria-label="خدمات فروشگاه">
@@ -130,13 +145,13 @@ export default function ProductDetailLayout({ product, viewProduct, selection, s
                                 <p className="product-detail__stock">تنها {viewProduct.countInStock.toLocaleString("fa-IR")} عدد در انبار باقی مانده</p>
                             )}
                             <div className="product-detail__desktop-action product-details__purchase-action">
-                                <ProductActions product={viewProduct} variantOptions={variantOptions} isDesktop />
+                                <ProductActions product={viewProduct} promotion={promotion} variantOptions={variantOptions} isDesktop />
                             </div>
                         </div>
                     }
                 />
             </div>
-            <div className="product-detail__mobile-action lg:hidden"><ProductActions product={viewProduct} variantOptions={variantOptions} /></div>
+            <div className="product-detail__mobile-action lg:hidden"><ProductActions product={viewProduct} promotion={promotion} variantOptions={variantOptions} /></div>
         </div>
     );
 }

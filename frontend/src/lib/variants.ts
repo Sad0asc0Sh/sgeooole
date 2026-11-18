@@ -188,18 +188,27 @@ export function withSelectedVariant<T extends Product>(
     variant: ProductVariant | undefined | null,
 ): T {
     if (!variant || typeof variant !== "object") return product;
+    const variantImages = variant.images?.length ? variant.images : undefined;
+    const images = variantImages ?? product.images;
+    const cardImages = variantImages
+        ? variantImages.map((src, index) => variant.cardImages?.[index] || src)
+        : product.cardImages;
+    const image = images[0] ?? product.image;
+    // Thumbnails belong to the same collection as the full-size photos.
+    const media = {
+        image,
+        images,
+        cardImages,
+        cardImage: cardImages?.[0] || (variantImages ? image : product.cardImage || image),
+    };
+
     // متغیر مستثنی از تخفیف (تیک تخفیف در پنل ادمین خاموش): قیمت پایه‌ی خودش نمایش
     // داده می‌شود و هیچ اثری از پروموشن محصول (لیبل، تم، تایمر، درصد، قیمت خط‌خورده)
     // روی آن نمی‌ماند؛ هم برای تخفیف زمان‌دار (Sale) و هم لحظه‌ای/شگفت‌انگیز.
     if (variant.excludeFromPromotion === true) {
-        const exImages =
-            variant.images && variant.images.length > 0 ? variant.images : product.images;
-        const exCardImages =
-            variant.cardImages && variant.cardImages.length > 0
-                ? variant.cardImages
-                : product.cardImages;
         return {
             ...product,
+            ...media,
             price: num(variant.price, num(product.price)),
             oldPrice: undefined,
             compareAtPrice: undefined,
@@ -211,10 +220,6 @@ export function withSelectedVariant<T extends Product>(
             campaignLabel: undefined,
             campaignTheme: undefined,
             countInStock: num(variant.stock),
-            image: exImages[0] ?? product.image,
-            cardImage: exCardImages?.[0] ?? product.cardImage ?? exImages[0] ?? product.image,
-            images: exImages,
-            cardImages: exCardImages,
             sku: variant.sku ?? product.sku,
         };
     }
@@ -225,22 +230,13 @@ export function withSelectedVariant<T extends Product>(
     const finalPrice = num(variant.price, num(product.price));
     const price = promotionDead ? (hasBase ? basePrice : finalPrice) : finalPrice;
     const oldPrice = promotionDead ? undefined : variant.oldPrice;
-    const images =
-        variant.images && variant.images.length > 0 ? variant.images : product.images;
-    const cardImages =
-        variant.cardImages && variant.cardImages.length > 0
-            ? variant.cardImages
-            : product.cardImages;
     return {
         ...product,
+        ...media,
         price,
         oldPrice,
         compareAtPrice: oldPrice ?? product.compareAtPrice,
         countInStock: num(variant.stock),
-        image: images[0] ?? product.image,
-        cardImage: cardImages?.[0] ?? product.cardImage ?? images[0] ?? product.image,
-        images,
-        cardImages,
         sku: variant.sku ?? product.sku,
     };
 }

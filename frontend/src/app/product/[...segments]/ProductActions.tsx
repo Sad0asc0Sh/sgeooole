@@ -1,24 +1,24 @@
 "use client";
-import { useState, useEffect } from "react";
-import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
-import { getServerNow } from "@/lib/serverClock";
+import { useState } from "react";
+import type { ProductPromotionState } from "@/lib/promotions/productPromotion";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Minus, Plus, Trash2 } from "lucide-react";
-import { Product } from "@/services/productService";
-import type { ProductVariantOption } from "@/types/product";
+import type { Product, ProductVariantOption } from "@/types/product";
 import { promotionPillClass } from "@/lib/campaignTheme";
 import { optionsKey } from "@/lib/variants";
+import { isAtStockCap, resolveAvailableStock } from "@/lib/stockLimits";
 import { useCart } from "@/hooks/useCart";
 
 type ProductActionsProps = {
     product: Product;
+    promotion: ProductPromotionState;
     variantOptions: ProductVariantOption[];
     /** @deprecated فقط برای سازگاری عقب‌رو؛ استفاده نکنید */
     selectedColor?: { name: string } | null;
     isDesktop?: boolean;
 };
 
-export default function ProductActions({ product, variantOptions = [], selectedColor, isDesktop = false }: ProductActionsProps) {
+export default function ProductActions({ product, promotion, variantOptions = [], selectedColor, isDesktop = false }: ProductActionsProps) {
     // سازگاری عقب‌رو: اگر variantOptions داده نشد ولی selectedColor قدیمی آمد.
     const effectiveVariantOptions: ProductVariantOption[] =
         variantOptions.length > 0
@@ -26,43 +26,18 @@ export default function ProductActions({ product, variantOptions = [], selectedC
             : selectedColor
                 ? [{ name: "رنگ", value: selectedColor.name }]
                 : [];
-    // کلید پایدار برای useEffect (آرایه هر رندر رفرنس جدید دارد).
     const variantKey = optionsKey(effectiveVariantOptions);
     const [addingToCart, setAddingToCart] = useState(false);
     const { addToCart, updateQuantity, removeFromCart, cartItems } = useCart();
-    const [now, setNow] = useState(() => getServerNow());
-
-    // Single source: the shared resolver (server-corrected clock). No duplicated
-    // timer math — an expired snapshot restores the base price and a stale
-    // compareAtPrice can never inflate it.
-    const promotion = resolveProductPromotion(product, now);
-
-    // Any active countdown (flash deal or special offer)
-    // A campaign label counts only while its promotion is live; a label alone (stale snapshot
-    // with an ended countdown) must not keep the discount badge / struck-through price alive.
+    const quantity = cartItems.find((item) => item.id === product.id && optionsKey(item.variantOptions) === variantKey)?.qty ?? 0;
+    const isInStock = product.countInStock > 0;
+    const atStockCap = isAtStockCap(quantity, resolveAvailableStock(product));
     const hasActivePromotion = promotion.kind !== "none";
-
-    // Same scheme as the product card and the detail banner: a live flash deal
-    // paints the amber→orange→red gradient here too, not a loose amber/red fill.
+    const { displayPrice, effectiveDiscount } = promotion;
     const discountPillClass = promotionPillClass(promotion.kind, product.campaignTheme);
 
-    // Price reversion: the resolver already restores the base price after expiry.
-    const displayPrice = promotion.displayPrice;
-
-    // Calculate quantity for the SPECIFIC selected variant
-    const [quantity, setQuantity] = useState(0);
-
-    useEffect(() => {
-        const matched = cartItems.find((i) => i.id === product.id && optionsKey(i.variantOptions) === variantKey);
-        setQuantity(matched?.qty || 0);
-    }, [cartItems, product.id, variantKey]);
-
-    useEffect(() => {
-        const id = setInterval(() => setNow(getServerNow()), 1000);
-        return () => clearInterval(id);
-    }, []);
-
     const handleAddToCart = async () => {
+        if (!isInStock || atStockCap || addingToCart) return;
         try {
             setAddingToCart(true);
             await addToCart(product, 1, effectiveVariantOptions);
@@ -74,12 +49,8 @@ export default function ProductActions({ product, variantOptions = [], selectedC
         }
     };
 
-    // سقف موجودی همین محصول/ترکیب انتخاب‌شده (countInStock بعد از اعمال
-    // ترکیب، موجودی همان ترکیب است): دکمه‌ی + روی سقف غیرفعال می‌شود.
-    const atStockCap = product.countInStock > 0 && quantity >= product.countInStock;
-
     const handleIncrement = async () => {
-        if (atStockCap) return;
+        if (!isInStock || atStockCap) return;
         try {
             await updateQuantity(product.id, quantity + 1, effectiveVariantOptions);
         } catch (err) {
@@ -160,7 +131,7 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                                 <motion.button
                                     whileTap={{ scale: 0.8 }}
                                     onClick={handleIncrement}
-                                    disabled={atStockCap}
+                                    disabled={!isInStock || atStockCap}
                                     title={atStockCap ? "به سقف موجودی رسیده‌اید" : undefined}
                                     className={`w-11 h-11 flex items-center justify-center text-amber-700 rounded-lg transition-colors ${atStockCap ? "opacity-40 cursor-not-allowed" : "hover:bg-amber-50"}`}
                                 >
@@ -175,13 +146,13 @@ export default function ProductActions({ product, variantOptions = [], selectedC
                                 exit={{ opacity: 0, width: "180px" }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={handleAddToCart}
-                                disabled={product.countInStock === 0 || addingToCart}
-                                className={`h-full font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all text-base ${product.countInStock === 0
+                                disabled={!isInStock || atStockCap || addingToCart}
+                                className={`h-full font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all text-base ${!isInStock
                                     ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                                     : "bg-gradient-to-l from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 shadow-amber-200"
                                     }`}
                             >
-                                {product.countInStock === 0 ? (
+                                {!isInStock ? (
                                     "ناموجود"
                                 ) : addingToCart ? (
                                     <>
@@ -199,97 +170,41 @@ export default function ProductActions({ product, variantOptions = [], selectedC
         );
     }
 
-    // Mobile fixed bottom bar layout (default)
+    const showDiscount = effectiveDiscount > 0 && (product.oldPrice ?? 0) > displayPrice;
+
     return (
-        <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 p-4 pb-[calc(1rem_+_var(--safe-area-bottom))] z-[100] flex items-center justify-between gap-4 shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
-            <div className="flex flex-col">
-                {/* Show old price and discount badge only when there's an active promotion */}
-                {product.oldPrice && hasActivePromotion && (
-                    <div className="flex items-center gap-2 mb-1">
-                        {product.discount > 0 && (
-                            <div
-                                className={`text-white text-[11px] font-bold px-2 py-0.5 rounded-full ${discountPillClass}`}
-                            >
-                                {product.discount.toLocaleString("fa-IR")}٪
-                            </div>
-                        )}
-                        <span className="text-[12px] text-gray-400 line-through decoration-gray-300 decoration-1">
-                            {product.oldPrice.toLocaleString("fa-IR")}
-                        </span>
+        <div className="product-actions-mobile pb-[calc(0.75rem_+_var(--safe-area-bottom))]" role="region" aria-label="خرید محصول">
+            <div className="product-actions-mobile__control">
+                {quantity > 0 ? (
+                    <div className="product-actions-mobile__quantity" aria-label="تعداد در سبد خرید" role="group">
+                        <button type="button" onClick={handleIncrement} disabled={!isInStock || atStockCap} aria-label="افزایش تعداد">
+                            <Plus size={20} aria-hidden="true" />
+                        </button>
+                        <output aria-label="تعداد در سبد خرید">{quantity.toLocaleString("fa-IR")}</output>
+                        <button type="button" onClick={handleDecrement} aria-label={quantity === 1 ? "حذف از سبد خرید" : "کاهش تعداد"}>
+                            {quantity === 1 ? <Trash2 size={19} aria-hidden="true" /> : <Minus size={20} aria-hidden="true" />}
+                        </button>
+                    </div>
+                ) : (
+                    <button type="button" className="product-actions-mobile__buy" onClick={handleAddToCart} disabled={!isInStock || atStockCap || addingToCart} aria-busy={addingToCart}>
+                        {addingToCart && <Loader2 className="motion-safe:animate-spin" size={18} aria-hidden="true" />}
+                        {!isInStock ? "ناموجود" : addingToCart ? "در حال افزودن" : "افزودن به سبد خرید"}
+                    </button>
+                )}
+            </div>
+            <div className="product-actions-mobile__prices">
+                {showDiscount && (
+                    <div className="product-actions-mobile__discount">
+                        <bdi className={`product-actions-mobile__discount-badge ${discountPillClass}`}>
+                            {effectiveDiscount.toLocaleString("fa-IR")}٪
+                        </bdi>
+                        <del><bdi>{product.oldPrice?.toLocaleString("fa-IR")}</bdi></del>
                     </div>
                 )}
-                <div className="flex items-center gap-1">
-                    <span className="text-xl font-black text-black">
-                        {displayPrice.toLocaleString("fa-IR")}
-                    </span>
-                    <span className="text-xs text-gray-500">تومان</span>
+                <div className="product-actions-mobile__price">
+                    <bdi>{displayPrice.toLocaleString("fa-IR")}</bdi>
+                    <span>تومان</span>
                 </div>
-            </div>
-            <div className="flex-1 h-[50px] relative flex justify-end">
-                <AnimatePresence mode="wait" initial={false}>
-                    {quantity > 0 ? (
-                        <motion.div
-                            key="quantity-controls"
-                            initial={{ opacity: 0, width: "100%" }}
-                            animate={{ opacity: 1, width: "160px" }}
-                            exit={{ opacity: 0, width: "100%" }}
-                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                            className="h-full flex items-center justify-between bg-white border border-gray-200 rounded-lg shadow-sm px-1"
-                        >
-                            <motion.button
-                                whileTap={{ scale: 0.8 }}
-                                onClick={handleDecrement}
-                                className="w-10 h-10 flex items-center justify-center text-amber-700 rounded-full hover:bg-amber-50 transition-colors"
-                            >
-                                {quantity === 1 ? <Trash2 size={20} /> : <Minus size={20} />}
-                            </motion.button>
-
-                            <motion.span
-                                key={quantity}
-                                initial={{ y: 10, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="text-lg font-bold text-amber-700 w-8 text-center"
-                            >
-                                {quantity.toLocaleString("fa-IR")}
-                            </motion.span>
-
-                            <motion.button
-                                whileTap={{ scale: 0.8 }}
-                                onClick={handleIncrement}
-                                disabled={atStockCap}
-                                title={atStockCap ? "به سقف موجودی رسیده‌اید" : undefined}
-                                className={`w-10 h-10 flex items-center justify-center text-amber-700 rounded-full transition-colors ${atStockCap ? "opacity-40 cursor-not-allowed" : "hover:bg-amber-50"}`}
-                            >
-                                <Plus size={20} />
-                            </motion.button>
-                        </motion.div>
-                    ) : (
-                        <motion.button
-                            key="add-to-cart"
-                            initial={{ opacity: 0, width: "160px" }}
-                            animate={{ opacity: 1, width: "100%" }}
-                            exit={{ opacity: 0, width: "160px" }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={handleAddToCart}
-                            disabled={product.countInStock === 0 || addingToCart}
-                            className={`h-full font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition-all ${product.countInStock === 0
-                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                : "bg-amber-600 text-white hover:bg-amber-700 shadow-amber-100"
-                                }`}
-                        >
-                            {product.countInStock === 0 ? (
-                                "ناموجود"
-                            ) : addingToCart ? (
-                                <>
-                                    <Loader2 className="animate-spin" size={20} />
-                                    <span>...</span>
-                                </>
-                            ) : (
-                                "افزودن به سبد خرید"
-                            )}
-                        </motion.button>
-                    )}
-                </AnimatePresence>
             </div>
         </div>
     );

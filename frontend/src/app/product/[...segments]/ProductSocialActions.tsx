@@ -63,11 +63,14 @@ export default function ProductSocialActions({ product }: ProductSocialActionsPr
     return (
         <>
             {/* Action Buttons - Square Icons Centered */}
-            <div className="flex items-center justify-center gap-4 mb-4">
+            <div className="product-social-actions flex items-center justify-center gap-4 mb-4">
                 {/* Wishlist Button */}
                 <motion.button
                     whileTap={{ scale: 0.9 }}
                     whileHover={{ scale: 1.05 }}
+                    type="button"
+                    aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+                    aria-pressed={isFavorite}
                     onClick={() => toggleWishlist(product)}
                     className={`
                         w-12 h-12 flex items-center justify-center rounded-xl transition-all shadow-sm
@@ -88,6 +91,8 @@ export default function ProductSocialActions({ product }: ProductSocialActionsPr
                 <motion.button
                     whileTap={{ scale: 0.9 }}
                     whileHover={{ scale: 1.05 }}
+                    type="button"
+                    aria-label={copied ? "لینک کپی شد" : "اشتراک‌گذاری"}
                     onClick={handleShare}
                     className="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all border border-gray-200 shadow-sm"
                     title={copied ? "لینک کپی شد" : "اشتراک‌گذاری"}

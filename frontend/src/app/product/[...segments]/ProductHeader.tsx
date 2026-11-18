@@ -2,71 +2,44 @@
 import { useState } from "react";
 import { ShoppingCart, Search, X, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { Product } from "@/services/productService";
 import { useCart } from "@/hooks/useCart";
 import { useSmartBack } from "@/hooks/useSmartBack";
 import AIChatSheet from "@/components/features/ai/AIChatSheet";
 import MobileSearchOverlay from "@/components/features/search/MobileSearchOverlay";
 
-type ProductHeaderProps = {
-    product: Product;
-};
-
-export default function ProductHeader({ product: _product }: ProductHeaderProps) {
+export default function ProductHeader() {
     const handleSmartBack = useSmartBack();
     const { itemCount } = useCart();
     const [isAiOpen, setIsAiOpen] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-    // const { toggleWishlist, isInWishlist } = useWishlist(); // Wishlist removed from header as per request
-    // const isFavorite = isInWishlist(product.id);
-
     return (
         <>
-            <div className="fixed top-0 left-0 w-full z-[100] bg-white shadow-sm flex justify-between items-center px-4 py-3 border-b border-gray-100 md:hidden">
-                {/* Right: Close Button */}
+            <nav className="product-detail__mobile-header" aria-label="ناوبری صفحه محصول">
                 <button
                     type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleSmartBack("/");
-                    }}
-                    className="w-11 h-11 -mr-2 rounded-full flex items-center justify-center text-gray-700 active:bg-gray-100 hover:bg-gray-50 transition-colors touch-manipulation cursor-pointer z-10"
-                    title="بستن صفحه محصول"
+                    onClick={() => handleSmartBack("/")}
                     aria-label="بستن صفحه محصول"
                 >
-                    <X size={26} className="pointer-events-none" />
+                    <X size={24} aria-hidden="true" />
                 </button>
-
-                {/* Left: Actions (AI, Cart, Search) - Visual LTR */}
-                <div className="flex items-center gap-2" dir="ltr">
-                    {/* AI Icon */}
-                    <button
-                        onClick={() => setIsAiOpen(true)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-ekg-50 text-kala-500 hover:bg-kala-50 transition-colors"
-                    >
-                        <Sparkles className="h-5 w-5" />
+                <div className="product-detail__header-actions">
+                    <button type="button" onClick={() => setIsSearchOpen(true)} aria-label="جستجو">
+                        <Search size={22} aria-hidden="true" />
                     </button>
-
-                    {/* Cart */}
-                    <Link href="/cart" className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-kala-600 transition-colors relative">
-                        <ShoppingCart size={22} />
+                    <Link href="/cart" aria-label={itemCount > 0 ? `سبد خرید، ${itemCount.toLocaleString("fa-IR")} کالا` : "سبد خرید"}>
+                        <ShoppingCart size={22} aria-hidden="true" />
                         {itemCount > 0 && (
-                            <span className="absolute top-0 right-0 w-4 h-4 bg-kala-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white">
-                                {itemCount}
+                            <span className="product-detail__cart-count" aria-hidden="true">
+                                {itemCount.toLocaleString("fa-IR")}
                             </span>
                         )}
                     </Link>
-
-                    {/* Search */}
-                    <button
-                        onClick={() => setIsSearchOpen(true)}
-                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 hover:text-kala-600 transition-colors"
-                    >
-                        <Search size={22} />
+                    <button type="button" onClick={() => setIsAiOpen(true)} className="product-detail__header-assistant" aria-label="دستیار خرید">
+                        <Sparkles size={20} aria-hidden="true" />
                     </button>
                 </div>
-            </div>
+            </nav>
 
             <AIChatSheet open={isAiOpen} onOpenChange={setIsAiOpen} />
             <MobileSearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

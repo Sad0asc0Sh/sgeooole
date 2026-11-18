@@ -319,7 +319,16 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
 
             <div className="product-details__mobile-tabs" aria-label="بخش‌های جزئیات محصول">
                 {mobileTabs.map(({ name, label }) => (
-                    <button type="button" key={name} aria-pressed={activeTab === name} onClick={() => onTabChange(name)}>
+                    <button
+                        type="button"
+                        key={name}
+                        aria-pressed={activeTab === name}
+                        aria-controls={sectionIds[name]}
+                        onClick={(event) => {
+                            onTabChange(name);
+                            event.currentTarget.closest("article")?.scrollIntoView?.({ block: "start" });
+                        }}
+                    >
                         {label}
                     </button>
                 ))}

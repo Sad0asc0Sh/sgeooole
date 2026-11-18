@@ -7,6 +7,7 @@ import RelatedProducts from "./RelatedProducts";
 import { fetchProductById, fetchProductByCode, fetchProductBySlug } from "@/lib/productData";
 import { buildProductUrl, encodeRedirectPath } from "@/lib/paths";
 import { buildProductMetaDescription, buildProductSeoTitle } from "@/lib/seo";
+import { findVariant, initialSelection, withSelectedVariant } from "@/lib/variants";
 
 // Phase 2 SEO #13 (edge caching): ISR revalidate drives the Cache-Control
 // header Next.js emits for prerendered PDPs:
@@ -159,7 +160,9 @@ export default async function ProductPage({ params }: { params: Promise<PagePara
         `KY-${(product.sku?.replace(/\D/g, '').slice(-7) || product.id.slice(-7)).padStart(7, '0')}`;
 
     const categoryPath = product.categoryPath || [];
-    const primaryImage = product.images?.[0];
+    const variants = product.variants ?? [];
+    const initialVariant = findVariant(variants, initialSelection(variants));
+    const primaryImage = withSelectedVariant(product, initialVariant).image;
 
     return (
         <>

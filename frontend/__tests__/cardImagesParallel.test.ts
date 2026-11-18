@@ -91,6 +91,15 @@ describe("cardImages parallelism", () => {
     ]);
   });
 
+  it("resolves relative thumbnails on the same asset host as their full images", async () => {
+    mockedApi.get.mockResolvedValue({
+      data: { data: { _id: "relative", name: "P", price: 1000, images: [{ url: "/api/uploads/main.webp", cardUrl: "/api/uploads/card.webp" }] } },
+    });
+
+    const product = await productService.getById("relative");
+    expect(product.cardImage).toBe(product.image.replace(/main\.webp$/, "card.webp"));
+  });
+
   it("wishlistItemToProduct pairs variant and top-level cardImages", () => {
     const product = wishlistItemToProduct({
       _id: "w1",

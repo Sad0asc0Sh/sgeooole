@@ -427,6 +427,8 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
 };
 
 const apiBaseUrl = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
+// The detail page and its client refresh must use browser-reachable asset URLs.
+const productAssetApiUrl = (process.env.NEXT_PUBLIC_API_URL || apiBaseUrl).replace(/\/$/, "");
 
 const encodePathSegment = (value: string) => {
   // Avoid double-encoding: Next/router params may already be percent-encoded.
@@ -469,7 +471,7 @@ export const fetchProductById = cache(async (id: string): Promise<(Product & { i
     const data = (payload as any)?.data ?? payload;
     if (!data) return null;
 
-    return mapBackendProduct(data as BackendProduct, apiBaseUrl);
+    return mapBackendProduct(data as BackendProduct, productAssetApiUrl);
   } catch (error) {
     // Keep RateLimitError for runtime error boundaries, but never fail the production build.
     if (error instanceof RateLimitError) {
@@ -512,7 +514,7 @@ export const fetchProductByCode = cache(async (code: string): Promise<(Product &
       syncClockFromFetch(response, payload);
       const data = (payload as any)?.data ?? payload;
       if (data) {
-        const product = mapBackendProduct(data as BackendProduct, apiBaseUrl);
+        const product = mapBackendProduct(data as BackendProduct, productAssetApiUrl);
         // Attach productCode to the result
         return { ...product, productCode: data.productCode || normalizedCode };
       }

@@ -1,5 +1,5 @@
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import "@testing-library/jest-dom";
 import VariantSelector from "@/app/product/[...segments]/VariantSelector";
 import type { ProductAttribute, ProductVariant } from "@/types/product";
@@ -62,6 +62,15 @@ describe("VariantSelector — نمایش واریانت‌های ثبت‌شده
         mount({ "رنگ": "مشکی", "سایز": "M" });
         // قرمز+M ارزان‌ترینش ۵۲۰٬۰۰۰ است → +۲۰٬۰۰۰ نسبت به ۵۰۰٬۰۰۰
         expect(screen.getByText(`+${(20000).toLocaleString("fa-IR")}`)).toBeInTheDocument();
+    });
+
+    it("previews the price and stock of the combination reached after adjusting another option", () => {
+        mount({ "رنگ": "مشکی", "سایز": "L" });
+        const red = screen.getByRole("button", { name: "رنگ قرمز" });
+        expect(within(red.parentElement!).getByText(`+${(20000).toLocaleString("fa-IR")}`)).toBeInTheDocument();
+        const yellow = screen.getByRole("button", { name: "رنگ زرد" });
+        expect(yellow.querySelector(".bg-red-500")).toBeInTheDocument();
+        expect(yellow).toBeEnabled();
     });
 
     it("گزینه‌ی ناموجود خط‌خورده است ولی قابل کلیک", () => {

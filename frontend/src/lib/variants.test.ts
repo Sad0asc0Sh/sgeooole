@@ -114,6 +114,19 @@ describe("variants lib — سناریوی فروشگاهی رنگ", () => {
         expect(view.images).toEqual(["base.jpg"]);
     });
 
+    test.each([false, true])("uses the selected photos as missing thumbnails (promotion exclusion %s)", (excludeFromPromotion) => {
+        const product = { ...baseProduct, cardImage: "base-card.jpg", cardImages: ["base-card.jpg"] };
+        const variant = { ...variants[1], images: ["red-front.jpg", "red-side.jpg"], excludeFromPromotion };
+        const view = withSelectedVariant(product, variant);
+
+        expect(view.cardImage).toBe("red-front.jpg");
+        expect(view.cardImages).toEqual(["red-front.jpg", "red-side.jpg"]);
+        expect(withSelectedVariant(product, { ...variant, cardImages: ["red-front-card.jpg"] }).cardImages)
+            .toEqual(["red-front-card.jpg", "red-side.jpg"]);
+        expect(withSelectedVariant(product, { ...variant, images: [], cardImages: ["red-front-card.jpg"] }).cardImages)
+            .toEqual(["base-card.jpg"]);
+    });
+
     test("withSelectedVariant بعد از انقضای پروموشن قیمت پایه را برمی‌گرداند", () => {
         const expired = {
             ...baseProduct,

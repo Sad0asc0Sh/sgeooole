@@ -3,9 +3,10 @@ import { useMemo } from "react";
 import { Check } from "lucide-react";
 import type { ProductAttribute, ProductVariant } from "@/types/product";
 import {
+    applyChoice,
     colorHexFor,
+    findVariant,
     isColorAttribute,
-    isOptionOutOfStock,
     priceRange,
     type Selection,
 } from "@/lib/variants";
@@ -67,18 +68,14 @@ export default function VariantSelector({
         return null;
     }
 
-    // ارزان‌ترین ترکیب سازگار با یک مقدار (با حفظ بقیه‌ی انتخاب‌ها) — مبنای تگ تفاوت قیمت
-    const cheapestForValue = (attrName: string, value: string): number | null => {
-        const others = Object.entries(selection ?? {}).filter(([k]) => k !== attrName);
-        const compatible = variants.filter((v) => {
-            const opts = v?.options ?? [];
-            if (!opts.some((o) => o.name === attrName && o.value === value)) return false;
-            return others.every(([k, val]) =>
-                !val || opts.some((o) => o.name === k && o.value === val),
-            );
-        });
-        if (compatible.length === 0) return null;
-        return Math.min(...compatible.map((v) => v.price));
+    // Preview the same combination that applying this option will actually select.
+    const getOptionState = (name: string, value: string) => {
+        const next = findVariant(variants, applyChoice(variants, selection, name, value));
+        return {
+            unavailable: !next,
+            out: !next || next.stock <= 0,
+            diff: next && range ? next.price - range.min : null,
+        };
     };
 
     /** چیپ اختلاف قیمت — متن دقیقاً «+۲۰٬۰۰۰» / «−۲۰٬۰۰۰» (قرارداد تست). */
@@ -123,19 +120,17 @@ export default function VariantSelector({
                             <div className="flex flex-wrap gap-x-3 gap-y-4">
                                 {attr.values.map((value) => {
                                     const isSelected = selectedValue === value;
-                                    const out = isOptionOutOfStock(variants, selection, attr.name, value);
+                                    const { out, diff, unavailable } = getOptionState(attr.name, value);
                                     const hex = colorHexFor(value, attr.swatches);
                                     const isLight = ["#ffffff", "#fef3c7", "#e7d8b7"].includes(
                                         hex.toLowerCase(),
                                     );
-                                    const cheapest = cheapestForValue(attr.name, value);
-                                    const diff =
-                                        cheapest !== null && range ? cheapest - range.min : null;
                                     return (
                                         <div key={value} className="flex w-16 flex-col items-center gap-1.5">
                                             <button
                                                 type="button"
                                                 onClick={() => onChange(attr.name, value)}
+                                                disabled={unavailable}
                                                 title={value}
                                                 aria-label={`${attr.name} ${value}`}
                                                 aria-pressed={isSelected}
@@ -175,16 +170,14 @@ export default function VariantSelector({
                             >
                                 {attr.values.map((value) => {
                                     const isSelected = selectedValue === value;
-                                    const out = isOptionOutOfStock(variants, selection, attr.name, value);
-                                    const cheapest = cheapestForValue(attr.name, value);
-                                    const diff =
-                                        cheapest !== null && range ? cheapest - range.min : null;
+                                    const { out, diff, unavailable } = getOptionState(attr.name, value);
                                     if (longText) {
                                         return (
                                             <button
                                                 key={value}
                                                 type="button"
                                                 onClick={() => onChange(attr.name, value)}
+                                                disabled={unavailable}
                                                 aria-pressed={isSelected}
                                                 className={`group flex min-h-[60px] w-full items-center gap-2.5 rounded-xl border-2 px-3.5 py-3 text-right outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-kala-500/50 active:scale-[0.98] ${
                                                     isSelected
@@ -227,6 +220,7 @@ export default function VariantSelector({
                                             key={value}
                                             type="button"
                                             onClick={() => onChange(attr.name, value)}
+                                            disabled={unavailable}
                                             aria-pressed={isSelected}
                                             className={`group flex min-h-[52px] w-full items-center justify-between gap-2 rounded-xl border-2 px-3.5 py-3 text-right outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-kala-500/50 active:scale-[0.98] ${
                                                 isSelected
