@@ -20,10 +20,16 @@ type CategoryItem = {
   updatedAt?: string;
 };
 
+type BrandItem = {
+  _id: string;
+  slug?: string;
+  updatedAt?: string;
+};
+
 const API_BASE = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 
 const fetchJsonWithTimeout = async (url: string, init: RequestInit & { next?: any }, timeoutMs: number) => {
   const controller = new AbortController();
@@ -121,8 +127,30 @@ async function fetchCategories(): Promise<CategoryItem[]> {
   }
 }
 
+// Brand listing pages (/products?brand=<slug>) are first-class indexable
+// pages with their own canonical + title (products/page.tsx
+// generateMetadata) — they belong in the sitemap exactly like categories.
+// `/blog` and `/glossary` stay out until real content ships there.
+async function fetchBrands(): Promise<BrandItem[]> {
+  try {
+    const json = await fetchJsonWithTimeout(
+      `${API_BASE}/brands?fields=slug,updatedAt`,
+      { next: { revalidate: 3600 } },
+      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
+    );
+    return Array.isArray(json?.data) ? json.data : [];
+  } catch (error) {
+    logBuildFetchWarning("[sitemap] Failed to fetch brands", error);
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories] = await Promise.all([fetchProducts(), fetchCategories()]);
+  const [products, categories, brands] = await Promise.all([
+    fetchProducts(),
+    fetchCategories(),
+    fetchBrands(),
+  ]);
   const now = new Date();
 
   const staticPages: MetadataRoute.Sitemap = [
@@ -157,6 +185,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
+  // Same pattern as categories — single-brand listing pages are indexable
+  // (multi-brand combos and price/sort filters are noindexed instead).
+  const brandPages: MetadataRoute.Sitemap = brands
+    .filter((brand) => brand.slug)
+    .map((brand) => {
+      return {
+        url: `${SITE_URL}/products?brand=${encodeURIComponent(brand.slug as string)}`,
+        lastModified: brand.updatedAt ? new Date(brand.updatedAt) : now,
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      };
+    });
+
   // NOTE: product URLs MUST use the shared buildProductUrl() so the sitemap
   // lists the exact canonical URLs (lib/paths scheme: /product/{code}/{slug}).
   // A previous local builder emitted /{categoryPath}/{slug} URLs which the
@@ -183,5 +224,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       };
     });
 
-  return [...staticPages, ...categoryPages, ...productPages];
+  return [...staticPages, ...categoryPages, ...brandPages, ...productPages];
 }

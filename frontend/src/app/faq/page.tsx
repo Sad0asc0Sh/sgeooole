@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import FaqClient from "./FaqClient";
 import { defaultFAQs } from "./defaultFaqs";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 const API_BASE = (process.env.INTERNAL_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
 
 const title = "سوالات متداول | ای کا جی کالا";

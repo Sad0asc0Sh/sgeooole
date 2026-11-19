@@ -800,6 +800,44 @@ function extractScopedFilterParamsFromUrl(originalUrl) {
   return extracted
 }
 
+// هیدریت مرجع‌های خام برند/دسته در ردیف‌های خروجی (هم‌ریخته‌ی mongoose
+// populate: { _id, name, slug }). خروجی aggregation فیلد brand/category را
+// به‌صورت ObjectId خام نگه می‌دارد و بدون این نگاشت، فرانت‌اند آن شناسه‌ی
+// ۲۴-هگز را عیناً در alt تصاویر («برند 665f…») و برچسب دسته چاپ می‌کرد.
+// الگوی همین نگاشت بدون $lookup قبلاً در buildFacets برای فست برندها است.
+const isHydratedRef = (value) =>
+  !!value && typeof value === 'object' && ('name' in value || 'slug' in value)
+
+async function hydrateListingRefs(data, models) {
+  if (!Array.isArray(data) || !data.length) return
+  const brandIds = new Set()
+  const categoryIds = new Set()
+  for (const row of data) {
+    if (row?.brand && !isHydratedRef(row.brand)) brandIds.add(String(row.brand))
+    if (row?.category && !isHydratedRef(row.category)) categoryIds.add(String(row.category))
+  }
+  const [brandDocs, categoryDocs] = await Promise.all([
+    brandIds.size && typeof models?.Brand?.find === 'function'
+      ? models.Brand.find({ _id: { $in: [...brandIds] } }).select('_id name slug').lean()
+      : Promise.resolve([]),
+    categoryIds.size && typeof models?.Category?.find === 'function'
+      ? models.Category.find({ _id: { $in: [...categoryIds] } }).select('_id name slug').lean()
+      : Promise.resolve([]),
+  ])
+  const brandById = new Map(brandDocs.map((doc) => [String(doc._id), doc]))
+  const categoryById = new Map(categoryDocs.map((doc) => [String(doc._id), doc]))
+  for (const row of data) {
+    if (row?.brand && !isHydratedRef(row.brand)) {
+      const doc = brandById.get(String(row.brand))
+      row.brand = doc ? { _id: doc._id, name: doc.name, slug: doc.slug } : undefined
+    }
+    if (row?.category && !isHydratedRef(row.category)) {
+      const doc = categoryById.get(String(row.category))
+      row.category = doc ? { _id: doc._id, name: doc.name, slug: doc.slug } : undefined
+    }
+  }
+}
+
 async function listProducts(query, models, now = new Date()) {
   const options = parseListingQuery(query)
   const context = await resolveListingContext(options, models, now)
@@ -814,6 +852,7 @@ async function listProducts(query, models, now = new Date()) {
   // آخرین مرحله‌ی pipeline یک $facet است، پس شاخه‌ها در سطح بالای سند
   // خروجی قرار می‌گیرند (data/total/priceRange/brands/categories/prop_i).
   const facets = await buildFacets({ raw: result, criteria, context, options, models })
+  await hydrateListingRefs(result?.data, models)
   return {
     success: true,
     data: result?.data || [],
@@ -829,5 +868,6 @@ module.exports = {
   buildListingPipeline,
   resolveListingContext,
   extractScopedFilterParamsFromUrl,
+  hydrateListingRefs,
   ListingQueryError,
 }

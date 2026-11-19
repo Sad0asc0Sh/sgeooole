@@ -5,6 +5,31 @@ import { buildProductSpecs, type BackendSpecifications } from "./productSpecs";
 import { resolvePricing } from "@/lib/pricing";
 import { updateServerClock, updateServerClockFromPayload } from "@/lib/serverClock";
 
+// شناسه‌ی ۲۴-کاراکتری هگز = ObjectId خام mongoose؛ یعنی برند در بک‌اند
+// populate نشده و نام واقعی در دسترس نیست.
+const RAW_OBJECT_ID_RE = /^[0-9a-f]{24}$/i;
+
+export const isRawObjectId = (value: unknown): value is string =>
+  typeof value === "string" && RAW_OBJECT_ID_RE.test(value);
+
+/**
+ * پسوند « برند X» برای متن alt تصاویر محصول — با گارد SEO:
+ * اگر نام برند غایب یا یک ObjectId خام باشد، رشته‌ی خالی برمی‌گردد تا
+ * هرگز «برند 665f1a2b…» در alt/HTML چاپ نشود (alt فقط «نام محصول +
+ * ای کا جی کالا» می‌ماند). مصرف در ProductCard، HomeProductCard و
+ * ProductGallery؛ خودِ mapping (normalizeProduct) هم برند خام را حذف می‌کند.
+ */
+export function brandAltSuffix(brand: unknown): string {
+  const name =
+    typeof brand === "object" && brand !== null
+      ? (brand as { name?: unknown }).name
+      : brand;
+  if (typeof name !== "string") return "";
+  const trimmed = name.trim();
+  if (!trimmed || isRawObjectId(trimmed)) return "";
+  return ` برند ${trimmed}`;
+}
+
 const syncClockFromFetch = (response: Response | null | undefined, payload: unknown) => {
   try {
     updateServerClockFromPayload(payload);
@@ -361,10 +386,16 @@ export const mapBackendProduct = (backend: BackendProduct, apiUrl: string): Prod
     return path;
   })();
 
-  const brand =
+  // گارد SEO: برندِ populate‌نشده به‌صورت رشته‌ی ObjectId خام می‌آید — آن را
+  // حذف کن تا هیچ‌جا (alt، برچسب، اسکیما) «برند <id-24-هگز>» رندر نشود.
+  const rawBrand =
     typeof backend.brand === "object" && backend.brand !== null
       ? (backend.brand as any).name
-      : backend.brand || undefined;
+      : backend.brand;
+  const brand =
+    typeof rawBrand === "string" && rawBrand.trim() && !isRawObjectId(rawBrand.trim())
+      ? rawBrand
+      : undefined;
 
   const brandSlug =
     typeof backend.brand === "object" && backend.brand !== null

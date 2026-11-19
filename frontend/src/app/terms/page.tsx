@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import TermsClient from "./TermsClient";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 
 const title = "قوانین و مقررات | ای کا جی کالا";
 const description =

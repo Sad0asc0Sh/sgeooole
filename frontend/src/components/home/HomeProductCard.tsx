@@ -9,6 +9,7 @@ import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { resolveCampaignThemeVariant } from "@/lib/campaignTheme";
+import { brandAltSuffix } from "@/lib/productData";
 import type { Product } from "@/types/product";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import styles from "./HomeProductRail.module.css";
@@ -52,7 +53,7 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
         <DeferredImage
           src={product.cardImage || product.image || "/placeholder.svg"}
           backupSrc={product.image}
-          alt={`خرید ${product.name || product.title}${product.brand ? ` برند ${product.brand}` : ""} | ای کا جی کالا`}
+          alt={`خرید ${product.name || product.title}${brandAltSuffix(product.brand)} | ای کا جی کالا`}
           fill
           className={`${imageStyles.image} ${isOutOfStock ? "grayscale opacity-60" : ""}`}
           sizes="(max-width: 479px) 46vw, (max-width: 767px) 200px, 240px"

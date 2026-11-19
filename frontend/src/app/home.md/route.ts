@@ -7,7 +7,7 @@
  * Browsers keep receiving the normal HTML homepage.
  */
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 
 const BODY = `# ای کا جی کالا (ekgkala) — فروشگاه اینترنتی کالای تکنولوژی و دیجیتال
 

@@ -6,7 +6,7 @@
  * Served as text/plain so LLMs can fetch it without rendering HTML.
  */
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 
 const BODY = `# ekgkala — ای کا جی کالا
 

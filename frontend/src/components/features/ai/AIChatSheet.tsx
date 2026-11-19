@@ -121,7 +121,7 @@ export function resolveChatImage(src: string | undefined): string {
     if (s.startsWith("http://") || s.startsWith("https://")) return s;
     if (s.startsWith("/")) {
         try {
-            const base = (typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> })?.env?.NEXT_PUBLIC_API_URL) || "https://www.ekgkala.ir/api";
+            const base = (typeof process !== "undefined" && (process as unknown as { env?: Record<string, string> })?.env?.NEXT_PUBLIC_API_URL) || "https://ekgkala.ir/api";
             return `${String(base).replace(/\/api\/?$/, "")}${s}`;
         } catch {
             return s;
@@ -1060,5 +1060,5 @@ function getBaseUrl(): string {
     } catch {
         // ignore
     }
-    return 'https://www.ekgkala.ir';
+    return 'https://ekgkala.ir';
 }

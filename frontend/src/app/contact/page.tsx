@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import ContactClient from "./ContactClient";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 
 const title = "تماس با ای کا جی کالا | ekgkala";
 const description =

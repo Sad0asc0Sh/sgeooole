@@ -2,6 +2,7 @@ import type { Product } from "@/types/product";
 import { buildProductUrl } from "@/lib/paths";
 import { priceRange } from "@/lib/variants";
 import { stripHtmlToText } from "@/lib/seo";
+import { isRawObjectId } from "@/lib/productData";
 
 // Schema images must be absolute and real: productData maps products without
 // photos to the relative "/placeholder.svg", which is not an indexable product
@@ -125,8 +126,14 @@ export default function ProductStructuredData({ product, relatedProducts = [] }:
                 // markup inside the JSON-LD (same helper the meta description uses).
                 description: stripHtmlToText(product.description) || product.title,
                 image: absoluteSchemaImages(product.images, product.variants),
-                brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
-                sku: product.sku || product.id,
+                // Same raw-ObjectId guard as the image alt: an unpopulated
+                // brand must never leak a 24-hex id into the JSON-LD.
+                brand: product.brand && !isRawObjectId(product.brand)
+                    ? { "@type": "Brand", name: product.brand }
+                    : undefined,
+                // sku must be the store's real item code — fall back to the
+                // KY- productCode before ever exposing the raw Mongo _id.
+                sku: product.sku || product.productCode || product.id,
                 mpn: product.sku,
                 offers,
                 // Only emit aggregateRating with real review data — never fabricate

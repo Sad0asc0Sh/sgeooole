@@ -15,6 +15,7 @@ import ResilientImage from "@/components/ui/ResilientImage";
 import { promotionPillClass } from "@/lib/campaignTheme";
 import { isFlashDealLabel } from "@/lib/flashDealUtils";
 import { resolveProductPromotion, type ProductPromotionState } from "@/lib/promotions/productPromotion";
+import { brandAltSuffix } from "@/lib/productData";
 import type { Product } from "@/types/product";
 
 const placeholder = "/placeholder.svg";
@@ -104,7 +105,8 @@ export default function ProductGallery({ product, promotion = resolveProductProm
     };
 
     const caption = `${faNum(activeIndex + 1)} / ${faNum(photos.length)}`;
-    const brandSuffix = product.brand ? ` برند ${product.brand}` : "";
+    // گارد SEO: برندِ populate‌نشده (ObjectId خام ۲۴-هگز) هرگز وارد alt نمی‌شود
+    const brandSuffix = brandAltSuffix(product.brand);
     const imageAlt = (index: number) => index === 0
         ? `خرید ${product.name}${brandSuffix}`
         : `${product.name} - نمای ${faNum(index + 1)}`;

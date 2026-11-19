@@ -45,6 +45,10 @@ const nextConfig = {
             },
             {
                 protocol: 'https',
+                hostname: 'ekgkala.ir',
+            },
+            {
+                protocol: 'https',
                 hostname: 'www.ekgkala.ir',
             },
             {
@@ -73,7 +77,7 @@ const nextConfig = {
     },
 
     async headers() {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://www.ekgkala.ir/api'
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ekgkala.ir/api'
 
         return [
             {
@@ -100,7 +104,7 @@ const nextConfig = {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.ekgkala.ir https://accounts.google.com https://apis.google.com",
+                            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://ekgkala.ir https://accounts.google.com https://apis.google.com",
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: https: blob:",
@@ -139,17 +143,22 @@ const nextConfig = {
     },
 
     async redirects() {
+        // Canonical host is the apex (https://ekgkala.ir, no www) — same host
+        // nginx 301s to. These are the defense-in-depth layer for traffic that
+        // reaches Next.js directly (dev, or a proxy misconfiguration): any
+        // http request and any www-host request must land on the apex over
+        // https in ONE hop (never http→www→apex, which would chain redirects).
         return [
             {
                 source: '/:path*',
                 has: [{ type: 'header', key: 'x-forwarded-proto', value: 'http' }],
-                destination: 'https://www.ekgkala.ir/:path*',
+                destination: 'https://ekgkala.ir/:path*',
                 permanent: true,
             },
             {
                 source: '/:path*',
-                has: [{ type: 'host', value: 'ekgkala.ir' }],
-                destination: 'https://www.ekgkala.ir/:path*',
+                has: [{ type: 'host', value: 'www.ekgkala.ir' }],
+                destination: 'https://ekgkala.ir/:path*',
                 permanent: true,
             },
         ]

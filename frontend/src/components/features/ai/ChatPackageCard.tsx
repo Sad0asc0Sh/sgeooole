@@ -28,7 +28,7 @@ function resolveChatImage(src: string | undefined): string {
             const base =
                 (typeof process !== "undefined" &&
                     (process as unknown as { env?: Record<string, string> })?.env?.NEXT_PUBLIC_API_URL) ||
-                "https://www.ekgkala.ir/api";
+                "https://ekgkala.ir/api";
             return `${String(base).replace(/\/api\/?$/, "")}${s}`;
         } catch {
             return s;

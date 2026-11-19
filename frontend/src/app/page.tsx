@@ -23,7 +23,7 @@ export const revalidate = 60;
 const API_BASE = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
 
 type ApiResponse<T> = { data?: T };
@@ -239,11 +239,14 @@ export default async function Home() {
     "@context": "https://schema.org",
     "@graph": [
       {
-        // Entity SEO: one canonical Organization/OnlineStore entity for the
-        // brand, with every spelling users actually search for, all three
-        // Mashhad branches exactly as published on /contact, the real logo
-        // file (the old /logo.png URL returned 404) and non-empty sameAs.
-        "@type": ["Organization", "OnlineStore"],
+        // Entity SEO: one canonical OnlineStore/ElectronicsStore entity for
+        // the brand (type aligned with the store's actual niche: CCTV,
+        // alarm systems, parking gates — security & electronics hardware),
+        // with every spelling users actually search for, all three Mashhad
+        // branches exactly as published on /contact (as `department` nodes
+        // carrying each branch's real phone), the real logo file (the old
+        // /logo.png URL returned 404) and non-empty sameAs.
+        "@type": ["OnlineStore", "ElectronicsStore"],
         "@id": `${SITE_URL}/#organization`,
         name: "ای کا جی کالا",
         legalName: "فروشگاه اینترنتی ای کا جی کالا (EKG KALA)",
@@ -253,8 +256,10 @@ export default async function Home() {
           "ای‌کا‌جی‌کالا",
           "ای کی جی کالا",
           "ای‌کی‌جی کالا",
+          "ای ک جی کالا",
           "ایکاجی کالا",
           "ایکیجی کالا",
+          "اکج کالا",
           "فروشگاه ای کا جی کالا",
           "فروشگاه اینترنتی ای کا جی کالا",
           "شرکت ای کا جی کالا",
@@ -283,7 +288,7 @@ export default async function Home() {
           `${SITE_URL}/ekg-logo.jpg`,
         ],
         description:
-          "فروشگاه اینترنتی ای کا جی کالا (ekgkala / EKG KALA)؛ مرجع رسمی خرید آنلاین کالای تکنولوژی، دیجیتال، الکترونیک و تجهیزات هوشمند در ایران با ۳ شعبه فعال در مشهد (بلوار پیروزی، میدان صاحب‌الزمان و خین‌عرب) و ارسال سریع به سراسر کشور. ای کا جی کالا یک فروشگاه مستقل است و تنها وب‌سایت رسمی آن ekgkala.ir است.",
+          "فروشگاه اینترنتی و حضوری ای کا جی کالا (ekgkala)؛ مرجع تخصصی خرید دوربین مداربسته، دزدگیر اماکن، جک پارکینگی، کرکره برقی، ریموت و تجهیزات امنیتی در مشهد با ارسال سراسری.",
         contactPoint: [
           {
             "@type": "ContactPoint",
@@ -307,34 +312,56 @@ export default async function Home() {
             availableLanguage: ["fa"],
           },
         ],
-        // All three branch addresses, exactly as published on /contact
-        // (ContactClient branches) — branch 3 (Khin Arab, Tarchi) is the
-        // address Enamad/Torob list for this store, so publishing it here
-        // ties that third-party record to this domain.
-        address: [
+        // All three branches, exactly as published on /contact
+        // (ContactClient branches), as `department` LocalBusiness nodes so
+        // each branch keeps its own address AND its real phone — branch 3
+        // (Khin Arab, Tarchi) is the address Enamad/Torob list for this
+        // store, so publishing it here ties that third-party record to
+        // this domain. Phones come from ContactClient (branch 2 lists
+        // 05137136355 and 05137136356; the second number stays in the
+        // sales contactPoint above).
+        department: [
           {
-            "@type": "PostalAddress",
+            "@type": "ElectronicsStore",
+            "@id": `${SITE_URL}/#branch-piroozi`,
             name: "شعبه ۱ ای کا جی کالا (بلوار پیروزی)",
-            addressCountry: "IR",
-            addressRegion: "خراسان رضوی",
-            addressLocality: "مشهد",
-            streetAddress: "پیروزی 75 بین ولایتی 9و11",
+            parentOrganization: { "@id": `${SITE_URL}/#organization` },
+            telephone: "05135013383",
+            address: {
+              "@type": "PostalAddress",
+              addressCountry: "IR",
+              addressRegion: "خراسان رضوی",
+              addressLocality: "مشهد",
+              streetAddress: "پیروزی 75 بین ولایتی 9و11",
+            },
           },
           {
-            "@type": "PostalAddress",
+            "@type": "ElectronicsStore",
+            "@id": `${SITE_URL}/#branch-sahibelzaman`,
             name: "شعبه ۲ ای کا جی کالا (میدان صاحب‌الزمان)",
-            addressCountry: "IR",
-            addressRegion: "خراسان رضوی",
-            addressLocality: "مشهد",
-            streetAddress: "میدان صاحب الزمان پاساژ سبحان طبقه +۱ واحد ۱۶",
+            parentOrganization: { "@id": `${SITE_URL}/#organization` },
+            telephone: "05137136355",
+            address: {
+              "@type": "PostalAddress",
+              addressCountry: "IR",
+              addressRegion: "خراسان رضوی",
+              addressLocality: "مشهد",
+              streetAddress: "میدان صاحب الزمان پاساژ سبحان طبقه +۱ واحد ۱۶",
+            },
           },
           {
-            "@type": "PostalAddress",
+            "@type": "ElectronicsStore",
+            "@id": `${SITE_URL}/#branch-khinarab`,
             name: "شعبه ۳ ای کا جی کالا (خین‌عرب - طرح‌چی)",
-            addressCountry: "IR",
-            addressRegion: "خراسان رضوی",
-            addressLocality: "مشهد",
-            streetAddress: "خین عرب طرح چی6 - پ63",
+            parentOrganization: { "@id": `${SITE_URL}/#organization` },
+            telephone: "09154191788",
+            address: {
+              "@type": "PostalAddress",
+              addressCountry: "IR",
+              addressRegion: "خراسان رضوی",
+              addressLocality: "مشهد",
+              streetAddress: "خین عرب طرح چی6 - پ63",
+            },
           },
         ],
         sameAs: socialLinks,

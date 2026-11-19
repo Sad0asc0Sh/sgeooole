@@ -6,7 +6,7 @@
 
 import { defaultFAQs } from "@/app/faq/defaultFaqs";
 
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.ekgkala.ir").replace(/\/$/, "");
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 const LAST_UPDATED = "2026-10-29";
 
 function buildBody(): string {
