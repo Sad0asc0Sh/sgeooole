@@ -24,9 +24,21 @@ import {
     UserOutlined,
 } from '@ant-design/icons'
 import api from '../../api'
+import { getProvinceNameById, getProvinceNameForCity } from '../../data/iranLocations'
 
 const { Option } = Select
 const { TextArea } = Input
+
+// نمایش استان آدرس؛ برای آدرس‌های قدیمی که استان‌شان خالی است، از شناسه استان یا نام شهر تشخیص داده می‌شود
+const resolveProvinceName = (address) => {
+  if (!address) return null
+  return (
+    address.province ||
+    getProvinceNameById(address.provinceId) ||
+    getProvinceNameForCity(address.city) ||
+    null
+  )
+}
 
 function CreateOrderPage() {
     const navigate = useNavigate()
@@ -238,7 +250,7 @@ function CreateOrderPage() {
                     phone: selectedAddress.phone || selectedAddress.mobile,
                     mobile: selectedAddress.mobile,
                     nationalCode: selectedAddress.nationalCode || '',
-                    province: selectedAddress.province,
+                    province: resolveProvinceName(selectedAddress) || '',
                     city: selectedAddress.city,
                     address: selectedAddress.address,
                     postalCode: selectedAddress.postalCode,
@@ -414,7 +426,7 @@ function CreateOrderPage() {
                                             <div>
                                                 <div style={{ fontWeight: 'bold' }}>{addr.fullName}</div>
                                                 <small style={{ color: '#666' }}>
-                                                    {addr.province}, {addr.city} - {addr.mobile}
+                                                    {resolveProvinceName(addr)}, {addr.city} - {addr.mobile}
                                                 </small>
                                             </div>
                                         </Option>
@@ -435,7 +447,7 @@ function CreateOrderPage() {
                                         {selectedAddress.fullName}
                                     </div>
                                     <div style={{ fontSize: 12, color: '#666', lineHeight: 1.6 }}>
-                                        {selectedAddress.province}, {selectedAddress.city}
+                                        {resolveProvinceName(selectedAddress)}, {selectedAddress.city}
                                         <br />
                                         {selectedAddress.address}
                                         {selectedAddress.plaque && `, پلاک ${selectedAddress.plaque}`}

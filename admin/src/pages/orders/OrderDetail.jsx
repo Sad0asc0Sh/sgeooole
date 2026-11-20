@@ -43,6 +43,7 @@ import S3AdminImage from '../../components/S3AdminImage'
 import ResponsiveTable from '../../components/ResponsiveTable'
 import useIsMobile from '../../hooks/useIsMobile'
 import { useCan } from '../../rbac/useCan'
+import { getProvinceNameById, getProvinceNameForCity } from '../../data/iranLocations'
 
 // فعال‌سازی تقویم جلالی
 dayjs.extend(jalaliday)
@@ -77,6 +78,17 @@ const formatPersianDate = (date, includeTime = false) => {
     return `${day} ${month} ${year} - ساعت ${time}`
   }
   return `${day} ${month} ${year}`
+}
+
+// نمایش استان سفارش؛ برای سفارش‌های قدیمی که استان‌شان خالی ثبت شده، از شناسه استان یا نام شهر تشخیص داده می‌شود
+const resolveProvinceName = (shippingAddress) => {
+  if (!shippingAddress) return null
+  return (
+    shippingAddress.province ||
+    getProvinceNameById(shippingAddress.provinceId) ||
+    getProvinceNameForCity(shippingAddress.city) ||
+    null
+  )
 }
 
 const { TextArea } = Input
@@ -631,6 +643,9 @@ function OrderDetail() {
                   </Descriptions.Item>
                   <Descriptions.Item label="آدرس">
                     {order.shippingAddress?.address || '—'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="استان">
+                    {resolveProvinceName(order.shippingAddress) || '—'}
                   </Descriptions.Item>
                   <Descriptions.Item label="شهر">
                     {order.shippingAddress?.city || '—'}

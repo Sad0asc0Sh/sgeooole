@@ -59,3 +59,6 @@ export const getProvinceNameForCity = (cityName) => {
   const city = iranCities.find((item) => normalizeIranLocationText(item.name) === normalizedCity)
   return city ? provinceById.get(city.provinceId)?.name : undefined
 }
+
+export const getProvinceNameById = (provinceId) =>
+  Number.isInteger(provinceId) ? provinceById.get(provinceId)?.name : undefined
