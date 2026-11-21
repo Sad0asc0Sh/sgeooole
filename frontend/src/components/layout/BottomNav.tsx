@@ -1,10 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Home, LayoutGrid, ShoppingCart, BookOpen, User } from "lucide-react";
-import CategoriesSheet from "@/components/features/categories/CategoriesSheet";
-import { useCategoryMenu } from "@/components/features/categories/useCategoryMenu";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/store/cartStore";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
@@ -22,10 +20,6 @@ const navItemClass = "flex min-h-11 min-w-11 flex-col items-center justify-cente
 export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const menu = useCategoryMenu(pathname);
-    const isCategoriesOpen = menu.path !== null;
-    const categoryTrigger = useRef<HTMLButtonElement>(null);
-    const openedOn = useRef<string | null>(null);
     const { user } = useAuth();
 
     // Total units in the cart. A primitive selector means the nav re-renders only
@@ -36,17 +30,6 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
     );
     const cartInitialized = useCartStore((state) => state.initialized);
     const hasCartItems = cartCount > 0;
-
-    useLayoutEffect(() => {
-        if (isCategoriesOpen) {
-            openedOn.current = window.location.href;
-        } else if (openedOn.current) {
-            if (openedOn.current === window.location.href && document.activeElement === document.body) {
-                categoryTrigger.current?.focus({ preventScroll: true });
-            }
-            openedOn.current = null;
-        }
-    }, [isCategoriesOpen]);
 
     // Feedback for "a product just landed in the cart": the cart fills up (solid
     // glyph + count badge) and plays a short spring + halo. The first settled
@@ -80,11 +63,9 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
         onNavClick();
 
         if (pathname === "/" || pathname === "") {
-            if (isCategoriesOpen) menu.backTo(-1);
             getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
-            menu.leaveForLink(e, "/");
             getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
             router.push("/");
@@ -99,7 +80,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
         { href: user ? "/profile" : "/login", label: "حساب کاربری", icon: User },
     ];
 
-    const navigation = (
+    return (
             <nav className={`md:hidden sticky bottom-0 w-full shrink-0 bg-white/95 backdrop-blur-lg border-t border-ekg-200/60 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
                 <div className="flex justify-between items-center px-4 h-[var(--bottom-nav-height)]">
                     {navItems.map((item) => {
@@ -107,29 +88,23 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                         const isHome = item.href === "/";
                         const isCart = item.href === "/cart";
 
-                        // Active State Logic
-                        let isActive = false;
-                        if (isCategoriesOpen) {
-                            isActive = isCat;
-                        } else {
-                            isActive = pathname === item.href;
-                        }
+                        // Active State Logic — the categories tab owns /categories*.
+                        const isActive = isCat
+                            ? pathname.startsWith("/categories")
+                            : pathname === item.href;
 
                         if (isCat) {
                             return (
-                                <button
+                                <Link
                                     key={item.href}
-                                    type="button"
-                                    ref={categoryTrigger}
-                                    aria-haspopup="dialog"
-                                    aria-expanded={isCategoriesOpen}
-                                    aria-controls={isCategoriesOpen ? "mobile-category-menu" : undefined}
-                                    onClick={() => isCategoriesOpen ? menu.backTo(-1) : menu.enter()}
-                                    className={`${navItemClass} ${isActive ? "text-kala-700" : "text-ekg-500"}`}
+                                    href={item.href}
+                                    onNavigate={onNavClick}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={`${navItemClass} ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                                 >
                                     <item.icon size={20} />
                                     <span className="text-[10px] font-medium">{item.label}</span>
-                                </button>
+                                </Link>
                             );
                         }
 
@@ -153,10 +128,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     key={item.href}
                                     href={item.href}
                                     aria-label={cartAriaLabel}
-                                    onNavigate={(event) => {
-                                        menu.leaveForLink(event, item.href);
-                                        onNavClick();
-                                    }}
+                                    onNavigate={onNavClick}
                                     className={`relative ${navItemClass} transition-colors duration-200 ${isActive ? "text-kala-600" : hasCartItems ? "text-ekg-700" : "text-ekg-500"}`}
                                 >
                                     <span className={`relative flex h-5 w-5 items-center justify-center ${styles.cartIcon} ${isCartBumping ? styles.bump : ""}`}>
@@ -184,10 +156,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onNavigate={(event) => {
-                                    menu.leaveForLink(event, item.href);
-                                    onNavClick();
-                                }}
+                                onNavigate={onNavClick}
                                 className={`${navItemClass} ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                             >
                                 <item.icon size={20} />
@@ -197,10 +166,5 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                     })}
                 </div>
             </nav>
-    );
-
-    return menu.path === null ? navigation : (
-        <CategoriesSheet path={menu.path} enter={menu.enter} backTo={menu.backTo}
-            leaveForLink={menu.leaveForLink} navigation={navigation} />
     );
 }

@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, render, renderHook, screen } from "@testing-library/react";
 import { useCategoryFilterNavigation } from "@/hooks/useCategoryFilterNavigation";
 import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import CategoriesPage from "@/app/categories/page";
@@ -6,6 +6,10 @@ import CategoryPage from "@/app/categories/[slug]/page";
 import { permanentRedirect } from "next/navigation";
 
 jest.mock("next/navigation", () => ({ permanentRedirect: jest.fn() }));
+
+jest.mock("@/services/categoryService", () => ({
+  categoryService: { getTree: jest.fn() },
+}));
 
 let desktop = false;
 let resize: () => void;
@@ -23,9 +27,17 @@ beforeEach(() => {
 });
 afterEach(() => { jest.restoreAllMocks(); window.history.replaceState(null, "", "/"); });
 
-test("retires the category index with a permanent redirect to product filters", () => {
-  CategoriesPage();
-  expect(permanentRedirect).toHaveBeenCalledWith("/products#category-filters");
+test("serves a real category index page instead of a redirect", async () => {
+  const { categoryService } = await import("@/services/categoryService");
+  (categoryService.getTree as jest.Mock).mockResolvedValue([
+    { _id: "root-1", name: "موبایل", slug: "mobile", showOnHomepage: true, homepageOrder: 0, order: 0, isActive: true },
+  ]);
+  const page = await CategoriesPage();
+  expect(permanentRedirect).not.toHaveBeenCalled();
+  render(page);
+  // Both responsive branches render server-side; each carries the rail.
+  await act(async () => {});
+  expect(screen.getAllByRole("button", { name: "موبایل" })).toHaveLength(2);
 });
 
 test("opens a bookmarked category at its encoded listing URL", async () => {

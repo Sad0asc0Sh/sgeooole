@@ -1,0 +1,7 @@
+2026/11/21-14:53:41.054 2e1c Reusing MANIFEST D:\project\sgeooole\_re\chrome-profile\Default\IndexedDB\https_snappshop.ir_0.indexeddb.leveldb/MANIFEST-000001
+2026/11/21-14:53:41.055 2e1c Recovering log #14
+2026/11/21-14:53:41.055 2e1c Reusing old log D:\project\sgeooole\_re\chrome-profile\Default\IndexedDB\https_snappshop.ir_0.indexeddb.leveldb/000014.log 
+2026/11/21-14:53:41.062 8a70 Level-0 table #20: started
+2026/11/21-14:53:41.064 8a70 Level-0 table #20: 614 bytes OK
+2026/11/21-14:53:41.066 8a70 Delete type=0 #14
+2026/11/21-14:53:41.066 2e1c Manual compaction at level-0 from '\x00\x07\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at (end)

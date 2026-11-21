@@ -1,0 +1,374 @@
+/* Clone of snappshop.ir categories UI (sidebar + category-list + AllCategories
+   modules), measured from the live site and re-tokened to the ekg/kala palette. */
+
+/* ── Mobile rail (categories-sidebar_sidebar) ─────────────────────────── */
+
+.rail {
+  width: 92px;
+  flex: none;
+  background: white;
+  overflow-y: auto;
+  scrollbar-width: none;
+  position: sticky;
+  top: 64px; /* mobile header height */
+  align-self: flex-start;
+  max-height: calc(100dvh - 64px - var(--bottom-nav-height, 56px));
+}
+
+.rail::-webkit-scrollbar { display: none; }
+
+.railItem {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  min-height: 92px;
+  padding: 8px 4px;
+  background: var(--color-ekg-50);
+  border-inline-end: 1px solid var(--color-ekg-200);
+  border-bottom: 1px solid var(--color-ekg-200);
+  cursor: pointer;
+  text-align: center;
+}
+
+.railItem img { width: 48px; height: 48px; object-fit: contain; }
+
+.railLabel {
+  margin-top: 4px; /* mt-xxs */
+  font-size: 12px; /* caption */
+  line-height: 16px;
+  color: var(--color-ekg-700);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.railItemActive {
+  background: white;
+  border-inline-end-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.railItemActive .railLabel {
+  font-weight: 700;
+  color: var(--color-kala-600);
+}
+
+/* Pink indicator bar on the outer edge of the active item (68px tall). */
+.railItemActive::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 68px;
+  background: var(--color-kala-600);
+  border-start-start-radius: 4px;
+  border-end-start-radius: 4px;
+}
+
+/* Items adjacent to the active one curve away from the content pane. */
+.railItemBeforeActive {
+  border-bottom-color: transparent;
+  border-end-end-radius: 16px;
+}
+
+.railItemAfterActive {
+  border-start-end-radius: 16px;
+}
+
+/* ── Content column ───────────────────────────────────────────────────── */
+
+.content {
+  flex: 1;
+  min-width: 0;
+  background: white;
+}
+
+.toolbar {
+  position: sticky;
+  top: 64px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: white;
+  border-bottom: 1px solid var(--color-ekg-100);
+}
+
+.toolbarLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px; /* body-2 */
+  font-weight: 700;
+  color: var(--color-ekg-900);
+}
+
+.toolbarLink:hover { color: var(--color-kala-600); }
+
+/* Accordion groups (category-list_categories-items) */
+
+.group { border-bottom: 1px solid var(--color-ekg-200); }
+
+.groupActive { border-bottom: none; }
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 16px; /* py-m */
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: start;
+}
+
+.groupTitle {
+  font-size: 14px; /* body-2 + text-bold */
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--color-ekg-900);
+}
+
+.groupHeader:hover .groupTitle { color: var(--color-kala-600); }
+
+.groupChevron { color: var(--color-ekg-500); flex: none; transition: transform 200ms ease; }
+
+.groupChevronOpen { transform: rotate(180deg); }
+
+.groupBody { padding: 4px 16px 16px; }
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+}
+
+.card img { width: 48px; height: 48px; object-fit: contain; }
+
+.cardLabel {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--color-ekg-700);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.card:hover .cardLabel { color: var(--color-kala-600); }
+
+.cardAllIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ekg-700);
+}
+
+/* ── Desktop: pill rail + columns (NavigationMenu + AllCategories) ────── */
+
+@media (min-width: 768px) {
+  .rail {
+    width: 146px;
+    padding: 0;
+    background: transparent;
+    top: 80px; /* desktop header top row */
+    max-height: calc(100dvh - 80px);
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ekg-300) transparent;
+  }
+
+  .pillList {
+    display: flex;
+    flex-direction: column;
+    row-gap: 12px; /* spacing-s */
+  }
+
+  .railItem,
+  .railItemActive {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    min-height: 40px; /* 2.5rem */
+    padding: 0 12px; /* px-s */
+    background: transparent;
+    border: 1px solid var(--color-ekg-300);
+    border-radius: 8px; /* border-radius-lg */
+    transition: all 250ms ease;
+  }
+
+  .railItem img,
+  .cardAllIcon img { width: 16px; height: 16px; }
+
+  .railLabel {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    color: var(--color-ekg-600);
+  }
+
+  .railItem:hover {
+    border-color: var(--color-kala-600);
+    background: var(--color-kala-50);
+    color: var(--color-kala-600);
+  }
+
+  .railItemActive {
+    border-color: var(--color-kala-600);
+    background: var(--color-kala-50);
+  }
+
+  .railItemActive .railLabel { color: var(--color-kala-600); }
+
+  .railItemActive::after { display: none; }
+
+  .railItemBeforeActive { border-end-end-radius: 8px; }
+
+  .railItemAfterActive { border-start-end-radius: 8px; }
+
+  .toolbar { top: 80px; }
+}
+
+/* Desktop content = AllCategories columns: 396px-tall column-wrap chunks,
+   stacked vertically — exactly like the original left-side-wrappers. */
+
+.columns {
+  display: none;
+  padding: 24px; /* py-l + page padding */
+}
+
+.columnsChunk { display: none; }
+
+@media (min-width: 768px) {
+  .columns {
+    display: flex;
+    flex-direction: column;
+    gap: 24px; /* spacing-l between stacked chunks */
+  }
+
+  .columnsChunk {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    column-gap: 24px; /* spacing-l */
+    row-gap: 8px; /* spacing-xs */
+    height: 396px; /* original wrapper height */
+  }
+
+  .group { display: contents; }
+
+  .groupHeader { display: contents; }
+
+  .groupTitle,
+  .columnLink {
+    width: 168px;
+    flex: none;
+  }
+
+  .groupTitle {
+    font-size: 14px;
+    line-height: 20px;
+    transition: color 350ms ease;
+  }
+
+  .groupTitle:hover { color: var(--color-kala-600); }
+
+  .groupChevron { display: none; }
+
+  .groupBody {
+    display: contents;
+    padding: 0;
+  }
+
+  .cardGrid { display: contents; }
+
+  .card {
+    display: block;
+    width: 168px;
+    padding: 0;
+    text-align: start;
+  }
+
+  .card img { display: none; }
+
+  .cardLabel {
+    margin: 0;
+    -webkit-line-clamp: 1;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--color-ekg-600);
+    transition: color 350ms ease;
+  }
+
+  .card:hover .cardLabel { color: var(--color-kala-600); }
+
+  .cardAll { margin-bottom: 16px; }
+
+  .cardAllIcon { display: none; }
+
+  .columnsBody { display: contents; }
+}
+
+/* ── Page scaffold ────────────────────────────────────────────────────── */
+
+.page {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100dvh - 64px);
+  background: white;
+}
+
+.feedback {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 16px;
+  color: var(--color-ekg-500);
+  text-align: center;
+}
+
+.feedback button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--color-kala-200);
+  background: var(--color-kala-50);
+  color: var(--color-kala-900);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.feedback button:disabled { opacity: 0.6; cursor: default; }
+
+.spinner { animation: spin 1s linear infinite; color: var(--color-kala-600); }
+
+@keyframes spin { to { transform: rotate(360deg); } }

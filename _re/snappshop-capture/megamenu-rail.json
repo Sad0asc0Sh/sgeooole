@@ -1,0 +1,31 @@
+{
+ "railCls": "AllCategories_all-categories__column__wkUgV overflow-y-auto",
+ "railStyle": null,
+ "railCS": {
+  "display": "block",
+  "width": "146.672px",
+  "height": "422px",
+  "padding": "0px",
+  "margin": "0px",
+  "background": "rgba(0, 0, 0, 0) none repeat scroll 0% 0% / auto padding-box border-box",
+  "boxShadow": "none",
+  "gap": "normal"
+ },
+ "pills": [
+  {
+   "tag": "UL",
+   "text": "موبایلدیجیتالزیبایی و سلامتخانه و آشپزخا",
+   "cls": "flex-column d-flex NavigationMenuList_module_navigationMenuList__a79e5f7c",
+   "href": null,
+   "w": 143,
+   "h": 664,
+   "color": "rgb(33, 33, 33)",
+   "bg": "rgba(0, 0, 0, 0)",
+   "border": "0px none rgb(33, 33, 33)",
+   "radius": "0px",
+   "font": "16px/400",
+   "margin": "0px",
+   "padding": "0px"
+  }
+ ]
+}

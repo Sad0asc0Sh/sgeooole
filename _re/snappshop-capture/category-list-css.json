@@ -1,0 +1,10 @@
+[
+ {
+  "href": "81e8d026fc3ff3e0.css",
+  "rules": [
+   "@keyframes category-list_shake-up-down__D1yh9{0%,to{transform:translateY(0)}",
+   ".category-list_categories-items__a82_X{border-bottom:1px solid var(--gray-200-color)}",
+   ".category-list_categories-items--active__E9usk{border-bottom:none}"
+  ]
+ }
+]

@@ -1,0 +1,100 @@
+{
+ "pills": [
+  {
+   "text": "موبایل",
+   "active": true,
+   "w": 143,
+   "h": 40,
+   "color": "rgb(180, 0, 174)",
+   "bg": "rgb(247, 229, 245)",
+   "border": "1px solid rgb(180, 0, 174)",
+   "radius": "8px",
+   "padding": "0px 12px",
+   "margin": "0px",
+   "font": "12px / 400 / lh 16px",
+   "gap": "normal 4px",
+   "icon": "#BASKET_NOTIFICATION_ACTIVE-icon",
+   "strongColor": "rgb(180, 0, 174)",
+   "strongWeight": "700"
+  },
+  {
+   "text": "دیجیتال",
+   "active": false,
+   "w": 143,
+   "h": 40,
+   "color": "rgb(97, 97, 97)",
+   "bg": "rgba(0, 0, 0, 0)",
+   "border": "1px solid rgb(224, 224, 224)",
+   "radius": "8px",
+   "padding": "0px 12px",
+   "margin": "0px",
+   "font": "12px / 400 / lh 16px",
+   "gap": "normal 4px",
+   "icon": "#BASKET_NOTIFICATION_ACTIVE-icon",
+   "strongColor": "rgb(97, 97, 97)",
+   "strongWeight": "700"
+  },
+  {
+   "text": "زیبایی و سلامت",
+   "active": false,
+   "w": 143,
+   "h": 40,
+   "color": "rgb(97, 97, 97)",
+   "bg": "rgba(0, 0, 0, 0)",
+   "border": "1px solid rgb(224, 224, 224)",
+   "radius": "8px",
+   "padding": "0px 12px",
+   "margin": "0px",
+   "font": "12px / 400 / lh 16px",
+   "gap": "normal 4px",
+   "icon": "#BASKET_NOTIFICATION_ACTIVE-icon",
+   "strongColor": "rgb(97, 97, 97)",
+   "strongWeight": "700"
+  },
+  {
+   "text": "خانه و آشپزخانه",
+   "active": false,
+   "w": 143,
+   "h": 40,
+   "color": "rgb(97, 97, 97)",
+   "bg": "rgba(0, 0, 0, 0)",
+   "border": "1px solid rgb(224, 224, 224)",
+   "radius": "8px",
+   "padding": "0px 12px",
+   "margin": "0px",
+   "font": "12px / 400 / lh 16px",
+   "gap": "normal 4px",
+   "icon": "#BASKET_NOTIFICATION_ACTIVE-icon",
+   "strongColor": "rgb(97, 97, 97)",
+   "strongWeight": "700"
+  }
+ ],
+ "li": [
+  {
+   "margin": "0px",
+   "padding": "0px",
+   "w": 143,
+   "h": 40
+  },
+  {
+   "margin": "0px",
+   "padding": "0px",
+   "w": 143,
+   "h": 40
+  },
+  {
+   "margin": "0px",
+   "padding": "0px",
+   "w": 143,
+   "h": 40
+  }
+ ],
+ "ul": {
+  "display": "block",
+  "flex": "row",
+  "wrap": "nowrap",
+  "gap": "normal",
+  "h": 470,
+  "scroll": "visible"
+ }
+}

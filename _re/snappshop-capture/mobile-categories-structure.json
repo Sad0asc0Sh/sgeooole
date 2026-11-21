@@ -1,0 +1,122 @@
+{
+ "railFound": false,
+ "railCls": null,
+ "railCS": null,
+ "railItems": [],
+ "headers": [
+  {
+   "text": "گوشی‌ موبایل براساس برند",
+   "cls": "d-flex align-items-center justify-content-between py-m category-list_categories-items__a82_X category-list_categories-items--active__E9usk",
+   "tag": "DIV",
+   "w": 267,
+   "h": 48,
+   "hasSvg": true,
+   "svgCls": "Icon_module_icon__6a1003a0"
+  },
+  {
+   "text": "گوشی‌ موبایل براساس قیمت و عملکرد",
+   "cls": "d-flex align-items-center justify-content-between py-m category-list_categories-items__a82_X",
+   "tag": "DIV",
+   "w": 267,
+   "h": 49,
+   "hasSvg": true,
+   "svgCls": "Icon_module_icon__6a1003a0"
+  },
+  {
+   "text": "تبلت براساس برند",
+   "cls": "d-flex align-items-center justify-content-between py-m category-list_categories-items__a82_X",
+   "tag": "DIV",
+   "w": 267,
+   "h": 49,
+   "hasSvg": true,
+   "svgCls": "Icon_module_icon__6a1003a0"
+  },
+  {
+   "text": "محبوب‌ترین تبلت‌ها",
+   "cls": "d-block",
+   "tag": "DIV",
+   "w": 267,
+   "h": 49,
+   "hasSvg": true,
+   "svgCls": "Icon_module_icon__6a1003a0 categories-items_categories-items__arrow-icon__47hW8"
+  },
+  {
+   "text": "پرفروش‌ترین تبلت‌ها",
+   "cls": "d-block",
+   "tag": "DIV",
+   "w": 267,
+   "h": 49,
+   "hasSvg": true,
+   "svgCls": "Icon_module_icon__6a1003a0 categories-items_categories-items__arrow-icon__47hW8"
+  }
+ ],
+ "cards": [
+  {
+   "text": "گوشی‌ اپل (آیفون)",
+   "href": "/category/mobile/apple",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/7d/e2/a032964d-4df1-492d-9a64-87a88b0f7de2.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 96,
+   "display": "flex",
+   "radius": "0px"
+  },
+  {
+   "text": "گوشی‌ سامسونگ",
+   "href": "/category/mobile/samsung",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/f6/8a/a032967c-3edb-431f-b4e5-c3b52c32f68a.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 96,
+   "display": "flex",
+   "radius": "0px"
+  },
+  {
+   "text": "گوشی‌ شیائومی",
+   "href": "/category/mobile/xiaomi",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/fc/f2/a03296a6-9857-4f0b-ac89-6291b8affcf2.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 80,
+   "display": "flex",
+   "radius": "0px"
+  },
+  {
+   "text": "گوشی‌ نوکیا",
+   "href": "/category/mobile/nokia",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/ba/5c/a03296cc-2ccb-4f28-a8f3-d8a3b322ba5c.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 80,
+   "display": "flex",
+   "radius": "0px"
+  },
+  {
+   "text": "گوشی‌ ریلمی",
+   "href": "/category/mobile/realme",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/2e/4c/a03296f3-da00-42bc-800d-30cae9a72e4c.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 80,
+   "display": "flex",
+   "radius": "0px"
+  },
+  {
+   "text": "گوشی‌ هانوفر",
+   "href": "/category/mobile/hanofer-mo",
+   "cls": "d-flex flex-column align-items-center",
+   "imgSrc": "https://cdn.snappshop.ir/mega-menus/5e/b3/a032971a-f49a-4799-8692-7b2cf18f5eb3.jpg?q=75&w=256",
+   "imgSize": "48x48",
+   "w": 76,
+   "h": 80,
+   "display": "flex",
+   "radius": "0px"
+  }
+ ],
+ "mainBg": "rgb(245, 245, 245)"
+}
