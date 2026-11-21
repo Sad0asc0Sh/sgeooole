@@ -154,3 +154,4 @@ vite.config.ts.timestamp-*
 
 # pnpm
 .pnpm-store/
+_re/
