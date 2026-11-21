@@ -61,6 +61,9 @@ export const categoryService = {
    */
   getTree: async (): Promise<Category[]> => {
     const { data } = await api.get<CategoryTreeResponse>("/categories/tree");
+    if (data.success !== true || !Array.isArray(data.data)) {
+      throw new Error("Invalid category tree response");
+    }
     return data.data;
   },
 

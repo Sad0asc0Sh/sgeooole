@@ -5,6 +5,7 @@ import Link from "next/link";
 import useSWR from "swr";
 import { ChevronLeft, ChevronRight, Shapes } from "lucide-react";
 import { useResilientImage } from "@/components/ui/ResilientImage";
+import { categoryImageSources, categoryProductHref } from "@/lib/categoryNavigation";
 import { categoryService, type Category } from "@/services/categoryService";
 import styles from "./HomeCategoryShowcase.module.css";
 
@@ -13,19 +14,7 @@ type HomeCategoryShowcaseProps = {
   categories: Category[] | null;
 };
 
-type CategoryVisual = Category["image"] | Category["icon"] | string | null | undefined;
-
 const SCROLL_STEP_FACTOR = 0.75;
-
-function imageUrl(value: CategoryVisual): string | undefined {
-  if (!value) return undefined;
-  if (typeof value === "string") return value;
-  return value.url || undefined;
-}
-
-function categoryHref(category: Category): string {
-  return `/products?category=${encodeURIComponent(category.slug || category._id)}&includeChildren=true`;
-}
 
 function CircleImage({
   url,
@@ -154,15 +143,11 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
         ) : (
           <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
             {items.map((category) => {
-              // cardUrl (320×320) بر url اصلی ارجح است — سبک‌تر برای دایره‌ی دسته.
-              const cardUrl =
-                (category.image && typeof category.image === "object" && (category.image as { cardUrl?: string }).cardUrl) ||
-                (category.icon && typeof category.icon === "object" && (category.icon as { cardUrl?: string }).cardUrl);
-              const url = cardUrl || imageUrl(category.image) || imageUrl(category.icon);
+              const [url] = categoryImageSources(category);
               return (
                 <li key={category._id || category.slug} className={styles.item}>
                   <Link
-                    href={categoryHref(category)}
+                    href={categoryProductHref(category)}
                     className={styles.category}
                     title={category.name}
                     data-category-id={category._id}

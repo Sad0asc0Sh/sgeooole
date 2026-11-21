@@ -2,6 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { useCategoryFilterNavigation } from "@/hooks/useCategoryFilterNavigation";
 import { CATEGORY_FILTER_HREF } from "@/lib/categoryNavigation";
 import CategoriesPage from "@/app/categories/page";
+import CategoryPage from "@/app/categories/[slug]/page";
 import { permanentRedirect } from "next/navigation";
 
 jest.mock("next/navigation", () => ({ permanentRedirect: jest.fn() }));
@@ -25,6 +26,12 @@ afterEach(() => { jest.restoreAllMocks(); window.history.replaceState(null, "", 
 test("retires the category index with a permanent redirect to product filters", () => {
   CategoriesPage();
   expect(permanentRedirect).toHaveBeenCalledWith("/products#category-filters");
+});
+
+test("opens a bookmarked category at its encoded listing URL", async () => {
+  const slug = "قفل-و-ریموت";
+  await CategoryPage({ params: Promise.resolve({ slug }) });
+  expect(permanentRedirect).toHaveBeenCalledWith(`/products?category=${encodeURIComponent(slug)}&includeChildren=true`);
 });
 
 test("opens the existing mobile filters for a category deep link", () => {

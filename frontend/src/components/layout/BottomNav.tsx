@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Home, LayoutGrid, ShoppingCart, BookOpen, User } from "lucide-react";
 import CategoriesSheet from "@/components/features/categories/CategoriesSheet";
+import { useCategoryMenu } from "@/components/features/categories/useCategoryMenu";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/store/cartStore";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
@@ -16,11 +17,15 @@ interface BottomNavProps {
 
 /** Keep in sync with the .bump animation length in BottomNav.module.css. */
 const CART_BUMP_MS = 620;
+const navItemClass = "flex min-h-11 min-w-11 flex-col items-center justify-center gap-1";
 
 export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+    const menu = useCategoryMenu(pathname);
+    const isCategoriesOpen = menu.path !== null;
+    const categoryTrigger = useRef<HTMLButtonElement>(null);
+    const openedOn = useRef<string | null>(null);
     const { user } = useAuth();
 
     // Total units in the cart. A primitive selector means the nav re-renders only
@@ -31,6 +36,17 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
     );
     const cartInitialized = useCartStore((state) => state.initialized);
     const hasCartItems = cartCount > 0;
+
+    useLayoutEffect(() => {
+        if (isCategoriesOpen) {
+            openedOn.current = window.location.href;
+        } else if (openedOn.current) {
+            if (openedOn.current === window.location.href && document.activeElement === document.body) {
+                categoryTrigger.current?.focus({ preventScroll: true });
+            }
+            openedOn.current = null;
+        }
+    }, [isCategoriesOpen]);
 
     // Feedback for "a product just landed in the cart": the cart fills up (solid
     // glyph + count badge) and plays a short spring + halo. The first settled
@@ -61,13 +77,14 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
     const handleHomeClick = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsCategoriesOpen(false);
         onNavClick();
 
         if (pathname === "/" || pathname === "") {
+            if (isCategoriesOpen) menu.backTo(-1);
             getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "smooth" });
         } else {
+            menu.leaveForLink(e, "/");
             getScrollManager().clear("/");
             window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
             router.push("/");
@@ -82,8 +99,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
         { href: user ? "/profile" : "/login", label: "حساب کاربری", icon: User },
     ];
 
-    return (
-        <>
+    const navigation = (
             <nav className={`md:hidden sticky bottom-0 w-full shrink-0 bg-white/95 backdrop-blur-lg border-t border-ekg-200/60 pb-safe-area z-bottom-nav transition-transform duration-300 ease-in-out shadow-[0_-2px_8px_rgba(0,0,0,0.04)] ${isServicesOpen ? 'translate-y-full' : 'translate-y-0'}`}>
                 <div className="flex justify-between items-center px-4 h-[var(--bottom-nav-height)]">
                     {navItems.map((item) => {
@@ -104,8 +120,12 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                 <button
                                     key={item.href}
                                     type="button"
-                                    onClick={() => setIsCategoriesOpen(!isCategoriesOpen)}
-                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                    ref={categoryTrigger}
+                                    aria-haspopup="dialog"
+                                    aria-expanded={isCategoriesOpen}
+                                    aria-controls={isCategoriesOpen ? "mobile-category-menu" : undefined}
+                                    onClick={() => isCategoriesOpen ? menu.backTo(-1) : menu.enter()}
+                                    className={`${navItemClass} ${isActive ? "text-kala-700" : "text-ekg-500"}`}
                                 >
                                     <item.icon size={20} />
                                     <span className="text-[10px] font-medium">{item.label}</span>
@@ -119,7 +139,7 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     key={item.href}
                                     type="button"
                                     onClick={handleHomeClick}
-                                    className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                    className={`${navItemClass} ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                                 >
                                     <item.icon size={20} />
                                     <span className="text-[10px] font-medium">{item.label}</span>
@@ -133,11 +153,11 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                                     key={item.href}
                                     href={item.href}
                                     aria-label={cartAriaLabel}
-                                    onClick={() => {
-                                        setTimeout(() => setIsCategoriesOpen(false), 500);
+                                    onNavigate={(event) => {
+                                        menu.leaveForLink(event, item.href);
                                         onNavClick();
                                     }}
-                                    className={`relative flex flex-col items-center gap-1 transition-colors duration-200 ${isActive ? "text-kala-600" : hasCartItems ? "text-ekg-700" : "text-ekg-500"}`}
+                                    className={`relative ${navItemClass} transition-colors duration-200 ${isActive ? "text-kala-600" : hasCartItems ? "text-ekg-700" : "text-ekg-500"}`}
                                 >
                                     <span className={`relative flex h-5 w-5 items-center justify-center ${styles.cartIcon} ${isCartBumping ? styles.bump : ""}`}>
                                         {/* Filled glyph once the cart holds something; outline while empty. */}
@@ -164,11 +184,11 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                onClick={() => {
-                                    setTimeout(() => setIsCategoriesOpen(false), 500);
+                                onNavigate={(event) => {
+                                    menu.leaveForLink(event, item.href);
                                     onNavClick();
                                 }}
-                                className={`flex flex-col items-center gap-1 ${isActive ? "text-kala-600" : "text-ekg-500"}`}
+                                className={`${navItemClass} ${isActive ? "text-kala-600" : "text-ekg-500"}`}
                             >
                                 <item.icon size={20} />
                                 <span className="text-[10px] font-medium">{item.label}</span>
@@ -177,7 +197,10 @@ export default function BottomNav({ onNavClick, isServicesOpen }: BottomNavProps
                     })}
                 </div>
             </nav>
-            <CategoriesSheet isOpen={isCategoriesOpen} onClose={() => setIsCategoriesOpen(false)} />
-        </>
+    );
+
+    return menu.path === null ? navigation : (
+        <CategoriesSheet path={menu.path} enter={menu.enter} backTo={menu.backTo}
+            leaveForLink={menu.leaveForLink} navigation={navigation} />
     );
 }
