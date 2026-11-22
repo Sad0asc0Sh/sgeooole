@@ -5,17 +5,18 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useCategoryTree } from "@/hooks/useCategories";
-import TechnolifeMegaMenu from "@/components/features/categories/TechnolifeMegaMenu";
+import CategoryCascadeMenu from "@/components/features/categories/CategoryCascadeMenu";
 import { normalizeCategoryTree } from "@/components/features/categories/tree";
-import triggerStyles from "@/components/features/categories/TechnolifeMegaMenu.module.css";
+import menuStyles from "@/components/features/categories/CategoryCascadeMenu.module.css";
 
 const CLOSE_DELAY_MS = 200;
-const BACKDROP_DIM = "rgba(0, 0, 0, 0.6)";
+/** Warm stone dim (ekg-900 based) instead of a cold black overlay. */
+const BACKDROP_DIM = "rgba(28, 25, 23, 0.55)";
 
 /**
- * Desktop mega menu — technolife.com clone: a right-anchored, full-height
- * cascade (icon rail → subcategory column → leaf column) under the header,
- * over a dimmed backdrop. Desktop only; the mobile experience stays in
+ * Desktop mega menu — store-native cascade: a right-anchored, full-height
+ * three-column menu (icon rail → subcategory column → leaf column) under the
+ * header, over a warm dim. Desktop only; the mobile experience stays in
  * CategoriesSheet/BottomNav and is intentionally untouched by this file.
  */
 export default function DesktopMegaMenu() {
@@ -71,8 +72,8 @@ export default function DesktopMegaMenu() {
 
     const skeleton = isOpen && isLoading;
     const triggerClass = isOpen
-        ? `${triggerStyles.trigger} ${triggerStyles.triggerActive}`
-        : triggerStyles.trigger;
+        ? `${menuStyles.trigger} ${menuStyles.triggerActive}`
+        : menuStyles.trigger;
 
     return (
         <div className="relative">
@@ -91,8 +92,8 @@ export default function DesktopMegaMenu() {
 
             {isOpen && createPortal(
                 <>
-                    {/* Dimmed click-away layer — sits under the header (z-50)
-                       and under the panel, like technolife's bgMenu. */}
+                    {/* Warm dimmed click-away layer — sits under the header
+                       (z-50) and under the panel. */}
                     <div
                         aria-hidden="true"
                         onClick={() => setIsOpen(false)}
@@ -114,15 +115,15 @@ export default function DesktopMegaMenu() {
                         aria-label="دسته بندی محصولات"
                     >
                         {skeleton ? (
-                            <div className={triggerStyles.menuStack} aria-hidden="true">
-                                <div className={triggerStyles.firstLevel}>
+                            <div className={menuStyles.menuStack} aria-hidden="true">
+                                <div className={menuStyles.firstLevel}>
                                     <div className="flex flex-col gap-2 pt-2 pl-6">
                                         {Array.from({ length: 12 }).map((_, i) => (
                                             <div
                                                 key={i}
                                                 className="flex items-center gap-2 p-2"
                                             >
-                                                <div className="h-[38px] w-[38px] shrink-0 rounded-full bg-ekg-100 animate-pulse" />
+                                                <div className="h-[40px] w-[40px] shrink-0 rounded-full bg-ekg-100 animate-pulse" />
                                                 <div className="h-4 w-[110px] rounded bg-ekg-100 animate-pulse" />
                                             </div>
                                         ))}
@@ -131,7 +132,7 @@ export default function DesktopMegaMenu() {
                             </div>
                         ) : (
                             categories.length ? (
-                                <TechnolifeMegaMenu
+                                <CategoryCascadeMenu
                                     roots={categories}
                                     onClose={() => setIsOpen(false)}
                                 />

@@ -1,0 +1,410 @@
+/* CategoryCascadeMenu — desktop-only cascade mega menu in the store's own
+   design language: warm stone neutrals (ekg-*) with the saffron brand accent
+   (kala-*). Structure follows the three-column cascade pattern (icon rail →
+   subcategory column → leaf column, full height under the header, over a
+   warm dim), while every surface, radius, color and motion cue is native.
+   The mobile experience stays untouched in CategoriesSheet/BottomNav. */
+
+.menuStack {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  direction: rtl;
+  animation: columnIn 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── Trigger (header nav row) — uses the nav links' underline language ── */
+
+.trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 19px;
+  color: var(--color-ekg-900, #1c1917);
+  padding: 8px 12px;
+  border-radius: 10px;
+  transition: color 150ms ease;
+}
+
+/* Brand underline, matching the nav link hover pattern. */
+.trigger::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  left: 12px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 100vh;
+  background: linear-gradient(to left, var(--color-kala-600), var(--color-kala-400), var(--color-kala-600));
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: right;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.trigger:hover {
+  color: var(--color-kala-700, #b45309);
+}
+
+.trigger:hover::after {
+  opacity: 0.55;
+  transform: scaleX(0.7);
+}
+
+.triggerActive {
+  color: var(--color-kala-700, #b45309);
+}
+
+.triggerActive::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+/* ── Level 1 rail ─────────────────────────────────────────────────────── */
+
+.firstLevel {
+  width: 280px;
+  flex: none;
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 8px 0 rgba(28, 25, 23, 0.08);
+  padding: 1rem 0 0 12px;
+  position: relative;
+  z-index: 3;
+}
+
+.railList {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0 0 12px 22px;
+  margin: 0;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ekg-300, #d4d0c8) transparent;
+}
+
+.railList::-webkit-scrollbar { width: 6px; }
+
+.railList::-webkit-scrollbar-track {
+  border-radius: 100vh;
+  background: var(--color-ekg-100, #f3f1ed);
+  margin-top: 15px;
+  margin-bottom: 22px;
+}
+
+.railList::-webkit-scrollbar-thumb {
+  border-radius: 100vh;
+  background: var(--color-ekg-300, #d4d0c8);
+}
+
+.railItem {
+  position: relative;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+/* Warm hairline under every rail row, 80% wide. */
+.railItem::after {
+  content: "";
+  width: 80%;
+  height: 1px;
+  background: var(--color-ekg-100, #f3f1ed);
+  position: absolute;
+  bottom: 0;
+  left: 0.5rem;
+}
+
+.railLink {
+  width: 100%;
+  padding: 8px 12px 8px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 12px 0 0 12px;
+  transition: background-color 180ms ease;
+}
+
+.railLink:hover,
+.railItemActive > .railLink {
+  background: var(--color-kala-50, #fffbeb);
+}
+
+/* Signature brand accent bar, hugging the screen edge on the active row. */
+.railItemActive::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 15%;
+  height: 70%;
+  width: 3px;
+  border-radius: 4px 0 0 4px;
+  background: linear-gradient(180deg, var(--color-kala-400), var(--color-kala-600));
+}
+
+.railRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.railIcon {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: 100%;
+  background: #fff;
+  box-shadow: 0 2px 8px 0 rgba(120, 113, 108, 0.18);
+  color: var(--color-kala-600, #d97706);
+}
+
+.railIcon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.railText {
+  padding-top: 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 140px;
+  font-weight: 600;
+  color: var(--color-ekg-800, #292524);
+  line-height: 30px;
+  font-size: 14px;
+  transition: color 180ms ease;
+}
+
+.railItemActive .railText {
+  color: var(--color-kala-900, #78350f);
+}
+
+.chevron {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--color-kala-700, #b45309);
+}
+
+/* ── Level 2 column (children of the hovered root) ────────────────────── */
+
+.secondLevel {
+  width: 280px;
+  flex: none;
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 8px 0 rgba(28, 25, 23, 0.08);
+  padding: 1.5rem 0 2rem 12px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  animation: columnIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Header chip in the warm saffron tint, linking to the hovered root. */
+.secondHeaderChip {
+  display: flex;
+  max-width: 100%;
+  margin: 0 2rem 0 13px;
+  color: var(--color-kala-900, #78350f);
+  background: linear-gradient(90deg, var(--color-kala-50), var(--color-kala-100));
+  border: 1px solid var(--color-kala-200, #fde68a);
+  padding: 8px 14px 6px;
+  border-radius: 12px;
+  flex: none;
+}
+
+.secondHeaderChip > span {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 26px;
+}
+
+.secondList {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 12px 20px;
+  margin: 14px 0 0;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ekg-300, #d4d0c8) transparent;
+}
+
+.secondItem {
+  position: relative;
+  padding-right: 28px;
+  margin-bottom: 2px;
+}
+
+.secondItemActive {
+  background: var(--color-kala-50, #fffbeb);
+  border-radius: 10px 0 0 10px;
+}
+
+.secondLink {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  color: var(--color-ekg-700, #44403c);
+}
+
+.secondText {
+  font-size: 14px;
+  line-height: 26px;
+  font-weight: 500;
+  color: var(--color-ekg-700, #44403c);
+  transition: color 180ms ease;
+}
+
+.secondLink:hover .secondText {
+  color: var(--color-kala-700, #b45309);
+}
+
+.secondItemActive .secondText {
+  font-weight: 700;
+  color: var(--color-kala-900, #78350f);
+}
+
+/* ── Level 3 column (children of the hovered group) ───────────────────── */
+
+.lastLevel {
+  width: 280px;
+  flex: none;
+  height: 100%;
+  background: var(--color-kala-50, #fffbeb);
+  box-shadow: -4px 0 8px 0 rgba(180, 83, 9, 0.1);
+  padding: 2rem 24px 1.25rem 12px;
+  display: flex;
+  flex-direction: column;
+  animation: columnIn 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lastHeaderChip {
+  display: flex;
+  max-width: 100%;
+  background: #fff;
+  border: 1px solid var(--color-kala-200, #fde68a);
+  border-radius: 12px;
+  margin: 0 8px 0 20px;
+  padding: 8px 14px 6px;
+  color: var(--color-kala-900, #78350f);
+  flex: none;
+}
+
+.lastHeaderChip > span {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 15px;
+  line-height: 24px;
+}
+
+.lastList {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 12px 12px;
+  margin: 20px 0 0;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-kala-200, #fde68a) transparent;
+}
+
+.lastItem {
+  margin-bottom: 2px;
+}
+
+.lastLink {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 10px 7px 0;
+  color: var(--color-ekg-800, #292524);
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 500;
+  text-align: start;
+  border-radius: 10px;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+/* Soft amber hover pill — the leaf column's own interaction cue. */
+.lastLink:hover {
+  background: var(--color-kala-100, #fef3c7);
+  color: var(--color-kala-900, #78350f);
+}
+
+/* ── Close button: floats left of the whole stack, over the dim ───────── */
+
+.closeBtn {
+  position: absolute;
+  top: 12px;
+  left: -56px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+}
+
+.closeBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Motion ───────────────────────────────────────────────────────────── */
+
+@keyframes columnIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menuStack,
+  .secondLevel,
+  .lastLevel {
+    animation: none;
+  }
+
+  .trigger,
+  .trigger::after,
+  .railLink,
+  .railText,
+  .secondText,
+  .lastLink,
+  .closeBtn {
+    transition: none;
+  }
+}

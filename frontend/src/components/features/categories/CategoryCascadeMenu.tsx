@@ -4,10 +4,10 @@ import Link from "next/link";
 import { ChevronLeft, LayoutGrid, X } from "lucide-react";
 import { useState } from "react";
 import ResilientImage from "@/components/ui/ResilientImage";
-import styles from "./TechnolifeMegaMenu.module.css";
+import styles from "./CategoryCascadeMenu.module.css";
 import type { CategoryNode } from "./tree";
 
-/** Circular icon chip on the rail — category icon when present, grid glyph otherwise. */
+/** Circular icon chip on the rail — category icon when present, brand grid glyph otherwise. */
 function RailIcon({ node }: { node: CategoryNode }) {
   return (
     <span className={styles.railIcon} aria-hidden="true">
@@ -27,18 +27,18 @@ function RailIcon({ node }: { node: CategoryNode }) {
   );
 }
 
-export interface TechnolifeMegaMenuProps {
+export interface CategoryCascadeMenuProps {
   roots: CategoryNode[];
   onClose: () => void;
 }
 
 /**
- * Technolife-style cascade body: icon rail on the right, the hovered root's
- * children as a middle column, and the hovered group's children as a
- * light-blue leaf column. Opening shows only the rail, exactly like the
- * original — columns appear as the pointer moves across the levels.
+ * Store-native cascade body: icon rail on the right, the hovered root's
+ * children as a middle column, and the hovered group's children as a warm
+ * saffron leaf column. Opening shows only the rail — columns appear as the
+ * pointer (or keyboard focus) moves across the levels.
  */
-export default function TechnolifeMegaMenu({ roots, onClose }: TechnolifeMegaMenuProps) {
+export default function CategoryCascadeMenu({ roots, onClose }: CategoryCascadeMenuProps) {
   const [activeRootId, setActiveRootId] = useState<string | null>(null);
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
