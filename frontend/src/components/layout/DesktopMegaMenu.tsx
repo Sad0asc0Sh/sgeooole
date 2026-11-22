@@ -5,15 +5,18 @@ import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useCategoryTree } from "@/hooks/useCategories";
-import MegaMenuPanel from "@/components/features/categories/MegaMenuPanel";
+import TechnolifeMegaMenu from "@/components/features/categories/TechnolifeMegaMenu";
 import { normalizeCategoryTree } from "@/components/features/categories/tree";
+import triggerStyles from "@/components/features/categories/TechnolifeMegaMenu.module.css";
 
 const CLOSE_DELAY_MS = 200;
+const BACKDROP_DIM = "rgba(0, 0, 0, 0.6)";
 
 /**
- * Desktop hover mega menu — a full-width clone of snappshop's AllCategories
- * panel: pill rail on the right, fixed-width link columns that wrap. The page
- * behind stays scrollable (no backdrop dim, no scroll lock), like the original.
+ * Desktop mega menu — technolife.com clone: a right-anchored, full-height
+ * cascade (icon rail → subcategory column → leaf column) under the header,
+ * over a dimmed backdrop. Desktop only; the mobile experience stays in
+ * CategoriesSheet/BottomNav and is intentionally untouched by this file.
  */
 export default function DesktopMegaMenu() {
     const pathname = usePathname();
@@ -23,18 +26,9 @@ export default function DesktopMegaMenu() {
         [categoryTree],
     );
     const [isOpen, setIsOpen] = useState(false);
-    const [activeId, setActiveId] = useState<string | null>(null);
     const [panelTop, setPanelTop] = useState<number | null>(null);
     const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const triggerRef = useRef<HTMLDivElement | null>(null);
-
-    // The active root must survive tree refreshes.
-    useEffect(() => {
-        if (!categories.length) return;
-        if (!activeId || !categories.some((c) => c.id === activeId)) {
-            setActiveId(categories[0].id);
-        }
-    }, [categories, activeId]);
 
     const clearCloseTimer = () => {
         if (closeTimer.current) {
@@ -76,6 +70,9 @@ export default function DesktopMegaMenu() {
     }, [pathname]);
 
     const skeleton = isOpen && isLoading;
+    const triggerClass = isOpen
+        ? `${triggerStyles.trigger} ${triggerStyles.triggerActive}`
+        : triggerStyles.trigger;
 
     return (
         <div className="relative">
@@ -86,58 +83,60 @@ export default function DesktopMegaMenu() {
                 onMouseLeave={scheduleClose}
                 aria-haspopup="true"
                 aria-expanded={isOpen}
-                className="flex items-center gap-2 cursor-pointer py-2 px-2 text-ekg-900 hover:text-kala-600 transition-colors"
+                className={triggerClass}
             >
-                <Menu className="w-6 h-6" />
-                <span className="font-bold text-sm">همه دسته‌بندی‌ها</span>
+                <Menu className="w-5 h-5" aria-hidden="true" />
+                <span>دسته بندی محصولات</span>
             </div>
 
             {isOpen && createPortal(
                 <>
-                    {/* Transparent click-away layer — no dimming, like the original */}
+                    {/* Dimmed click-away layer — sits under the header (z-50)
+                       and under the panel, like technolife's bgMenu. */}
                     <div
                         aria-hidden="true"
                         onClick={() => setIsOpen(false)}
+                        onMouseEnter={scheduleClose}
+                        style={{ background: BACKDROP_DIM }}
                         className="fixed inset-0 z-[39]"
                     />
 
-                    {/* Panel */}
+                    {/* Right-anchored full-height cascade */}
                     <div
                         onMouseEnter={clearCloseTimer}
                         onMouseLeave={scheduleClose}
                         style={{
                             top: panelTop ?? 0,
-                            maxHeight: panelTop ? `calc(100dvh - ${panelTop + 16}px)` : undefined,
+                            height: panelTop ? `calc(100dvh - ${panelTop}px)` : "100dvh",
                         }}
-                        className="fixed inset-x-0 z-[40] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.12)] border-b border-ekg-200/70 overflow-hidden"
+                        className="fixed right-0 z-[40] bg-white"
                         role="region"
-                        aria-label="همه دسته‌بندی‌ها"
+                        aria-label="دسته بندی محصولات"
                     >
-                        <div className="w-full max-w-[1440px] mx-auto flex items-start">
-                            {skeleton ? (
-                                <div className="flex w-full gap-6 p-6" aria-hidden="true">
-                                    <div className="w-[146px] flex flex-col gap-3">
-                                        {Array.from({ length: 9 }).map((_, i) => (
-                                            <div key={i} className="h-10 rounded-lg bg-ekg-100 animate-pulse" />
-                                        ))}
-                                    </div>
-                                    <div className="flex-1 flex flex-wrap gap-x-6 gap-y-2 content-start">
-                                        {Array.from({ length: 24 }).map((_, i) => (
-                                            <div key={i} className="h-4 w-[168px] rounded bg-ekg-100 animate-pulse" />
+                        {skeleton ? (
+                            <div className={triggerStyles.menuStack} aria-hidden="true">
+                                <div className={triggerStyles.firstLevel}>
+                                    <div className="flex flex-col gap-2 pt-2 pl-6">
+                                        {Array.from({ length: 12 }).map((_, i) => (
+                                            <div
+                                                key={i}
+                                                className="flex items-center gap-2 p-2"
+                                            >
+                                                <div className="h-[38px] w-[38px] shrink-0 rounded-full bg-ekg-100 animate-pulse" />
+                                                <div className="h-4 w-[110px] rounded bg-ekg-100 animate-pulse" />
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="flex items-start w-full py-6 px-4 lg:px-6">
-                                    <MegaMenuPanel
-                                        roots={categories}
-                                        activeId={activeId}
-                                        onActivate={setActiveId}
-                                        contentMaxHeight={panelTop ? `calc(100dvh - ${panelTop + 16}px - 48px)` : undefined}
-                                    />
-                                </div>
-                            )}
-                        </div>
+                            </div>
+                        ) : (
+                            categories.length ? (
+                                <TechnolifeMegaMenu
+                                    roots={categories}
+                                    onClose={() => setIsOpen(false)}
+                                />
+                            ) : null
+                        )}
                     </div>
                 </>,
                 document.body,
