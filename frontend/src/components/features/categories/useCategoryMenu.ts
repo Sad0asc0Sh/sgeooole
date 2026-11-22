@@ -2,42 +2,33 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// Each open level gets a same-page entry. Back from a listing can therefore
-// restore the exact branch, even when Next has unmounted the bottom navigation.
 const historyKey = "ekgCategoryMenu";
+const desktopQuery = "(min-width: 48rem)";
 
-function readPath(): string[] | null {
-  const entry = window.history.state?.[historyKey];
-  return entry?.page === window.location.href && Array.isArray(entry.path)
-    ? entry.path
-    : null;
+function hasOpenEntry() {
+  return window.history.state?.[historyKey] === window.location.href;
 }
 
 export function useCategoryMenu(pathname: string) {
-  const [path, setPath] = useState<string[] | null>(null);
-  const traversing = useRef(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const isClosing = useRef(false);
 
-  const backTo = useCallback((depth: number) => {
-    const current = readPath();
-    if (!current) {
-      setPath(null);
-      return;
-    }
-    if (traversing.current || depth >= current.length) return;
-    traversing.current = true;
-    window.history.go(depth - current.length);
+  const close = useCallback(() => {
+    if (isClosing.current || !hasOpenEntry()) return;
+    isClosing.current = true;
+    window.history.back();
   }, []);
 
   useEffect(() => {
-    const desktop = window.matchMedia?.("(min-width: 768px)");
+    const desktop = window.matchMedia?.(desktopQuery);
     const sync = () => {
-      traversing.current = false;
-      setPath(desktop?.matches ? null : readPath());
+      isClosing.current = false;
+      setIsOpen(!desktop?.matches && hasOpenEntry());
     };
     const resize = () => {
       if (desktop?.matches) {
-        backTo(-1);
-        setPath(null);
+        setIsOpen(false);
+        close();
       } else {
         sync();
       }
@@ -53,24 +44,26 @@ export function useCategoryMenu(pathname: string) {
       if (desktop?.removeEventListener) desktop.removeEventListener("change", resize);
       else desktop?.removeListener?.(resize);
     };
-  }, [pathname, backTo]);
+  }, [pathname, close]);
 
-  function enter(id?: string) {
-    if (traversing.current) return;
-    const next = id === undefined ? [] : [...(readPath() ?? []), id];
-    window.history.pushState({ [historyKey]: { page: window.location.href, path: next } }, "");
-    setPath(next);
+  function open() {
+    if (isClosing.current || window.matchMedia?.(desktopQuery)?.matches) return;
+    if (!hasOpenEntry()) {
+      // One same-URL entry lets Back dismiss the sheet without leaving the page.
+      window.history.pushState({ [historyKey]: window.location.href }, "");
+    }
+    setIsOpen(true);
   }
 
   function leaveForLink(event: { preventDefault(): void }, href: string) {
-    if (path === null) return;
+    if (!isOpen) return;
     if (new URL(href, window.location.href).href === window.location.href) {
       event.preventDefault();
-      backTo(-1);
+      close();
     } else {
-      setPath(null);
+      setIsOpen(false);
     }
   }
 
-  return { path, enter, backTo, leaveForLink };
+  return { isOpen, open, close, leaveForLink };
 }

@@ -89,6 +89,33 @@
   background: white;
 }
 
+.sheetBrowser {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: white;
+}
+
+.sheetBrowser .rail,
+.sheetBrowser .content {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.sheetBrowser .rail {
+  position: static;
+  max-height: none;
+}
+
+.sheetBrowser .toolbar {
+  top: 0;
+}
+
+.sheetBrowser .feedback {
+  overflow-y: auto;
+}
+
 .toolbar {
   position: sticky;
   top: 64px;

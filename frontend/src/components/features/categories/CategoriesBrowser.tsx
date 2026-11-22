@@ -10,13 +10,14 @@ import { CategoryColumns, CategoryRail, NodeThumbnail } from "./MegaMenuPanel";
 import styles from "./CategoriesBrowser.module.css";
 import { normalizeCategoryTree, type CategoryNode } from "./tree";
 
-export interface CategoriesBrowserProps {
-  /** Server-rendered tree — paints the page before SWR resolves. */
-  initialTree: CategoryNode[];
-  initialError?: boolean;
-}
+type CategoryNavigation = (event: { preventDefault(): void }, href: string) => void;
+type CategoriesBrowserProps =
+  | { initialTree: CategoryNode[]; initialError?: boolean; onNavigate?: never }
+  | { initialTree?: never; initialError?: never; onNavigate: CategoryNavigation };
 
-export default function CategoriesBrowser({ initialTree, initialError = false }: CategoriesBrowserProps) {
+const emptyTree: CategoryNode[] = [];
+
+export default function CategoriesBrowser({ initialTree = emptyTree, initialError = false, onNavigate }: CategoriesBrowserProps) {
   const { categoryTree, isLoading, isValidating, error, refresh } = useCategoryTree();
   const [activeId, setActiveId] = useState<string | null>(null);
   // undefined = "user hasn't chosen yet" → derive the default during render so
@@ -45,7 +46,7 @@ export default function CategoriesBrowser({ initialTree, initialError = false }:
 
   if (!roots.length) {
     return (
-      <div className={styles.page}>
+      <div className={onNavigate ? styles.sheetBrowser : styles.page}>
         <div className={styles.feedback} role="status">
           {isLoading ? (
             <Loader2 className={styles.spinner} size={28} aria-hidden="true" />
@@ -74,12 +75,13 @@ export default function CategoriesBrowser({ initialTree, initialError = false }:
   return (
     <>
       {/* Mobile: two-pane browser — image rail + single-open accordion of card grids. */}
-      <div className="flex items-start md:hidden">
+      <div className={onNavigate ? styles.sheetBrowser : "flex items-start md:hidden"}>
         {rail}
         <div className={styles.content} ref={contentRef}>
           {active && (
             <div className={styles.toolbar}>
-              <Link href={active.href} className={styles.toolbarLink}>
+              <Link href={active.href} className={styles.toolbarLink}
+                onNavigate={(event) => onNavigate?.(event, active.href)}>
                 <LayoutGrid size={18} aria-hidden="true" />
                 نمایش همه محصولات
               </Link>
@@ -91,7 +93,8 @@ export default function CategoriesBrowser({ initialTree, initialError = false }:
             if (!children.length) {
               return (
                 <div key={group.id} className={styles.group}>
-                  <Link href={group.href} className={styles.groupHeader}>
+                  <Link href={group.href} className={styles.groupHeader}
+                    onNavigate={(event) => onNavigate?.(event, group.href)}>
                     <span className={styles.groupTitle}>{group.title}</span>
                     <ArrowLeft size={20} className={styles.groupChevron} aria-hidden="true" />
                   </Link>
@@ -114,12 +117,14 @@ export default function CategoriesBrowser({ initialTree, initialError = false }:
                   <div id={`category-group-${group.id}`} className={styles.groupBody}>
                     <div className={styles.cardGrid}>
                       {children.map((child) => (
-                        <Link key={child.id} href={child.href} className={styles.card}>
+                        <Link key={child.id} href={child.href} className={styles.card}
+                          onNavigate={(event) => onNavigate?.(event, child.href)}>
                           <NodeThumbnail node={child} size={48} />
                           <span className={styles.cardLabel}>{child.title}</span>
                         </Link>
                       ))}
-                      <Link href={group.href} className={styles.card}>
+                      <Link href={group.href} className={styles.card}
+                        onNavigate={(event) => onNavigate?.(event, group.href)}>
                         <span className={styles.cardAllIcon} aria-hidden="true">
                           <LayoutGrid size={28} strokeWidth={1.75} />
                         </span>
@@ -135,20 +140,22 @@ export default function CategoriesBrowser({ initialTree, initialError = false }:
       </div>
 
       {/* Desktop: the AllCategories mega-menu body as a full page. */}
-      <div className="hidden md:flex items-start">
-        {rail}
-        <div className={styles.content}>
-          {active && (
-            <div className={styles.toolbar} style={{ position: "static" }}>
-              <Link href={active.href} className={styles.toolbarLink}>
-                <LayoutGrid size={18} aria-hidden="true" />
-                نمایش همه محصولات {active.title}
-              </Link>
-            </div>
-          )}
-          {active && <CategoryColumns root={active} />}
+      {!onNavigate && (
+        <div className="hidden md:flex items-start">
+          {rail}
+          <div className={styles.content}>
+            {active && (
+              <div className={styles.toolbar} style={{ position: "static" }}>
+                <Link href={active.href} className={styles.toolbarLink}>
+                  <LayoutGrid size={18} aria-hidden="true" />
+                  نمایش همه محصولات {active.title}
+                </Link>
+              </div>
+            )}
+            {active && <CategoryColumns root={active} />}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

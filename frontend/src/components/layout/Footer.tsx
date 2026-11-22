@@ -107,7 +107,7 @@ const DEFAULT_BRANCH_PHONES = [
     { label: "شعبه ۳ و پشتیبانی", display: "09154191788", tel: "09154191788" },
 ] as const;
 
-function Footer() {
+function Footer({ className }: { className?: string }) {
     const [storeInfo, setStoreInfo] = useState<StoreInfo>({});
     const { isAuthenticated } = useAuth();
     const { categoryTree } = useCategoryTree();
@@ -286,7 +286,7 @@ function Footer() {
         "مرجع خرید آنلاین کالای تکنولوژی و دیجیتال؛ گسترش‌یافته بر پایه امنیت، اصالت و آرامش خاطر";
 
     return (
-        <footer className={styles.footerRoot} dir="rtl" aria-label="پاورقی سایت ای‌کا‌جی کالا">
+        <footer className={className ? `${styles.footerRoot} ${className}` : styles.footerRoot} dir="rtl" aria-label="پاورقی سایت ای‌کا‌جی کالا">
             {/* ─── PRE-FOOTER: 4-Pillar Trust Strip + Expandable Brand & Marketplace Story ─── */}
             <div className={styles.preFooter}>
                 <ul className={styles.trustGrid} aria-label="مزایای خرید از ای‌کا‌جی کالا">

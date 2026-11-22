@@ -93,7 +93,7 @@ export default function ClientLayout({
                 {showChrome && (
                     <>
                         <ServicesWidget isOpen={isServicesOpen} onOpenChange={setIsServicesOpen} />
-                        {showFooter && <Footer />}
+                        {showFooter && <Footer className={path === "/categories" ? "hidden md:block" : undefined} />}
                         <BottomNav
                             isServicesOpen={isServicesOpen}
                             onNavClick={() => {
