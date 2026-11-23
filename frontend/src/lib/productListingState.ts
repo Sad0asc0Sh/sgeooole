@@ -1,7 +1,27 @@
+import { buildProductListingParams, type ProductFilterFacets, type ProductListingParams } from "@/lib/productFilters";
+import type { Product } from "@/types/product";
+
+export const PRODUCT_LISTING_PAGE_SIZE = 24;
+
 export const PRODUCT_LISTING_CACHE_POLICY = {
   staleTime: 60 * 1000,
   gcTime: 5 * 60 * 1000,
 } as const;
+
+export type ProductListingResult = {
+  products: Product[];
+  total: number;
+  totalPages: number;
+  currentPage: number;
+  priceRange?: { min: number; max: number };
+  facets?: ProductFilterFacets;
+};
+
+export type InitialProductListing = ProductListingResult & { cacheKey: string };
+
+export function buildListingCacheKey(query: ProductListingParams): string {
+  return `product-listing:${buildProductListingParams(query).toString()}`;
+}
 
 type ProductListingReadinessInput = {
   hasData: boolean;

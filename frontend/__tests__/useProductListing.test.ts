@@ -60,3 +60,47 @@ it("keeps stock, sale and rating queries in separate cache entries", () => {
   keys.push(swr.mock.calls.at(-1)![0]);
   expect(new Set(keys).size).toBe(4);
 });
+
+it("revalidates the server listing in a fresh browser and uses it only for the matching query", () => {
+  const { rerender } = renderHook(({ brand }) => {
+    const initialListing = {
+      cacheKey: "product-listing:page=1&sort=newest&brand=briton",
+      products: [],
+      total: 0,
+      totalPages: 1,
+      currentPage: 1,
+    };
+    return useProductListing({ page: 1, sort: "newest", brand }, initialListing);
+  }, { initialProps: { brand: "briton" } });
+
+  const [, , options] = swr.mock.calls.at(-1)!;
+  expect(options.fallbackData?.currentPage).toBe(1);
+  expect(options.revalidateOnMount).toBe(true);
+
+  rerender({ brand: "dahua" });
+  expect(swr.mock.calls.at(-1)![2].fallbackData).toBeUndefined();
+});
+
+it("keeps the rendered list usable while a background refresh retries", () => {
+  const initialListing = {
+    cacheKey: "product-listing:page=1&sort=newest",
+    products: [],
+    total: 0,
+    totalPages: 1,
+    currentPage: 1,
+  };
+  swr.mockImplementationOnce((_key, _fetcher, { fallbackData }) => ({
+    data: fallbackData,
+    error: new Error("Temporary outage"),
+    isLoading: false,
+    isValidating: true,
+  }));
+
+  const { result } = renderHook(() => useProductListing({ page: 1, sort: "newest" }, initialListing));
+  expect(result.current).toMatchObject({
+    isReady: true,
+    showSkeleton: false,
+    showUpdating: false,
+    showError: false,
+  });
+});

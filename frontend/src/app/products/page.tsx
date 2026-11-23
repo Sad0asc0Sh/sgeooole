@@ -3,17 +3,15 @@ import { Suspense, cache } from "react";
 import Link from "next/link";
 import ProductsPageClient from "./ProductsPageClient";
 import { buildProductUrl } from "@/lib/paths";
-import {
-  parseProductFilters,
-  appendPropertyFilters,
-  appendStableAttrAndRangeFilters,
-} from "@/lib/productFilters";
+import { buildProductListingParams, parseProductFilters } from "@/lib/productFilters";
 import { productService } from "@/services/productService";
 import { mapBackendProduct } from "@/lib/productData";
-import type { ProductListingResult } from "@/hooks/useProductListing";
+import {
+  buildListingCacheKey,
+  PRODUCT_LISTING_PAGE_SIZE,
+  type InitialProductListing,
+} from "@/lib/productListingState";
 import { brandService } from "@/services/brandService";
-
-export const revalidate = 300;
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
@@ -67,21 +65,11 @@ const resolveBrandName = cache(async (slug?: string): Promise<string | null> => 
   }
 });
 
-// ─── Server-rendered crawlable listing (SEO) ─────────────────────────────
-// ProductsPageClient fetches in the browser, so the initial HTML of /products
-// contained ZERO product links (verified live) and pagination was <button>s —
-// crawlers had no path from the listing to the products. The server now
-// fetches the SAME listing the client will show (same filter parsing, same
-// page size as useProductListing) and renders a visually-hidden nav of real
-// <Link>s (products + page numbers) plus a canonical ItemList JSON-LD.
-// Failure-safe by design: any API error returns null and the page renders
-// exactly as before (client UI unchanged, visually and functionally).
 const API_BASE = (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
-const SERVER_PAGE_SIZE = 24; // = useProductListing ITEMS_PER_PAGE
 
 async function fetchServerListing(
-  params: SearchParams
-): Promise<ProductListingResult | null> {
+  params: SearchParams,
+): Promise<InitialProductListing | null> {
   try {
     const raw = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -94,35 +82,26 @@ async function fetchServerListing(
       }
     }
     const filters = parseProductFilters(raw);
-    const query = new URLSearchParams();
-    query.set("page", String(filters.page));
-    query.set("limit", String(SERVER_PAGE_SIZE));
-    query.set("sort", filters.sort);
-    if (filters.category) query.set("category", filters.category);
-    if (filters.brand) query.set("brand", filters.brand);
-    if (filters.search) query.set("search", filters.search);
-    if (filters.minPrice !== undefined) query.set("minPrice", String(filters.minPrice));
-    if (filters.maxPrice !== undefined) query.set("maxPrice", String(filters.maxPrice));
-    if (filters.includeChildren) query.set("includeChildren", "true");
-    if (filters.inStock) query.set("inStock", "true");
-    if (filters.onSale) query.set("onSale", "true");
-    if (filters.minRating !== undefined) query.set("minRating", String(filters.minRating));
-    appendPropertyFilters(query, filters.properties);
-    appendStableAttrAndRangeFilters(query, filters.attrFilters, filters.ranges);
+    const query = buildProductListingParams({ ...filters, limit: PRODUCT_LISTING_PAGE_SIZE });
     query.set("facets", "false");
 
+    // The API invalidates its own cache on product/campaign edits and at campaign
+    // boundaries. A separate Next.js cache can outlive those invalidations.
     const res = await fetch(`${API_BASE}/products?${query.toString()}`, {
-      next: { revalidate: 300 },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8_000),
     });
     if (!res.ok) return null;
-    const json = await res.json().catch(() => null);
-    const rawItems: any[] = Array.isArray(json?.data) ? json.data : [];
+    const json = await res.json();
+    if (json?.success === false || !Array.isArray(json?.data)) return null;
+    const rawItems: Parameters<typeof mapBackendProduct>[0][] = json.data;
     const products = rawItems.map((item) => mapBackendProduct(item, API_BASE));
     const pagination = json?.pagination || {};
     const total = Number(pagination.totalItems) || products.length;
     const totalPages =
-      Number(pagination.totalPages) || Math.max(1, Math.ceil(total / SERVER_PAGE_SIZE));
+      Number(pagination.totalPages) || Math.max(1, Math.ceil(total / PRODUCT_LISTING_PAGE_SIZE));
     return {
+      cacheKey: buildListingCacheKey(filters),
       products,
       total,
       totalPages,
@@ -263,7 +242,7 @@ export default async function ProductListingPage({
                 : undefined;
             return {
               "@type": "ListItem",
-              position: (listing.currentPage - 1) * SERVER_PAGE_SIZE + index + 1,
+              position: (listing.currentPage - 1) * PRODUCT_LISTING_PAGE_SIZE + index + 1,
               url: `${SITE_URL}${listingHref(product)}`,
               name: product.title || product.name || product.slug || "",
               ...(imgUrl ? { image: imgUrl } : {}),

@@ -21,6 +21,7 @@ const {
 
 const MAX_PAGE = 100000
 const MAX_LIMIT = 100
+const LISTING_CACHE_TTL = 300
 const OPERATORS = new Set(['eq', 'lt', 'gt', 'gte', 'lte'])
 const NUMBERS = new Set(['price', 'stock', 'discount', 'rating', 'numReviews', 'views', 'salesCount', 'clickCount'])
 const BOOLEANS = new Set(['isActive', 'isFeatured', 'isOnSale', 'isFlashDeal', 'isSpecialOffer'])
@@ -390,10 +391,20 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
     brandMatch = { brand: { $in: [...brands.map((b) => b._id), ...options.brands.map(objectId).filter(Boolean)] } }
   }
   const campaigns = []
+  let nextCampaignBoundary = null
   if (!options.skipDiscount) {
-    const sales = await Sale.find({ isActive: true, startDate: { $lte: now }, endDate: { $gt: now } })
-      .select('name products categories discountPercentage badgeTheme endDate includeSubcategories showInFeatured').sort({ _id: 1 }).lean()
+    const cacheWindowEnd = new Date(now.getTime() + LISTING_CACHE_TTL * 1000)
+    const sales = await Sale.find({ isActive: true, startDate: { $lte: cacheWindowEnd }, endDate: { $gt: now } })
+      .select('name products categories discountPercentage badgeTheme startDate endDate includeSubcategories showInFeatured').sort({ _id: 1 }).lean()
     for (const sale of sales) {
+      if (!sale.products?.length && !sale.categories?.length) continue
+
+      // A sale can change totals and price ordering even when its products are off-page.
+      const scheduled = sale.startDate > now
+      const boundary = scheduled ? sale.startDate : sale.endDate
+      if (!nextCampaignBoundary || boundary < nextCampaignBoundary) nextCampaignBoundary = boundary
+      if (scheduled) continue
+
       const categories = []
       for (const id of sale.categories || []) categories.push(...(sale.includeSubcategories !== false ? await categoryIds(id) : [id]))
       campaigns.push({ ...sale, categories })
@@ -408,7 +419,7 @@ async function resolveListingContext(options, { Category, Brand, Sale }, now) {
     }
     conditions.push({ $or: featuredOr })
   }
-  return { conditions, brandMatch, campaigns, categoryRules, directRuleKeys, isLeafCategory }
+  return { conditions, brandMatch, campaigns, nextCampaignBoundary, categoryRules, directRuleKeys, isLeafCategory }
 }
 
 const literal = (value) => ({ $literal: value })
@@ -861,6 +872,7 @@ async function listProducts(query, models, now = new Date()) {
     pagination: { currentPage: options.page, itemsPerPage: options.limit, totalItems: total, totalPages: Math.ceil(total / options.limit) || 1 },
     priceRange: { min: result?.priceRange[0]?.min ?? 0, max: result?.priceRange[0]?.max ?? 0 },
     facets,
+    nextCampaignBoundary: context.nextCampaignBoundary,
   }
 }
 
@@ -872,4 +884,5 @@ module.exports = {
   extractScopedFilterParamsFromUrl,
   hydrateListingRefs,
   ListingQueryError,
+  LISTING_CACHE_TTL,
 }

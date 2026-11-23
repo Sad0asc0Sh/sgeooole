@@ -10,7 +10,7 @@ const Product = require('../models/Product')
 const Sale = require('../models/Sale')
 const Category = require('../models/Category')
 const Brand = require('../models/Brand')
-const { listProducts, extractScopedFilterParamsFromUrl, ListingQueryError } = require('../services/productListingService')
+const { listProducts, extractScopedFilterParamsFromUrl, ListingQueryError, LISTING_CACHE_TTL } = require('../services/productListingService')
 const { prepareProductSpecsAndDescription } = require('../services/specAndDescriptionService')
 const { mergeCategoryRules } = require('../services/listingFacets')
 const { autoEvolveCategoryFacets, loadCategoryRulesWithAncestors } = require('../services/categoryFacetEvolution')
@@ -805,27 +805,26 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
 // Query params:
 // - skipDiscount=true: Returns raw product data without discount calculation (for admin panel)
 // ============================================
-router.get('/', cacheMiddleware(300), async (req, res) => {
+router.get('/', cacheMiddleware(LISTING_CACHE_TTL), async (req, res) => {
   try {
     const now = new Date()
     const mergedQuery = { ...req.query, ...extractScopedFilterParamsFromUrl(req.originalUrl) }
-    const result = await listProducts(mergedQuery, { Product, Category, Brand, Sale }, now)
+    const { nextCampaignBoundary, ...result } = await listProducts(mergedQuery, { Product, Category, Brand, Sale }, now)
     // ساعت سرور برای اصلاح اختلاف ساعت کلاینت (فرانت آفست را از serverNow/هدر Date می‌سازد)
     result.serverNow = now.toISOString()
-    // TTL کش لیست هم مثل جزئیات تا نزدیک‌ترین پایان پروموشن کوتاه می‌شود تا
-    // قیمت/لیبل منقضی در کش نماند. skipDiscount خام است و نیازی به کوتاه‌سازی ندارد.
+    // انقضای کش در نزدیک‌ترین شروع/پایان کمپین یا پایان پیشنهاد روی کارت.
     if (req.query.skipDiscount !== 'true' && Array.isArray(result.data)) {
-      let nearest = null
+      let expiresAt = now.getTime() + LISTING_CACHE_TTL * 1000
+      if (nextCampaignBoundary) expiresAt = Math.min(expiresAt, nextCampaignBoundary.getTime())
       for (const item of result.data) {
         for (const key of ['flashDealEndTime', 'specialOfferEndTime']) {
           const value = item && item[key]
           if (!value) continue
-          const d = new Date(value)
-          if (Number.isNaN(d.getTime()) || d <= now) continue
-          if (!nearest || d < nearest) nearest = d
+          const end = new Date(value).getTime()
+          if (end > now.getTime()) expiresAt = Math.min(expiresAt, end)
         }
       }
-      if (nearest) res.locals.cacheTtlSeconds = ttlUntil(nearest, 300, now)
+      res.locals.cacheExpiresAt = expiresAt
     }
     res.json(result)
   } catch (error) {

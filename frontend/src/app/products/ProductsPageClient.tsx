@@ -3,7 +3,8 @@
 import { useEffect, useLayoutEffect, useState, Suspense, useCallback, useMemo, useRef, useId } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollRestoration } from "@/hooks/useScrollRestoration";
-import { useProductListing, type ProductListingResult } from "@/hooks/useProductListing";
+import { useProductListing } from "@/hooks/useProductListing";
+import type { InitialProductListing } from "@/lib/productListingState";
 import { useCategoryFilterNavigation } from "@/hooks/useCategoryFilterNavigation";
 import { useCategoryTree } from "@/hooks/useCategories";
 import { motion, AnimatePresence } from "framer-motion";
@@ -283,7 +284,7 @@ function DesktopSortBar({
 }
 
 // ─── Main Content Component ──────────────────────────────────────
-function ProductListingContent({ initialListing }: { initialListing?: ProductListingResult | null }) {
+function ProductListingContent({ initialListing }: { initialListing?: InitialProductListing | null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { markRoutePending, markRouteReady } = useRouteLoadingState();
@@ -1396,7 +1397,7 @@ function ProductListingContent({ initialListing }: { initialListing?: ProductLis
   );
 }
 
-export default function ProductsPageClient({ initialListing }: { initialListing?: ProductListingResult | null }) {
+export default function ProductsPageClient({ initialListing }: { initialListing?: InitialProductListing | null }) {
   return (
     <Suspense
       fallback={

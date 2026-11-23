@@ -24,6 +24,7 @@ const cache = new NodeCache({
   useClones: false, // Better performance - don't clone on get
   deleteOnExpire: true,
 })
+let cacheGeneration = 0
 
 // ============================================
 // Cache Key Builder
@@ -78,7 +79,7 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
     const key = varyByUser ? buildCacheKey(req) : (req.originalUrl || req.url)
     const cached = cache.get(key)
 
-    if (cached) {
+    if (cached && (cached.expiresAt === undefined || cached.expiresAt > Date.now())) {
       const hitTtl = cached.ttl || ttlSeconds
       // Set cache headers
       setCacheHeaders(res, hitTtl, cached.etag, !!req.user)
@@ -96,6 +97,7 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
 
     // Cache MISS
     res.setHeader('X-Cache', 'MISS')
+    const requestGeneration = cacheGeneration
 
     // Override res.json to cache the response
     const originalJson = res.json.bind(res)
@@ -107,14 +109,21 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
           const etag = crypto.createHash('md5').update(bodyString).digest('hex').substring(0, 16)
 
           // هندلر می‌تواند TTL را کوتاه‌تر کند (مثلاً تا لحظه‌ی پایان تخفیف) تا لیبل/قیمتِ منقضی در کش نماند
-          const effectiveTtl = Math.max(1, Math.min(ttlSeconds, Number(res.locals?.cacheTtlSeconds) || ttlSeconds))
+          const expiresAt = res.locals?.cacheExpiresAt
+          const requestedTtl = Math.max(1, Math.min(ttlSeconds, Number(res.locals?.cacheTtlSeconds) || ttlSeconds))
+          // Measure from the cache write, since the query may have crossed the deadline.
+          const effectiveTtl = expiresAt === undefined ? requestedTtl : Math.min(requestedTtl, (expiresAt - Date.now()) / 1000)
           setCacheHeaders(res, effectiveTtl, etag, !!req.user)
-          cache.set(key, {
-            body: payload,
-            status: res.statusCode || 200,
-            etag,
-            ttl: effectiveTtl,
-          }, effectiveTtl)
+          // A request already in flight may still hold data from before an edit.
+          if (effectiveTtl > 0 && requestGeneration === cacheGeneration) {
+            cache.set(key, {
+              body: payload,
+              status: res.statusCode || 200,
+              etag,
+              ttl: Math.ceil(effectiveTtl),
+              expiresAt,
+            }, effectiveTtl)
+          }
         }
       } catch (err) {
         console.error('[CACHE] Error caching response:', err.message)
@@ -130,7 +139,10 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
 // ============================================
 // Cache Utilities
 // ============================================
-const clearCacheByKey = (key) => cache.del(key)
+const clearCacheByKey = (key) => {
+  cacheGeneration++
+  return cache.del(key)
+}
 
 // کش Redis پرفروش‌ترین‌ها از روی داده‌ی محصولات ساخته می‌شود؛ با هر باطل‌سازی کشِ
 // محصولات (ویرایش محصول، تغییر/غیرفعال‌سازی تخفیف زمان‌دار، job انقضا و ...) آن هم
@@ -150,6 +162,7 @@ const invalidateBestsellersRedisCache = () => {
 }
 
 const clearCacheByPrefix = (prefix) => {
+  cacheGeneration++
   const keys = cache.keys()
   let cleared = 0
   keys.forEach((k) => {
@@ -170,6 +183,7 @@ const clearCacheByPrefix = (prefix) => {
 }
 
 const clearAllCache = () => {
+  cacheGeneration++
   const stats = cache.getStats()
   cache.flushAll()
   return stats.keys

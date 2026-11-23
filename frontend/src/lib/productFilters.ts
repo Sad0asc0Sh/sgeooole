@@ -5,6 +5,24 @@ export type ProductFilterAttrValues = Record<string, string | string[]>;
 export type ProductFilterRange = { min?: number; max?: number };
 export type ProductFilterRanges = Record<string, ProductFilterRange>;
 
+export type ProductListingParams = {
+  page?: number;
+  limit?: number;
+  sort?: string;
+  category?: string;
+  brand?: string;
+  search?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  includeChildren?: boolean;
+  inStock?: boolean;
+  onSale?: boolean;
+  minRating?: number;
+  properties?: ProductFilterProperties;
+  attrFilters?: ProductFilterAttrValues;
+  ranges?: ProductFilterRanges;
+};
+
 export type ProductFilterFacetValue = {
   value: string;
   count: number;
@@ -252,7 +270,9 @@ export function parseProductFilters(params: URLSearchParams) {
 
 export function appendPropertyFilters(params: URLSearchParams, properties?: ProductFilterProperties, prefix = "properties") {
   if (!properties) return;
-  Object.entries(properties).sort(([a], [b]) => a.localeCompare(b)).forEach(([name, raw]) => {
+  // Listing keys must be identical on the server and in browsers with other locales.
+  Object.keys(properties).sort().forEach((name) => {
+    const raw = properties[name];
     const values = [...new Set(Array.isArray(raw) ? raw : [raw])].filter(Boolean).sort();
     if (!values.length) return;
     if (prefix === "f.") {
@@ -269,18 +289,18 @@ export function appendStableAttrAndRangeFilters(
   ranges?: ProductFilterRanges
 ) {
   if (attrFilters) {
-    Object.entries(attrFilters)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([attrKey, raw]) => {
+    Object.keys(attrFilters).sort()
+      .forEach((attrKey) => {
         if (!VALID_ASCII_ATTR_KEY.test(attrKey) || FORBIDDEN_KEYS.has(attrKey)) return;
+        const raw = attrFilters[attrKey];
         const values = [...new Set(Array.isArray(raw) ? raw : [raw])].map((v) => v.trim()).filter(Boolean).sort();
         if (values.length) params.set(`f.${attrKey}`, values.join(","));
       });
   }
   if (ranges) {
-    Object.entries(ranges)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .forEach(([attrKey, range]) => {
+    Object.keys(ranges).sort()
+      .forEach((attrKey) => {
+        const range = ranges[attrKey];
         if (!VALID_ASCII_ATTR_KEY.test(attrKey) || FORBIDDEN_KEYS.has(attrKey) || !range) return;
         const { min, max } = range;
         if (min === undefined && max === undefined) return;
@@ -292,4 +312,23 @@ export function appendStableAttrAndRangeFilters(
         params.set(`r.${attrKey}`, serialized);
       });
   }
+}
+
+export function buildProductListingParams(filters: ProductListingParams): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
+  if (filters.sort) params.set("sort", filters.sort);
+  if (filters.category) params.set("category", filters.category);
+  if (filters.brand) params.set("brand", filters.brand);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.minPrice != null) params.set("minPrice", String(filters.minPrice));
+  if (filters.maxPrice != null) params.set("maxPrice", String(filters.maxPrice));
+  if (filters.includeChildren) params.set("includeChildren", "true");
+  if (filters.inStock) params.set("inStock", "true");
+  if (filters.onSale) params.set("onSale", "true");
+  if (filters.minRating !== undefined) params.set("minRating", String(filters.minRating));
+  appendPropertyFilters(params, filters.properties);
+  appendStableAttrAndRangeFilters(params, filters.attrFilters, filters.ranges);
+  return params;
 }

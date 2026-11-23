@@ -16,14 +16,8 @@
 import api from "@/lib/api";
 import { resolvePricing } from "@/lib/pricing";
 import { buildProductSpecs } from "@/lib/productSpecs";
-import {
-  appendPropertyFilters,
-  appendStableAttrAndRangeFilters,
-  type ProductFilterAttrValues,
-  type ProductFilterProperties,
-  type ProductFilterFacets,
-  type ProductFilterRanges,
-} from "@/lib/productFilters";
+import { buildProductListingParams, type ProductListingParams } from "@/lib/productFilters";
+import type { ProductListingResult } from "@/lib/productListingState";
 
 // Re-export types from the SSR-safe types file for backward compatibility
 // This allows existing client components to continue using `import { Product } from "@/services/productService"`
@@ -726,55 +720,9 @@ export const productService = {
   /**
    * Fetch products with advanced filtering
    */
-  getProducts: async (params: {
-    page?: number;
-    limit?: number;
-    sort?: string;
-    category?: string;
-    brand?: string;
-    search?: string;
-    minPrice?: number;
-    maxPrice?: number;
-    properties?: ProductFilterProperties;
-    attrFilters?: ProductFilterAttrValues;
-    ranges?: ProductFilterRanges;
-    includeChildren?: boolean;
-    inStock?: boolean;
-    onSale?: boolean;
-    minRating?: number;
-  }): Promise<{ products: Product[]; total: number; totalPages: number; currentPage: number; priceRange?: { min: number; max: number }; facets?: ProductFilterFacets }> => {
+  getProducts: async (params: ProductListingParams): Promise<ProductListingResult> => {
     try {
-      const queryParams = new URLSearchParams();
-      if (params.page) queryParams.set("page", params.page.toString());
-      if (params.limit) queryParams.set("limit", params.limit.toString());
-      if (params.sort) queryParams.set("sort", params.sort);
-      if (params.category) queryParams.set("category", params.category);
-      if (params.brand) queryParams.set("brand", params.brand);
-      if (params.search) queryParams.set("search", params.search);
-      // Use !== undefined to allow 0 values to be sent
-      if (params.minPrice !== undefined && params.minPrice !== null) {
-        queryParams.set("minPrice", params.minPrice.toString());
-      }
-      if (params.maxPrice !== undefined && params.maxPrice !== null) {
-        queryParams.set("maxPrice", params.maxPrice.toString());
-      }
-      if (params.includeChildren) queryParams.set("includeChildren", "true");
-      if (params.inStock) queryParams.set("inStock", "true");
-      if (params.onSale) queryParams.set("onSale", "true");
-      if (params.minRating !== undefined) queryParams.set("minRating", params.minRating.toString());
-
-      if (params.properties) {
-        appendPropertyFilters(queryParams, params.properties);
-      }
-      if (params.attrFilters || params.ranges) {
-        appendStableAttrAndRangeFilters(queryParams, params.attrFilters, params.ranges);
-      }
-
-      // توجه: عمداً `nocache=true` فرستاده نمی‌شود.
-      // کش سمت سرور با clearCacheByPrefix('/api/products') در هر ویرایش
-      // محصول/کمپین و با ttlUntil(nearest, 300, now) برای انقضای پروموشن‌ها
-      // دقیق مدیریت می‌شود؛ دور زدن آن فقط سرعت فیلترینگ را چند برابر کم می‌کرد.
-
+      const queryParams = buildProductListingParams(params);
       const response = await api.get(`/products?${queryParams.toString()}`);
 
       // Handle response structure

@@ -6,6 +6,7 @@ const mongoose = require('mongoose')
 require('mingo/init/system')
 const { aggregate, Query } = require('mingo')
 const { parseListingQuery, buildListingPipeline, listProducts, ListingQueryError } = require('../services/productListingService')
+const { cacheMiddleware, clearCacheByKey } = require('../middleware/cache')
 
 const now = new Date('2026-09-17T12:00:00Z')
 const future = new Date('2026-09-18T12:00:00Z')
@@ -231,6 +232,78 @@ test('category sale includeSubcategories=false excludes child and admin skips sa
   const admin = fixtureModels(products)
   await listProducts({ skipDiscount: 'true' }, admin, now)
   assert.equal(admin.calls.saleQueries.length, 0)
+})
+
+test('an empty on-sale listing becomes discounted at the scheduled start and expires at the end', async () => {
+  const startDate = new Date(now.getTime() + 60_000)
+  const endDate = new Date(now.getTime() + 120_000)
+  const models = fixtureModels([product(1, { price: 8_900_000 })], [{
+    _id: id(301), isActive: true, products: [id(1)], startDate, endDate,
+    name: 'Black Friday', discountPercentage: 8,
+  }])
+
+  const before = await listProducts({ onSale: 'true' }, models, now)
+  assert.deepEqual(before.data, [])
+  assert.deepEqual(before.nextCampaignBoundary, startDate)
+
+  const started = await listProducts({ onSale: 'true' }, models, startDate)
+  assert.equal(started.data[0].price, 8_188_000)
+  assert.equal(started.data[0].compareAtPrice, 8_900_000)
+  assert.equal(started.data[0].campaignLabel, 'Black Friday')
+  assert.deepEqual(started.nextCampaignBoundary, endDate)
+
+  const ended = await listProducts({}, models, endDate)
+  assert.equal(ended.data[0].price, 8_900_000)
+  assert.equal(ended.data[0].discount, 0)
+  assert.equal(ended.nextCampaignBoundary, null)
+})
+
+test('cached listing expiry is inclusive even when the response took time to compute', (t) => {
+  const key = '/api/products?onSale=true&facets=false'
+  const deadline = now.getTime() + 60_000
+  let currentTime = now.getTime()
+  t.mock.method(Date, 'now', () => currentTime)
+  t.after(() => clearCacheByKey(key))
+  const middleware = cacheMiddleware()
+  const req = { method: 'GET', query: {}, headers: {}, originalUrl: key }
+
+  const fetchListing = (getBody) => {
+    const res = {
+      locals: {}, statusCode: 200, setHeader() {}, status() { return this },
+      json(body) { return body },
+    }
+    return middleware(req, res, () => res.json(getBody(res)))
+  }
+
+  assert.equal(fetchListing((res) => {
+    currentTime += 2_000
+    res.locals.cacheExpiresAt = deadline
+    return 'before campaign'
+  }), 'before campaign')
+
+  currentTime = deadline - 1
+  assert.equal(fetchListing(() => 'unexpected cache miss'), 'before campaign')
+  currentTime = deadline
+  assert.equal(fetchListing(() => 'active campaign'), 'active campaign')
+})
+
+test('a listing computed across a cache invalidation cannot repopulate stale pricing', (t) => {
+  const key = '/api/products?facets=false'
+  t.after(() => clearCacheByKey(key))
+  const middleware = cacheMiddleware()
+  const req = { method: 'GET', query: {}, headers: {}, originalUrl: key }
+  const response = () => ({
+    locals: {}, statusCode: 200, setHeader() {}, status() { return this },
+    json(body) { return body },
+  })
+
+  const inFlight = response()
+  middleware(req, inFlight, () => {})
+  clearCacheByKey(key)
+  inFlight.json('old price')
+
+  const afterEdit = response()
+  assert.equal(middleware(req, afterEdit, () => afterEdit.json('updated price')), 'updated price')
 })
 
 test('production query sanitizers and hpp preserve repeated nested properties', () => {

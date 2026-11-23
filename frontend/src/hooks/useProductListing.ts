@@ -3,18 +3,16 @@
 import { useMemo } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import type { Cache } from "swr";
-import { productService, Product } from "@/services/productService";
+import { productService } from "@/services/productService";
+import type { ProductListingParams } from "@/lib/productFilters";
 import {
-  appendPropertyFilters,
-  appendStableAttrAndRangeFilters,
-  type ProductFilterAttrValues,
-  type ProductFilterFacets,
-  type ProductFilterProperties,
-  type ProductFilterRanges,
-} from "@/lib/productFilters";
-import { getProductListingReadiness, PRODUCT_LISTING_CACHE_POLICY } from "@/lib/productListingState";
+  buildListingCacheKey,
+  getProductListingReadiness,
+  PRODUCT_LISTING_CACHE_POLICY,
+  PRODUCT_LISTING_PAGE_SIZE,
+  type InitialProductListing,
+} from "@/lib/productListingState";
 
-const ITEMS_PER_PAGE = 24;
 const listingCacheTimestamps = new Map<string, number>();
 const listingCacheGcTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -33,115 +31,32 @@ function scheduleListingCacheEviction(cache: Cache<unknown>, cacheKey: string, f
   listingCacheGcTimers.set(cacheKey, timer);
 }
 
-export type ProductListingQuery = {
+type ProductListingQuery = Omit<ProductListingParams, "limit"> & {
   page: number;
   sort: string;
-  category?: string;
-  brand?: string;
-  search?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  includeChildren?: boolean;
-  inStock?: boolean;
-  onSale?: boolean;
-  minRating?: number;
-  properties?: ProductFilterProperties;
-  attrFilters?: ProductFilterAttrValues;
-  ranges?: ProductFilterRanges;
 };
-
-export type ProductListingResult = {
-  products: Product[];
-  total: number;
-  totalPages: number;
-  currentPage: number;
-  priceRange?: { min: number; max: number };
-  facets?: ProductFilterFacets;
-};
-
-function buildListingCacheKey(query: ProductListingQuery): string {
-  const params = new URLSearchParams();
-  params.set("page", String(query.page));
-  params.set("sort", query.sort);
-  if (query.category) params.set("category", query.category);
-  if (query.brand) params.set("brand", query.brand);
-  if (query.search) params.set("search", query.search);
-  if (query.minPrice !== undefined) params.set("minPrice", String(query.minPrice));
-  if (query.maxPrice !== undefined) params.set("maxPrice", String(query.maxPrice));
-  if (query.includeChildren) params.set("includeChildren", "true");
-  if (query.inStock) params.set("inStock", "true");
-  if (query.onSale) params.set("onSale", "true");
-  if (query.minRating !== undefined) params.set("minRating", String(query.minRating));
-  appendPropertyFilters(params, query.properties, "prop_");
-  appendStableAttrAndRangeFilters(params, query.attrFilters, query.ranges);
-  return `product-listing:${params.toString()}`;
-}
-
-async function fetchProductListing(query: ProductListingQuery): Promise<ProductListingResult> {
-  const data = await productService.getProducts({
-    page: query.page,
-    limit: ITEMS_PER_PAGE,
-    sort: query.sort,
-    category: query.category,
-    brand: query.brand,
-    search: query.search,
-    minPrice: query.minPrice,
-    maxPrice: query.maxPrice,
-    includeChildren: query.includeChildren,
-    inStock: query.inStock,
-    onSale: query.onSale,
-    minRating: query.minRating,
-    properties:
-      query.properties && Object.keys(query.properties).length > 0
-        ? query.properties
-        : undefined,
-    attrFilters:
-      query.attrFilters && Object.keys(query.attrFilters).length > 0
-        ? query.attrFilters
-        : undefined,
-    ranges:
-      query.ranges && Object.keys(query.ranges).length > 0
-        ? query.ranges
-        : undefined,
-  });
-
-  return {
-    products: data.products,
-    total: data.total,
-    totalPages: data.totalPages,
-    currentPage: data.currentPage,
-    priceRange: data.priceRange,
-    facets: data.facets,
-  };
-}
 
 export function useProductListing(
   query: ProductListingQuery,
-  initialData?: ProductListingResult | null
+  initialData?: InitialProductListing | null,
 ) {
   const cacheKey = useMemo(() => buildListingCacheKey(query), [query]);
   const { cache } = useSWRConfig();
+  const cachedData = cache.get(cacheKey)?.data;
   const fetchedAt = listingCacheTimestamps.get(cacheKey);
-  const hasInitialData = Boolean(
-    initialData &&
-      Array.isArray(initialData.products) &&
-      initialData.currentPage === query.page
-  );
-  const isStale =
-    !hasInitialData &&
-    (!fetchedAt || Date.now() - fetchedAt >= PRODUCT_LISTING_CACHE_POLICY.staleTime);
+  const fallbackData = initialData?.cacheKey === cacheKey ? initialData : undefined;
+  const needsRevalidation = cachedData === undefined || !fetchedAt || Date.now() - fetchedAt >= PRODUCT_LISTING_CACHE_POLICY.staleTime;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR(
     cacheKey,
-    () => fetchProductListing(query),
+    () => productService.getProducts({ ...query, limit: PRODUCT_LISTING_PAGE_SIZE }),
     {
-      fallbackData: hasInitialData ? (initialData ?? undefined) : undefined,
-      // SWR has no `staleTime` / `gcTime` options. The policy below provides
-      // their equivalents for this listing: a bounded fresh window plus
-      // explicit cache eviction after the maximum retention period.
-      revalidateOnMount: isStale,
+      fallbackData,
+      // The server listing gives us the first paint. The browser still refreshes
+      // the prices and loads filter facets when its own copy is stale or absent.
+      revalidateOnMount: needsRevalidation,
       revalidateIfStale: true,
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       revalidateOnReconnect: true,
       refreshInterval: 0,
       dedupingInterval: PRODUCT_LISTING_CACHE_POLICY.staleTime,
@@ -156,11 +71,14 @@ export function useProductListing(
     },
   );
 
+  const showingInitialData = fallbackData !== undefined && data === fallbackData;
+  const hasCurrentData = data !== undefined && (showingInitialData || data === cachedData);
+  const isStale = Boolean(data) && needsRevalidation && !showingInitialData;
   const readiness = getProductListingReadiness({
     hasData: Boolean(data),
-    isValidating,
-    isStale: Boolean(data) && isStale,
-    hasError: Boolean(error),
+    isValidating: isValidating && !showingInitialData,
+    isStale: isStale && !(hasCurrentData && error),
+    hasError: Boolean(error) && !hasCurrentData,
   });
 
   return {
@@ -175,7 +93,7 @@ export function useProductListing(
     error,
     mutate,
     hasCache: Boolean(data),
-    isStale: Boolean(data) && isStale,
+    isStale,
     ...readiness,
   };
 }
