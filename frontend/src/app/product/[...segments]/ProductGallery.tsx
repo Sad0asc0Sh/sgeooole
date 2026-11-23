@@ -31,6 +31,7 @@ type ProductGalleryProps = {
 
 export default function ProductGallery({ product, promotion = resolveProductPromotion(product) }: ProductGalleryProps) {
     const photos = product.images.length ? product.images : [product.image || placeholder];
+    const thumbnails = photos.map((photo, index) => product.cardImages?.[index] || (index === 0 && product.cardImage) || photo);
     // Packages and colours can share photos. Reset both sliders only when the full-size set changes.
     const collectionKey = JSON.stringify([product.id, photos]);
     const [position, setPosition] = useState({ collectionKey, index: 0 });
@@ -133,7 +134,7 @@ export default function ProductGallery({ product, promotion = resolveProductProm
                 : `relative w-14 h-14 lg:w-16 lg:h-16 rounded-lg overflow-hidden border flex-shrink-0 transition-colors bg-white ${activeIndex === index ? "border-kala-500" : "border-gray-200 hover:border-gray-400"}`}
         >
             <ResilientImage
-                src={product.cardImages?.[index] || (index === 0 && product.cardImage) || photo}
+                src={thumbnails[index]}
                 backupSrc={photo}
                 alt=""
                 fill
@@ -184,13 +185,14 @@ export default function ProductGallery({ product, promotion = resolveProductProm
                                 <div className="product-gallery__photo relative w-full h-full min-h-0 min-w-0 overflow-hidden">
                                     <ResilientImage
                                         src={photo}
+                                        backupSrc={thumbnails[index]}
                                         alt={imageAlt(index)}
                                         fill
                                         wrapperClassName="absolute inset-0"
                                         className="product-gallery__image object-contain object-center"
                                         sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 45vw"
                                         fetchPriority={index === 0 ? "high" : "auto"}
-                                        loading={index === 0 ? "eager" : "lazy"}
+                                        loading={index === activeIndex ? "eager" : "lazy"}
                                     />
                                     {showCampaignBadge && index === 0 && (
                                         <div className="product-gallery__campaign absolute top-4 left-4 z-20">
@@ -252,6 +254,7 @@ export default function ProductGallery({ product, promotion = resolveProductProm
                                     <div className="swiper-zoom-container product-gallery-dialog__zoom">
                                         <ResilientImage
                                             src={photo}
+                                            backupSrc={thumbnails[index]}
                                             alt={imageAlt(index)}
                                             fill
                                             wrapperClassName="absolute inset-0"

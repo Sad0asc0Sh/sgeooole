@@ -1,377 +1,219 @@
 "use client";
 
 import Image, { type ImageProps } from "next/image";
-import {
-  useState,
-  useCallback,
-  useRef,
-  useEffect,
-  forwardRef,
-  useMemo,
-} from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState, type Ref } from "react";
 
-const MAX_RETRIES = 2; // Reduced from 5 to 2
-const RETRY_DELAYS_MS = [500, 1500]; // Simplified delays
+const MAX_RETRIES = 2;
+const RETRY_DELAYS_MS = [500, 1500];
+const LOAD_TIMEOUT_MS = 20_000;
 const PLACEHOLDER_SRC = "/placeholder.svg";
-
-/* ── Tiny inline SVG placeholder (gray-100) ────────────────── */
 const DEFAULT_BLUR_SVG =
   "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2YzZjRmNiIvPjwvc3ZnPg==";
 
-function getRetryDelay(attempt: number): number {
-  return RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)];
+type ImageSource = ImageProps["src"];
+type ImageRequest = {
+  index: number;
+  src: ImageSource;
+  phase: "loading" | "failed" | "loaded" | "fallback";
+};
+
+function sourceUrl(src: ImageSource | null | undefined): string {
+  if (!src) return "";
+  if (typeof src === "string") return src;
+  return "default" in src ? src.default.src : src.src;
 }
 
-function bustCache(src: string): string {
+function retrySource(src: ImageSource, index: number): ImageSource {
+  if (typeof src !== "string") return src;
   try {
-    const url = new URL(src, window.location.origin);
-    url.searchParams.set("_retry", Date.now().toString());
-    return url.toString();
+    const url = new URL(src, document.baseURI);
+    if (!/^https?:$/.test(url.protocol) || /[?&](?:signature|x-amz-signature|x-goog-signature)=/i.test(url.search)) return src;
+    url.searchParams.set("_retry", `${Date.now()}-${index}`);
+    return src.startsWith("/") && !src.startsWith("//") ? `${url.pathname}${url.search}${url.hash}` : url.href;
   } catch {
-    const separator = src.includes("?") ? "&" : "?";
-    return `${src}${separator}_retry=${Date.now()}`;
+    return src;
   }
 }
 
-/* ── Connection warming (only on first failure) ────────────────────────────────────── */
-
-/* ── Loading state enum ────────────────────────────────────── */
-type LoadPhase = "skeleton" | "loaded" | "error";
-
 export interface ResilientImageProps extends Omit<ImageProps, "onError"> {
   fallbackSrc?: string;
-  /**
-   * Full-resolution image to switch to when `src` (usually the lightweight
-   * card variant) fails to load. Tried once before the retry/fallback path.
-   */
+  /** Full-resolution photo used if its smaller variant fails. */
   backupSrc?: string;
   maxRetries?: number;
   onRetryExhausted?: () => void;
   showSkeleton?: boolean;
   skeletonClassName?: string;
   transitionDuration?: number;
-  /**
-   * Optional class for the internal wrapper. Defaults to `contents` so the
-   * image behaves as a direct child of its parent. Pass a positioned class
-   * (e.g. `absolute inset-0`) when `fill` is used inside a positioned box:
-   * Next's fill warning inspects this wrapper, not the grandparent.
-   */
+  /** Position this wrapper when using `fill`, for example `absolute inset-0`. */
   wrapperClassName?: string;
 }
 
-/**
- * ResilientImage — Optimized for CDN performance
- * ================================================
- * ✅ Reduced retries (2 instead of 5) for faster failure
- * ✅ Simplified retry delays
- * ✅ Respects CDN caching
- * ✅ Smooth fade-in on load
- * ✅ Viewport-gated retries
- */
-const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(
-  function ResilientImage(
-    {
-      src,
-      fallbackSrc = PLACEHOLDER_SRC,
-      backupSrc,
-      maxRetries = MAX_RETRIES,
-      onRetryExhausted,
-      alt,
-      showSkeleton = true,
-      skeletonClassName,
-      transitionDuration = 300,
-      wrapperClassName,
-      onLoad: onLoadProp,
-      className,
-      style,
-      ...rest
-    },
-    ref
-  ) {
-    const originalSrc = src;
-    const [currentSrc, setCurrentSrc] = useState<ImageProps["src"]>(src);
-    const [phase, setPhase] = useState<LoadPhase>("skeleton");
+function ImageRequestView({
+  src,
+  alt,
+  backupSrc,
+  fallbackSrc = PLACEHOLDER_SRC,
+  maxRetries = MAX_RETRIES,
+  onRetryExhausted,
+  showSkeleton = true,
+  skeletonClassName,
+  transitionDuration = 300,
+  wrapperClassName,
+  onLoad,
+  imageRef,
+  style,
+  ...rest
+}: ResilientImageProps & { imageRef: Ref<HTMLImageElement> }) {
+  const [request, setRequest] = useState<ImageRequest>({ index: 0, src, phase: "loading" });
+  const [nearViewport, setNearViewport] = useState(false);
+  const nodeRef = useRef<HTMLImageElement>(null);
+  const notified = useRef(false);
+  const initialUrl = rest.overrideSrc ?? sourceUrl(src);
+  const backup = backupSrc && backupSrc !== initialUrl && backupSrc !== fallbackSrc ? backupSrc : undefined;
+  const retryLimit = Number.isFinite(maxRetries) ? Math.max(0, Math.floor(maxRetries)) : MAX_RETRIES;
+  const prioritized = Boolean(rest.priority || rest.preload);
+  const requestedLoading = rest.loading ?? (prioritized ? "eager" : "lazy");
+  const readyToLoad = requestedLoading === "eager" || nearViewport;
 
-    const retryCount = useRef(0);
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const isInViewport = useRef(false);
-    const wrapperRef = useRef<HTMLSpanElement>(null);
-    const waitingForViewport = useRef(false);
-    const triedBackup = useRef(false);
-    const scheduleRetryRef = useRef<() => void>(() => {});
-
-    useEffect(() => {
-      retryCount.current = 0;
-      triedBackup.current = false;
-      waitingForViewport.current = false;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      setCurrentSrc(src);
-
-      const node = wrapperRef.current;
-      const imgEl = node?.querySelector("img");
-      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-        setPhase("loaded");
-      } else {
-        setPhase("skeleton");
+  const attachImage = useCallback((image: HTMLImageElement | null) => {
+    nodeRef.current = image;
+    if (typeof imageRef === "function") {
+      const cleanup = imageRef(image);
+      if (typeof cleanup === "function") {
+        return () => {
+          nodeRef.current = null;
+          cleanup();
+        };
       }
-    }, [src]);
-
-    useEffect(() => {
-      const node = wrapperRef.current;
-      if (!node) return;
-
-      const imgEl = node.querySelector("img");
-      if (imgEl && imgEl.complete && imgEl.naturalWidth > 0) {
-        setPhase("loaded");
-      }
-
-      // Legacy browser fallback: no IntersectionObserver (IE11, old Safari/Chrome)
-      // -> treat as visible so retries are never viewport-blocked forever.
-      if (typeof IntersectionObserver === "undefined") {
-        isInViewport.current = true;
-        if (waitingForViewport.current) {
-          waitingForViewport.current = false;
-          scheduleRetryRef.current();
-        }
-        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-      }
-
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          isInViewport.current = entry.isIntersecting;
-          if (entry.isIntersecting && waitingForViewport.current) {
-            waitingForViewport.current = false;
-            scheduleRetryRef.current();
-          }
-        },
-        { rootMargin: "200px" }
-      );
-
-      // A display:contents wrapper has no box; observe the image itself.
-      if (imgEl) observer.observe(imgEl);
-      return () => {
-        observer.disconnect();
-        if (timerRef.current) clearTimeout(timerRef.current);
-      };
-    }, []);
-
-    // Switch once to the full-res backup (card → main) before burning retries.
-    const tryBackup = useCallback((): boolean => {
-      if (!backupSrc || triedBackup.current || backupSrc === originalSrc) return false;
-      triedBackup.current = true;
-      setCurrentSrc(backupSrc);
-      return true;
-    }, [backupSrc, originalSrc]);
-
-    const scheduleRetry = useCallback(() => {
-      if (retryCount.current >= maxRetries) {
-        setPhase("error");
-        setCurrentSrc(fallbackSrc);
-        onRetryExhausted?.();
-        return;
-      }
-
-      const delay = getRetryDelay(retryCount.current);
-      timerRef.current = setTimeout(() => {
-        retryCount.current += 1;
-        if (typeof originalSrc === "string") {
-          // Only bust cache on second retry to respect CDN
-          if (retryCount.current > 1) {
-            setCurrentSrc(bustCache(originalSrc));
-          } else {
-            const image = wrapperRef.current?.querySelector("img");
-            if (image?.getAttribute("src") === originalSrc) image.src = originalSrc;
-            setCurrentSrc(originalSrc);
-          }
-        } else {
-          setCurrentSrc(originalSrc);
-        }
-      }, delay);
-    }, [maxRetries, fallbackSrc, onRetryExhausted, originalSrc]);
-    scheduleRetryRef.current = scheduleRetry;
-
-    const handleError = useCallback(() => {
-      if (phase === "error") return;
-
-      // First failure of a card variant → full image, immediately.
-      if (tryBackup()) return;
-
-      if (retryCount.current >= maxRetries) {
-        setPhase("error");
-        setCurrentSrc(fallbackSrc);
-        onRetryExhausted?.();
-        return;
-      }
-
-      if (!isInViewport.current) {
-        waitingForViewport.current = true;
-        return;
-      }
-
-      scheduleRetry();
-    }, [phase, maxRetries, fallbackSrc, onRetryExhausted, scheduleRetry, tryBackup]);
-
-    const handleLoad: NonNullable<ImageProps["onLoad"]> = useCallback((event) => {
-      setPhase("loaded");
-      onLoadProp?.(event);
-    }, [onLoadProp]);
-
-    const imageStyle = useMemo(
-      () => ({
-        ...style,
-        transition: `opacity ${transitionDuration}ms ease-in-out`,
-        // SEO: the <img> is NEVER opacity:0 in the initial/SSR style. A hidden
-        // first paint made crawlers treat product photos as not rendered; the
-        // skeleton below is only an overlay behind the (always visible) image.
-        opacity: 1,
-      }),
-      [style, transitionDuration]
-    );
-
-    const shouldPrioritize = Boolean(rest.priority);
-    const isUnoptimized = rest.unoptimized ?? true;
-    const imageProps: ImageProps = {
-      ...rest,
-      src: currentSrc,
-      alt: alt ?? "",
-      className,
-      style: imageStyle,
-      // Direct S3 delivery: avoid injecting inline base64 SVG background-image
-      // on SSR <img> tags (which hurts Googlebot-Image indexing) since the
-      // skeleton <span> behind the image already provides the loading state.
-      placeholder: isUnoptimized ? "empty" : (rest.placeholder ?? "blur"),
-      blurDataURL: isUnoptimized ? undefined : (rest.blurDataURL ?? DEFAULT_BLUR_SVG),
-      // Direct S3 delivery — never route through the server optimizer.
-      unoptimized: isUnoptimized,
-      decoding: rest.decoding ?? "async",
-      loading: rest.loading ?? (shouldPrioritize ? "eager" : "lazy"),
-      fetchPriority: rest.fetchPriority ?? (shouldPrioritize ? "high" : "auto"),
-      onError: handleError,
-      onLoad: handleLoad,
-    };
-
-    return (
-      <span ref={wrapperRef} className={wrapperClassName ?? "contents"}>
-        {showSkeleton && phase === "skeleton" && (
-          <span
-            className={skeletonClassName || "absolute inset-0 bg-gray-100 animate-pulse"}
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 0,
-            }}
-          />
-        )}
-        <Image {...imageProps} ref={ref} alt={alt || ""} />
-      </span>
-    );
-  }
-);
-
-ResilientImage.displayName = "ResilientImage";
-export default ResilientImage;
-
-/* ── Hook variant for advanced use cases ────────────────────────────────────── */
-export function useResilientImage(
-  originalSrc: string | null,
-  fallbackSrc: string = PLACEHOLDER_SRC,
-  maxRetries: number = MAX_RETRIES
-) {
-  const [currentSrc, setCurrentSrc] = useState(originalSrc || fallbackSrc);
-  const [phase, setPhase] = useState<LoadPhase>("skeleton");
-  const retryCount = useRef(0);
-  const failed = useRef(false);
-  const isInViewport = useRef(false);
-  const waitingForViewport = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const ref = useRef<HTMLImageElement>(null);
-  const doRetryRef = useRef<() => void>(() => {});
+    } else if (imageRef) {
+      imageRef.current = image;
+    }
+  }, [imageRef]);
 
   useEffect(() => {
-    retryCount.current = 0;
-    failed.current = false;
-    waitingForViewport.current = false;
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setCurrentSrc(originalSrc || fallbackSrc);
-
-    if (ref.current && ref.current.complete && ref.current.naturalWidth > 0) {
-      setPhase("loaded");
-    } else {
-      setPhase("skeleton");
+    if (readyToLoad) return;
+    const image = nodeRef.current;
+    if (!image) return;
+    if (typeof IntersectionObserver !== "function") {
+      setNearViewport(true);
+      return;
     }
-  }, [originalSrc, fallbackSrc]);
+
+    // The default wrapper uses display:contents, so observe the image itself.
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) setNearViewport(true);
+    }, { rootMargin: "200px" });
+    observer.observe(image);
+    return () => observer.disconnect();
+  }, [readyToLoad, request.index]);
+
+  const settle = useCallback((phase: "loaded" | "failed") => {
+    setRequest((current) => {
+      if (current.index !== request.index) return current;
+      if (current.phase === "loading" || (current.phase === "failed" && phase === "loaded")) {
+        return { ...current, phase };
+      }
+      return current;
+    });
+  }, [request.index]);
 
   useEffect(() => {
-    const node = ref.current;
-    if (node && node.complete && node.naturalWidth > 0) {
-      setPhase("loaded");
-    }
-    if (!node) return;
+    if (request.phase !== "loading") return;
+    const image = nodeRef.current;
+    if (!image) return;
 
-    if (typeof IntersectionObserver === "undefined") {
-      isInViewport.current = true;
-      if (waitingForViewport.current) {
-        waitingForViewport.current = false;
-        doRetryRef.current();
-      }
-      return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    // Reconcile loads and errors that finished before hydration attached the handlers.
+    if (image.complete && (image.naturalWidth > 0 || image.currentSrc)) {
+      settle(image.naturalWidth > 0 ? "loaded" : "failed");
+      return;
     }
+    // Lazy images outside the viewport can legitimately sit idle for a long time.
+    if (!readyToLoad) return;
+    const timeout = window.setTimeout(() => {
+      settle(image.complete && image.naturalWidth > 0 ? "loaded" : "failed");
+    }, LOAD_TIMEOUT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [readyToLoad, request.phase, settle]);
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        isInViewport.current = entry.isIntersecting;
-        if (entry.isIntersecting && waitingForViewport.current) {
-          waitingForViewport.current = false;
-          doRetryRef.current();
-        }
-      },
-      { rootMargin: "200px" }
-    );
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-      if (timerRef.current) clearTimeout(timerRef.current);
+  useEffect(() => {
+    if (request.phase !== "failed") return;
+    const advance = (nextSrc: ImageSource, phase: ImageRequest["phase"] = "loading") => {
+      setRequest((current) => current === request ? { index: current.index + 1, src: nextSrc, phase } : current);
     };
-  }, []);
 
-  function doRetry() {
-    if (retryCount.current >= maxRetries || failed.current) {
-      failed.current = true;
-      setPhase("error");
-      setCurrentSrc(fallbackSrc);
+    if (request.index === 0 && backup) {
+      advance(backup);
       return;
     }
-    const delay = getRetryDelay(retryCount.current);
-    timerRef.current = setTimeout(() => {
-      retryCount.current += 1;
-      if (originalSrc) {
-        // Only bust cache on second retry
-        if (retryCount.current > 1) {
-          setCurrentSrc(bustCache(originalSrc));
-        } else {
-          if (ref.current?.getAttribute("src") === originalSrc) ref.current.src = originalSrc;
-          setCurrentSrc(originalSrc);
-        }
-      } else {
-        setCurrentSrc(fallbackSrc);
+
+    const retries = request.index - (backup ? 1 : 0);
+    if (retries >= retryLimit || initialUrl === fallbackSrc) {
+      advance(fallbackSrc, "fallback");
+      return;
+    }
+    if (!readyToLoad) return;
+
+    const retry = window.setTimeout(() => {
+      const image = nodeRef.current;
+      if (image?.complete && image.naturalWidth > 0) {
+        settle("loaded");
+        return;
       }
-    }, delay);
-  }
-  doRetryRef.current = doRetry;
+      const source = backup && retries % 2 === 1 ? backup : src;
+      advance(retrySource(source, request.index + 1));
+    }, RETRY_DELAYS_MS[Math.min(retries, RETRY_DELAYS_MS.length - 1)]);
+    return () => window.clearTimeout(retry);
+  }, [backup, fallbackSrc, initialUrl, readyToLoad, request, retryLimit, settle, src]);
 
-  const onError = useCallback(() => {
-    if (failed.current) return;
-    if (!isInViewport.current) {
-      waitingForViewport.current = true;
-      return;
-    }
-    doRetry();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalSrc, maxRetries, fallbackSrc]);
+  useEffect(() => {
+    if (request.phase !== "fallback" || notified.current) return;
+    notified.current = true;
+    onRetryExhausted?.();
+  }, [onRetryExhausted, request.phase]);
 
-  const onLoad = useCallback(() => {
-    setPhase("loaded");
-  }, []);
-
-  return { src: currentSrc, onError, onLoad, ref, phase };
+  const unoptimized = rest.unoptimized ?? true;
+  return (
+    <span className={wrapperClassName ?? "contents"}>
+      {showSkeleton && (request.phase === "loading" || request.phase === "failed") && (
+        <span
+          aria-hidden="true"
+          className={skeletonClassName || "absolute inset-0 bg-gray-100 animate-pulse"}
+          style={{ position: "absolute", inset: 0, zIndex: 0 }}
+        />
+      )}
+      <Image
+        {...rest}
+        key={request.index}
+        ref={attachImage}
+        src={request.src}
+        alt={alt ?? ""}
+        overrideSrc={request.index === 0 ? rest.overrideSrc : undefined}
+        unoptimized={unoptimized}
+        placeholder={unoptimized ? "empty" : (rest.placeholder ?? "blur")}
+        blurDataURL={unoptimized ? undefined : (rest.blurDataURL ?? DEFAULT_BLUR_SVG)}
+        decoding={rest.decoding ?? "async"}
+        loading={readyToLoad ? "eager" : requestedLoading}
+        fetchPriority={rest.fetchPriority ?? (prioritized ? "high" : "auto")}
+        style={{ ...style, transition: `opacity ${transitionDuration}ms ease-in-out`, opacity: 1 }}
+        onError={(event) => {
+          if (event.currentTarget === nodeRef.current) settle("failed");
+        }}
+        onLoad={(event) => {
+          if (event.currentTarget !== nodeRef.current || event.currentTarget.naturalWidth === 0) return;
+          settle("loaded");
+          onLoad?.(event);
+        }}
+      />
+    </span>
+  );
 }
+
+const ResilientImage = forwardRef<HTMLImageElement, ResilientImageProps>(function ResilientImage(props, ref) {
+  // A different product/variant must start with fresh state, including during navigation.
+  const originalUrl = sourceUrl(props.src);
+  const src = originalUrl ? props.src : (props.backupSrc || props.fallbackSrc || PLACEHOLDER_SRC);
+  const key = JSON.stringify([sourceUrl(src), props.overrideSrc, props.backupSrc, props.fallbackSrc]);
+  return <ImageRequestView key={key} {...props} src={src} imageRef={ref} />;
+});
+
+export default ResilientImage;

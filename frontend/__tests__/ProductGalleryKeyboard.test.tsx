@@ -16,7 +16,6 @@ jest.mock("swiper/react", () => ({
     SwiperSlide: ({ children }: any) => <div>{children}</div>,
 }));
 jest.mock("swiper/modules", () => ({ Pagination: {}, Zoom: {}, Navigation: {} }));
-jest.mock("@/components/ui/ResilientImage", () => ({ __esModule: true, default: ({ alt }: any) => <span role="img" aria-label={alt} /> }));
 
 const product: Product = {
     id: "gallery-test", name: "محصول", title: "محصول", price: 100,
@@ -46,4 +45,24 @@ it("keeps keyboard focus in the gallery and restores focus and scrolling on Esca
     expect(document.body.style.overflow).toBe("auto");
     document.body.style.overflow = "";
     scroll.mockRestore();
+});
+
+it("starts the selected photo immediately and uses the matching alternate size on failure", () => {
+    render(<ProductGallery product={{
+        ...product,
+        images: ["/first.webp", "/second.webp"],
+        cardImages: ["/first-card.webp", "/second-card.webp"],
+    }} />);
+    const button = screen.getByRole("button", { name: "نمایش تصویر ۲" });
+    const secondPhoto = () => screen.getByRole("img", { name: "محصول - نمای ۲" });
+    expect(secondPhoto()).toHaveAttribute("loading", "lazy");
+    expect(button.querySelector("img")).toHaveAttribute("src", "/second-card.webp");
+
+    fireEvent.error(button.querySelector("img")!);
+    expect(button.querySelector("img")).toHaveAttribute("src", "/second.webp");
+
+    fireEvent.click(button);
+    expect(secondPhoto()).toHaveAttribute("loading", "eager");
+    fireEvent.error(secondPhoto());
+    expect(secondPhoto()).toHaveAttribute("src", "/second-card.webp");
 });

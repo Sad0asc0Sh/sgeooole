@@ -38,7 +38,7 @@ export default function ContactPage() {
       "@type": "OnlineStore",
       "@id": `${SITE_URL}/#organization`,
       name: "ای کا جی کالا",
-      alternateName: ["ای کا جی کالا", "ای‌کا‌جی کالا", "ekgkala", "EKG KALA"],
+      alternateName: ["ای کا جی کالا", "ای‌کا‌جی کالا", "ekgkala", "EKGKALA"],
       url: SITE_URL,
       telephone: "05135013383",
       address: [

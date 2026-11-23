@@ -336,7 +336,7 @@ function Footer({ className }: { className?: string }) {
                         <div className={styles.seoTitleGroup}>
                             <span className={styles.seoBadge}>اصالت، امنیت و آرامش</span>
                             <h2 className={styles.seoHeading}>
-                                فروشگاه اینترنتی ای کا جی کالا (ای‌کا‌جی کالا / EKG KALA)؛ تجربه‌ای مطمئن در خرید آنلاین دنیای تکنولوژی
+                                فروشگاه اینترنتی ای کا جی کالا (ای‌کا‌جی کالا / ekgkala)؛ تجربه‌ای مطمئن در خرید آنلاین دنیای تکنولوژی
                             </h2>
                         </div>
                     </div>
@@ -348,7 +348,7 @@ function Footer({ className }: { className?: string }) {
                         }`}
                     >
                         <p className={styles.seoParagraph}>
-                            فروشگاه اینترنتی <strong>ای کا جی کالا (ای‌کا‌جی کالا / EKG KALA)</strong> مسیر خود را از سال{" "}
+                            فروشگاه اینترنتی <strong>ای کا جی کالا (ای‌کا‌جی کالا / ekgkala)</strong> مسیر خود را از سال{" "}
                             <strong>۱۳۹۶</strong> در کلان‌شهر مشهد با تکیه بر ارزش‌های بنیادین{" "}
                             <strong>امنیت، اعتماد و آرامش خاطر مشتریان</strong> آغاز کرد. پشتوانه‌ای که با تعهد به
                             اصالت کالا و صداقت در خدمات شکل گرفت، امروز به یک پلتفرم جامع خرید آنلاین برای{" "}
@@ -357,7 +357,7 @@ function Footer({ className }: { className?: string }) {
                             </Link>{" "}
                             تبدیل شده است تا خانواده‌ها و کسب‌وکارها در سراسر ایران بدون هیچ محدودیتی به سبدی متنوع از
                             محصولات استاندارد و منتخب دسترسی داشته باشند. نام رسمی این فروشگاه{" "}
-                            <strong>ای کا جی کالا</strong> (ای کی جی کالا / EKG KALA) و تنها وب‌سایت رسمی آن{" "}
+                            <strong>ای کا جی کالا</strong> (ای کی جی کالا / ekgkala) و تنها وب‌سایت رسمی آن{" "}
                             <strong>ekgkala.ir</strong> است.
                         </p>
 
@@ -424,7 +424,7 @@ function Footer({ className }: { className?: string }) {
                                     >
                                         <img
                                             src="/logo-text.png"
-                                            alt="ای‌کا‌جی کالا | EKG KALA"
+                                            alt="ای‌کا‌جی کالا | ekgkala"
                                             width={168}
                                             height={57}
                                             draggable={false}
@@ -435,7 +435,7 @@ function Footer({ className }: { className?: string }) {
                                         <span className="ekg-logo-composite" style={{ display: "none" }}>
                                             <img
                                                 src={LOGO_RATIO_PLACEHOLDER}
-                                                alt="ای‌کا‌جی کالا | EKG KALA"
+                                                alt="ای‌کا‌جی کالا | ekgkala"
                                                 width={168}
                                                 height={57}
                                                 draggable={false}
@@ -851,7 +851,7 @@ function Footer({ className }: { className?: string }) {
                         <div className={styles.tierBottom}>
                             <p className={styles.copyrightText}>
                                 © ۱۳۹۶–۱۴۰۵ تمامی حقوق مادی و معنوی این وب‌سایت متعلق به فروشگاه اینترنتی{" "}
-                                <span className={styles.copyrightHighlight}>ای‌کا‌جی کالا (EKG KALA)</span> می‌باشد.
+                                <span className={styles.copyrightHighlight}>ای‌کا‌جی کالا (ekgkala)</span> می‌باشد.
                             </p>
 
                             <div className={styles.bottomMetaLeft}>

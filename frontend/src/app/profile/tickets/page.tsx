@@ -40,7 +40,7 @@ interface ToastState {
 // فرستنده است و هیچ‌وقت رشته‌ی 'admin' نیست.
 const isSupportMessage = (msg: TicketMessage) => msg.isAdminReply === true;
 
-// ========== SUPPORT MESSENGER (EKG KALA) ==========
+// ========== SUPPORT MESSENGER (EKGKALA) ==========
 export default function SupportMessengerPage() {
     return (
         <ProtectedRoute>
