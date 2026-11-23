@@ -64,6 +64,19 @@ const calibrateCeilingForExactFloor = (rawCeiling, targetFloor, preferredDiscoun
 }
 
 const validatePricingSyncPayload = (payload = {}, existingProduct = null) => {
+  // ۴.۲.۱: محصول متغیر قیمتِ واقعی را در تنوع‌ها دارد (Product.price برایش الزامی نیست و computeItemPricing/فید ترب
+  // از قیمت تنوع می‌خوانند). نوشتن price سطح محصول اثری روی قیمت مشتری/ترب ندارد ولی «اعمال‌شده» گزارش می‌شود و
+  // pricingMeta.exactFloorPrice باعث بالا کشیدن قیمت نمایشی تنوع‌های ارزان‌تر می‌شود (clampToManagedExactFloor).
+  // تا پشتیبانی کامل تنوع‌ها (مستند پیاده‌سازی، فاز ۲)، صریحاً رد می‌شود.
+  if (existingProduct && existingProduct.productType === 'variable') {
+    return {
+      valid: false,
+      code: 'VARIABLE_PRODUCT_UNSUPPORTED',
+      error:
+        'محصول متغیر (تنوع‌دار) هنوز توسط مغز قیمت‌گذاری پشتیبانی نمی‌شود؛ قیمت تنوع‌ها را در پنل مدیریت تغییر دهید',
+    }
+  }
+
   const finalPrice = Number(payload.finalPrice ?? payload.price ?? 0)
   const rawBasePrice = Number(payload.basePrice ?? payload.compareAtPrice ?? finalPrice)
   const incomingCost = Number(payload.costPrice ?? 0)
@@ -325,7 +338,84 @@ const cleanupEmptyAutoManagedSales = async (SaleModel, { now = new Date() } = {}
   return { deactivated: deactivatedRes.modifiedCount || 0, deleted }
 }
 
+const OBJECT_ID_RE = /^[a-fA-F0-9]{24}$/
+
+/**
+ * یافتن محصول برای pricing-sync با «اولویت» شناسه‌ها (۴.۲.۱).
+ * قبلاً `findOne({ $or: [_id, productCode, sku] })` بود؛ در MongoDB ترتیب شاخه‌های $or اولویت نیست و sku در
+ * مدل یکتا نیست، پس با sku تکراری ممکن بود قیمت روی «محصول دیگر» بنشیند.
+ *  ۱) productId (ObjectId) ← ۲) productCode (یکتا) ← ۳) sku فقط وقتی دقیقاً یک محصول دارد (سازگاری با رفتار قبلی).
+ *  - اگر چند شناسه داده شده و به محصول‌های متفاوت اشاره کنند ⇒ IDENTIFIER_MISMATCH
+ *  - اگر sku چند محصول را بزند ⇒ AMBIGUOUS_SKU
+ * @param ProductModel مدل mongoose (یا هر شیء با findOne/find)؛ `select` را خودِ فراخواننده روی query می‌گذارد
+ * @param applySelect  تابعی که روی query (قبل از اجرا) projection و lean را اعمال می‌کند
+ * @returns {{ product?: object, status?: number, code?: string, message?: string }}
+ */
+const resolvePricingSyncProduct = async (ProductModel, body = {}, applySelect = (q) => q) => {
+  const idRaw = body.productId != null ? String(body.productId).trim() : ''
+  const codeRaw = body.productCode != null ? String(body.productCode).trim().toUpperCase() : ''
+  const skuRaw = body.sku != null ? String(body.sku).trim() : ''
+  const hasId = OBJECT_ID_RE.test(idRaw)
+
+  if (!hasId && !codeRaw && !skuRaw) {
+    return {
+      status: 400,
+      code: 'MISSING_PRODUCT_IDENTIFIER',
+      message: 'ارسال یکی از شناسه‌های sku، productCode یا productId الزامی است',
+    }
+  }
+
+  const byId = hasId ? await applySelect(ProductModel.findOne({ _id: idRaw })) : null
+  const byCode = codeRaw ? await applySelect(ProductModel.findOne({ productCode: codeRaw })) : null
+
+  if (byId && byCode && String(byId._id) !== String(byCode._id)) {
+    return {
+      status: 409,
+      code: 'IDENTIFIER_MISMATCH',
+      message: 'productId و productCode به دو محصول متفاوت اشاره می‌کنند؛ قیمت اعمال نشد',
+    }
+  }
+  if (byId) return { product: byId, matchedBy: 'productId' }
+  if (byCode) return { product: byCode, matchedBy: 'productCode' }
+
+  // شناسهٔ قوی پیدا نشد؛ برای سازگاری با رفتار قبلی به sku سقوط می‌کنیم، ولی فقط وقتی sku «یکتا» باشد
+  if (!skuRaw) {
+    return { status: 404, code: 'PRODUCT_NOT_FOUND', message: 'محصول مورد نظر در فروشگاه sgeooole یافت نشد' }
+  }
+  const bySku = await applySelect(ProductModel.find({ sku: skuRaw }).limit(2))
+  const list = Array.isArray(bySku) ? bySku : bySku ? [bySku] : []
+  if (list.length === 1) return { product: list[0], matchedBy: 'sku' }
+  if (list.length > 1) {
+    return {
+      status: 409,
+      code: 'AMBIGUOUS_SKU',
+      message: `sku «${skuRaw}» به بیش از یک محصول تعلق دارد؛ برای اعمال قیمت productCode یا productId بفرستید`,
+    }
+  }
+  return { status: 404, code: 'PRODUCT_NOT_FOUND', message: 'محصول مورد نظر در فروشگاه sgeooole یافت نشد' }
+}
+
+/**
+ * قیمتی که «همین الان» مشتری و فید ترب برای این محصول می‌بینند (۴.۲.۱) — تأیید حلقه‌بسته برای موتور.
+ * از همان توابعی استفاده می‌کند که فید ترب و سبد خرید استفاده می‌کنند (getPricing/computeItemPricing)، نه از price خام.
+ * @param product        سند محصول (lean) پس از به‌روزرسانی
+ * @param campaignContext خروجی getActiveSalesCampaignContext
+ * @param deps           { getPricing, getCanonicalVariant } از utils/torobMapper (تزریق برای آزمون‌پذیری)
+ */
+const describeEffectivePrice = (product, campaignContext, deps, now = new Date()) => {
+  const variant =
+    product && product.productType === 'variable' ? deps.getCanonicalVariant(product, campaignContext) : null
+  const pricing = deps.getPricing(product, variant, now, campaignContext)
+  return {
+    currentPrice: pricing.currentPrice,
+    oldPrice: pricing.oldPrice,
+    source: variant ? 'canonical_variant' : 'product',
+  }
+}
+
 module.exports = {
+  resolvePricingSyncProduct,
+  describeEffectivePrice,
   calibrateCeilingForExactFloor,
   validatePricingSyncPayload,
   syncProductTimedSaleMembership,

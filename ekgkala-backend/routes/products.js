@@ -2996,35 +2996,27 @@ router.post('/pricing-sync', async (req, res) => {
     const {
       validatePricingSyncPayload,
       syncProductTimedSaleMembership,
+      resolvePricingSyncProduct,
+      describeEffectivePrice,
     } = require('../services/competitivePricingSyncService')
     const { rebuildTorobFeed } = require('../jobs/torobFeedCache')
 
-    const query = []
-    if (body.productId && /^[a-fA-F0-9]{24}$/.test(String(body.productId))) {
-      query.push({ _id: body.productId })
-    }
-    if (body.productCode) {
-      query.push({ productCode: String(body.productCode).trim().toUpperCase() })
-    }
-    if (body.sku) {
-      query.push({ sku: String(body.sku).trim() })
-    }
-
-    if (query.length === 0) {
-      return res.status(400).json({
+    // ۴.۲.۱: جست‌وجوی محصول با اولویت productId ← productCode ← sku (فقط یکتا)؛ قبلاً $or بدون اولویت بود و با sku
+    // تکراری ممکن بود قیمت روی محصول دیگر بنشیند. costPrice / hardFloorPrice / supplierQuotes در مدل select:false هستند؛
+    // گارد کف قطعی به مقدار ذخیره‌شده نیاز دارد.
+    const resolved = await resolvePricingSyncProduct(Product, body, (q) =>
+      q.select('+costPrice +hardFloorPrice +supplierQuotes').lean()
+    )
+    if (!resolved.product) {
+      return res.status(resolved.status || 404).json({
         success: false,
-        message: 'ارسال یکی از شناسه‌های sku، productCode یا productId الزامی است',
+        ok: false,
+        valid: false,
+        code: resolved.code || 'PRODUCT_NOT_FOUND',
+        message: resolved.message || 'محصول مورد نظر در فروشگاه sgeooole یافت نشد',
       })
     }
-
-    // costPrice / hardFloorPrice / supplierQuotes در مدل select:false هستند؛ گارد کف قطعی به مقدار ذخیره‌شده نیاز دارد
-    const existingProduct = await Product.findOne({ $or: query }).select('+costPrice +hardFloorPrice +supplierQuotes').lean()
-    if (!existingProduct) {
-      return res.status(404).json({
-        success: false,
-        message: 'محصول مورد نظر در فروشگاه sgeooole یافت نشد',
-      })
-    }
+    const existingProduct = resolved.product
 
     // مجرای امن پروب: مغز قیمت‌گذاری پیش از اعمال، با ?dryRun=1 همین اندپوینت را بدون هیچ
     // نوشتنی در دیتابیس صدا می‌زند تا اعتبار کف سود/قیمت خرید/کمپین را بسنجد. قرارداد پذیرش:
@@ -3049,6 +3041,23 @@ router.post('/pricing-sync', async (req, res) => {
       })
     }
 
+    // ۴.۲.۱: تأیید حلقه‌بسته — قیمتی که مشتری/فید ترب «واقعاً» می‌بینند (با همان توابع فید ترب) محاسبه و برگردانده می‌شود
+    // تا موتور بتواند «اعمال‌شده ولی اثری ندارد» (کمپین/Sale دستی، گارد کف، تنوع کانونیکال، …) را بفهمد.
+    const computeEffective = async (productDoc) => {
+      try {
+        const { getPricing, getCanonicalVariant } = require('../utils/torobMapper')
+        const { getActiveSalesCampaignContext } = require('../services/pricingService')
+        const plain = typeof productDoc.toObject === 'function' ? productDoc.toObject() : productDoc
+        const campaignContext = await getActiveSalesCampaignContext(new Date())
+        return describeEffectivePrice(plain, campaignContext, { getPricing, getCanonicalVariant })
+      } catch (effErr) {
+        console.warn('Warning computing effective price after pricing-sync:', effErr.message)
+        return null
+      }
+    }
+    const isEffectiveMismatch = (effective) =>
+      effective != null && Math.abs(Number(effective.currentPrice) - Number(check.finalPrice)) > 1
+
     if (dryRun) {
       return res.json({
         success: true,
@@ -3060,6 +3069,7 @@ router.post('/pricing-sync', async (req, res) => {
           _id: existingProduct._id,
           sku: existingProduct.sku,
           productCode: existingProduct.productCode,
+          matchedBy: resolved.matchedBy || null,
           finalPrice: check.finalPrice,
           basePrice: check.basePrice,
           discountPct: check.discountPct,
@@ -3103,6 +3113,9 @@ router.post('/pricing-sync', async (req, res) => {
       }
     }
 
+    const effective = await computeEffective(updated)
+    const effectiveMismatch = isEffectiveMismatch(effective)
+
     return res.json({
       success: true,
       message: 'قیمت محصول و سیستم تخفیف با رعایت خط قرمز تامین همکار بروزرسانی شد و فید ترب همگام‌سازی گردید',
@@ -3110,6 +3123,7 @@ router.post('/pricing-sync', async (req, res) => {
         _id: updated._id,
         sku: updated.sku,
         productCode: updated.productCode,
+        matchedBy: resolved.matchedBy || null,
         price: updated.price,
         compareAtPrice: updated.compareAtPrice,
         discount: updated.discount,
@@ -3118,6 +3132,8 @@ router.post('/pricing-sync', async (req, res) => {
         discountPct: check.discountPct,
         campaignType: check.campaignType,
         timedSaleId: syncedSale ? syncedSale._id : null,
+        effective,
+        effectiveMismatch,
       },
     })
   } catch (error) {
