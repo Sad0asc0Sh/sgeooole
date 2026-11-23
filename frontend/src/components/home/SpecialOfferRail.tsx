@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo, memo } from "react";
+import { useEffect, useRef, useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import DeferredImage from "@/components/ui/DeferredImage";
+import HomeImage from "./HomeImage";
 import { useSpecialOffers } from "@/hooks/useProducts";
-import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import PromotionSection from "@/components/promotion/PromotionSection";
 import PromotionHeader from "@/components/promotion/PromotionHeader";
@@ -18,10 +18,11 @@ import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
-import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
-import { getServerNow } from "@/lib/serverClock";
+import type { Product } from "@/types/product";
 import { buildProductUrl } from "@/lib/paths";
+import styles from "./HomeProductRail.module.css";
 
 /**
  * Special Offer Rail Component
@@ -72,24 +73,10 @@ function CampaignSegment({ label }: { label: string }) {
   );
 }
 
-function SpecialOfferRail() {
-  // SWR-based fetching with automatic caching
-  const { specialOffers: products, isLoading, error, refresh } = useSpecialOffers(100);
-  const [now, setNow] = useState(() => getServerNow());
+function SpecialOfferRail({ initialProducts, initialNow }: { initialProducts?: Product[]; initialNow?: number }) {
+  const { specialOffers: products, refresh } = useSpecialOffers(100, initialProducts);
+  const now = usePromotionBoundary(products, () => { void refresh(); }, initialNow);
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
-
-  // Refetch once right after the nearest special-offer boundary so the server
-  // (not a cached snapshot) decides the post-expiry price.
-  useEffect(() => {
-    const currentTime = getServerNow();
-    const expiries = products
-      .map((product) => getNextPromotionExpiry(product, currentTime))
-      .filter((value): value is number => value !== null);
-    if (!expiries.length) return;
-    const delay = Math.min(Math.max(0, Math.min(...expiries) - currentTime) + 50, 2_147_483_647);
-    const id = window.setTimeout(() => { void refresh(); }, delay);
-    return () => window.clearTimeout(id);
-  }, [products, refresh]);
 
   // Only products with a live special offer AND at least one sellable
   // discounted variant stay in the rail (variable products with all models
@@ -114,15 +101,7 @@ function SpecialOfferRail() {
 
   const isExpired = !earliestEndTime || earliestEndTime <= now;
 
-  // Update timer every second
-  useEffect(() => {
-    const id = setInterval(() => setNow(getServerNow()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // Hide section if loading, error, expired, or no product has a sellable
-  // discounted variant left (e.g. all variable models excluded from promotion).
-  if (isLoading || error || products.length === 0 || activeProducts.length === 0 || isExpired) {
+  if (activeProducts.length === 0 || isExpired) {
     return null;
   }
 
@@ -133,7 +112,7 @@ function SpecialOfferRail() {
         description={getPromotionCopy("promotion.section.curated.description")}
         actionHref="/products?sort=special"
         actionLabel={getPromotionCopy("promotion.action.viewAll")}
-        countdown={<Countdown targetDate={earliestEndTime} variant="promotion" />}
+        countdown={<Countdown targetDate={earliestEndTime} variant="promotion" initialNow={initialNow} />}
       />
 
       <div className="relative mt-5">
@@ -159,22 +138,8 @@ function SpecialOfferRail() {
           followFinger={true}
           speed={300}
           spaceBetween={12}
-          slidesPerView={2.3}
-          breakpoints={{
-            640: {
-              slidesPerView: 2.5,
-            },
-            768: {
-              slidesPerView: 3.5,
-            },
-            1024: {
-              slidesPerView: 5,
-            },
-            1280: {
-              slidesPerView: 6,
-            },
-          }}
-          className="w-full !pb-2"
+          slidesPerView="auto"
+          className={`${styles.carousel} ${styles.promotionCarousel}`}
           grabCursor
         >
           {activeProducts.map((product) => {
@@ -188,11 +153,8 @@ function SpecialOfferRail() {
             const displayPrice = pricing.displayPrice;
 
             return (
-              <SwiperSlide
-                key={product.id}
-                style={{ width: "148px", height: "auto" }}
-              >
-                <Link href={buildProductUrl(product)} className="block h-full">
+              <SwiperSlide key={product.id} className={styles.slide}>
+                <Link href={buildProductUrl(product)} prefetch={false} className="block h-full w-full">
                   <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white px-2 py-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
                     {/* نوار چسبیده بج‌ها: «منتخب» و بج کمپین در یک کپسول یکپارچه، بدون فاصله */}
                     <div className="mb-2 flex min-h-7 flex-col items-start gap-1.5">
@@ -212,19 +174,14 @@ function SpecialOfferRail() {
                     </div>
 
                     {/* Product Image */}
-                    <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
-                      <DeferredImage
+                    <div className={`${imageStyles.frame} ${styles.imageFrame} mb-3`}>
+                      <HomeImage
                         src={product.cardImage || product.image || "/placeholder.svg"}
-                        backupSrc={product.image}
+                        backupSources={[product.image]}
                         alt={product.name}
-                        fill
-                        className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : 'group-hover:scale-105'}`}
-                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
-                        loading="lazy"
-                        quality={70}
-                        placeholder="blur"
-                        blurDataURL={getBlurDataURL()}
-                        fallbackSrc="/placeholder.svg"
+                        width={420}
+                        height={420}
+                        className={`absolute inset-0 ${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? 'grayscale opacity-60' : 'group-hover:scale-105'}`}
                       />
 
                       {/* Out of Stock Overlay */}
@@ -280,8 +237,8 @@ function SpecialOfferRail() {
           })}
 
           {/* See All Card */}
-          <SwiperSlide style={{ height: "auto" }}>
-            <Link href="/products?sort=special" className="block h-full">
+          <SwiperSlide className={styles.slide}>
+            <Link href="/products?sort=special" className="block h-full w-full">
               <div className="flex h-full min-h-[220px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-ekg-200 bg-white/70 px-4 py-6 transition-all duration-300 hover:border-kala-300 hover:bg-white hover:shadow-sm">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full border border-kala-200 bg-kala-50 text-kala-700 transition-colors duration-300">
                   <ChevronLeft size={20} strokeWidth={2.5} />

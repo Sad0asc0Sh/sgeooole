@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ChevronLeft, ChevronRight, Shapes } from "lucide-react";
-import { useResilientImage } from "@/components/ui/ResilientImage";
 import { categoryImageSources, categoryProductHref } from "@/lib/categoryNavigation";
 import { categoryService, type Category } from "@/services/categoryService";
+import HomeImage from "./HomeImage";
 import styles from "./HomeCategoryShowcase.module.css";
 
 type HomeCategoryShowcaseProps = {
@@ -16,26 +16,20 @@ type HomeCategoryShowcaseProps = {
 
 const SCROLL_STEP_FACTOR = 0.75;
 
-function CircleImage({
-  url,
-  name,
-}: {
-  url: string;
-  name: string;
-}) {
-  const { src, onError, onLoad, ref } = useResilientImage(url, "/placeholder.svg");
-  // هرگز opacity:0 در SSR — تصویر به‌محض رسیدن بایت‌های شبکه دیده می‌شود.
+export function HomeCategoryPlaceholder() {
   return (
-    <img
-      ref={ref}
-      src={src}
-      alt={name}
-      onError={onError}
-      onLoad={onLoad}
-      loading="lazy"
-      decoding="async"
-      style={{ opacity: 1 }}
-    />
+    <section className={styles.section} aria-busy="true">
+      <div className={styles.stage}>
+        <div className={styles.rail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
+          {Array.from({ length: 9 }, (_, index) => (
+            <span key={index} className={styles.skeletonItem} aria-hidden="true">
+              <span className={styles.skeletonBadge} />
+              <span className={styles.skeletonLabel} />
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -60,7 +54,7 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
 
   // وقتی داده از SSR آمده، هیچ درخواست تکراری در mount نزن
   // (قبلاً revalidateOnMount: true باعث دانلود دوباره‌ی همان لیست می‌شد).
-  const hasSsrData = Array.isArray(categories) && categories.length > 0;
+  const hasSsrData = categories !== null;
   const { data, error, isLoading, isValidating, mutate } = useSWR<Category[]>(
     "homepage-categories",
     () => categoryService.getHomepage(),
@@ -108,25 +102,15 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
   };
 
   // A successful, genuinely empty feed should remove the section entirely.
-  if (!showSkeleton && !showError && items.length === 0) {
-    return null;
-  }
+  if (showSkeleton) return <HomeCategoryPlaceholder />;
+  if (!showError && items.length === 0) return null;
 
   return (
-    <section className={styles.section} aria-busy={showSkeleton || undefined} data-home-categories="carousel">
+    <section className={styles.section} data-home-categories="carousel">
       <h2 className={styles.srTitle}>دسته‌بندی‌های فروشگاه</h2>
 
       <div className={styles.stage}>
-        {showSkeleton ? (
-          <div className={styles.rail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
-            {Array.from({ length: 9 }, (_, index) => (
-              <span key={index} className={styles.skeletonItem} aria-hidden="true">
-                <span className={styles.skeletonBadge} />
-                <span className={styles.skeletonLabel} />
-              </span>
-            ))}
-          </div>
-        ) : showError ? (
+        {showError ? (
           <div className={styles.feedback} role="status">
             <p>بارگذاری دسته‌بندی‌ها انجام نشد.</p>
             <button
@@ -142,8 +126,8 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
           </div>
         ) : (
           <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
-            {items.map((category) => {
-              const [url] = categoryImageSources(category);
+            {items.map((category, index) => {
+              const [url, ...backups] = categoryImageSources(category);
               return (
                 <li key={category._id || category.slug} className={styles.item}>
                   <Link
@@ -156,7 +140,8 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
                       <span className={styles.disc}>
                         <span className={styles.hairline}>
                           {url ? (
-                            <CircleImage url={url} name={category.name} />
+                            <HomeImage src={url} backupSources={backups} alt={category.name}
+                              width={114} height={114} loading={index < 4 ? "eager" : "lazy"} />
                           ) : (
                             <Shapes className={styles.fallbackIcon} strokeWidth={1.5} aria-hidden="true" />
                           )}

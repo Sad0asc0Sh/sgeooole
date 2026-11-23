@@ -9,9 +9,10 @@ interface ProductRailProps {
   products: Product[];
   viewAllHref?: string;
   description?: string;
+  initialNow?: number;
 }
 
-export default function ProductRail({ title, products, viewAllHref = "/products", description = "محصولات منتخب برای شما", onExpire }: ProductRailProps & { onExpire?: () => void }) {
-  const now = usePromotionBoundary(products, onExpire);
+export default function ProductRail({ title, products, viewAllHref = "/products", description = "محصولات منتخب برای شما", onExpire, initialNow }: ProductRailProps & { onExpire?: () => void }) {
+  const now = usePromotionBoundary(products, onExpire, initialNow);
   return <HomeProductRail title={title} description={description} products={products} viewAllHref={viewAllHref} railKey={`rail_${title}`} now={now} />;
 }

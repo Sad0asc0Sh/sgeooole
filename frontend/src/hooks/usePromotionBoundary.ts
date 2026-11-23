@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { getNextPromotionExpiry, type ProductPromotionInput } from "@/lib/promotions/productPromotion";
 import { getServerNow } from "@/lib/serverClock";
 
-export function usePromotionBoundary(products: ProductPromotionInput[], onBoundary?: () => void) {
+const subscribeToHydration = () => () => {};
+const browserReady = () => true;
+const serverRendering = () => false;
+
+export function usePromotionBoundary(products: ProductPromotionInput[], onBoundary?: () => void, initialNow?: number) {
   const [now, setNow] = useState(() => getServerNow());
+  const hydrated = useSyncExternalStore(subscribeToHydration, browserReady, serverRendering);
 
   useEffect(() => {
     const currentTime = getServerNow();
@@ -26,5 +31,5 @@ export function usePromotionBoundary(products: ProductPromotionInput[], onBounda
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, now]);
 
-  return Math.max(now, getServerNow());
+  return !hydrated && initialNow !== undefined ? initialNow : Math.max(now, getServerNow());
 }

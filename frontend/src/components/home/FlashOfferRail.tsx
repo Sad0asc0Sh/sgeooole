@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, useMemo, memo } from "react";
+import { useMemo, memo } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
-import DeferredImage from "@/components/ui/DeferredImage";
+import HomeImage from "./HomeImage";
 import { useFlashDeals } from "@/hooks/useProducts";
-import { getBlurDataURL } from "@/lib/blurPlaceholder";
+import { usePromotionBoundary } from "@/hooks/usePromotionBoundary";
 import { buildProductUrl } from "@/lib/paths";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -19,38 +19,19 @@ import Countdown from "@/components/ui/Countdown";
 import { getPromotionCopy } from "@/lib/promotions/promotionCopy";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
-import { getNextPromotionExpiry, resolveProductPromotion } from "@/lib/promotions/productPromotion";
+import { resolveProductPromotion } from "@/lib/promotions/productPromotion";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
-import { getServerNow } from "@/lib/serverClock";
+import type { Product } from "@/types/product";
+import styles from "./HomeProductRail.module.css";
 
 /**
  * Flash Offer Rail Component - horizontal strip of flash deals
  * OPTIMIZED: Uses SWR for caching, React.memo for card components
  */
-function FlashOfferRail() {
-  // SWR-based fetching with automatic caching
-  const { flashDeals, isLoading, refresh } = useFlashDeals(100);
-  const [now, setNow] = useState(() => getServerNow());
+function FlashOfferRail({ initialProducts, initialNow }: { initialProducts?: Product[]; initialNow?: number }) {
+  const { flashDeals, refresh } = useFlashDeals(100, initialProducts);
+  const now = usePromotionBoundary(flashDeals, () => { void refresh(); }, initialNow);
   const { onTouchStart, onTouchEnd } = useVelocitySnap();
-
-  // Update timer every second - only for countdown display
-  useEffect(() => {
-    const id = setInterval(() => setNow(getServerNow()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  // After the nearest flash boundary, ask the server once for the authoritative
-  // state so a cached discounted snapshot cannot linger past its end time.
-  useEffect(() => {
-    const currentTime = getServerNow();
-    const expiries = flashDeals
-      .map((product) => getNextPromotionExpiry(product, currentTime))
-      .filter((value): value is number => value !== null);
-    if (!expiries.length) return;
-    const delay = Math.min(Math.max(0, Math.min(...expiries) - currentTime) + 50, 2_147_483_647);
-    const id = window.setTimeout(() => { void refresh(); }, delay);
-    return () => window.clearTimeout(id);
-  }, [flashDeals, refresh]);
 
   // Filter products with active countdown - removes expired products in real-time.
   // Variable products need at least one sellable discounted variant to stay in the rail.
@@ -61,7 +42,7 @@ function FlashOfferRail() {
     });
   }, [flashDeals, now]);
 
-  if (isLoading || activeFlashDeals.length === 0) {
+  if (activeFlashDeals.length === 0) {
     return null;
   }
 
@@ -97,22 +78,8 @@ function FlashOfferRail() {
           followFinger={true}
           speed={300}
           spaceBetween={12}
-          slidesPerView={2.3}
-          breakpoints={{
-            640: {
-              slidesPerView: 2.5,
-            },
-            768: {
-              slidesPerView: 3.5,
-            },
-            1024: {
-              slidesPerView: 5,
-            },
-            1280: {
-              slidesPerView: 6,
-            },
-          }}
-          className="w-full !pb-2"
+          slidesPerView="auto"
+          className={`${styles.carousel} ${styles.promotionCarousel}`}
           grabCursor
         >
           {activeFlashDeals.map((product) => {
@@ -127,8 +94,8 @@ function FlashOfferRail() {
             const isLowStock = product.countInStock > 0 && product.countInStock <= 3;
 
             return (
-              <SwiperSlide key={product.id} style={{ width: "148px", height: "auto" }}>
-                <Link href={buildProductUrl(product)} className="block h-full">
+              <SwiperSlide key={product.id} className={styles.slide}>
+                <Link href={buildProductUrl(product)} prefetch={false} className="block h-full w-full">
                   <div className="group relative flex h-full cursor-pointer flex-col justify-between overflow-hidden rounded-xl border border-ekg-100 bg-white p-3 shadow-sm transition-all duration-300 hover:border-kala-200 hover:shadow-md">
                     <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
                       <div className="flex min-w-0 flex-wrap items-center gap-1.5">
@@ -141,19 +108,14 @@ function FlashOfferRail() {
                       </div>
                     </div>
 
-                    <div className={`${imageStyles.frame} mb-3 rounded-lg`}>
-                      <DeferredImage
+                    <div className={`${imageStyles.frame} ${styles.imageFrame} mb-3`}>
+                      <HomeImage
                         src={product.cardImage || product.image || "/placeholder.svg"}
-                        backupSrc={product.image}
+                        backupSources={[product.image]}
                         alt={product.name}
-                        fill
-                        className={`${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : "group-hover:scale-105"}`}
-                        sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 148px"
-                        loading="lazy"
-                        quality={75}
-                        placeholder="blur"
-                        blurDataURL={getBlurDataURL()}
-                        fallbackSrc="/placeholder.svg"
+                        width={420}
+                        height={420}
+                        className={`absolute inset-0 ${imageStyles.image} transition-transform duration-500 ${isOutOfStock ? "grayscale opacity-60" : "group-hover:scale-105"}`}
                       />
 
                       {/* OUT OF STOCK OVERLAY */}
@@ -168,7 +130,7 @@ function FlashOfferRail() {
 
                     <div className="mb-2 flex justify-center">
                       {product.flashDealEndTime && (
-                        <Countdown targetDate={product.flashDealEndTime} variant="compact" />
+                        <Countdown targetDate={product.flashDealEndTime} variant="compact" initialNow={initialNow} />
                       )}
                     </div>
 
@@ -224,8 +186,8 @@ function FlashOfferRail() {
           })}
 
           {/* "See All" Card (Last Slide) */}
-          <SwiperSlide style={{ height: "auto" }}>
-            <Link href="/products?sort=flash" className="block h-full">
+          <SwiperSlide className={styles.slide}>
+            <Link href="/products?sort=flash" className="block h-full w-full">
               <div className="flex h-full min-h-[220px] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-ekg-200 bg-white/70 px-4 py-6 transition-all duration-300 hover:border-kala-300 hover:bg-white hover:shadow-sm">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full border border-kala-200 bg-kala-50 text-kala-700 transition-colors duration-300">
                   <ChevronLeft size={20} strokeWidth={2.5} />

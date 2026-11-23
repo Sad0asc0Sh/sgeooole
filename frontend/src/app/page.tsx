@@ -1,145 +1,62 @@
-import { Suspense } from "react";
-import Link from "next/link";
-import { buildProductUrl } from "@/lib/paths";
+import { Suspense, type ReactNode } from "react";
 import type { Metadata } from "next";
-import HeroSection from "@/components/home/HeroSection";
-import HomeCategoryShowcase from "@/components/home/HomeCategoryShowcase";
-import MiddleBannerRail from "@/components/home/MiddleBannerRail";
+import HeroSection, { HeroPlaceholder } from "@/components/home/HeroSection";
+import HomeCategoryShowcase, { HomeCategoryPlaceholder } from "@/components/home/HomeCategoryShowcase";
+import MiddleBannerRail, { MiddleBannerPlaceholder } from "@/components/home/MiddleBannerRail";
 import FlashOfferRail from "@/components/home/FlashOfferRail";
 import SpecialOfferRail from "@/components/home/SpecialOfferRail";
-import ProductRailContainer from "@/components/home/ProductRailContainer";
+import ProductRailContainer, { ProductRailPlaceholder } from "@/components/home/ProductRailContainer";
 import ServicesGrid from "@/components/home/ServicesGrid";
 import BrandsStrip from "@/components/home/BrandsStrip";
 import ValueProposition from "@/components/home/ValueProposition";
 import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
-import { resolveImageUrl } from "@/lib/image";
 import { mapBackendProduct } from "@/lib/productData";
-import type { Product } from "@/types/product";
 
 export const revalidate = 60;
 
-const API_BASE = (typeof window === "undefined" ? (process.env.INTERNAL_API_URL || "http://localhost:5000/api") : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api")).replace(/\/$/, "");
+const API_BASE = (process.env.INTERNAL_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
+const PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
 const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build" || process.env.NEXT_PHASE === "phase-export";
 const IS_LOCAL_API = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api(\/|$)/.test(API_BASE);
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "ای‌کا‌جی کالا";
 
-type ApiResponse<T> = { data?: T };
+const HOME_CARD_FIELDS = "name,slug,productCode,price,discount,images,stock,brand,category,compareAtPrice,isFlashDeal,flashDealEndTime,isSpecialOffer,specialOfferEndTime,campaignLabel,campaignTheme,productType,variants";
+const CARD_QUERY = `facets=false&nocache=true&fields=${HOME_CARD_FIELDS}`;
 
-const fetchJsonWithTimeout = async <T,>(url: string, init: RequestInit & { next?: { revalidate: number } }, timeoutMs: number): Promise<T | null> => {
+async function fetchHomeList<T>(path: string): Promise<T[] | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeout = setTimeout(() => controller.abort(), IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000);
   try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    if (!res.ok) return null;
-    return (await res.json().catch(() => null)) as T | null;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-};
-
-const logBuildFetchWarning = (message: string, error?: unknown) => {
-  if (IS_BUILD_PHASE) return;
-  if (process.env.NODE_ENV !== "production") {
-    console.warn(message, error);
-  } else {
-    console.warn(message);
-  }
-};
-
-async function fetchHomeCategories(): Promise<Category[] | null> {
-  try {
-    const json = await fetchJsonWithTimeout<ApiResponse<Category[]> & { success?: boolean }>(
-      `${API_BASE}/categories/homepage`,
-      { next: { revalidate } },
-      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
-    );
-    if (json?.success !== true || !Array.isArray(json.data)) {
-      throw new Error("Invalid homepage categories response");
-    }
-    return json.data;
+    const response = await fetch(`${API_BASE}${path}`, { signal: controller.signal, next: { revalidate } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload: { success?: boolean; data?: unknown } | null = await response.json();
+    if (payload?.success !== true || !Array.isArray(payload.data)) throw new Error("Invalid response");
+    return payload.data as T[];
   } catch (error) {
-    logBuildFetchWarning("[home] Failed to fetch homepage categories", error);
+    if (!IS_BUILD_PHASE) console.warn(`[home] Failed to load ${path.split("?")[0]}`, error);
+    // A failed request can be recovered in the browser. An empty list is valid data.
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
-async function fetchBanners(): Promise<Banner[]> {
+async function fetchHomeProducts(path: string) {
   try {
-    const json = await fetchJsonWithTimeout<ApiResponse<Banner[]>>(
-      `${API_BASE}/banners?isActive=true&sort=sortOrder`,
-      { next: { revalidate } },
-      IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000
-    );
-    return Array.isArray(json?.data) ? json.data : [];
+    const products = await fetchHomeList<Parameters<typeof mapBackendProduct>[0]>(path);
+    return products?.map((product) => mapBackendProduct(product, PUBLIC_API_BASE)) ?? undefined;
   } catch (error) {
-    logBuildFetchWarning("[home] Failed to fetch banners", error);
-    return [];
+    if (!IS_BUILD_PHASE) console.warn(`[home] Failed to read ${path.split("?")[0]} products`, error);
+    return undefined;
   }
 }
 
-
-type HomeRailsData = {
-  newest: Product[];
-  bestSellers: Product[];
-  merged: Product[];
-};
-
-// ─── Server-rendered homepage product rails + crawlable links/images (SEO) ───
-// Mirror the rails' own data sources on the server so ProductRailContainer
-// renders real product cards and <img> tags directly in the initial SSR HTML
-// (just like HeroSection does for banners).
-async function fetchHomeRailProducts(): Promise<HomeRailsData> {
-  const timeout = IS_BUILD_PHASE && IS_LOCAL_API ? 1200 : 8000;
-  try {
-    const [newestJson, bestJson] = await Promise.all([
-      fetchJsonWithTimeout<ApiResponse<any[]> & { success?: boolean }>(
-        `${API_BASE}/products?sort=-createdAt&limit=10&facets=false`,
-        { next: { revalidate } },
-        timeout
-      ),
-      fetchJsonWithTimeout<ApiResponse<any[]> & { success?: boolean }>(
-        `${API_BASE}/bestsellers?limit=10&in_stock=true`,
-        { next: { revalidate } },
-        timeout
-      ),
-    ]);
-    const newest = Array.isArray(newestJson?.data)
-      ? newestJson.data.map((item) => mapBackendProduct(item, API_BASE))
-      : [];
-    const bestSellers = Array.isArray(bestJson?.data)
-      ? bestJson.data.map((item) => mapBackendProduct(item, API_BASE))
-      : [];
-    const seen = new Set<string>();
-    const merged: Product[] = [];
-    for (const list of [newest, bestSellers]) {
-      for (const item of list) {
-        const key = item.productCode || item.slug || item.id || "";
-        if (!key || seen.has(key)) continue;
-        seen.add(key);
-        merged.push(item);
-      }
-    }
-    return { newest, bestSellers, merged };
-  } catch (error) {
-    logBuildFetchWarning("[home] Failed to fetch rail products", error);
-    return { newest: [], bestSellers: [], merged: [] };
-  }
+async function HomeFeed<T>({ data, children }: { data: Promise<T>; children: (data: T) => ReactNode }) {
+  return children(await data);
 }
-
-const SkeletonHero = () => (
-  <section className="w-full max-w-[1920px] mx-auto animate-pulse">
-    <div className="relative mt-2 mb-3 h-[180px] md:mb-0 md:h-auto md:aspect-[1911/430]">
-      <div className="mx-5 h-full md:mx-0">
-        <div className="relative h-full w-full overflow-hidden rounded-lg bg-ekg-950 md:rounded-none">
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
-        </div>
-      </div>
-    </div>
-  </section>
-);
 
 export async function generateMetadata(): Promise<Metadata> {
   // Title starts with the exact brand query «ای کا جی کالا» itself (not the
@@ -193,13 +110,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function Home() {
-  const [homepageCats, banners, railData] = await Promise.all([
-    fetchHomeCategories(),
-    fetchBanners(),
-    fetchHomeRailProducts(),
-  ]);
-  const railProducts = railData.merged;
+export default function Home() {
+  // Start the feeds together. Each section can render when its own data arrives,
+  // so a slow product query cannot hold up discovery of the first banner.
+  const banners = fetchHomeList<Banner>("/banners?isActive=true&sort=sortOrder");
+  const categories = fetchHomeList<Category>("/categories/homepage");
+  const flash = fetchHomeProducts(`/products?isFlashDeal=true&activeFlash=true&limit=100&${CARD_QUERY}`);
+  const special = fetchHomeProducts(`/products?featured=true&limit=100&${CARD_QUERY}`);
+  const bestSellers = fetchHomeProducts("/bestsellers?limit=10&in_stock=true&nocache=true");
+  const newest = fetchHomeProducts(`/products?sort=-createdAt&limit=10&${CARD_QUERY}`);
+  const initialNow = Date.now();
 
   // Never publish a fabricated phone number as factual data: contactPoint
   // uses NEXT_PUBLIC_CONTACT_PHONE when configured, and otherwise falls back
@@ -393,18 +313,6 @@ export default async function Home() {
     ],
   };
 
-  // Only preload the first hero, and select the same source as its picture.
-  const mainSliderBanners = (banners || [])
-    .filter((b) => b.position === "main-slider")
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  const firstHero = mainSliderBanners[0];
-  const heroDesktopUrl = firstHero ? resolveImageUrl(firstHero.image, "") : "";
-  const heroMobileUrl = firstHero
-    ? resolveImageUrl(firstHero.mobileImage, "") ||
-      (firstHero.image && typeof firstHero.image === "object" && (firstHero.image as any).cardUrl
-        ? resolveImageUrl(String((firstHero.image as any).cardUrl), "")
-        : "")
-    : "";
   return (
     <div className="flex flex-col pb-4">
       <script
@@ -412,14 +320,6 @@ export default async function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      {heroDesktopUrl && heroMobileUrl && heroMobileUrl !== heroDesktopUrl ? (
-        <>
-          <link rel="preload" as="image" href={heroMobileUrl} media="(max-width: 767px)" fetchPriority="high" />
-          <link rel="preload" as="image" href={heroDesktopUrl} media="(min-width: 768px)" fetchPriority="high" />
-        </>
-      ) : heroDesktopUrl ? (
-        <link rel="preload" as="image" href={heroDesktopUrl} fetchPriority="high" />
-      ) : null}
       {/* Brand H1 for SEO: visually hidden (the design carries no visible
           heading here) but present in the rendered DOM for crawlers and
           assistive tech, carrying the exact brand spelling users search
@@ -429,58 +329,49 @@ export default async function Home() {
       <h1 className="sr-only">
         ای کا جی کالا (ekgkala.ir) — وب‌سایت رسمی فروشگاه اینترنتی ای‌کا‌جی کالا؛ مرجع خرید آنلاین کالای تکنولوژی، دیجیتال و هوشمند
       </h1>
-      {/* Crawlable product links for the client-rendered rails below (see fetchHomeRailProducts) */}
-      {railProducts.length > 0 && (
-        <nav aria-label="محصولات منتخب فروشگاه" className="sr-only">
-          <ul>
-            {railProducts.map((item) => {
-              const label = item.title || item.name || item.slug || "محصول";
-              return (
-                <li key={item.productCode || item.slug || item.id}>
-                  <Link href={buildProductUrl(item)}>
-                    <span>{label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      )}
       <HomeSection variant="hero">
-        <Suspense fallback={<SkeletonHero />}>
-          <HeroSection initialBanners={banners} />
+        <Suspense fallback={<HeroPlaceholder />}>
+          <HomeFeed data={banners}>{(data) => <HeroSection initialBanners={data} />}</HomeFeed>
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="discovery">
-        <HomeCategoryShowcase categories={homepageCats} />
-      </HomeSection>
-
-      <HomeSection variant="promotion">
-        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <FlashOfferRail />
+        <Suspense fallback={<HomeCategoryPlaceholder />}>
+          <HomeFeed data={categories}>{(data) => <HomeCategoryShowcase categories={data} />}</HomeFeed>
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="promotion">
-        <MiddleBannerRail initialBanners={banners} />
+        <Suspense fallback={null}>
+          <HomeFeed data={flash}>{(products) => <FlashOfferRail initialProducts={products} initialNow={initialNow} />}</HomeFeed>
+        </Suspense>
       </HomeSection>
 
       <HomeSection variant="promotion">
-        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <SpecialOfferRail />
+        <Suspense fallback={<MiddleBannerPlaceholder />}>
+          <HomeFeed data={banners}>{(data) => <MiddleBannerRail initialBanners={data} />}</HomeFeed>
+        </Suspense>
+      </HomeSection>
+
+      <HomeSection variant="promotion">
+        <Suspense fallback={null}>
+          <HomeFeed data={special}>{(products) => <SpecialOfferRail initialProducts={products} initialNow={initialNow} />}</HomeFeed>
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="products">
-        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" limit={10} initialProducts={railData.bestSellers} />
+        <Suspense fallback={<ProductRailPlaceholder title="پرفروش‌ترین‌ها" fetchType="bestSellers" />}>
+          <HomeFeed data={bestSellers}>{(products) => (
+            <ProductRailContainer title="پرفروش‌ترین‌ها" fetchType="bestSellers" initialProducts={products} initialNow={initialNow} />
+          )}</HomeFeed>
         </Suspense>
       </HomeSection>
 
       <HomeSection variant="products">
-        <Suspense fallback={<div className="p-4 animate-pulse h-48 bg-white rounded-xl mx-4" />}>
-          <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" limit={10} initialProducts={railData.newest} />
+        <Suspense fallback={<ProductRailPlaceholder title="جدیدترین‌ها" fetchType="newest" />}>
+          <HomeFeed data={newest}>{(products) => (
+            <ProductRailContainer title="جدیدترین‌ها" fetchType="newest" initialProducts={products} initialNow={initialNow} />
+          )}</HomeFeed>
         </Suspense>
       </HomeSection>
 

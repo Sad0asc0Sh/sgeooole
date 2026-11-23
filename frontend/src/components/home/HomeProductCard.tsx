@@ -2,10 +2,9 @@
 
 import { memo } from "react";
 import Link from "next/link";
-import DeferredImage from "@/components/ui/DeferredImage";
+import HomeImage from "./HomeImage";
 import { AlertTriangle } from "lucide-react";
 import ProductTimerBadge from "@/components/product/ProductTimerBadge";
-import { getBlurDataURL } from "@/lib/blurPlaceholder";
 import { buildProductUrl } from "@/lib/paths";
 import { resolveCardPricing } from "@/lib/promotions/variantCardPricing";
 import { resolveCampaignThemeVariant } from "@/lib/campaignTheme";
@@ -39,7 +38,7 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
     : variant === "spring" ? "lime" : "blue";
 
   return (
-    <Link href={buildProductUrl(product)} className={styles.card} data-home-product={product.id}>
+    <Link href={buildProductUrl(product)} prefetch={false} className={styles.card} data-home-product={product.id}>
       <div className={styles.promotionSlot}>
         {label && (
           <div className={styles.promotionHeader} data-promotion-theme={theme}>
@@ -50,21 +49,16 @@ function HomeProductCard({ product, now }: HomeProductCardProps) {
       </div>
 
       <div className={`${imageStyles.frame} ${styles.imageFrame}`}>
-        <DeferredImage
+        <HomeImage
           src={product.cardImage || product.image || "/placeholder.svg"}
-          backupSrc={product.image}
+          backupSources={[product.image]}
           alt={`خرید ${product.name || product.title}${brandAltSuffix(product.brand)} | ای کا جی کالا`}
-          fill
-          className={`${imageStyles.image} ${isOutOfStock ? "grayscale opacity-60" : ""}`}
-          sizes="(max-width: 479px) 46vw, (max-width: 767px) 200px, 240px"
-          loading="lazy"
-          quality={75}
-          placeholder="blur"
-          blurDataURL={getBlurDataURL()}
-          fallbackSrc="/placeholder.svg"
+          width={420}
+          height={420}
+          className={`absolute inset-0 ${imageStyles.image} ${isOutOfStock ? "grayscale opacity-60" : ""}`}
         />
         {endTime && !isOutOfStock && (
-          <ProductTimerBadge key={endTime} targetDate={endTime} color="" className={`${styles.cardTimer} ${styles[theme]}`} />
+          <ProductTimerBadge key={endTime} targetDate={endTime} initialNow={now} color="" className={`${styles.cardTimer} ${styles[theme]}`} />
         )}
         {isLowStock && <span className={styles.stock}><AlertTriangle size={12} aria-hidden />تنها {product.countInStock.toLocaleString("fa-IR")} عدد</span>}
         {isOutOfStock && (

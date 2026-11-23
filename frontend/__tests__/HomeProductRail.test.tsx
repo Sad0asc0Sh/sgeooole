@@ -6,11 +6,10 @@ import SpecialOfferRail from "@/components/home/SpecialOfferRail";
 import { useSpecialOffers } from "@/hooks/useProducts";
 import type { Product } from "@/types/product";
 
-jest.mock("@/components/ui/ResilientImage", () => ({ __esModule: true, default: ({ alt }: { alt: string }) => <span role="img" aria-label={alt} /> }));
 jest.mock("@/hooks/useProducts", () => ({ useSpecialOffers: jest.fn() }));
 jest.mock("@/lib/scroll/ScrollManager", () => ({ getScrollManager: () => ({ getHorizontal: () => 0, saveHorizontal: jest.fn() }) }));
 jest.mock("swiper/react", () => ({
-  Swiper: ({ children, breakpointsBase, slidesPerView }: { children: React.ReactNode; breakpointsBase: string; slidesPerView: number }) => <div data-testid="carousel" data-breakpoints-base={breakpointsBase} data-slides-per-view={slidesPerView}>{children}</div>,
+  Swiper: ({ children, slidesPerView }: { children: React.ReactNode; slidesPerView: string }) => <div data-testid="carousel" data-slides-per-view={slidesPerView}>{children}</div>,
   SwiperSlide: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 jest.mock("swiper/modules", () => ({ A11y: {} }));
@@ -24,6 +23,7 @@ afterEach(() => { jest.useRealTimers(); });
 test("uses the shared product URL and correct comparison price", () => {
   const { container } = render(<HomeProductCard product={product} now={now} />);
   expect(screen.getByRole("link")).toHaveAttribute("href", "/product/one/one");
+  expect(screen.getByRole("img")).toHaveAttribute("src", product.image);
   expect(container.querySelector("del")).toHaveTextContent((1000000).toLocaleString("fa-IR"));
   expect(screen.getByText((800000).toLocaleString("fa-IR"))).toBeInTheDocument();
 });
@@ -74,11 +74,10 @@ test("does not advertise a purchasable price for an out-of-stock item", () => {
   expect(screen.getAllByText("ناموجود").length).toBeGreaterThan(0);
 });
 
-test("uses container breakpoints, accessible navigation, and local retry", () => {
+test("uses CSS-defined slide widths, accessible navigation, and local retry", () => {
   const props = { title: "جدیدترین‌ها", description: "تازه‌ترین محصولات", products: [product], viewAllHref: "/products", railKey: "newest", now };
   const { rerender } = render(<HomeProductRail {...props} />);
-  expect(screen.getByTestId("carousel")).toHaveAttribute("data-breakpoints-base", "container");
-  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "2.3");
+  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "auto");
   expect(screen.getByRole("button", { name: "محصولات قبلی جدیدترین‌ها" })).toBeDisabled();
   const retry = jest.fn();
   rerender(<HomeProductRail {...props} error onRetry={retry} />);
@@ -96,7 +95,7 @@ test("preserves the original curated section expiry behavior", () => {
   render(<SpecialOfferRail />);
   expect(screen.getByRole("heading", { name: product.name })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "دوربین دوم" })).toBeInTheDocument();
-  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "2.3");
+  expect(screen.getByTestId("carousel")).toHaveAttribute("data-slides-per-view", "auto");
   act(() => { jest.advanceTimersByTime(1100); });
   expect(screen.queryByRole("heading", { name: "پیشنهادهای منتخب" })).not.toBeInTheDocument();
 });

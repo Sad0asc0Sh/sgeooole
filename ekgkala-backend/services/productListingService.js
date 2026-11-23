@@ -111,6 +111,7 @@ function parseListingQuery(query = {}) {
     skipDiscount: query.skipDiscount === undefined ? false : boolean(query.skipDiscount, 'skipDiscount'),
     inStock: query.inStock === undefined ? false : boolean(query.inStock, 'inStock'),
     onSale: query.onSale === undefined ? false : boolean(query.onSale, 'onSale'),
+    activeFlash: query.activeFlash === undefined ? false : boolean(query.activeFlash, 'activeFlash'),
     // بخش «منتخب‌ها»ی صفحه اصلی: شگفت‌انگیزهای دستی + محصولات تخفیف‌های زمان‌داری که showInFeatured دارند
     featured: query.featured === undefined ? false : boolean(query.featured, 'featured'),
     includeChildren: query.includeChildren === undefined ? false : boolean(query.includeChildren, 'includeChildren'),
@@ -321,6 +322,7 @@ function parseListingQuery(query = {}) {
 // Explicit ObjectId casting matters: Mongoose does NOT cast aggregation matches.
 async function resolveListingContext(options, { Category, Brand, Sale }, now) {
   const conditions = [...options.conditions]
+  if (options.activeFlash) conditions.push({ isFlashDeal: true, flashDealEndTime: { $gt: now } })
   const graphs = new Map()
   // یک کوئری واحد و کش‌شده برای: خود دسته، همه‌ی زیرشاخه‌ها و همه‌ی والدها.
   // (به‌جای چند رفت‌وبرگشت جداگانه — هم سریع‌تر است و هم قواعد ارث‌بری را

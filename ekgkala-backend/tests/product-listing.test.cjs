@@ -191,6 +191,18 @@ function fixtureModels(products, sales = []) {
   }
 }
 
+test('the homepage flash feed keeps only deals with a future end time', async () => {
+  const models = fixtureModels([
+    product(1, { isFlashDeal: true, flashDealEndTime: now }),
+    product(2, { isFlashDeal: true, flashDealEndTime: future }),
+    product(3, { isFlashDeal: true }),
+    product(4, { isFlashDeal: false, flashDealEndTime: future }),
+  ])
+  const result = await listProducts({ activeFlash: 'true', facets: 'false', limit: '1' }, models, now)
+  assert.deepEqual(ids(result), [String(id(2))])
+  assert.equal(result.pagination.totalItems, 1)
+})
+
 test('mixed brand slug/IDs, category descendants, campaign windows and response contract', async () => {
   const products = [product(1, { brand: brandA, category: child }), product(2, { brand: brandB, category: parent }), product(3, { brand: brandB, category: other })]
   const sales = [

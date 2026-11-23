@@ -686,6 +686,32 @@
   overflow: hidden;
 }
 
+/* Center the same slide Swiper will select, even when its JS is still loading.
+   The width matches slidesPerView: 1.1 with an 8px space between slides. */
+.hero-swiper:not(.swiper-initialized) {
+  --hero-slide-gap: 8px;
+  --hero-slide-width: calc((100% - 0.8px) / 1.1);
+}
+
+.hero-swiper:not(.swiper-initialized) .swiper-wrapper {
+  transform: translateX(calc(var(--hero-initial-slide) * (var(--hero-slide-width) + var(--hero-slide-gap)) + (var(--hero-slide-width) - 100%) / 2));
+}
+
+.hero-swiper:not(.swiper-initialized) .swiper-slide {
+  width: var(--hero-slide-width);
+}
+
+.hero-swiper:not(.swiper-initialized) .swiper-slide:not(:last-child) {
+  margin-left: var(--hero-slide-gap);
+}
+
+@media (min-width: 768px) {
+  .hero-swiper:not(.swiper-initialized) {
+    --hero-slide-gap: 0px;
+    --hero-slide-width: 100%;
+  }
+}
+
 .hero-swiper img {
   -webkit-user-drag: none;
   user-select: none;

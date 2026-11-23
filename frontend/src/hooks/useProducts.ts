@@ -16,12 +16,14 @@ const swrConfig = {
  * Hook for fetching Flash Deals with SWR caching
  * Data is cached and instantly available on subsequent renders
  */
-export function useFlashDeals(limit: number = 10) {
+export function useFlashDeals(limit: number = 10, initialData?: Product[]) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `flash-deals-${limit}`,
         () => productService.getFlashDeals(limit),
         {
             ...swrConfig,
+            fallbackData: initialData,
+            revalidateOnMount: initialData === undefined,
             // Promotions change from admin: refetch when tab refocuses
             revalidateOnFocus: true,
             revalidateOnReconnect: true,
@@ -43,12 +45,14 @@ export function useFlashDeals(limit: number = 10) {
 /**
  * Hook for fetching Special Offers with SWR caching
  */
-export function useSpecialOffers(limit: number = 10) {
+export function useSpecialOffers(limit: number = 10, initialData?: Product[]) {
     const { data, error, isLoading, isValidating, mutate } = useSWR<Product[]>(
         `special-offers-${limit}`,
         () => productService.getSpecialOffers(limit),
         {
             ...swrConfig,
+            fallbackData: initialData,
+            revalidateOnMount: initialData === undefined,
             // ترتیب کارت‌ها رندم است؛ فقط با رفرش صفحه دوباره چیده شود،
             // نه با رفرش دوره‌ای/فوکس/اتصال مجدد (swrConfig همین را می‌گوید).
         }

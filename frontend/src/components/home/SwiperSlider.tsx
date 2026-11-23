@@ -1,15 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, A11y, Keyboard } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper";
 import "swiper/css";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import HeroBannerImage from "./HeroBannerImage";
+import HeroBannerImage, { HERO_IMAGE_BACKGROUND } from "./HeroBannerImage";
 import HeroBannerLink from "./HeroBannerLink";
-import { resolveImageUrl } from "@/lib/image";
-import { bannerAltText } from "@/lib/bannerAlt";
 import type { Banner } from "@/services/bannerService";
 
 type SwiperSliderProps = {
@@ -67,10 +65,7 @@ type RingSlide = {
 export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  // پهنای باند ابتدا ۱۰۰٪ به بنر اول (LCP) اختصاص می‌یابد؛ اسلایدهای
-  // ثانویه (از جمله کلون‌های ring) فقط پس از لود اسلاید اول، تغییر
-  // اسلاید، یا حداکثر ۴۵۰ms بعد از mount هایدریت می‌شوند.
-  const [hydrateSecondarySlides, setHydrateSecondarySlides] = useState(false);
+  const [secondarySlidesReady, setSecondarySlidesReady] = useState(false);
   const jumpingRef = useRef(false);
   // قفل ناوبری: تا پایان انیمیشن، کلیک/سوایپ بعدی پذیرفته نمی‌شود.
   const lockUntilRef = useRef(0);
@@ -120,15 +115,8 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
     [clearUnlockTimer]
   );
 
-  // سقف ایمنی: حتی اگر بنر اول دیر لود شود، اسلایدهای ثانویه حداکثر
-  // ۴۵۰ms بعد از mount بیرون می‌آیند تا اسلایدر قفل نشود.
-  useEffect(() => {
-    const timer = window.setTimeout(() => setHydrateSecondarySlides(true), 450);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  const handlePrimaryBannerLoad = useCallback(() => {
-    setHydrateSecondarySlides(true);
+  const showSecondarySlides = useCallback(() => {
+    setSecondarySlidesReady(true);
   }, []);
 
   const slides = useMemo(() => banners.filter(Boolean), [banners]);
@@ -222,7 +210,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
   const handleSlideChange = useCallback(
     (instance: SwiperClass) => {
       // کاربر اسلاید را عوض کرد — اسلایدهای ثانویه باید فوراً در دسترس باشند.
-      setHydrateSecondarySlides(true);
+      showSecondarySlides();
       if (slideCount < 2) {
         setActiveIndex(0);
         return;
@@ -235,7 +223,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       // سریع، چند بنر را رد کنند یا به لبهٔ رینگ برسند.
       beginSlideLock(instance);
     },
-    [slideCount, beginSlideLock]
+    [slideCount, beginSlideLock, showSecondarySlides]
   );
 
   const handleNext = useCallback(() => {
@@ -258,6 +246,7 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
       <Swiper
         modules={[Autoplay, A11y, Keyboard]}
         onSwiper={setSwiper}
+        onTouchStart={showSecondarySlides}
         onSlideChange={handleSlideChange}
         onTransitionEnd={handleTransitionEnd}
         initialSlide={initialSlide}
@@ -297,59 +286,25 @@ export default function SwiperSlider({ banners }: SwiperSliderProps) {
         }}
         dir="rtl"
         className="hero-swiper h-full w-full"
+        style={{ "--hero-initial-slide": initialSlide } as CSSProperties}
       >
         {ring.map(({ banner, realIndex, copy, isClone }) => {
-          const src = resolveImageUrl(banner.image, "");
-          // نسخه‌ی کارت (960×480) به‌عنوان fallback خودکار موبایل وقتی
-          // تصویر مستقل موبایل تنظیم نشده است — خیلی سبک‌تر از برش دسکتاپ.
-          const cardUrl =
-            banner.image && typeof banner.image === "object"
-              ? (banner.image as { cardUrl?: string }).cardUrl
-              : undefined;
-          const mobileSrc =
-            resolveImageUrl(banner.mobileImage, "") ||
-            (cardUrl ? resolveImageUrl(cardUrl, "") : "");
-          if (!src) return null;
-
           const isPrimarySlide = !isClone && realIndex === 0;
-          // اسکلت اسلایدها همیشه در DOM می‌مانند (حلقه/initialSlide سالم
-          // می‌ماند)؛ فقط تصویر اسلایدهای ثانویه تا هایدریت رندر نمی‌شود تا
-          // مرورگر چند بنر سنگین را هم‌زمان دانلود نکند.
           const isNearbySlide = realIndex === activeIndex ||
             realIndex === (activeIndex + 1) % slideCount ||
             realIndex === (activeIndex - 1 + slideCount) % slideCount;
-          const shouldRenderImage = isPrimarySlide || (hydrateSecondarySlides && isNearbySlide);
+          const shouldRenderImage = isPrimarySlide || (secondarySlidesReady && isNearbySlide);
 
           return (
             <SwiperSlide
               key={`${banner._id}-${copy}-${realIndex}`}
-              className="relative h-full w-full overflow-hidden rounded-lg md:rounded-none"
+              className={`relative h-full w-full overflow-hidden rounded-lg md:rounded-none ${HERO_IMAGE_BACKGROUND}`}
               aria-hidden={isClone ? "true" : undefined}
             >
               <HeroBannerLink banner={banner} tabIndex={isClone ? -1 : undefined}>
-                {shouldRenderImage ? (
-                <HeroBannerImage
-                  src={src}
-                  mobileSrc={mobileSrc || null}
-                  alt={bannerAltText(banner)}
-                  width={banner.image && typeof banner.image === "object" ? banner.image.width : undefined}
-                  height={banner.image && typeof banner.image === "object" ? banner.image.height : undefined}
-                  mobileWidth={
-                    banner.mobileImage && typeof banner.mobileImage === "object"
-                      ? banner.mobileImage.width
-                      : undefined
-                  }
-                  mobileHeight={
-                    banner.mobileImage && typeof banner.mobileImage === "object"
-                      ? banner.mobileImage.height
-                      : undefined
-                  }
-                  priority={isPrimarySlide}
-                  fit={banner.fit === "contain" ? "contain" : "cover"}
-                  onBannerLoad={isPrimarySlide ? handlePrimaryBannerLoad : undefined}
-                />
-                ) : (
-                  <span aria-hidden="true" className="absolute inset-0 block animate-pulse bg-gradient-to-r from-ekg-200 via-ekg-100 to-ekg-200" />
+                {shouldRenderImage && (
+                  <HeroBannerImage banner={banner} priority={isPrimarySlide}
+                    onSettled={isPrimarySlide ? showSecondarySlides : undefined} />
                 )}
               </HeroBannerLink>
             </SwiperSlide>

@@ -7,9 +7,10 @@ interface ProductTimerBadgeProps {
     targetDate: string;
     color?: string;
     className?: string;
+    initialNow?: number;
 }
 
-export default function ProductTimerBadge({ targetDate, color = "text-gray-700", className = "" }: ProductTimerBadgeProps) {
+export default function ProductTimerBadge({ targetDate, color = "text-gray-700", className = "", initialNow }: ProductTimerBadgeProps) {
     const [isVisible, setIsVisible] = useState(true);
 
     const handleExpire = () => {
@@ -23,6 +24,7 @@ export default function ProductTimerBadge({ targetDate, color = "text-gray-700",
             <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-md shadow-sm border border-gray-100 flex items-center justify-center gap-1">
                 <CountdownTimer
                     targetDate={targetDate}
+                    initialNow={initialNow}
                     showSeconds={true}
                     className={`text-[11px] font-bold ${color}`}
                     onExpire={handleExpire}

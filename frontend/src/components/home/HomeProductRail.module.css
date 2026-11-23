@@ -71,8 +71,24 @@
   outline: 2px solid #b45309;
   outline-offset: -3px;
 }
-.carousel { width: 100%; min-width: 0; padding: 2px 0 6px; }
-.carousel .slide { height: auto; min-width: 0; box-sizing: border-box; display: flex; }
+.carousel,
+.skeletonRail {
+  /* Swiper reads the CSS width with slidesPerView="auto". The same width is
+     already in use on the server HTML and in the loading placeholders. */
+  --rail-gap: 12px;
+  --rail-cards: 2.3;
+  --rail-slide-width: calc((100% - var(--rail-gap) * (var(--rail-cards) - 1)) / var(--rail-cards));
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.carousel { padding: 2px 0 6px; }
+.skeletonRail { display: flex; }
+.carousel .slide,
+.skeletonCard { flex: 0 0 auto; width: var(--rail-slide-width); min-width: 0; }
+.carousel .slide { height: auto; box-sizing: border-box; display: flex; }
+.carousel:not(:global(.swiper-initialized)) .slide:not(:last-child),
+.skeletonCard:not(:last-child) { margin-inline-end: var(--rail-gap); }
 .card {
   display: flex;
   flex-direction: column;
@@ -114,6 +130,9 @@
 .discountBadge { flex-shrink: 0; padding: 2px 6px; border-radius: 6px; background: #ef394e; color: #fff; font-size: 10px; font-weight: 700; }
 .discountRose { background: #e11d48; }
 .imageFrame { border-radius: 8px; }
+.carousel .imageFrame,
+.skeletonCard .skeletonImage { background: #f1f5f9; }
+.carousel .imageFrame img { will-change: auto; }
 .unavailable { position: absolute; inset: 0; display: grid; place-items: center; background: #ffffff66; }
 .unavailable span { padding: 4px 10px; border-radius: 6px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; }
 .productName {
@@ -139,16 +158,26 @@
 .moreCard:hover { border-color: #d97706; }
 .moreIcon { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #fde68a; border-radius: 50%; background: #fffbeb; color: #b45309; }
 .moreDescription { font-size: 11px; font-weight: 500; color: #64748b; }
-.skeletonRail { display: flex; gap: 12px; overflow: hidden; }
-.skeletonCard { flex: 0 0 calc((100% - 60px) / 6); height: 390px; border-radius: 12px; background: #f1f5f9; animation: pulse 1.5s ease-in-out infinite; }
+.skeletonRail { padding: 2px 0 6px; }
+.skeletonRail .skeletonCard { width: var(--rail-slide-width); min-height: 320px; }
+.skeletonImage { flex-shrink: 0; border-radius: 8px; }
+.skeletonLine { display: block; width: 60%; height: 12px; margin-block: 5px; border-radius: 6px; background: #f1f5f9; }
 .feedback { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 40px 16px; color: #475569; font-size: 14px; }
-@keyframes pulse { 50% { opacity: .5; } }
 
-/* Fallback for browsers without @container (Chrome<105, Safari<16, Firefox<110)) */
-@media (max-width: 1279px) { .skeletonCard { flex-basis: calc((100% - 48px) / 5); } }
-@media (max-width: 1039px) { .skeletonCard { flex-basis: calc((100% - 36px) / 4); } }
-@media (max-width: 799px) { .skeletonCard { flex-basis: calc((100% - 24px) / 3); } }
-@media (max-width: 639px) { .skeletonCard { flex-basis: calc((100% - 18px) / 2.5); } }
+.promotionCarousel { padding-bottom: 8px; }
+@media (min-width: 640px) { .promotionCarousel { --rail-cards: 2.5; } }
+@media (min-width: 768px) { .promotionCarousel { --rail-cards: 3.5; } }
+@media (min-width: 1024px) { .promotionCarousel { --rail-cards: 5; } }
+@media (min-width: 1280px) { .promotionCarousel { --rail-cards: 6; } }
+
+/* Viewport fallback includes the container's two 16px gutters. */
+@supports not (container-type: inline-size) {
+  @media (min-width: 472px) { .container .carousel, .skeletonRail { --rail-cards: 2.5; } }
+  @media (min-width: 672px) { .container .carousel, .skeletonRail { --rail-cards: 3; } }
+  @media (min-width: 832px) { .container .carousel, .skeletonRail { --rail-cards: 4; } }
+  @media (min-width: 1072px) { .container .carousel, .skeletonRail { --rail-cards: 5; } }
+  @media (min-width: 1312px) { .container .carousel, .skeletonRail { --rail-cards: 6; } }
+}
 @media (max-width: 479px) {
   .heading h2 { font-size: 17px; }
   .header { gap: 12px; }
@@ -157,14 +186,13 @@
   .card { --card-padding: 10px; }
   .productName { font-size: 12px; }
   .price { font-size: 15px; }
-  .skeletonCard { height: 340px; }
 }
-@media (max-width: 439px) { .skeletonCard { flex-basis: calc((100% - 15.6px) / 2.3); } }
 @supports (container-type: inline-size) {
-  @container (max-width: 1279px) { .skeletonCard { flex-basis: calc((100% - 48px) / 5); } }
-  @container (max-width: 1039px) { .skeletonCard { flex-basis: calc((100% - 36px) / 4); } }
-  @container (max-width: 799px) { .skeletonCard { flex-basis: calc((100% - 24px) / 3); } }
-  @container (max-width: 639px) { .skeletonCard { flex-basis: calc((100% - 18px) / 2.5); } }
+  @container (min-width: 440px) { .container .carousel, .skeletonRail { --rail-cards: 2.5; } }
+  @container (min-width: 640px) { .container .carousel, .skeletonRail { --rail-cards: 3; } }
+  @container (min-width: 800px) { .container .carousel, .skeletonRail { --rail-cards: 4; } }
+  @container (min-width: 1040px) { .container .carousel, .skeletonRail { --rail-cards: 5; } }
+  @container (min-width: 1280px) { .container .carousel, .skeletonRail { --rail-cards: 6; } }
   @container (max-width: 479px) {
     .heading h2 { font-size: 17px; }
     .header { gap: 12px; }
@@ -173,12 +201,9 @@
     .card { --card-padding: 10px; }
     .productName { font-size: 12px; }
     .price { font-size: 15px; }
-    .skeletonCard { height: 340px; }
   }
-  @container (max-width: 439px) { .skeletonCard { flex-basis: calc((100% - 15.6px) / 2.3); } }
 }
 @media (prefers-reduced-motion: reduce) {
   .card { transition: none; }
   .carousel :global(.swiper-wrapper) { transition-duration: 0ms !important; }
-  .skeletonCard { animation: none; }
 }

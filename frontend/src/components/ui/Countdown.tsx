@@ -10,6 +10,7 @@ type CountdownProps = {
   targetDate?: string | Date | number;
   variant?: CountdownVariant;
   onExpire?: () => void;
+  initialNow?: number;
 };
 
 type TimeParts = {
@@ -25,13 +26,13 @@ const getTargetTime = (targetDate?: string | Date | number) => {
   return new Date(targetDate).getTime();
 };
 
-const getTimeParts = (targetDate?: string | Date | number): TimeParts => {
+const getTimeParts = (targetDate?: string | Date | number, now = getServerNow()): TimeParts => {
   const targetTime = getTargetTime(targetDate);
   if (!Number.isFinite(targetTime)) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
   }
 
-  const remaining = targetTime - getServerNow();
+  const remaining = targetTime - now;
   if (remaining <= 0) {
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
   }
@@ -55,8 +56,9 @@ export default function Countdown({
   targetDate,
   variant = "inline",
   onExpire,
+  initialNow,
 }: CountdownProps) {
-  const [timeLeft, setTimeLeft] = useState<TimeParts>(() => getTimeParts(targetDate));
+  const [timeLeft, setTimeLeft] = useState<TimeParts>(() => getTimeParts(targetDate, initialNow));
 
   useEffect(() => {
     const update = () => {

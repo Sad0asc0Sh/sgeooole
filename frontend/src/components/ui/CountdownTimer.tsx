@@ -8,33 +8,30 @@ interface CountdownTimerProps {
     className?: string;
     showSeconds?: boolean;
     onExpire?: () => void;
+    initialNow?: number;
 }
 
-export default function CountdownTimer({ targetDate, className = "", showSeconds = true, onExpire }: CountdownTimerProps) {
-    const [timeLeft, setTimeLeft] = useState({
-        days: 0,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
-    });
+const ZERO = { days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+function getTimeLeft(difference: number) {
+    if (!(difference > 0)) return ZERO;
+    return {
+        days: Math.floor(difference / 86400000),
+        hours: Math.floor(difference / 3600000) % 24,
+        minutes: Math.floor(difference / 60000) % 60,
+        seconds: Math.floor(difference / 1000) % 60,
+    };
+}
+
+export default function CountdownTimer({ targetDate, className = "", showSeconds = true, onExpire, initialNow }: CountdownTimerProps) {
+    const target = Date.parse(targetDate);
+    const [timeLeft, setTimeLeft] = useState(() => initialNow === undefined ? ZERO : getTimeLeft(target - initialNow));
 
     useEffect(() => {
         const calculateTimeLeft = () => {
-            const difference = +new Date(targetDate) - getServerNow();
-
-            if (difference > 0) {
-                return {
-                    days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-                    hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-                    minutes: Math.floor((difference / 1000 / 60) % 60),
-                    seconds: Math.floor((difference / 1000) % 60),
-                };
-            }
-            // Trigger onExpire if provided
-            if (onExpire) {
-                onExpire();
-            }
-            return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+            const difference = target - getServerNow();
+            if (!(difference > 0)) onExpire?.();
+            return getTimeLeft(difference);
         };
 
         setTimeLeft(calculateTimeLeft());
@@ -49,7 +46,7 @@ export default function CountdownTimer({ targetDate, className = "", showSeconds
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [targetDate, onExpire]);
+    }, [target, onExpire]);
 
     // Format with leading zeros
     const format = (num: number) => num.toString().padStart(2, "0");

@@ -10,6 +10,7 @@ import "swiper/css";
 import type { Product } from "@/types/product";
 import { getScrollManager } from "@/lib/scroll/ScrollManager";
 import { useVelocitySnap } from "@/hooks/useVelocitySnap";
+import imageStyles from "@/components/product/ProductImageFrame.module.css";
 import HomeProductCard from "./HomeProductCard";
 import styles from "./HomeProductRail.module.css";
 
@@ -65,7 +66,17 @@ export default function HomeProductRail({
 
         {loading ? (
           <div className={styles.skeletonRail} role="status" aria-label={`در حال بارگذاری ${title}`}>
-            {Array.from({ length: 6 }, (_, index) => <div key={index} className={styles.skeletonCard} aria-hidden />)}
+            {Array.from({ length: 6 }, (_, index) => (
+              <div key={index} className={`${styles.card} ${styles.skeletonCard}`} aria-hidden>
+                <div className={styles.promotionSlot} />
+                <div className={`${imageStyles.frame} ${styles.skeletonImage}`} />
+                <div className={styles.productName}><span className={styles.skeletonLine} /></div>
+                <div className={styles.pricing}>
+                  <div className={styles.discountRow} />
+                  <div className={styles.price}><span className={styles.skeletonLine} /></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className={styles.feedback} role="status">
@@ -98,15 +109,7 @@ export default function HomeProductRail({
             longSwipes={false}
             speed={300}
             spaceBetween={12}
-            slidesPerView={2.3}
-            breakpointsBase="container"
-            breakpoints={{
-              440: { slidesPerView: 2.5 },
-              640: { slidesPerView: 3 },
-              800: { slidesPerView: 4 },
-              1040: { slidesPerView: 5 },
-              1280: { slidesPerView: 6 },
-            }}
+            slidesPerView="auto"
             className={styles.carousel}
             grabCursor
             watchOverflow

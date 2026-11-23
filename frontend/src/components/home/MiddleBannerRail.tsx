@@ -1,123 +1,63 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import DeferredImage from "@/components/ui/DeferredImage";
+import HomeImage from "./HomeImage";
 import HeroBannerLink from "./HeroBannerLink";
-import { Banner, bannerService } from "@/services/bannerService";
-import { generateBannerBlurPlaceholder, resolveImageUrl } from "@/lib/image";
+import { useHomeBanners } from "@/hooks/useHomeBanners";
+import type { Banner } from "@/services/bannerService";
+import { resolveImageUrl } from "@/lib/image";
 import { bannerAltText } from "@/lib/bannerAlt";
 
 type MiddleBannerRailProps = {
   /** Active banners fetched by the homepage server component. */
-  initialBanners?: Banner[];
+  initialBanners?: Banner[] | null;
 };
 
-/**
- * The three `middle-banner` creatives.
- *
- * They used to sit inside HeroSection directly under the main slider. The
- * homepage now places them *below* the timed offers, so this component owns
- * the row (including its own client-side recovery when the server fetch was
- * empty) and keeps the same 16:5 creative contract.
- */
-export default function MiddleBannerRail({
-  initialBanners = [],
-}: MiddleBannerRailProps) {
-  const [banners, setBanners] = useState<Banner[]>(initialBanners);
-  const [loading, setLoading] = useState(initialBanners.length === 0);
+const ROW = "mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-3 px-4 py-4 md:flex-row md:justify-center md:gap-4 md:py-5";
+const TILE = "aspect-[16/5] w-full overflow-hidden rounded-2xl border bg-ekg-50 md:w-[31%] xl:w-[32%]";
 
-  useEffect(() => {
-    if (initialBanners.length > 0) {
-      setBanners(initialBanners);
-      setLoading(false);
-      return;
-    }
-
-    let isMounted = true;
-    bannerService
-      .getByPosition("middle-banner")
-      .then((data) => {
-        if (isMounted) setBanners(Array.isArray(data) ? data : []);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch middle banners:", error);
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [initialBanners]);
-
-  const middleBanners = useMemo(
-    () =>
-      banners
-        .filter((banner) => banner.position === "middle-banner")
-        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-        .slice(0, 3),
-    [banners]
+export function MiddleBannerPlaceholder() {
+  return (
+    <section className="w-full bg-white" aria-busy="true" aria-label="در حال بارگذاری بنرهای تبلیغاتی">
+      <div className={ROW}>
+        {[0, 1, 2].map((index) => <div key={index} className={`${TILE} border-ekg-100`} />)}
+      </div>
+    </section>
   );
+}
 
-  if (loading) {
-    return (
-      <section
-        className="w-full bg-white"
-        aria-busy="true"
-        aria-label="در حال بارگذاری بنرهای تبلیغاتی"
-      >
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-3 px-4 py-4 md:flex-row md:justify-center md:gap-4 md:py-5">
-          {[0, 1, 2].map((index) => (
-            <div
-              key={index}
-              className="aspect-[16/5] w-full animate-pulse rounded-2xl border border-ekg-100 bg-gradient-to-r from-ekg-100 via-ekg-50 to-ekg-100 md:w-[31%] xl:w-[32%]"
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
+export default function MiddleBannerRail({
+  initialBanners = null,
+}: MiddleBannerRailProps) {
+  const { banners, loading } = useHomeBanners(initialBanners);
+  const middleBanners = banners
+    .filter((banner) => banner.position === "middle-banner")
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .slice(0, 3);
 
-  if (middleBanners.length === 0) {
-    return null;
-  }
+  if (loading) return <MiddleBannerPlaceholder />;
+  if (middleBanners.length === 0) return null;
 
   return (
     <section className="w-full bg-white" aria-label="بنرهای تبلیغاتی میانی">
-      <div className="mx-auto flex w-full max-w-screen-2xl flex-col items-center gap-3 px-4 py-4 md:flex-row md:justify-center md:gap-4 md:py-5">
+      <div className={ROW}>
         {middleBanners.map((banner) => {
-          // نسخه‌ی کارت 960×480 برای بنرهای میانی — بسیار سبک‌تر از دسکتاپ کامل.
-          const cardUrl =
-            banner.image && typeof banner.image === "object"
-              ? (banner.image as { cardUrl?: string }).cardUrl
-              : undefined;
-          const imageUrl = resolveImageUrl(
-            cardUrl ? { url: cardUrl } : banner.image,
-            "/placeholder.svg"
-          );
-          const backupSrc = resolveImageUrl(banner.image, "");
+          const original = resolveImageUrl(banner.image, "");
+          const card = typeof banner.image === "object" ? banner.image?.cardUrl?.trim() : undefined;
           const label = bannerAltText(banner, "بنر تبلیغاتی ای کا جی کالا");
 
           return (
             <div
               key={banner._id}
-              className="group relative aspect-[16/5] w-full overflow-hidden rounded-2xl border border-ekg-200/60 bg-ekg-50 shadow-sm transition-shadow duration-300 hover:shadow-[0_18px_40px_-30px_rgba(28,25,23,0.55)] md:w-[31%] xl:w-[32%]"
+              className={`${TILE} group relative border-ekg-200/60 shadow-sm transition-shadow duration-300 hover:shadow-[0_18px_40px_-30px_rgba(28,25,23,0.55)]`}
             >
               <HeroBannerLink banner={banner} className="absolute inset-0 block">
-                <DeferredImage
-                  src={imageUrl}
-                  backupSrc={backupSrc && backupSrc !== imageUrl ? backupSrc : undefined}
+                <HomeImage
+                  src={card || original}
+                  backupSources={[original]}
                   alt={label}
-                  fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 32vw"
-                  quality={80}
-                  loading="lazy"
-                  placeholder="blur"
-                  blurDataURL={generateBannerBlurPlaceholder(800, 250)}
-                  fallbackSrc="/placeholder.svg"
-                  wrapperClassName="absolute inset-0"
-                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.015]"
+                  width={960}
+                  height={300}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.015]"
                 />
               </HeroBannerLink>
             </div>

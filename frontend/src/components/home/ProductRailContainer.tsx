@@ -13,17 +13,28 @@ interface ProductRailContainerProps {
   fetchType: "newest" | "bestSellers" | "discounted" | "all";
   limit?: number;
   initialProducts?: Product[];
+  initialNow?: number;
 }
 
-function ProductRailContainer({ title, fetchType, limit = 10, initialProducts }: ProductRailContainerProps) {
+const railDescription = (fetchType: ProductRailContainerProps["fetchType"]) =>
+  fetchType === "newest" ? "تازه‌ترین محصولات فروشگاه" : "انتخاب‌های پرطرفدار خریداران";
+const railHref = (fetchType: ProductRailContainerProps["fetchType"]) =>
+  fetchType === "newest" ? "/products?sort=newest" : "/products?sort=bestSelling";
+
+export function ProductRailPlaceholder({ title, fetchType }: Pick<ProductRailContainerProps, "title" | "fetchType">) {
+  return <HomeProductRail title={title} description={railDescription(fetchType)} products={[]} viewAllHref={railHref(fetchType)}
+    railKey={`rail_${title}`} now={0} loading />;
+}
+
+function ProductRailContainer({ title, fetchType, limit = 10, initialProducts, initialNow }: ProductRailContainerProps) {
   const newest = useNewestProducts(fetchType === "newest" ? limit : 0, fetchType === "newest" ? initialProducts : undefined);
   const bestSellers = useBestSellers(fetchType === "bestSellers" ? limit : 0, fetchType === "bestSellers" ? initialProducts : undefined);
   const source = fetchType === "newest" ? newest : fetchType === "bestSellers" ? bestSellers : null;
   if (!source) return null;
 
   const { products, isLoading, error, refresh } = source;
-  const viewAllHref = fetchType === "newest" ? "/products?sort=newest" : "/products?sort=bestSelling";
-  const description = fetchType === "newest" ? "تازه‌ترین محصولات فروشگاه" : "انتخاب‌های پرطرفدار خریداران";
+  const viewAllHref = railHref(fetchType);
+  const description = railDescription(fetchType);
 
   if (products.length === 0 && (isLoading || error)) {
     return <HomeProductRail title={title} description={description} products={[]} viewAllHref={viewAllHref}
@@ -33,7 +44,8 @@ function ProductRailContainer({ title, fetchType, limit = 10, initialProducts }:
   // After a promotion boundary, refetch once so the server (not a cached
   // snapshot) decides the post-expiry price; the boundary re-render alone
   // already restores the base price via the shared resolver.
-  return <ProductRail title={title} description={description} products={products} viewAllHref={viewAllHref} onExpire={() => { void refresh(); }} />;
+  return <ProductRail title={title} description={description} products={products} viewAllHref={viewAllHref}
+    initialNow={initialNow} onExpire={() => { void refresh(); }} />;
 }
 
 export default memo(ProductRailContainer);

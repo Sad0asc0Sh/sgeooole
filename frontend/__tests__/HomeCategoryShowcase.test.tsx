@@ -7,15 +7,6 @@ import { categoryService, type Category } from "@/services/categoryService";
 jest.mock("@/services/categoryService", () => ({
   categoryService: { getHomepage: jest.fn() },
 }));
-jest.mock("@/components/ui/ResilientImage", () => ({
-  useResilientImage: (url: string) => ({
-    src: url,
-    onError: jest.fn(),
-    onLoad: jest.fn(),
-    ref: jest.fn(),
-    phase: "loaded",
-  }),
-}));
 
 const category = (
   id: string,
@@ -120,7 +111,7 @@ test("hides only a successfully empty category feed", async () => {
   await waitFor(() => expect(container).toBeEmptyDOMElement());
 });
 
-test("renders category images lazily from cardUrl, never hidden", async () => {
+test("requests nearby category images early and lets the browser defer the rest", async () => {
   const pictured = category("9", "دسته تصویری", "pictured", {
     image: {
       url: "https://s3.example/full.webp",
@@ -129,13 +120,15 @@ test("renders category images lazily from cardUrl, never hidden", async () => {
     },
   });
 
-  mount([pictured]);
+  mount([pictured, camera, dvr, lock, {
+    ...pictured, _id: "10", slug: "another", name: "دستهٔ دیگر",
+  }]);
 
   const img = await screen.findByRole("img", { name: "دسته تصویری" });
   expect(img).toHaveAttribute("src", "https://s3.example/card.webp");
-  expect(img).toHaveAttribute("loading", "lazy");
+  expect(img).toHaveAttribute("loading", "eager");
   expect(img.getAttribute("fetchpriority")).not.toBe("high");
-  expect(img).toHaveStyle({ opacity: "1" });
+  expect(screen.getByRole("img", { name: "دستهٔ دیگر" })).toHaveAttribute("loading", "lazy");
   expect(fetchCategories).not.toHaveBeenCalled();
 });
 

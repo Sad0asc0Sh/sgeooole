@@ -95,6 +95,21 @@ const CSS_WATCHDOG = [
   "})();",
 ].join("\n");
 
+// Install the reveal rule only when the load listener is running. Images
+// still paint normally when scripts are disabled, and their URLs are always
+// available to the preload scanner before the React bundles arrive.
+const HOME_IMAGE_REVEAL = [
+  "(function(){",
+  "  var sheet=document.getElementById('ekg-critical-css').sheet;",
+  "  if(!sheet||!sheet.insertRule)return;",
+  "  document.addEventListener('load',function(event){",
+  "    var image=event.target;",
+  "    if(image.tagName==='IMG'&&image.hasAttribute('data-home-image'))image.setAttribute('data-home-image-loaded','');",
+  "  },true);",
+  "  sheet.insertRule('img[data-home-image]:not([data-home-image-loaded]){visibility:hidden}',sheet.cssRules.length);",
+  "})();",
+].join("\n");
+
 // Parspack Cloud Storage — DNS preconnect
 const PARSPACK_ENDPOINT =
   process.env.NEXT_PUBLIC_PARSPACK_ENDPOINT ||
@@ -207,18 +222,16 @@ export default function RootLayout({
         <link
           rel="preconnect"
           href={PARSPACK_ENDPOINT}
-          crossOrigin="anonymous"
-        />
-        {/* Second preconnect without crossorigin for non-CORS image fetches */}
-        <link
-          rel="preconnect"
-          href={PARSPACK_ENDPOINT}
         />
         {/* CSS resilience net — see the CRITICAL_CSS / CSS_WATCHDOG note above.
             Inert when the Tailwind bundle loads normally. */}
         <style
           id="ekg-critical-css"
           dangerouslySetInnerHTML={{ __html: CRITICAL_CSS }}
+        />
+        <script
+          id="ekg-home-image-reveal"
+          dangerouslySetInnerHTML={{ __html: HOME_IMAGE_REVEAL }}
         />
         <script
           id="ekg-css-watchdog"
