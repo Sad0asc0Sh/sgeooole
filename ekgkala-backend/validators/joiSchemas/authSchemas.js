@@ -233,6 +233,11 @@ const changePasswordSchema = Joi.object({
              'string.max': 'رمز عبور نباید بیشتر از ۱۲۸ کاراکتر باشد',
          }),
 
+     currentPassword: Joi.string()
+         .max(128)
+         .optional()
+         .allow(''),
+
      email: Joi.string()
          .trim()
          .lowercase()

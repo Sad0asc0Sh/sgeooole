@@ -86,17 +86,22 @@ const generateKey = (type = 'ip') => {
             case 'ip':
                 return ip
 
-            case 'ip+email':
-                const email = req.body?.email || req.body?.username || ''
+            case 'ip+email': {
+                const rawEmail = req.body?.email ?? req.body?.username
+                const email = typeof rawEmail === 'string' ? rawEmail : ''
                 return `${ip}:${email.toLowerCase().substring(0, 50)}`
+            }
 
-            case 'ip+user':
+            case 'ip+user': {
                 const userId = req.user?._id?.toString() || ''
                 return userId ? `${ip}:${userId}` : ip
+            }
 
-            case 'ip+phone':
-                const phone = req.body?.phone || req.body?.mobile || ''
+            case 'ip+phone': {
+                const rawPhone = req.body?.phone ?? req.body?.mobile
+                const phone = typeof rawPhone === 'string' ? rawPhone : ''
                 return `${ip}:${phone.substring(0, 15)}`
+            }
 
             default:
                 return ip

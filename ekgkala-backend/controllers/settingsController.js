@@ -1,4 +1,29 @@
 const Settings = require('../models/Settings')
+const { assertSafeOutboundUrl } = require('../utils/urlSafety')
+const { invalidateConfigCache } = require('../utils/notificationService')
+
+const isValidHttpOrEmptyUrl = (value) => {
+  const trimmed = String(value || '').trim()
+  if (!trimmed) return true
+  return /^https?:\/\//i.test(trimmed)
+}
+
+const maskSettingsSecrets = (settingsObj) => {
+  if (!settingsObj || typeof settingsObj !== 'object') return settingsObj
+  if (settingsObj.aiConfig?.apiKey) settingsObj.aiConfig.apiKey = '****'
+  if (settingsObj.paymentGatewayKeys?.apiKey) settingsObj.paymentGatewayKeys.apiKey = '****'
+  if (settingsObj.paymentGatewayKeys?.apiSecret) settingsObj.paymentGatewayKeys.apiSecret = '****'
+  if (settingsObj.notificationSettings?.smsUsername) settingsObj.notificationSettings.smsUsername = '****'
+  if (settingsObj.notificationSettings?.smsPassword) settingsObj.notificationSettings.smsPassword = '****'
+  if (settingsObj.notificationSettings?.smsApiKey) settingsObj.notificationSettings.smsApiKey = '****'
+  if (settingsObj.kycSettings?.apiKey) settingsObj.kycSettings.apiKey = '****'
+  if (settingsObj.kycSettings?.clientId) settingsObj.kycSettings.clientId = '****'
+  if (settingsObj.paymentConfig?.zarinpal?.merchantId) settingsObj.paymentConfig.zarinpal.merchantId = '****'
+  if (settingsObj.paymentConfig?.sadad?.merchantId) settingsObj.paymentConfig.sadad.merchantId = '****'
+  if (settingsObj.paymentConfig?.sadad?.terminalId) settingsObj.paymentConfig.sadad.terminalId = '****'
+  if (settingsObj.paymentConfig?.sadad?.terminalKey) settingsObj.paymentConfig.sadad.terminalKey = '****'
+  return settingsObj
+}
 
 // دریافت تنظیمات (سند تک‌مثالی). در صورت عدم وجود، ایجاد می‌شود.
 // دریافت تنظیمات عمومی (بدون نیاز به احراز هویت)
@@ -81,23 +106,7 @@ exports.getSettings = async (req, res) => {
     }
 
     // Convert to object to modify response without affecting DB document
-    const settingsObj = settings.toObject();
-
-    // Mask sensitive keys if they exist
-    if (settingsObj.aiConfig?.apiKey) settingsObj.aiConfig.apiKey = '****';
-    if (settingsObj.paymentGatewayKeys?.apiKey) settingsObj.paymentGatewayKeys.apiKey = '****';
-    if (settingsObj.paymentGatewayKeys?.apiSecret) settingsObj.paymentGatewayKeys.apiSecret = '****';
-    if (settingsObj.notificationSettings?.smsUsername) settingsObj.notificationSettings.smsUsername = '****';
-    if (settingsObj.notificationSettings?.smsPassword) settingsObj.notificationSettings.smsPassword = '****';
-    if (settingsObj.notificationSettings?.smsApiKey) settingsObj.notificationSettings.smsApiKey = '****';
-    if (settingsObj.kycSettings?.apiKey) settingsObj.kycSettings.apiKey = '****';
-    if (settingsObj.kycSettings?.clientId) settingsObj.kycSettings.clientId = '****';
-
-    // Mask payment gateway credentials
-    if (settingsObj.paymentConfig?.zarinpal?.merchantId) settingsObj.paymentConfig.zarinpal.merchantId = '****';
-    if (settingsObj.paymentConfig?.sadad?.merchantId) settingsObj.paymentConfig.sadad.merchantId = '****';
-    if (settingsObj.paymentConfig?.sadad?.terminalId) settingsObj.paymentConfig.sadad.terminalId = '****';
-    if (settingsObj.paymentConfig?.sadad?.terminalKey) settingsObj.paymentConfig.sadad.terminalKey = '****';
+    const settingsObj = maskSettingsSecrets(settings.toObject());
 
     res.json({
       success: true,
@@ -108,7 +117,6 @@ exports.getSettings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'خطا در دریافت تنظیمات سایت',
-      error: error.message,
     })
   }
 }
@@ -139,9 +147,17 @@ exports.updateSettings = async (req, res) => {
     // For nested objects (Social Links)
     if (updates.socialLinks) {
       if (!settings.socialLinks) settings.socialLinks = {}
-      if (updates.socialLinks.telegram !== undefined) settings.socialLinks.telegram = updates.socialLinks.telegram
-      if (updates.socialLinks.instagram !== undefined) settings.socialLinks.instagram = updates.socialLinks.instagram
-      if (updates.socialLinks.aparat !== undefined) settings.socialLinks.aparat = updates.socialLinks.aparat
+      for (const field of ['telegram', 'instagram', 'aparat']) {
+        if (updates.socialLinks[field] !== undefined) {
+          if (!isValidHttpOrEmptyUrl(updates.socialLinks[field])) {
+            return res.status(400).json({
+              success: false,
+              message: `آدرس شبکه اجتماعی (${field}) باید با http:// یا https:// شروع شود.`,
+            })
+          }
+          settings.socialLinks[field] = String(updates.socialLinks[field] || '').trim()
+        }
+      }
     }
 
     // For nested objects (Cart Settings)
@@ -174,10 +190,10 @@ exports.updateSettings = async (req, res) => {
 
     // For nested objects (Payment Gateway Keys)
     if (updates.paymentGatewayKeys) {
-      // Only update keys if provided (non-empty)
+      // Only update keys if provided (non-empty and not masked)
       const keys = updates.paymentGatewayKeys
-      if (keys.apiKey) settings.paymentGatewayKeys.apiKey = keys.apiKey
-      if (keys.apiSecret) settings.paymentGatewayKeys.apiSecret = keys.apiSecret
+      if (keys.apiKey && keys.apiKey !== '****') settings.paymentGatewayKeys.apiKey = keys.apiKey
+      if (keys.apiSecret && keys.apiSecret !== '****') settings.paymentGatewayKeys.apiSecret = keys.apiSecret
     }
 
     // For nested objects (KYC Settings)
@@ -194,7 +210,21 @@ exports.updateSettings = async (req, res) => {
     if (updates.aiConfig) {
       const ai = updates.aiConfig
       if (ai.enabled !== undefined) settings.aiConfig.enabled = ai.enabled
-      if (ai.baseUrl) settings.aiConfig.baseUrl = ai.baseUrl
+      if (ai.baseUrl) {
+        const safeAiBaseUrl = await assertSafeOutboundUrl(ai.baseUrl, { allowHttpInDev: true })
+        let prevAiOrigin = ''
+        try {
+          if (settings.aiConfig?.baseUrl) prevAiOrigin = new URL(settings.aiConfig.baseUrl).origin
+        } catch (_) {}
+        const nextAiOrigin = new URL(safeAiBaseUrl).origin
+        if (prevAiOrigin && nextAiOrigin !== prevAiOrigin && (!ai.apiKey || ai.apiKey === '****')) {
+          return res.status(400).json({
+            success: false,
+            message: 'با تغییر دامنه سرویس هوش مصنوعی، وارد کردن مجدد کلید API الزامی است.',
+          })
+        }
+        settings.aiConfig.baseUrl = safeAiBaseUrl
+      }
       if (ai.model) settings.aiConfig.model = ai.model
       if (ai.groqModel) settings.aiConfig.groqModel = ai.groqModel
       if (ai.maxDailyMessages !== undefined) settings.aiConfig.maxDailyMessages = ai.maxDailyMessages
@@ -264,6 +294,15 @@ exports.updateSettings = async (req, res) => {
         // Ignore unfinished rows instead of allowing one blank row to reject
         // the entire settings document. Tracking URLs are optional for local
         // couriers, so an empty template is preserved as an empty string.
+        for (const row of incomingCouriers) {
+          const tpl = String(row?.trackingUrlTemplate || '').trim()
+          if (!isValidHttpOrEmptyUrl(tpl)) {
+            return res.status(400).json({
+              success: false,
+              message: 'الگوی لینک پیگیری پست باید با http:// یا https:// شروع شود.',
+            })
+          }
+        }
         const couriers = incomingCouriers
           .map((courier) => ({
             name: String(courier?.name || '').trim(),
@@ -298,20 +337,23 @@ exports.updateSettings = async (req, res) => {
     }
 
     await settings.save()
+    invalidateConfigCache()
+
+    const maskedResponse = maskSettingsSecrets(settings.toObject())
 
     res.json({
       success: true,
       message: 'تنظیمات سایت با موفقیت به‌روزرسانی شد',
-      data: settings,
+      data: maskedResponse,
     })
   } catch (error) {
     console.error('Error updating settings:', error)
-    res.status(error.name === 'ValidationError' ? 400 : 500).json({
+    const status = error.statusCode || (error.name === 'ValidationError' ? 400 : 500)
+    res.status(status).json({
       success: false,
-      message: error.name === 'ValidationError'
-        ? 'اطلاعات تنظیمات نامعتبر است'
+      message: status === 400
+        ? (error.message || 'اطلاعات تنظیمات نامعتبر است')
         : 'خطا در به‌روزرسانی تنظیمات سایت',
-      error: error.message,
     })
   }
 }

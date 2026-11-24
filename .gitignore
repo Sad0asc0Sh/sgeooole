@@ -155,3 +155,16 @@ vite.config.ts.timestamp-*
 # pnpm
 .pnpm-store/
 _re/
+
+
+# Browser capture profiles & temporary backups/patches
+.pdp-shots/
+**/.pdp-shots/
+**/*chrome-profile*/
+*.backup
+*.backup-*
+*.bak
+*.old
+*.patch
+*.tmp
+!.env.template

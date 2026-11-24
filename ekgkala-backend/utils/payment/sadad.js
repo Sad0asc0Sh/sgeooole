@@ -53,7 +53,10 @@ exports.requestPayment = async ({ amount, callbackUrl, description, orderId, con
       : 'https://sadad.shaparak.ir/VPG/api/v0'
 
     // تبدیل تومان به ریال
-    const amountInRials = amount * 10
+    const amountInRials = Math.round(Number(amount) * 10)
+    if (!Number.isFinite(amountInRials) || amountInRials < 1000) {
+      throw new Error('مبلغ تراکنش باید حداقل ۱۰۰ تومان (۱۰۰۰ ریال) باشد.')
+    }
 
     // تولید امضای دیجیتال
     const signData = generateSignData(terminalId, orderId, amountInRials, terminalKey)
@@ -121,8 +124,15 @@ exports.requestPayment = async ({ amount, callbackUrl, description, orderId, con
  * @param {Object} params.config - تنظیمات درگاه (terminalId, terminalKey)
  * @returns {Object} { success, refId, traceNumber, rrn }
  */
-exports.verifyPayment = async ({ token, orderId, config }) => {
+exports.verifyPayment = async ({ token, orderId, amount, config }) => {
   try {
+    if (!token || typeof token !== 'string') {
+      return {
+        success: false,
+        message: 'توکن تایید پرداخت سداد نامعتبر است',
+      }
+    }
+
     const { terminalId, terminalKey, isSandbox } = config
 
     // تعیین URL بر اساس حالت Sandbox یا Production
@@ -154,10 +164,42 @@ exports.verifyPayment = async ({ token, orderId, config }) => {
       timeout: 15000,
     })
 
-    console.log('🟢 Sadad Verify Response:', response.data)
+    console.log('🟢 Sadad Verify Response:', {
+      ResCode: response.data?.ResCode,
+      OrderId: response.data?.OrderId,
+      SystemTraceNo: response.data?.SystemTraceNo,
+    })
 
     // بررسی وضعیت پاسخ
-    if (response.data.ResCode === 0) {
+    if (Number(response.data?.ResCode) === 0) {
+      if (
+        amount !== undefined &&
+        amount !== null &&
+        response.data?.Amount !== undefined &&
+        response.data?.Amount !== null
+      ) {
+        const expectedAmountInRials = Math.round(Number(amount) * 10)
+        if (Number(response.data.Amount) !== expectedAmountInRials) {
+          return {
+            success: false,
+            message: 'مبلغ تراکنش با مبلغ سفارش مطابقت ندارد',
+          }
+        }
+      }
+
+      if (
+        orderId !== undefined &&
+        orderId !== null &&
+        response.data?.OrderId !== undefined &&
+        response.data?.OrderId !== null &&
+        String(response.data.OrderId) !== String(orderId)
+      ) {
+        return {
+          success: false,
+          message: 'شناسه سفارش با تراکنش مطابقت ندارد',
+        }
+      }
+
       return {
         success: true,
         refId: response.data.SystemTraceNo || response.data.RetrivalRefNo,
@@ -168,8 +210,8 @@ exports.verifyPayment = async ({ token, orderId, config }) => {
     } else {
       return {
         success: false,
-        code: response.data.ResCode,
-        message: getSadadErrorMessage(response.data.ResCode),
+        code: response.data?.ResCode,
+        message: getSadadErrorMessage(response.data?.ResCode),
       }
     }
   } catch (error) {

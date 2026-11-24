@@ -21,6 +21,7 @@ import {
   SoundOutlined,
 } from '@ant-design/icons'
 import api from '../../api'
+import { toSafeAdminHref } from '../../utils/htmlSanitizer'
 
 const { Option } = Select
 
@@ -163,8 +164,8 @@ function AnnouncementsPage() {
       dataIndex: 'link',
       key: 'link',
       render: (text) =>
-        text ? (
-          <a href={text} target="_blank" rel="noopener noreferrer">
+        text && toSafeAdminHref(text) !== '#' ? (
+          <a href={toSafeAdminHref(text)} target="_blank" rel="noopener noreferrer">
             {text.length > 30 ? text.substring(0, 30) + '...' : text}
           </a>
         ) : (

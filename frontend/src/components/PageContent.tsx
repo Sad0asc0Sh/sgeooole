@@ -1,3 +1,5 @@
+import { sanitizeRichHtml } from "@/lib/sanitizeHtml";
+
 interface PageContentProps {
   content: string;
   className?: string;
@@ -20,7 +22,7 @@ export default function PageContent({ content, className = "" }: PageContentProp
         prose-a:text-kala-500 prose-a:no-underline hover:prose-a:underline
         ${className}`}
       dir="rtl"
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(content) }}
     />
   );
 }

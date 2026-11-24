@@ -1,3 +1,5 @@
+import { safeExternalHref, sanitizeRichHtml } from "@/lib/sanitizeHtml";
+
 // Mapping of common icons to SVG paths
 const ICON_PATHS: Record<string, string> = {
     'shopping-cart': '<path d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z" />',
@@ -24,12 +26,12 @@ export function renderContent(text: string): string {
     const html = cleaned
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+        .replace(/\[(.*?)\]\((.*?)\)/g, (_, label, href) => `<a href="${safeExternalHref(href)}">${label}</a>`);
 
     // 2. Block detection
     // If it looks like HTML (contains multiple tags), treat it as a single block
     if (html.includes('<div') || html.includes('<h1') || html.includes('<p ')) {
-        return `<div class="cms-content">${html}</div>`;
+        return `<div class="cms-content">${sanitizeRichHtml(html)}</div>`;
     }
 
     const blocks = html.split(/\n\n+/);
@@ -52,14 +54,14 @@ export function renderContent(text: string): string {
                 content = titleText;
             }
 
-            return `<h2 class="cms-h2">${iconHtml}<span>${content}</span></h2>`;
+            return `<h2 class="cms-h2">${iconHtml}<span>${sanitizeRichHtml(content)}</span></h2>`;
         }
 
         // 2b. ACCORDION
         if (trimmedBlock.startsWith('> ')) {
             const lines = trimmedBlock.split('\n');
-            const question = lines[0].substring(2).trim();
-            const answer = lines.slice(1).join('\n').trim();
+            const question = sanitizeRichHtml(lines[0].substring(2).trim());
+            const answer = sanitizeRichHtml(lines.slice(1).join('\n').trim());
 
             return `
                 <details class="cms-accordion">
@@ -71,20 +73,20 @@ export function renderContent(text: string): string {
 
         // H3
         if (trimmedBlock.startsWith('### ')) {
-            return `<h3 class="cms-h3">${trimmedBlock.substring(4)}</h3>`;
+            return `<h3 class="cms-h3">${sanitizeRichHtml(trimmedBlock.substring(4))}</h3>`;
         }
 
         // List
         if (trimmedBlock.startsWith('^- ')) {
             const items = trimmedBlock.split('\n')
                 .filter(line => line.trim().startsWith('^- '))
-                .map(line => `<li class="cms-li">${line.trim().substring(3)}</li>`)
+                .map(line => `<li class="cms-li">${sanitizeRichHtml(line.trim().substring(3))}</li>`)
                 .join('');
             return `<ul class="cms-ul">${items}</ul>`;
         }
 
         // Paragraph
-        const pContent = trimmedBlock.replace(/\n/g, '<br />');
+        const pContent = sanitizeRichHtml(trimmedBlock).replace(/\n/g, '<br />');
         return `<p class="cms-p">${pContent}</p>`;
     });
 

@@ -94,7 +94,9 @@ const NativeCaptcha = forwardRef<NativeCaptchaRef, NativeCaptchaProps>(
             ) : (
               <div
                 className="w-full h-full flex items-center justify-center scale-95"
-                dangerouslySetInnerHTML={{ __html: svg }}
+                dangerouslySetInnerHTML={{
+                  __html: /<script|on[a-z]+\s*=|javascript:|<foreignObject/i.test(svg) ? "" : svg,
+                }}
               />
             )}
           </div>

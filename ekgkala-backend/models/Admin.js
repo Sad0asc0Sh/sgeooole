@@ -60,11 +60,19 @@ const UserSchema = new mongoose.Schema(
     resetPasswordToken: {
       type: String,
       default: null,
+      select: false,
     },
 
     resetPasswordExpire: {
       type: Date,
       default: null,
+      select: false,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+      default: null,
+      select: false,
     },
 
     // Personal Info
@@ -139,6 +147,9 @@ UserSchema.pre('save', async function (next) {
   try {
     const salt = await bcrypt.genSalt(12)
     this.password = await bcrypt.hash(this.password, salt)
+    if (!this.isNew) {
+      this.passwordChangedAt = new Date(Date.now() - 1000)
+    }
     next()
   } catch (error) {
     next(error)
@@ -154,10 +165,13 @@ UserSchema.methods.comparePassword = async function (candidatePassword) {
   }
 }
 
-// حذف فیلد password در خروجی JSON
+// حذف فیلدهای حساس احراز هویت در خروجی JSON
 UserSchema.methods.toJSON = function () {
   const obj = this.toObject()
   delete obj.password
+  delete obj.resetPasswordToken
+  delete obj.resetPasswordExpire
+  delete obj.passwordChangedAt
   return obj
 }
 

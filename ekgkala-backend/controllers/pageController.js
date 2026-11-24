@@ -1,4 +1,8 @@
 const Page = require('../models/Page')
+const { sanitizeHtmlContent } = require('../utils/htmlSanitizer')
+
+const ALLOWED_PAGE_SORTS = new Set(['createdAt', '-createdAt', 'updatedAt', '-updatedAt', 'title', '-title', 'status', '-status'])
+const ALLOWED_PAGE_STATUSES = new Set(['draft', 'published'])
 
 // ──────────────────────────────────────────────
 // Helper: sanitize slug
@@ -80,21 +84,25 @@ exports.getPageBySlugAdmin = async (req, res) => {
 // ──────────────────────────────────────────────
 exports.getAdminPages = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = {}
 
-    if (req.query.status) {
-      filter.status = req.query.status
+    if (req.query.status && ALLOWED_PAGE_STATUSES.has(String(req.query.status))) {
+      filter.status = String(req.query.status)
     }
 
-    if (req.query.search) {
-      filter.title = { $regex: req.query.search, $options: 'i' }
+    if (req.query.search && typeof req.query.search === 'string') {
+      const escapedSearch = req.query.search.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      if (escapedSearch) {
+        filter.title = { $regex: escapedSearch, $options: 'i' }
+      }
     }
 
-    const sort = req.query.sort || '-createdAt'
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : '-createdAt'
+    const sort = ALLOWED_PAGE_SORTS.has(rawSort) ? rawSort : '-createdAt'
 
     const query = Page.find(filter).sort(sort).skip(skip).limit(limit)
 
@@ -153,11 +161,12 @@ exports.createPage = async (req, res) => {
       })
     }
 
+    const pageStatus = status && ALLOWED_PAGE_STATUSES.has(String(status)) ? String(status) : 'published'
     const page = await Page.create({
       title,
       slug: finalSlug,
-      content: content || '',
-      status: status || 'published',
+      content: sanitizeHtmlContent(content || ''),
+      status: pageStatus,
       meta: meta || {},
     })
 
@@ -226,8 +235,10 @@ exports.updatePage = async (req, res) => {
       page.slug = sanitizedSlug
     }
 
-    if (updates.content !== undefined) page.content = updates.content
-    if (updates.status !== undefined) page.status = updates.status
+    if (updates.content !== undefined) page.content = sanitizeHtmlContent(updates.content || '')
+    if (updates.status !== undefined && ALLOWED_PAGE_STATUSES.has(String(updates.status))) {
+      page.status = String(updates.status)
+    }
 
     // FIX 3: Merge meta fields instead of replacing entirely
     if (updates.meta !== undefined) {

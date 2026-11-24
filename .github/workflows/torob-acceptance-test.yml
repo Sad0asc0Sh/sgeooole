@@ -1,5 +1,8 @@
 name: Torob API V3 Acceptance Test
 
+permissions:
+  contents: read
+
 # این workflow فقط با یک MongoDB موقت و ایزوله (سرویس‌کانتینر GitHub Actions) کار می‌کند.
 # هیچ اتصالی به دیتابیس واقعی/production (چه لوکال روی سرور، چه Atlas) در این فایل وجود ندارد یا نباید اضافه شود.
 

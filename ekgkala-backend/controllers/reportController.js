@@ -228,8 +228,8 @@ exports.getCustomerReports = async (req, res) => {
 // ============================================
 exports.getDeliveredItemsReport = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = Math.min(parseInt(req.query.limit, 10) || 20, 2000)
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const basePipeline = [{ $match: { orderStatus: 'Delivered' } }]
@@ -254,7 +254,7 @@ exports.getDeliveredItemsReport = async (req, res) => {
     }
 
     // جست‌وجو
-    const search = (req.query.search || '').trim()
+    const search = typeof req.query.search === 'string' ? req.query.search.trim().slice(0, 100) : ''
     if (search) {
       const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       const rx = { $regex: escaped, $options: 'i' }

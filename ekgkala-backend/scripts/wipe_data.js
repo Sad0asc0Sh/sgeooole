@@ -1,14 +1,22 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
-// List of collections to clear (Transactional Data)
-// These are the collection names in MongoDB (usually lowercase plural of model name)
+const args = new Set(process.argv.slice(2));
+const executeWipe = args.has('--execute');
+const confirmProduction = args.has('--confirm-production');
+
+if (process.env.NODE_ENV === 'production' && !confirmProduction) {
+    console.error('❌ Refusing to run wipe_data.js in NODE_ENV=production without --confirm-production');
+    process.exit(1);
+}
+
+// List of collections to clear (Transactional Data — NEVER wipe auditlogs)
 const COLLECTIONS_TO_CLEAR = [
     'orders',
     'tickets',
     'carts',
     'notifications',
-    'auditlogs',
     'chathistories',
     'rmas',
     'otps',
@@ -34,9 +42,24 @@ const connectDB = async () => {
 const wipeData = async () => {
     const conn = await connectDB();
 
-    console.log('⚠️  STARTING DATABASE WIPE ⚠️');
+    console.log(executeWipe ? '⚠️  STARTING DATABASE WIPE ⚠️' : '🔍 DRY-RUN MODE (pass --execute to actually delete)');
     console.log('Target Collections:', COLLECTIONS_TO_CLEAR.join(', '));
     console.log('---------------------------------------------------');
+
+    if (!executeWipe) {
+        const collections = await mongoose.connection.db.listCollections().toArray();
+        const collectionNames = collections.map(c => c.name);
+        for (const collectionName of COLLECTIONS_TO_CLEAR) {
+            if (collectionNames.includes(collectionName)) {
+                const count = await mongoose.connection.db.collection(collectionName).countDocuments();
+                console.log(`[DRY-RUN] Would clear ${collectionName}: ${count} documents`);
+            } else {
+                console.log(`[DRY-RUN] Collection ${collectionName} not found, skipping.`);
+            }
+        }
+        await mongoose.connection.close();
+        process.exit(0);
+    }
 
     const readline = require('readline').createInterface({
         input: process.stdin,

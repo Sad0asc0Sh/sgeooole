@@ -22,9 +22,11 @@ const HOST_BUCKET = PARSPACK_ENDPOINT.split(".")[0];
 const isValidConfig = !!(PARSPACK_BUCKET_NAME && PARSPACK_ACCESS_KEY && PARSPACK_SECRET_KEY);
 
 // TLS debug override — set S3_TLS_REJECT_UNAUTHORIZED=0 ONLY for temporary
-// debugging when the endpoint DNS is misconfigured on the host machine.
-// NEVER use in production.
-const S3_REJECT_UNAUTHORIZED = process.env.S3_TLS_REJECT_UNAUTHORIZED !== "0";
+// non-production debugging. Production ALWAYS enforces valid TLS certificates.
+const S3_REJECT_UNAUTHORIZED =
+  process.env.NODE_ENV === "production"
+    ? true
+    : process.env.S3_TLS_REJECT_UNAUTHORIZED !== "0";
 const s3HttpsAgent = new https.Agent({
   rejectUnauthorized: S3_REJECT_UNAUTHORIZED,
   keepAlive: true,
@@ -205,6 +207,24 @@ const cardKeyFor = (objectKey) => { if (/-card\.webp$/i.test(objectKey)) return 
 /** True when the buffer really is WebP (RIFF....WEBP), whatever its name. */
 const isWebpBuffer = (buf) => Buffer.isBuffer(buf) && buf.length > 12 && buf.toString("ascii", 0, 4) === "RIFF" && buf.toString("ascii", 8, 12) === "WEBP";
 
+/** Detect image signature from buffer magic bytes. Returns 'jpeg' | 'png' | 'webp' | 'gif' | null */
+const detectImageSignature = (buf) => {
+  if (!Buffer.isBuffer(buf) || buf.length < 12) return null;
+  // JPEG: FF D8 FF
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "jpeg";
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
+    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
+  ) return "png";
+  // WebP: RIFF....WEBP
+  if (isWebpBuffer(buf)) return "webp";
+  // GIF: GIF87a or GIF89a
+  const hdr6 = buf.toString("ascii", 0, 6);
+  if (hdr6 === "GIF87a" || hdr6 === "GIF89a") return "gif";
+  return null;
+};
+
 const MIME_MAP = {
   ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
   ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif",
@@ -320,6 +340,10 @@ const validateFile = (file) => {
     );
   }
 
+  if (Buffer.isBuffer(file.buffer) && !detectImageSignature(file.buffer)) {
+    throw new Error("محتوای فایل تصویر معتبر نیست");
+  }
+
   return true;
 };
 
@@ -432,9 +456,36 @@ const uploadToParsPack = async (buffer, originalName, options = {}) => {
     throw new Error("[ParspackS3] Upload payload must be a Buffer");
   }
 
+  const detectedSig = detectImageSignature(buffer);
+  if (!detectedSig) {
+    const err = new Error("محتوای فایل تصویر معتبر نیست");
+    err.statusCode = 400;
+    throw err;
+  }
+
   const filename = generateSafeFilename(originalName);
   const ext = path.extname(originalName).toLowerCase();
   const isGif = ext === ".gif";
+
+  if (isGif) {
+    if (detectedSig !== "gif") {
+      const err = new Error("محتوای فایل GIF معتبر نیست");
+      err.statusCode = 400;
+      throw err;
+    }
+    if (sharp) {
+      try {
+        const meta = await sharp(buffer, { animated: true }).metadata();
+        if (!meta || meta.format !== "gif" || !meta.width || !meta.height) {
+          throw new Error("Invalid GIF metadata");
+        }
+      } catch {
+        const err = new Error("فایل GIF معتبر نیست");
+        err.statusCode = 400;
+        throw err;
+      }
+    }
+  }
 
   let uploadBuffer = buffer;
   let uploadFilename = filename;
@@ -442,31 +493,45 @@ const uploadToParsPack = async (buffer, originalName, options = {}) => {
 
   if (shouldConvertToWebp(ext)) {
     const webpBuffer = await convertToWebp(buffer, { maxWidth, maxHeight, quality });
-    if (webpBuffer) {
-      uploadBuffer = webpBuffer;
-      uploadFilename = filename.replace(/\.[^.]+$/, ".webp");
-      contentType = "image/webp";
-      console.log(
-        `[ParspackS3] Converted to WebP: ${buffer.length} → ${webpBuffer.length} bytes (${Math.round((1 - webpBuffer.length / buffer.length) * 100)}% smaller)`
-      );
+    if (!webpBuffer) {
+      const err = new Error("فایل تصویر قابل پردازش یا تبدیل به WebP نیست");
+      err.statusCode = 400;
+      throw err;
     }
+    uploadBuffer = webpBuffer;
+    uploadFilename = filename.replace(/\.[^.]+$/, ".webp");
+    contentType = "image/webp";
+    console.log(
+      `[ParspackS3] Converted to WebP: ${buffer.length} → ${webpBuffer.length} bytes (${Math.round((1 - webpBuffer.length / buffer.length) * 100)}% smaller)`
+    );
   }
 
   const objectKey = `uploads/${uploadFilename}`;
   const mainResult = await putObject(uploadBuffer, objectKey, contentType);
   console.log(`[ParspackS3] Upload succeeded: ${objectKey}`);
 
-  // Card variant: prefer the client-supplied buffer, else derive it from the
-  // final (already-WebP) main buffer. GIFs never get a card variant.
+  // Card variant: prefer the client-supplied buffer when verified via sharp,
+  // else derive it from the final (already-WebP) main buffer. GIFs never get a card variant.
   let cardResult = null;
   const wantsCard = !isGif && contentType === "image/webp" && (generateCard || Buffer.isBuffer(cardBuffer));
   if (wantsCard) {
     const cardObjKey = cardKeyFor(objectKey);
     if (cardObjKey) {
-      // Trust a client-supplied card only when it really is WebP — it is
-      // stored under a `-card.webp` key with an image/webp content type, so
-      // JPEG bytes here would ship a mislabeled, possibly broken, image.
-      let cardBuf = isWebpBuffer(cardBuffer) ? cardBuffer : null;
+      let cardBuf = null;
+      if (isWebpBuffer(cardBuffer)) {
+        if (sharp) {
+          try {
+            const cardMeta = await sharp(cardBuffer).metadata();
+            if (cardMeta && cardMeta.format === "webp" && cardMeta.width > 0 && cardMeta.height > 0) {
+              cardBuf = cardBuffer;
+            }
+          } catch {
+            cardBuf = null;
+          }
+        } else {
+          cardBuf = cardBuffer;
+        }
+      }
       if (!cardBuf) {
         cardBuf = await convertToWebp(uploadBuffer, {
           maxWidth: cardMaxWidth,
@@ -560,7 +625,17 @@ const deleteFromParsPack = async (key) => {
     return;
   }
 
-  const objectKey = key.startsWith("uploads/") ? key : `uploads/${key}`;
+  const rawKey = String(key).trim().replace(/^\/+/, "");
+  if (!rawKey || rawKey.includes("..") || rawKey.includes("\\")) {
+    throw new Error("کلید فایل نامعتبر است");
+  }
+  const normalizedBase = rawKey.startsWith("uploads/")
+    ? rawKey.slice("uploads/".length)
+    : rawKey;
+  if (!/^[A-Za-z0-9._-]+$/.test(normalizedBase)) {
+    throw new Error("کلید فایل نامعتبر است");
+  }
+  const objectKey = `uploads/${normalizedBase}`;
   const cardObjKey = cardKeyFor(objectKey);
 
   if (cardObjKey) {
@@ -602,6 +677,7 @@ module.exports = {
   convertToWebp,
   cardKeyFor,
   isWebpBuffer,
+  detectImageSignature,
   getPublicUrl,
   extractImageInfo,
   validateFile,

@@ -1,4 +1,5 @@
 import PageHeader from '../../components/ui/PageHeader'
+import { toSafeAdminHref } from '../../utils/htmlSanitizer'
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
@@ -613,9 +614,9 @@ function OrderDetail() {
                       <span style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{order.trackingCode}</span>
                     </Descriptions.Item>
                   )}
-                  {order.preparedTrackingUrl ? (
+                  {order.preparedTrackingUrl && toSafeAdminHref(order.preparedTrackingUrl) !== '#' ? (
                     <Descriptions.Item label="لینک رهگیری آنلاین" span={2}>
-                      <a href={order.preparedTrackingUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'monospace' }}>
+                      <a href={toSafeAdminHref(order.preparedTrackingUrl)} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'monospace' }}>
                         {order.preparedTrackingUrl}
                       </a>
                     </Descriptions.Item>
@@ -802,9 +803,9 @@ marginBottom: 8,
                         style={{ fontFamily: 'monospace' }}
                         disabled={!canUpdateStatus}
                         addonAfter={
-                          preparedTrackingUrl ? (
+                          preparedTrackingUrl && toSafeAdminHref(preparedTrackingUrl) !== '#' ? (
                             <Tooltip title="باز کردن مستقیم سایت شرکت پستی">
-                              <a href={preparedTrackingUrl} target="_blank" rel="noopener noreferrer" aria-label="باز کردن مستقیم لینک رهگیری">
+                              <a href={toSafeAdminHref(preparedTrackingUrl)} target="_blank" rel="noopener noreferrer" aria-label="باز کردن مستقیم لینک رهگیری">
                                 <LinkOutlined />
                               </a>
                             </Tooltip>
@@ -824,19 +825,19 @@ marginBottom: 8,
                         style={{ fontFamily: 'monospace' }}
                         disabled={!canUpdateStatus}
                         addonAfter={
-                          preparedTrackingUrl ? (
+                          preparedTrackingUrl && toSafeAdminHref(preparedTrackingUrl) !== '#' ? (
                             <Tooltip title="تست و باز کردن لینک در تب جدید">
-                              <a href={preparedTrackingUrl} target="_blank" rel="noopener noreferrer">
+                              <a href={toSafeAdminHref(preparedTrackingUrl)} target="_blank" rel="noopener noreferrer">
                                 <LinkOutlined />
                               </a>
                             </Tooltip>
                           ) : null
                         }
                       />
-                      {preparedTrackingUrl && (
+                      {preparedTrackingUrl && toSafeAdminHref(preparedTrackingUrl) !== '#' && (
                         <div style={{ fontSize: 12, marginTop: 4, color: '#0f6b33' }}>
                           <CheckCircleOutlined /> پیش‌نمایش لینک: {' '}
-                          <a href={preparedTrackingUrl} target="_blank" rel="noopener noreferrer">
+                          <a href={toSafeAdminHref(preparedTrackingUrl)} target="_blank" rel="noopener noreferrer">
                             باز کردن لینک پیگیری
                           </a>
                         </div>

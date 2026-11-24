@@ -28,8 +28,8 @@ module.exports = {
         // ============================================
         {
             name: 'ekgkala-backend',
-            script: './ekgkala-backend/server.js',
-            cwd: __dirname,
+            script: './server.js',
+            cwd: './ekgkala-backend',
 
             // Fork mode with a single instance: server.js runs in-process
             // scheduled jobs (setInterval), so clustering would duplicate them.

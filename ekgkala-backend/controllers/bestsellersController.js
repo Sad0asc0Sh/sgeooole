@@ -280,7 +280,7 @@ exports.getBestsellers = async (req, res) => {
       // ابتدا از SalesEvent استفاده می‌کنیم (داده‌های واقعی فروش)
       console.log('[BestSellers] ⚠️ ProductScore خالی است، استفاده از fallback')
 
-      const parsedLimit = parseInt(limit) || 8
+      const parsedLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 8))
 
       // مرحله 1: سعی کن از SalesEvent واقعی استفاده کنی
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -405,24 +405,27 @@ exports.getBestsellers = async (req, res) => {
 exports.trackImpression = async (req, res) => {
   try {
     const { product_id, section = 'bestsellers', position = 0 } = req.body
+    const mongoose = require('mongoose')
 
-    if (!product_id) {
+    if (!product_id || !mongoose.Types.ObjectId.isValid(String(product_id))) {
       return res.status(400).json({
         success: false,
-        message: 'product_id الزامی است',
+        message: 'product_id معتبر نیست',
       })
     }
 
     // دریافت session_id از cookie یا header
-    const sessionId = req.cookies?.sessionId || req.headers['x-session-id'] || req.ip
+    const sessionId = String(req.cookies?.sessionId || req.headers['x-session-id'] || req.ip || '').slice(0, 128)
+    const parsedPosition = Math.max(0, Math.min(1000, parseInt(position, 10) || 0))
+    const safeSection = String(section || 'bestsellers').trim().slice(0, 50)
 
     // ثبت ProductView
     const view = new ProductView({
       product_id,
       session_id: sessionId,
       user_id: req.user?._id || null,
-      source: section,
-      position: position,
+      source: safeSection,
+      position: parsedPosition,
       viewed_at: new Date(),
     })
 

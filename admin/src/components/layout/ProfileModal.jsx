@@ -18,7 +18,7 @@ function ProfileModal({ open, onClose }) {
   const [loading, setLoading] = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [previewAvatar, setPreviewAvatar] = useState(null)
-  const { user, setUser } = useAuthStore()
+  const { user, permissions, setUser, setAuth } = useAuthStore()
 
   // مقداردهی اولیه فرم با اطلاعات کاربر
   useEffect(() => {
@@ -43,16 +43,22 @@ function ProfileModal({ open, onClose }) {
       // فقط اگر رمز عبور وارد شده باشد آن را ارسال کن
       if (values.password && values.password.trim() !== '') {
         updateData.password = values.password
+        updateData.currentPassword = values.currentPassword
       }
 
-      const res = await api.put('/auth/me/update', updateData)
+      const res = await api.put('/auth/admin/profile', updateData)
 
       if (res.data.success) {
         message.success('پروفایل با موفقیت به‌روزرسانی شد')
-        // به‌روزرسانی اطلاعات کاربر در store
-        setUser(res.data.data)
-        // پاک کردن فیلد رمز عبور
+        // به‌روزرسانی اطلاعات کاربر و توکن در store
+        if (res.data.token) {
+          setAuth(res.data.data, res.data.token, permissions)
+        } else {
+          setUser(res.data.data)
+        }
+        // پاک کردن فیلدهای رمز عبور
         form.setFieldsValue({
+          currentPassword: '',
           password: '',
           confirmPassword: '',
         })
@@ -192,16 +198,35 @@ function ProfileModal({ open, onClose }) {
         </Form.Item>
 
         <Form.Item
+          name="currentPassword"
+          label="رمز عبور فعلی (در صورت تغییر رمز)"
+          dependencies={['password']}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const password = getFieldValue('password')
+                if (!password || !password.trim() || (value && value.length > 0)) {
+                  return Promise.resolve()
+                }
+                return Promise.reject(new Error('برای تغییر رمز عبور، رمز فعلی الزامی است'))
+              },
+            }),
+          ]}
+        >
+          <Input.Password placeholder="رمز عبور فعلی" autoComplete="current-password" />
+        </Form.Item>
+
+        <Form.Item
           name="password"
           label="رمز عبور جدید (اختیاری)"
           rules={[
             {
-              min: 6,
-              message: 'رمز عبور باید حداقل ۶ کاراکتر باشد',
+              min: 8,
+              message: 'رمز عبور باید حداقل ۸ کاراکتر باشد',
             },
           ]}
         >
-          <Input.Password placeholder="اگر می‌خواهید رمز عبور را تغییر دهید، وارد کنید" />
+          <Input.Password placeholder="حداقل ۸ کاراکتر" autoComplete="new-password" />
         </Form.Item>
 
         <Form.Item

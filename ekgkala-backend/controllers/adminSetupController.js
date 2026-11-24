@@ -11,6 +11,28 @@ const crypto = require('crypto')
 const Admin = require('../models/Admin')
 const Settings = require('../models/Settings')
 const { logSecurityEvent, SECURITY_EVENTS } = require('../utils/auditLogger')
+const { getClientIp } = require('../utils/clientIp')
+
+const PLACEHOLDER_SETUP_KEYS = new Set(['change_me', 'change_this', 'changeme', 'secret', 'default'])
+
+const verifySetupKey = (providedKey) => {
+    const requiredSetupKey = typeof process.env.ADMIN_SETUP_KEY === 'string'
+        ? process.env.ADMIN_SETUP_KEY.trim()
+        : ''
+    if (
+        !requiredSetupKey ||
+        requiredSetupKey.length < 24 ||
+        PLACEHOLDER_SETUP_KEYS.has(requiredSetupKey.toLowerCase())
+    ) {
+        return { configured: false, valid: false }
+    }
+    if (typeof providedKey !== 'string' || !providedKey.trim()) {
+        return { configured: true, valid: false }
+    }
+    const providedHash = crypto.createHash('sha256').update(providedKey.trim()).digest()
+    const requiredHash = crypto.createHash('sha256').update(requiredSetupKey).digest()
+    return { configured: true, valid: crypto.timingSafeEqual(providedHash, requiredHash) }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // 🔒 SECURITY HELPERS
@@ -81,11 +103,7 @@ const validatePasswordStrength = (password) => {
  * @returns {string}
  */
 const getRealIP = (req) => {
-    return req.headers['x-forwarded-for']?.split(',')[0] ||
-        req.headers['x-real-ip'] ||
-        req.connection?.remoteAddress ||
-        req.socket?.remoteAddress ||
-        'unknown'
+    return getClientIp(req)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -146,12 +164,19 @@ const setupInitialAdmin = async (req, res) => {
 
     try {
         // ═══════════════════════════════════════════════════════════════════════
-        // 1. بررسی Setup Key (کلید امنیتی از .env)
+        // 1. بررسی Setup Key (کلید امنیتی از .env - fail closed)
         // ═══════════════════════════════════════════════════════════════════════
-        const requiredSetupKey = process.env.ADMIN_SETUP_KEY
         const providedSetupKey = req.body.setupKey || req.headers['x-setup-key']
+        const keyCheck = verifySetupKey(providedSetupKey)
 
-        if (requiredSetupKey && providedSetupKey !== requiredSetupKey) {
+        if (!keyCheck.configured) {
+            return res.status(503).json({
+                success: false,
+                message: 'کلید امنیتی ADMIN_SETUP_KEY روی سرور پیکربندی نشده است'
+            })
+        }
+
+        if (!keyCheck.valid) {
             // Log security event
             try {
                 await logSecurityEvent({
@@ -378,9 +403,15 @@ const setUserRole = async (req, res) => {
     try {
         const { setupKey, email, role } = req.body || {}
 
-        // 1. بررسی setupKey
-        const requiredSetupKey = process.env.ADMIN_SETUP_KEY
-        if (!requiredSetupKey || setupKey !== requiredSetupKey) {
+        // 1. بررسی setupKey (fail closed)
+        const keyCheck = verifySetupKey(setupKey)
+        if (!keyCheck.configured) {
+            return res.status(503).json({
+                success: false,
+                message: 'کلید امنیتی ADMIN_SETUP_KEY روی سرور پیکربندی نشده است'
+            })
+        }
+        if (!keyCheck.valid) {
             return res.status(403).json({
                 success: false,
                 message: 'کلید امنیتی نامعتبر است'

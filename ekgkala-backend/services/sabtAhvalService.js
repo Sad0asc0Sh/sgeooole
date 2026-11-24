@@ -33,8 +33,10 @@ class SabtAhvalService {
      */
     async inquiryIdentity(nationalCode, birthDate) {
         const config = await this.getConfig()
+        const isProduction = process.env.NODE_ENV === 'production'
+        const maskedNid = nationalCode ? `${String(nationalCode).slice(0, 3)}****${String(nationalCode).slice(-2)}` : 'n/a'
 
-        console.log(`[SABT-AHVAL] Inquiry (${config.provider}): NationalCode=${nationalCode}, BirthDate=${birthDate}`)
+        console.log(`[SABT-AHVAL] Inquiry (${config.provider}): NationalCode=${maskedNid}`)
 
         // 1. بررسی اولیه الگوریتمی
         if (!isValidNationalCode(nationalCode)) {
@@ -46,10 +48,14 @@ class SabtAhvalService {
 
         // اگر سرویس غیرفعال شده باشد
         if (!config.isActive) {
-            // تصمیم با شماست: آیا در صورت غیرفعال بودن، همه را تایید کنیم یا رد؟
-            // معمولاً اگر احراز هویت اجباری است، باید رد کنیم یا به حالت Mock برگردیم.
-            // اینجا فرض می‌کنیم به حالت Mock برمی‌گردد برای جلوگیری از قفل شدن سیستم.
-            console.warn('[SABT-AHVAL] Service is disabled in settings, falling back to Mock.')
+            if (isProduction) {
+                console.warn('[SABT-AHVAL] Service is disabled in production; rejecting KYC check (fail-closed).')
+                return {
+                    isValid: false,
+                    message: 'سرویس استعلام هویت در حال حاضر غیرفعال است.',
+                }
+            }
+            console.warn('[SABT-AHVAL] Service is disabled in settings, falling back to Mock (non-prod).')
             return this.mockInquiry(nationalCode, birthDate)
         }
 
@@ -59,6 +65,13 @@ class SabtAhvalService {
         } else if (config.provider === 'jibit') {
             return this.callJibit(nationalCode, birthDate, config)
         } else {
+            if (isProduction) {
+                console.warn('[SABT-AHVAL] Mock KYC provider is blocked in production (fail-closed).')
+                return {
+                    isValid: false,
+                    message: 'سرویس استعلام هویت ثبت احوال پیکربندی نشده است.',
+                }
+            }
             return this.mockInquiry(nationalCode, birthDate)
         }
     }

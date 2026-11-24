@@ -1,5 +1,6 @@
 const Review = require('../models/Review')
 const Product = require('../models/Product')
+const { sanitizeHtmlContent } = require('../utils/htmlSanitizer')
 
 /**
  * @desc    Get reviews for a product (Public)
@@ -9,8 +10,8 @@ const Product = require('../models/Product')
 exports.getProductReviews = async (req, res) => {
   try {
     const { productId } = req.params
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 10
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit, 10) || 10))
     const skip = (page - 1) * limit
 
     const reviews = await Review.find({ product: productId, isApproved: true })
@@ -67,25 +68,27 @@ exports.addReview = async (req, res) => {
     }
 
     // Validate input
-    if (!rating || isNaN(Number(rating))) {
+    const numericRating = Number(rating)
+    if (!Number.isFinite(numericRating) || numericRating < 1 || numericRating > 5) {
       return res.status(400).json({
         success: false,
-        message: 'Rating must be a number',
+        message: 'Rating must be between 1 and 5',
       })
     }
 
-    if (!comment || !comment.trim()) {
+    if (!comment || typeof comment !== 'string' || !comment.trim()) {
       return res.status(400).json({
         success: false,
         message: 'Comment is required',
       })
     }
 
+    const cleanComment = sanitizeHtmlContent(comment.trim().slice(0, 2000))
     const review = await Review.create({
       user: req.user._id,
       product: productId,
-      rating: Number(rating),
-      comment,
+      rating: numericRating,
+      comment: cleanComment,
       isApproved: false, // Default to pending
     })
 
@@ -126,8 +129,8 @@ exports.addReview = async (req, res) => {
  */
 exports.getAllReviewsAsAdmin = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     // فیلتر بر اساس isApproved
@@ -287,7 +290,7 @@ exports.postAdminReply = async (req, res) => {
 
     // به‌روزرسانی پاسخ ادمین
     review.adminReply = {
-      message: replyMessage.trim(),
+      message: sanitizeHtmlContent(String(replyMessage).trim().slice(0, 2000)),
       repliedAt: Date.now(),
     }
 
@@ -322,8 +325,8 @@ exports.getUserReviews = async (req, res) => {
       })
     }
 
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const total = await Review.countDocuments({ user: req.user._id })

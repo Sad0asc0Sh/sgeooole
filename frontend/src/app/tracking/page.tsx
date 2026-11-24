@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Package, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { safeExternalHref } from "@/lib/sanitizeHtml";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/lib/api";
 
@@ -205,9 +206,9 @@ export default function TrackingPage() {
                                             {result.trackingCode}
                                         </p>
                                     )}
-                                    {result.preparedTrackingUrl && result.preparedTrackingUrl.trim().length > 0 ? (
+                                    {result.preparedTrackingUrl && safeExternalHref(result.preparedTrackingUrl) !== "#" ? (
                                         <a
-                                            href={result.preparedTrackingUrl}
+                                            href={safeExternalHref(result.preparedTrackingUrl)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="mt-3 flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-all text-sm font-bold"

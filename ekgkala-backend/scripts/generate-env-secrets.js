@@ -23,6 +23,11 @@ const adminSetupKey = crypto.randomBytes(32).toString('hex')
 console.log('ADMIN_SETUP_KEY=' + adminSetupKey)
 console.log()
 
+// Competitive Pricing Sync Secret (32 bytes = 64 hex chars)
+const pricingSecret = crypto.randomBytes(32).toString('hex')
+console.log('SGEOOOLE_PRICING_SECRET=' + pricingSecret)
+console.log()
+
 // MongoDB Password suggestion (16 bytes = 32 chars, alphanumeric)
 const dbPassword = crypto.randomBytes(16).toString('base64').replace(/[^a-zA-Z0-9]/g, '').substring(0, 24)
 console.log('# Suggested MongoDB Password (use in MONGODB_URI):')

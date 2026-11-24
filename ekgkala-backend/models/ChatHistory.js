@@ -74,6 +74,11 @@ const chatHistorySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.Mixed,
         default: null,
     },
+    expiresAt: {
+        type: Date,
+        default: null,
+        index: { expireAfterSeconds: 0 },
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('ChatHistory', chatHistorySchema);

@@ -2,6 +2,36 @@ const AiProvider = require('../models/AiProvider')
 const axios = require('axios')
 const dnsAgent = require('../utils/dnsAgent')
 const { getProviderRuntimeHealth } = require('../utils/groqService')
+const { assertSafeOutboundUrl } = require('../utils/urlSafety')
+
+const FORBIDDEN_HEADER_NAMES = new Set([
+  'host',
+  'authorization',
+  'cookie',
+  'proxy-authorization',
+  'content-length',
+  'transfer-encoding',
+  'connection',
+  'upgrade',
+  'x-forwarded-for',
+  'forwarded',
+])
+
+const sanitizeCustomHeaders = (rawHeaders) => {
+  if (!rawHeaders || typeof rawHeaders !== 'object' || Array.isArray(rawHeaders)) {
+    return {}
+  }
+  const clean = {}
+  for (const [k, v] of Object.entries(rawHeaders)) {
+    const key = String(k || '').trim()
+    if (!key || FORBIDDEN_HEADER_NAMES.has(key.toLowerCase())) continue
+    if (/[\r\n]/.test(key)) continue
+    const val = String(v ?? '').trim()
+    if (/[\r\n]/.test(val)) continue
+    clean[key] = val.slice(0, 512)
+  }
+  return clean
+}
 
 exports.getRuntimeHealth = async (req, res) => {
   res.json({ success: true, data: getProviderRuntimeHealth() })
@@ -33,15 +63,17 @@ exports.getById = async (req, res) => {
 exports.create = async (req, res) => {
   try {
     const { name, baseUrl, apiKey, model, isActive, isDefault, priority, maxTokens, temperature, description, headers } = req.body
+    const safeBaseUrl = await assertSafeOutboundUrl(baseUrl, { allowHttpInDev: true })
+    const safeHeaders = sanitizeCustomHeaders(headers)
     const provider = new AiProvider({
-      name, baseUrl, apiKey, model,
+      name, baseUrl: safeBaseUrl, apiKey, model,
       isActive: isActive !== undefined ? isActive : true,
       isDefault: isDefault || false,
       priority: priority || 100,
       maxTokens: maxTokens || 500,
       temperature: temperature !== undefined ? temperature : 0.7,
       description: description || '',
-      headers: headers || {},
+      headers: safeHeaders,
     })
     await provider.save()
     const result = provider.toObject()
@@ -49,6 +81,9 @@ exports.create = async (req, res) => {
     res.status(201).json({ success: true, data: result, message: 'ارائه‌دهنده با موفقیت ایجاد شد' })
   } catch (error) {
     console.error('Error creating AI provider:', error)
+    if (error.statusCode === 400) {
+      return res.status(400).json({ success: false, message: error.message })
+    }
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(e => e.message).join(', ')
       return res.status(400).json({ success: false, message: messages })
@@ -64,8 +99,22 @@ exports.update = async (req, res) => {
       return res.status(404).json({ success: false, message: 'ارائه‌دهنده یافت نشد' })
     }
     const { name, baseUrl, apiKey, model, isActive, isDefault, priority, maxTokens, temperature, description, headers } = req.body
+    if (baseUrl !== undefined) {
+      const safeBaseUrl = await assertSafeOutboundUrl(baseUrl, { allowHttpInDev: true })
+      let prevOrigin = ''
+      try {
+        prevOrigin = new URL(provider.baseUrl).origin
+      } catch (_) {}
+      const nextOrigin = new URL(safeBaseUrl).origin
+      if (prevOrigin && nextOrigin !== prevOrigin && (!apiKey || apiKey === '****')) {
+        return res.status(400).json({
+          success: false,
+          message: 'با تغییر دامنه ارائه‌دهنده، وارد کردن مجدد کلید API الزامی است.',
+        })
+      }
+      provider.baseUrl = safeBaseUrl
+    }
     if (name !== undefined) provider.name = name
-    if (baseUrl !== undefined) provider.baseUrl = baseUrl
     if (apiKey && apiKey !== '****') provider.apiKey = apiKey
     if (model !== undefined) provider.model = model
     if (isActive !== undefined) provider.isActive = isActive
@@ -74,13 +123,16 @@ exports.update = async (req, res) => {
     if (maxTokens !== undefined) provider.maxTokens = maxTokens
     if (temperature !== undefined) provider.temperature = temperature
     if (description !== undefined) provider.description = description
-    if (headers !== undefined) provider.headers = headers
+    if (headers !== undefined) provider.headers = sanitizeCustomHeaders(headers)
     await provider.save()
     const result = provider.toObject()
     delete result.apiKey
     res.json({ success: true, data: result, message: 'ارائه‌دهنده با موفقیت به‌روزرسانی شد' })
   } catch (error) {
     console.error('Error updating AI provider:', error)
+    if (error.statusCode === 400) {
+      return res.status(400).json({ success: false, message: error.message })
+    }
     if (error.name === 'ValidationError') {
       const messages = Object.values(error.errors).map(e => e.message).join(', ')
       return res.status(400).json({ success: false, message: messages })
@@ -145,7 +197,9 @@ exports.testConnection = async (req, res) => {
     if (!baseUrl || !apiKey || !model) {
       return res.status(400).json({ success: false, message: 'آدرس پایه، کلید API و مدل الزامی هستند' })
     }
-    const url = baseUrl.replace(/\/$/, '') + '/chat/completions'
+    const safeBaseUrl = await assertSafeOutboundUrl(baseUrl, { allowHttpInDev: true })
+    const safeHeaders = sanitizeCustomHeaders(headers)
+    const url = safeBaseUrl.replace(/\/$/, '') + '/chat/completions'
     const response = await axios.post(
       url,
       {
@@ -157,9 +211,9 @@ exports.testConnection = async (req, res) => {
       },
       {
         headers: {
+          ...safeHeaders,
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          ...headers,
         },
         timeout: 15000,
         httpsAgent: dnsAgent,

@@ -26,7 +26,7 @@ const releaseExpiredUnpaidReservations = async () => {
       stockDeducted: true,
       createdAt: { $lte: cutoff },
     })
-      .select('_id orderCode orderItems')
+      .select('_id orderCode orderItems couponCode')
       .lean()
 
     for (const staleOrder of staleOrders) {
@@ -47,6 +47,18 @@ const releaseExpiredUnpaidReservations = async () => {
         if (!claimed) continue
 
         await inventoryService.releaseStock(staleOrder.orderItems)
+
+        if (staleOrder.couponCode) {
+          try {
+            const Coupon = require('../models/Coupon')
+            await Coupon.findOneAndUpdate(
+              { code: staleOrder.couponCode, usageCount: { $gt: 0 } },
+              { $inc: { usageCount: -1 } },
+            )
+          } catch (couponErr) {
+            console.error('[STOCK-RELEASE] Error releasing coupon usage:', couponErr.message)
+          }
+        }
 
         try {
           const { logAction } = require('../utils/auditLogger')

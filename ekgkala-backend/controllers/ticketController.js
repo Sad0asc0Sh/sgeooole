@@ -1,20 +1,28 @@
 const Ticket = require('../models/Ticket')
+const Order = require('../models/Order')
+const mongoose = require('mongoose')
+const { sanitizeHtmlContent } = require('../utils/htmlSanitizer')
+
+const ALLOWED_TICKET_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent'])
+const ALLOWED_TICKET_STATUSES = new Set(['open', 'pending', 'closed'])
 
 // Helper: ساخت فیلتر براساس کوئری برای ادمین
 const buildTicketFilter = (query) => {
   const filter = {}
 
-  if (query.status) {
-    filter.status = query.status
+  if (query.status && ALLOWED_TICKET_STATUSES.has(String(query.status))) {
+    filter.status = String(query.status)
   }
 
-  if (query.priority) {
-    filter.priority = query.priority
+  if (query.priority && ALLOWED_TICKET_PRIORITIES.has(String(query.priority))) {
+    filter.priority = String(query.priority)
   }
 
-  if (query.search) {
-    // جستجو روی موضوع (و در آینده می‌توان ایمیل را هم اضافه کرد)
-    filter.subject = { $regex: query.search, $options: 'i' }
+  if (query.search && typeof query.search === 'string') {
+    const escaped = query.search.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (escaped) {
+      filter.subject = { $regex: escaped, $options: 'i' }
+    }
   }
 
   return filter
@@ -23,14 +31,17 @@ const buildTicketFilter = (query) => {
 // --- روت‌های ادمین ---
 
 // لیست همه تیکت‌ها برای ادمین
+const ALLOWED_TICKET_SORTS = new Set(['createdAt', '-createdAt', 'updatedAt', '-updatedAt', 'status', '-status', 'priority', '-priority'])
+
 exports.getAllTicketsAsAdmin = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = buildTicketFilter(req.query)
-    const sort = req.query.sort || '-createdAt'
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : '-createdAt'
+    const sort = ALLOWED_TICKET_SORTS.has(rawSort) ? rawSort : '-createdAt'
 
     const query = Ticket.find(filter)
       .populate('user', 'name email')
@@ -144,7 +155,7 @@ exports.postReplyAsAdmin = async (req, res) => {
 
     ticket.messages.push({
       sender: req.user._id,
-      message: message.trim(),
+      message: sanitizeHtmlContent(String(message).trim().slice(0, 5000)),
       isAdminReply: true,
     })
 
@@ -214,22 +225,42 @@ exports.createTicket = async (req, res) => {
   try {
     const { subject, message, order, priority } = req.body || {}
 
-    if (!subject || !message) {
+    if (!subject || typeof subject !== 'string' || !subject.trim() || !message || typeof message !== 'string' || !message.trim()) {
       return res.status(400).json({
         success: false,
         message: 'موضوع و متن پیام الزامی است',
       })
     }
 
+    let verifiedOrderId
+    if (order !== undefined && order !== null && String(order).trim() !== '') {
+      const rawOrderId = String(order).trim()
+      if (!mongoose.Types.ObjectId.isValid(rawOrderId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'شناسه سفارش نامعتبر است',
+        })
+      }
+      const ownsOrder = await Order.exists({ _id: rawOrderId, user: req.user._id })
+      if (!ownsOrder) {
+        return res.status(403).json({
+          success: false,
+          message: 'شما اجازه ثبت تیکت برای این سفارش را ندارید',
+        })
+      }
+      verifiedOrderId = rawOrderId
+    }
+
+    const safePriority = priority && ALLOWED_TICKET_PRIORITIES.has(String(priority)) ? String(priority) : 'medium'
     const ticket = await Ticket.create({
       user: req.user._id,
-      order: order || undefined,
-      subject,
-      priority: priority || 'medium',
+      order: verifiedOrderId,
+      subject: sanitizeHtmlContent(subject.trim().slice(0, 200)),
+      priority: safePriority,
       messages: [
         {
           sender: req.user._id,
-          message,
+          message: sanitizeHtmlContent(message.trim().slice(0, 5000)),
           isAdminReply: false,
         },
       ],
@@ -253,21 +284,22 @@ exports.createTicket = async (req, res) => {
 // لیست تیکت‌های کاربر جاری
 exports.getMyTickets = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = { user: req.user._id }
 
     if (req.query.status) {
-      filter.status = req.query.status
+      filter.status = String(req.query.status)
     }
 
     if (req.query.priority) {
-      filter.priority = req.query.priority
+      filter.priority = String(req.query.priority)
     }
 
-    const sort = req.query.sort || '-updatedAt'
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : '-updatedAt'
+    const sort = ALLOWED_TICKET_SORTS.has(rawSort) ? rawSort : '-updatedAt'
 
     const query = Ticket.find(filter).sort(sort).skip(skip).limit(limit)
 
@@ -364,7 +396,7 @@ exports.postReplyAsUser = async (req, res) => {
 
     ticket.messages.push({
       sender: req.user._id,
-      message: message.trim(),
+      message: sanitizeHtmlContent(String(message).trim().slice(0, 5000)),
       isAdminReply: false,
     })
 

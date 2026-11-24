@@ -15,6 +15,8 @@
  */
 
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
     turbopack: {
         root: __dirname,
@@ -51,16 +53,20 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'www.ekgkala.ir',
             },
-            {
-                protocol: 'http',
-                hostname: 'localhost',
-            port: '5000',
-            },
-            {
-                protocol: 'http',
-                hostname: '127.0.0.1',
-            port: '5000',
-            },
+            ...(isProd
+                ? []
+                : [
+                    {
+                        protocol: 'http',
+                        hostname: 'localhost',
+                        port: '5000',
+                    },
+                    {
+                        protocol: 'http',
+                        hostname: '127.0.0.1',
+                        port: '5000',
+                    },
+                ]),
         ],
         // Direct S3 delivery (unoptimized) — variants are pre-built on ParsPack
         // (This .js file is the only config Next loads; a .ts sibling is ignored.)
@@ -88,6 +94,9 @@ const nextConfig = {
                     { key: 'X-Content-Type-Options', value: 'nosniff' },
                     { key: 'X-XSS-Protection', value: '1; mode=block' },
                     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+                    ...(isProd
+                        ? [{ key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' }]
+                        : []),
                     {
                         key: 'Permissions-Policy',
                         value: [
@@ -104,7 +113,7 @@ const nextConfig = {
                         key: 'Content-Security-Policy',
                         value: [
                             "default-src 'self'",
-                            "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://ekgkala.ir https://accounts.google.com https://apis.google.com",
+                            `script-src 'self' ${isProd ? '' : "'unsafe-eval' "}'unsafe-inline' https://ekgkala.ir https://accounts.google.com https://apis.google.com`.replace(/\s+/g, ' '),
                             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com",
                             "font-src 'self' https://fonts.gstatic.com data:",
                             "img-src 'self' data: https: blob:",
@@ -114,7 +123,7 @@ const nextConfig = {
                             "form-action 'self'",
                             "frame-src 'self' https://accounts.google.com",
                             "object-src 'none'",
-                            'upgrade-insecure-requests',
+                            ...(isProd ? ['upgrade-insecure-requests'] : []),
                         ].join('; '),
                     },
                 ],

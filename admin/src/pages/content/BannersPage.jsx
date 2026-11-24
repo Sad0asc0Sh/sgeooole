@@ -1,4 +1,5 @@
 import PageHeader from '../../components/ui/PageHeader'
+import { toSafeAdminHref } from '../../utils/htmlSanitizer'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Card,
@@ -1701,9 +1702,9 @@ function BannersPage() {
       width: 72,
       align: 'center',
       render: (link) =>
-        link ? (
+        link && toSafeAdminHref(link) !== '#' ? (
           <Tooltip title={link}>
-            <a href={link} target="_blank" rel="noreferrer" aria-label="باز کردن لینک">
+            <a href={toSafeAdminHref(link)} target="_blank" rel="noopener noreferrer" aria-label="باز کردن لینک">
               <LinkOutlined style={{ fontSize: 17 }} />
             </a>
           </Tooltip>

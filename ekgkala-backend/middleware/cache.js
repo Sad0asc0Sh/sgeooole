@@ -31,9 +31,10 @@ let cacheGeneration = 0
 // ============================================
 const buildCacheKey = (req) => {
   const baseKey = req.originalUrl || req.url
-  // Include user role for personalized caching
-  const role = req.user?.role || 'guest'
-  return `${role}:${baseKey}`
+  // Include user role and userId for isolated caching
+  const role = req.userType === 'customer' ? 'user' : (req.user?.role || 'guest')
+  const userId = req.user?._id?.toString() || 'anon'
+  return `${role}:${userId}:${baseKey}`
 }
 
 // ============================================
@@ -76,7 +77,13 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
       return next()
     }
 
-    const key = varyByUser ? buildCacheKey(req) : (req.originalUrl || req.url)
+    const scopePrefix =
+      req.user &&
+      req.userType !== 'customer' &&
+      ['admin', 'manager', 'superadmin', 'editor', 'support'].includes(req.user.role)
+        ? 'admin:'
+        : 'public:'
+    const key = varyByUser ? buildCacheKey(req) : `${scopePrefix}${req.originalUrl || req.url}`
     const cached = cache.get(key)
 
     if (cached && (cached.expiresAt === undefined || cached.expiresAt > Date.now())) {
@@ -141,7 +148,7 @@ const cacheMiddleware = (ttlSeconds = CACHE_TTL.MEDIUM, options = {}) => {
 // ============================================
 const clearCacheByKey = (key) => {
   cacheGeneration++
-  return cache.del(key)
+  return cache.del([key, `public:${key}`, `admin:${key}`])
 }
 
 // کش Redis پرفروش‌ترین‌ها از روی داده‌ی محصولات ساخته می‌شود؛ با هر باطل‌سازی کشِ

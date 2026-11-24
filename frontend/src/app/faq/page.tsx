@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import FaqClient from "./FaqClient";
 import { defaultFAQs } from "./defaultFaqs";
+import { safeJsonLd } from "@/lib/sanitizeHtml";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://ekgkala.ir").replace(/\/$/, "");
 const API_BASE = (process.env.INTERNAL_API_URL || "http://localhost:5000/api").replace(/\/$/, "");
@@ -76,7 +77,7 @@ export default async function FAQPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(faqSchema) }}
       />
       <FaqClient />
     </>

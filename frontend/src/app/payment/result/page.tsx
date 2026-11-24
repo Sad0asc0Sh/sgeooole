@@ -4,6 +4,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import { CheckCircle, XCircle, Loader2, ArrowRight, CreditCard } from "lucide-react";
 import Link from "next/link";
+import { safePaymentRedirectUrl } from "@/lib/sanitizeHtml";
 
 function PaymentResultContent() {
   const searchParams = useSearchParams();
@@ -32,8 +33,9 @@ function PaymentResultContent() {
     try {
       setRetrying(true);
       const res = await api.post(`/orders/${orderIdToRetry}/pay`);
-      if (res.data.success && res.data.data.paymentUrl) {
-        window.location.href = res.data.data.paymentUrl;
+      const safePayUrl = safePaymentRedirectUrl(res.data?.data?.paymentUrl);
+      if (res.data.success && safePayUrl) {
+        window.location.href = safePayUrl;
       } else {
         setError(res.data.message || "خطا در ایجاد درخواست پرداخت مجدد");
       }

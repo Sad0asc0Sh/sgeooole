@@ -1,18 +1,45 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Form, Input, Button, message } from 'antd'
-import { MailOutlined } from '@ant-design/icons'
+import { MailOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons'
 import AuthShell from '../components/auth/AuthShell'
 import api from '../api'
+import { sanitizeAdminHtml } from '../utils/htmlSanitizer'
 
 function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
+  const [captchaId, setCaptchaId] = useState('')
+  const [captchaSvg, setCaptchaSvg] = useState('')
+  const [captchaText, setCaptchaText] = useState('')
+
+  const loadCaptcha = useCallback(async () => {
+    try {
+      const res = await api.get(`/auth/captcha?_t=${Date.now()}`)
+      if (res.data?.success && res.data?.captchaId && res.data?.svg) {
+        setCaptchaId(res.data.captchaId)
+        setCaptchaSvg(sanitizeAdminHtml(res.data.svg))
+        setCaptchaText('')
+      }
+    } catch (err) {
+      console.error('Failed to load captcha:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadCaptcha()
+  }, [loadCaptcha])
 
   const onFinish = async (values) => {
+    if (!captchaId || captchaText.trim().length < 5) {
+      message.error('لطفاً کد امنیتی ۵ رقمی را وارد کنید')
+      return
+    }
     setLoading(true)
     try {
       const res = await api.post('/auth/admin/forgot-password', {
         email: values.email,
+        captchaId,
+        captchaText: captchaText.trim(),
       })
 
       message.success(
@@ -25,6 +52,7 @@ function ForgotPasswordPage() {
         err?.response?.data?.message || 'خطا در ارسال ایمیل بازنشانی'
       message.error(errorMsg)
       console.error('Forgot password error:', err)
+      loadCaptcha()
     } finally {
       setLoading(false)
     }
@@ -68,6 +96,37 @@ function ForgotPasswordPage() {
               placeholder="you@example.com"
               dir="ltr"
               style={{ textAlign: 'left' }}
+            />
+          </Form.Item>
+
+          <Form.Item label="کد امنیتی">
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+              <div
+                style={{
+                  flex: 1,
+                  height: 42,
+                  border: '1px solid #d9d9d9',
+                  borderRadius: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#fafafa',
+                  overflow: 'hidden',
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: /<script|on[a-z]+\s*=|javascript:|<foreignObject/i.test(captchaSvg) ? '' : captchaSvg,
+                }}
+              />
+              <Button icon={<ReloadOutlined />} onClick={loadCaptcha} title="کد جدید" />
+            </div>
+            <Input
+              prefix={<SafetyOutlined />}
+              placeholder="کد ۵ رقمی را وارد کنید"
+              value={captchaText}
+              onChange={(e) => setCaptchaText(e.target.value)}
+              maxLength={6}
+              dir="ltr"
+              style={{ textAlign: 'center', letterSpacing: 4 }}
             />
           </Form.Item>
 

@@ -1,25 +1,35 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { authService } from "@/services/authService";
 import Link from "next/link";
 import { Mail, ArrowLeft } from "lucide-react";
+import NativeCaptcha, { NativeCaptchaRef } from "@/components/auth/NativeCaptcha";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [captchaId, setCaptchaId] = useState("");
+  const [captchaText, setCaptchaText] = useState("");
+  const captchaRef = useRef<NativeCaptchaRef | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captchaId || captchaText.length < 5) {
+      setStatus("error");
+      setErrorMessage("لطفاً کد امنیتی ۵ رقمی را وارد کنید.");
+      return;
+    }
     setStatus("loading");
     setErrorMessage("");
 
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(email, captchaId, captchaText);
       setStatus("success");
     } catch (err: any) {
       setStatus("error");
       setErrorMessage(err.message || "خطا در ارسال ایمیل");
+      captchaRef.current?.refresh();
     }
   };
 
@@ -69,6 +79,14 @@ export default function ForgotPasswordPage() {
               disabled={status === "loading"}
             />
           </div>
+
+          <NativeCaptcha
+            ref={captchaRef}
+            onChange={(id, text) => {
+              setCaptchaId(id);
+              setCaptchaText(text);
+            }}
+          />
 
           {status === "error" && (
             <p className="text-red-500 text-xs bg-red-50 p-3 rounded-lg border border-red-100">

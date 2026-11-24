@@ -1,4 +1,12 @@
 const Announcement = require('../models/Announcement')
+const { sanitizeHtmlContent } = require('../utils/htmlSanitizer')
+
+const isValidAnnouncementLink = (value) => {
+  if (!value) return true
+  const trimmed = String(value).trim()
+  if (!trimmed) return true
+  return /^(\/(?!\/)|https?:\/\/)[^\s"'<>]+$/i.test(trimmed)
+}
 
 /**
  * @desc    دریافت اعلان فعال (روت عمومی برای سایت مشتری)
@@ -59,16 +67,32 @@ exports.createAnnouncement = async (req, res) => {
     const { message, link, type, isActive } = req.body
 
     // اعتبارسنجی
-    if (!message || message.trim() === '') {
+    if (!message || String(message).trim() === '') {
       return res.status(400).json({
         success: false,
         message: 'متن اعلان الزامی است',
       })
     }
 
+    const sanitizedMessage = sanitizeHtmlContent(String(message).trim())
+    if (!sanitizedMessage.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'متن اعلان معتبر نیست',
+      })
+    }
+
+    const cleanLink = link ? String(link).trim() : null
+    if (cleanLink && !isValidAnnouncementLink(cleanLink)) {
+      return res.status(400).json({
+        success: false,
+        message: 'لینک اعلان باید مسیر داخلی (/) یا http/https معتبر باشد',
+      })
+    }
+
     const announcement = await Announcement.create({
-      message: message.trim(),
-      link: link?.trim() || null,
+      message: sanitizedMessage,
+      link: cleanLink || null,
       type: type || 'info',
       isActive: Boolean(isActive),
     })
@@ -110,8 +134,26 @@ exports.updateAnnouncement = async (req, res) => {
     }
 
     // به‌روزرسانی فیلدها
-    if (message !== undefined) announcement.message = message.trim()
-    if (link !== undefined) announcement.link = link?.trim() || null
+    if (message !== undefined) {
+      const sanitizedMessage = sanitizeHtmlContent(String(message).trim())
+      if (!sanitizedMessage.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'متن اعلان معتبر نیست',
+        })
+      }
+      announcement.message = sanitizedMessage
+    }
+    if (link !== undefined) {
+      const cleanLink = link ? String(link).trim() : null
+      if (cleanLink && !isValidAnnouncementLink(cleanLink)) {
+        return res.status(400).json({
+          success: false,
+          message: 'لینک اعلان باید مسیر داخلی (/) یا http/https معتبر باشد',
+        })
+      }
+      announcement.link = cleanLink || null
+    }
     if (type !== undefined) announcement.type = type
     if (isActive !== undefined) announcement.isActive = Boolean(isActive)
 

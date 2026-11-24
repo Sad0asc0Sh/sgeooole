@@ -67,13 +67,13 @@ function ResetPasswordPage() {
             label="رمز عبور جدید"
             rules={[
               { required: true, message: 'لطفاً رمز عبور جدید را وارد کنید' },
-              { min: 6, message: 'رمز عبور باید حداقل ۶ کاراکتر باشد' },
+              { min: 8, message: 'رمز عبور باید حداقل ۸ کاراکتر باشد' },
             ]}
             hasFeedback
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="حداقل ۶ کاراکتر"
+              placeholder="حداقل ۸ کاراکتر"
               autoComplete="new-password"
             />
           </Form.Item>

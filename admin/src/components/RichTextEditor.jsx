@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Quill from 'quill'
 import 'quill/dist/quill.snow.css'
 import './RichTextEditor.css'
+import { sanitizeAdminHtml } from '../utils/htmlSanitizer'
 
 const defaultModules = {
   toolbar: [
@@ -65,7 +66,7 @@ function RichTextEditor({ value, onChange, modules, formats }) {
   useEffect(() => {
     const q = quillRef.current
     if (!q || !ready) return
-    const nextHtml = value ?? ''
+    const nextHtml = sanitizeAdminHtml(value ?? '')
 
     // قالب ساختاریافته همیشه در حالت HTML باز می‌شود (بدون تخریب استایل‌ها)
     if (STRUCTURED_HTML_RE.test(nextHtml)) {
@@ -95,9 +96,10 @@ function RichTextEditor({ value, onChange, modules, formats }) {
       if (!pasted || !looksLikeRawHtml(pasted)) return
       event.preventDefault()
       event.stopPropagation()
-      setHtmlContent(pasted)
+      const cleanPasted = sanitizeAdminHtml(pasted)
+      setHtmlContent(cleanPasted)
       setIsHtmlMode(true)
-      onChange?.(pasted)
+      onChange?.(cleanPasted)
     }
     container.addEventListener('paste', handler, true)
     return () => container.removeEventListener('paste', handler, true)
@@ -110,7 +112,7 @@ function RichTextEditor({ value, onChange, modules, formats }) {
     const handler = () => {
       if (isApplyingValueRef.current) return
       if (!isHtmlMode) {
-        onChange?.(q.root.innerHTML)
+        onChange?.(sanitizeAdminHtml(q.root.innerHTML))
       }
     }
     q.on('text-change', handler)
@@ -122,7 +124,7 @@ function RichTextEditor({ value, onChange, modules, formats }) {
     const q = quillRef.current
     if (!q) return
     if (!isHtmlMode) {
-      setHtmlContent(q.root.innerHTML)
+      setHtmlContent(sanitizeAdminHtml(q.root.innerHTML))
       setIsHtmlMode(true)
     } else {
       var confirmed = window.confirm(
@@ -130,9 +132,9 @@ function RichTextEditor({ value, onChange, modules, formats }) {
       )
       if (!confirmed) return
       isApplyingValueRef.current = true
-      q.clipboard.dangerouslyPasteHTML(htmlContent)
+      q.clipboard.dangerouslyPasteHTML(sanitizeAdminHtml(htmlContent))
       isApplyingValueRef.current = false
-      onChange?.(q.root.innerHTML)
+      onChange?.(sanitizeAdminHtml(q.root.innerHTML))
       setIsHtmlMode(false)
     }
   }, [isHtmlMode, htmlContent, onChange])

@@ -7,6 +7,7 @@ import { reviewService, Review } from "@/services/reviewService";
 import { useAuth } from "@/hooks/useAuth";
 import { demoteH1ToH2 } from "@/lib/seo";
 import { normalizeDescriptionRoot } from "@/lib/productDescription";
+import { sanitizeRichHtml } from "@/lib/sanitizeHtml";
 import Link from "next/link";
 import "./product-details.css";
 
@@ -162,7 +163,7 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
         // releasing any pixel width pinned on the article's root, which would
         // otherwise shrink the whole description into a narrow centred card
         // inside the (much wider) product-page column.
-        if (isStructuredTemplate(cleaned)) return normalizeDescriptionRoot(cleaned);
+        if (isStructuredTemplate(cleaned)) return sanitizeRichHtml(normalizeDescriptionRoot(cleaned));
 
         // 2. Strip inline background-color and color styles completely
         cleaned = cleaned.replace(/style="([^"]*)"/gi, (match, p1) => {
@@ -219,7 +220,7 @@ export default function ProductTabs({ product, activeTab, onTabChange, purchaseS
             `.trim();
         });
 
-        return cleaned;
+        return sanitizeRichHtml(cleaned);
     };
 
 

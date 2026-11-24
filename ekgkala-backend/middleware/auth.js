@@ -42,7 +42,11 @@ const protect = async (req, res, next) => {
       })
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      algorithms: ['HS256'],
+    })
 
     // Check if it's a customer or admin user
     // Customer tokens include type: 'customer' in payload
@@ -50,7 +54,7 @@ const protect = async (req, res, next) => {
 
     if (decoded.type === 'customer') {
       // Look up in User (customer) collection
-      user = await User.findById(decoded.id)
+      user = await User.findById(decoded.id).select('+passwordChangedAt')
 
       if (!user) {
         return res.status(401).json({
@@ -67,7 +71,7 @@ const protect = async (req, res, next) => {
       }
     } else {
       // Look up in Admin collection (legacy/backward compatibility)
-      user = await Admin.findById(decoded.id)
+      user = await Admin.findById(decoded.id).select('+passwordChangedAt')
 
       if (!user) {
         return res.status(401).json({
@@ -84,7 +88,18 @@ const protect = async (req, res, next) => {
       }
     }
 
+    if (user.passwordChangedAt && decoded.iat) {
+      const changedAtSeconds = Math.floor(new Date(user.passwordChangedAt).getTime() / 1000)
+      if (decoded.iat < changedAtSeconds) {
+        return res.status(401).json({
+          success: false,
+          message: 'رمز عبور تغییر کرده است - لطفاً مجدداً وارد شوید',
+        })
+      }
+    }
+
     // Attach user to request
+    user._authType = decoded.type || 'admin'
     req.user = user
     req.userId = user._id
     req.userType = decoded.type || 'admin'
@@ -141,22 +156,34 @@ const optional = async (req, res, next) => {
       return next()
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+      algorithms: ['HS256'],
+    })
 
     let user
 
     if (decoded.type === 'customer') {
-      user = await User.findById(decoded.id)
+      user = await User.findById(decoded.id).select('+passwordChangedAt')
       if (!user || !user.isActive) {
         return next()
       }
     } else {
-      user = await Admin.findById(decoded.id)
+      user = await Admin.findById(decoded.id).select('+passwordChangedAt')
       if (!user || !user.isActive) {
         return next()
       }
     }
 
+    if (user.passwordChangedAt && decoded.iat) {
+      const changedAtSeconds = Math.floor(new Date(user.passwordChangedAt).getTime() / 1000)
+      if (decoded.iat < changedAtSeconds) {
+        return next()
+      }
+    }
+
+    user._authType = decoded.type || 'admin'
     req.user = user
     req.userId = user._id
     req.userType = decoded.type || 'admin'
@@ -165,6 +192,15 @@ const optional = async (req, res, next) => {
   } catch (_error) {
     return next()
   }
+}
+
+const getEffectiveRole = (req) => {
+  if (!req?.user) return 'guest'
+  // Customer tokens are strictly capped at customer role regardless of underlying DB field
+  if (req.userType === 'customer' || req.user._authType === 'customer') {
+    return 'user'
+  }
+  return req.user.role || 'guest'
 }
 
 const authorize = (...roles) => {
@@ -176,7 +212,8 @@ const authorize = (...roles) => {
       })
     }
 
-    if (!roles.includes(req.user.role)) {
+    const effectiveRole = getEffectiveRole(req)
+    if (!roles.includes(effectiveRole)) {
       return res.status(403).json({
         success: false,
         message: 'شما دسترسی لازم برای انجام این عملیات را ندارید',
@@ -209,7 +246,7 @@ const checkPermission = (requiredPermission) => {
       })
     }
 
-    const userRole = req.user.role || 'guest'
+    const userRole = getEffectiveRole(req)
 
     // SECURITY: No hardcoded superadmin bypass
     // Superadmin permissions are defined in config/rbac.js
@@ -254,7 +291,7 @@ const checkAnyPermission = (...permissions) => {
       })
     }
 
-    const userRole = req.user.role || 'guest'
+    const userRole = getEffectiveRole(req)
 
     // SECURITY: No hardcoded superadmin bypass
     // Superadmin permissions are defined in config/rbac.js
@@ -294,7 +331,7 @@ const checkAllPermissions = (...permissions) => {
       })
     }
 
-    const userRole = req.user.role || 'guest'
+    const userRole = getEffectiveRole(req)
 
     // SECURITY: No hardcoded superadmin bypass
     // Superadmin permissions are defined in config/rbac.js

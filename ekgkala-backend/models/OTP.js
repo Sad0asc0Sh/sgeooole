@@ -20,11 +20,12 @@ const otpSchema = new mongoose.Schema(
       lowercase: true,
     },
 
-    // 4-digit OTP code
+    // 4-digit OTP code (stored as SHA-256 hex digest)
     code: {
       type: String,
       required: true,
-      length: 4,
+      minlength: 4,
+      maxlength: 128,
     },
 
     // Expiration time (2 minutes from creation)

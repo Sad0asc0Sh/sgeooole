@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { sanitizeRichHtml } from "@/lib/sanitizeHtml";
 
 interface RichTextEditorProps {
   value: string;
@@ -19,7 +20,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
     el.appendChild(selected);
     range.insertNode(el);
     const div = document.getElementById("rte-editor");
-    if (div) onChange(div.innerHTML);
+    if (div) onChange(sanitizeRichHtml(div.innerHTML));
   }, [onChange]);
 
   return (
@@ -54,7 +55,7 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
       {preview ? (
         <div
           className="p-3 min-h-[200px] prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: value }}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(value) }}
         />
       ) : (
         <div
@@ -62,8 +63,8 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
           contentEditable
           suppressContentEditableWarning
           className="p-3 min-h-[200px] focus:outline-none"
-          onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
-          dangerouslySetInnerHTML={{ __html: value }}
+          onInput={(e) => onChange(sanitizeRichHtml((e.currentTarget as HTMLDivElement).innerHTML))}
+          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(value) }}
         />
       )}
     </div>

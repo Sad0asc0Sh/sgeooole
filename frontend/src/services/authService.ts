@@ -16,6 +16,7 @@ export interface User {
   addresses?: any[];
   avatar?: string;
   googleId?: string;
+  hasPassword?: boolean;
   // Personal Info
   nationalCode?: string;
   birthDate?: string | Date;
@@ -220,6 +221,7 @@ export const authService = {
         companyCity: userData.companyCity,
         orderStats: mappedOrderStats,
         googleId: userData.googleId,
+        hasPassword: userData.hasPassword !== undefined ? Boolean(userData.hasPassword) : undefined,
       };
 
       // Update localStorage with fresh data
@@ -327,6 +329,7 @@ export const authService = {
         companyCity: userData.companyCity,
         orderStats: mappedOrderStats,
         googleId: userData.googleId,
+        hasPassword: userData.hasPassword !== undefined ? Boolean(userData.hasPassword) : undefined,
       };
     } catch {
       return null;
@@ -338,6 +341,23 @@ export const authService = {
    * Clears authentication data and redirects to home
    */
   logout: (): void => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (token && typeof window !== "undefined") {
+      try {
+        const baseUrl = (api.defaults.baseURL || "/api").replace(/\/$/, "");
+        fetch(`${baseUrl}/auth/logout`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          keepalive: true,
+        }).catch(() => {});
+      } catch {
+        // Ignore network errors during logout cleanup
+      }
+    }
+
     // Clear localStorage
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -467,14 +487,19 @@ export const authService = {
    * Update Profile (including password and extended info)
    * @param data - Profile data
    */
-  updateProfile: async (data: Partial<User> & { password?: string }): Promise<any> => {
+  updateProfile: async (data: Partial<User> & { password?: string; currentPassword?: string }): Promise<any> => {
     try {
       console.log("[AUTH] Updating profile");
       const response = await api.put("/auth/me/update", data);
 
-      // Update localStorage if user data is returned
-      if (response.data.success && response.data.data?.user) {
-        if (typeof window !== "undefined") {
+      // Update localStorage if user or refreshed token is returned
+      if (response.data.success) {
+        if (response.data.data?.token && typeof window !== "undefined") {
+          const freshToken = response.data.data.token;
+          localStorage.setItem("token", freshToken);
+          api.defaults.headers.common["Authorization"] = `Bearer ${freshToken}`;
+        }
+        if (response.data.data?.user && typeof window !== "undefined") {
           localStorage.setItem("user", JSON.stringify(response.data.data.user));
         }
       }

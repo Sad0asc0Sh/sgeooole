@@ -359,12 +359,34 @@ exports.getAllCategories = async (req, res) => {
       query.showOnHomepage = showOnHomepage === 'true'
     }
 
+    const parsedLimit = Math.min(1000, Math.max(1, parseInt(limit, 10) || 1000))
+    const ALLOWED_CATEGORY_FIELDS = new Set([
+      '_id',
+      'name',
+      'slug',
+      'parent',
+      'order',
+      'isActive',
+      'showOnHomepage',
+      'homepageOrder',
+      'icon',
+      'image',
+      'description',
+      'properties',
+    ])
+
     let categoriesQuery = Category.find(query)
-      .limit(parseInt(limit, 10))
+      .limit(parsedLimit)
       .sort({ order: 1, name: 1 })
 
-    if (fields) {
-      categoriesQuery = categoriesQuery.select(fields.split(',').join(' '))
+    if (typeof fields === 'string' && fields.trim()) {
+      const safeFields = fields
+        .split(',')
+        .map((f) => f.trim())
+        .filter((f) => ALLOWED_CATEGORY_FIELDS.has(f))
+      if (safeFields.length > 0) {
+        categoriesQuery = categoriesQuery.select(safeFields.join(' '))
+      }
     }
 
     const categoriesList = await categoriesQuery.lean()
@@ -433,7 +455,7 @@ exports.getAllCategories = async (req, res) => {
 // Admin/maintenance: list active categories that are not reachable from a root (parent=null)
 exports.getOrphanCategories = async (req, res) => {
   try {
-    const limit = Math.max(1, parseInt(req.query.limit, 10) || 500)
+    const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 500))
 
     const minimalActive = await Category.find({ isActive: true }).select('_id parent').lean()
     const connectedIds = computeConnectedCategoryIdSet(minimalActive)

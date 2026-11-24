@@ -32,9 +32,11 @@ yarn-error.log*
 
 # local design/preview scratch (screenshots rendered with headless Chrome)
 .preview/
+.pdp-shots/
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel

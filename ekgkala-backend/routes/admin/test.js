@@ -1,17 +1,30 @@
 const express = require('express')
 const router = express.Router()
+const crypto = require('crypto')
 const axios = require('axios')
+const rateLimit = require('express-rate-limit')
 const Settings = require('../../models/Settings')
 const { sendOtpSMS } = require('../../utils/notificationService')
 const { normalizeIranMobile } = require('../../utils/phone')
-const { protect, authorize } = require('../../middleware/auth')
+const { protect, checkPermission, PERMISSIONS } = require('../../middleware/auth')
+const { getClientIp } = require('../../utils/clientIp')
+const dnsAgent = require('../../utils/dnsAgent')
+
+const adminTestLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req),
+    message: { success: false, message: 'تعداد درخواست‌های تست بیش از حد مجاز است.' },
+})
 
 /**
  * @route   GET /api/admin/test/sms-settings
  * @desc    بررسی تنظیمات پیامک (بدون نمایش اطلاعات حساس)
- * @access  Private/Admin
+ * @access  Private/Admin (SETTINGS_UPDATE)
  */
-router.get('/sms-settings', protect, authorize('admin'), async (req, res) => {
+router.get('/sms-settings', protect, checkPermission(PERMISSIONS.SETTINGS_UPDATE), async (req, res) => {
     try {
         const settings = await Settings.findOne({ singletonKey: 'main_settings' })
             .select('+notificationSettings.smsUsername +notificationSettings.smsPassword +notificationSettings.smsSenderNumber')
@@ -22,7 +35,7 @@ router.get('/sms-settings', protect, authorize('admin'), async (req, res) => {
             success: true,
             settings: {
                 smsUsername: smsUsername ? '✅ تنظیم شده' : '❌ خالی',
-                smsPassword: smsPassword ? `✅ تنظیم شده (${smsPassword.length} کاراکتر)` : '❌ خالی',
+                smsPassword: smsPassword ? '✅ تنظیم شده' : '❌ خالی',
                 smsSenderNumber: smsSenderNumber || '(خالی - از username استفاده می‌شود)',
             },
             isComplete: !!(smsUsername && smsPassword),
@@ -35,17 +48,16 @@ router.get('/sms-settings', protect, authorize('admin'), async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'خطا در بررسی تنظیمات',
-            error: error.message,
         })
     }
 })
 
 /**
  * @route   POST /api/admin/test/send-sms
- * @desc    تست ارسال پیامک
- * @access  Private/Admin
+ * @desc    تست ارسال پیامک (بدون بازگرداندن کد OTP در پاسخ)
+ * @access  Private/Admin (SETTINGS_UPDATE)
  */
-router.post('/send-sms', protect, authorize('admin'), async (req, res) => {
+router.post('/send-sms', protect, checkPermission(PERMISSIONS.SETTINGS_UPDATE), adminTestLimiter, async (req, res) => {
     try {
         const mobile = normalizeIranMobile(req.body.mobile)
 
@@ -56,28 +68,22 @@ router.post('/send-sms', protect, authorize('admin'), async (req, res) => {
             })
         }
 
-        console.log(`[TEST API] درخواست ارسال پیامک تست به ${mobile}`)
-
-        // تولید کد تست
-        const testCode = Math.floor(100000 + Math.random() * 900000).toString()
+        // تولید کد تست رمزنگاری‌شده (بدون لاگ/افشای کد)
+        const testCode = String(crypto.randomInt(100000, 1000000))
 
         // ارسال پیامک
         const result = await sendOtpSMS(mobile, testCode)
 
         res.json({
             success: true,
-            message: `پیامک تست با موفقیت به ${mobile} ارسال شد`,
-            code: testCode,
-            details: result.data,
+            message: `پیامک تست با موفقیت ارسال شد`,
+            details: { provider: result.provider, status: result.status, recId: result.recId },
         })
     } catch (error) {
         console.error('[TEST API] خطا در ارسال پیامک:', error)
         res.status(500).json({
             success: false,
             message: 'خطا در ارسال پیامک',
-            error: error.message,
-            code: error.code,
-            details: error.details,
         })
     }
 })
@@ -85,9 +91,9 @@ router.post('/send-sms', protect, authorize('admin'), async (req, res) => {
 /**
  * @route   GET /api/admin/test/health
  * @desc    بررسی وضعیت سلامت سیستم
- * @access  Private/Admin
+ * @access  Private/Admin (SETTINGS_UPDATE)
  */
-router.get('/health', protect, authorize('admin'), async (req, res) => {
+router.get('/health', protect, checkPermission(PERMISSIONS.SETTINGS_UPDATE), async (req, res) => {
     try {
         const settings = await Settings.findOne({ singletonKey: 'main_settings' })
             .select('+notificationSettings.smsUsername +notificationSettings.smsPassword')
@@ -107,32 +113,7 @@ router.get('/health', protect, authorize('admin'), async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            error: error.message,
-        })
-    }
-})
-
-/**
- * @route   GET /api/admin/test/outbound-ip
- * @desc    نمایش IP خروجی سرور (برای بررسی محدودیت IP در سرویس پیامک)
- * @access  Private/Admin
- */
-router.get('/outbound-ip', protect, authorize('admin'), async (req, res) => {
-    try {
-        const startedAt = Date.now()
-        const response = await axios.get('https://api.ipify.org?format=json', { timeout: 7000 })
-
-        res.json({
-            success: true,
-            ip: response.data?.ip,
-            ms: Date.now() - startedAt,
-            note: 'در Render/Railway ممکن است IP ثابت نباشد (Dynamic Egress)',
-        })
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'خطا در دریافت IP خروجی سرور',
-            error: error.message,
+            message: 'خطا در بررسی وضعیت سلامت سیستم',
         })
     }
 })
@@ -140,21 +121,21 @@ router.get('/outbound-ip', protect, authorize('admin'), async (req, res) => {
 /**
  * @route   GET /api/admin/test/sms-ping
  * @desc    تست دسترسی شبکه به دامنه‌های ملی‌پیامک (برای عیب‌یابی timeout)
- * @access  Private/Admin
+ * @access  Private/Admin (SETTINGS_UPDATE)
  */
-router.get('/sms-ping', protect, authorize('admin'), async (req, res) => {
+router.get('/sms-ping', protect, checkPermission(PERMISSIONS.SETTINGS_UPDATE), adminTestLimiter, async (req, res) => {
     const ping = async (url) => {
         const startedAt = Date.now()
         try {
             const r = await axios.get(url, {
                 timeout: 7000,
                 validateStatus: () => true,
-                httpsAgent: getSmsHttpsAgent(),
+                httpsAgent: dnsAgent,
                 proxy: false,
             })
             return { url, ok: true, status: r.status, ms: Date.now() - startedAt }
         } catch (e) {
-            return { url, ok: false, error: e.code || e.message, ms: Date.now() - startedAt }
+            return { url, ok: false, error: e.code || 'NETWORK_ERROR', ms: Date.now() - startedAt }
         }
     }
 
@@ -174,7 +155,6 @@ router.get('/sms-ping', protect, authorize('admin'), async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'خطا در تست شبکه پیامک',
-            error: error.message,
         })
     }
 })

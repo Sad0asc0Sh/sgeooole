@@ -11,7 +11,7 @@ const crypto = require('crypto')
 // SECURITY: xss-clean removed - using express-validator for input validation instead
 // const xss = require('xss-clean') // DEPRECATED - removed for security
 const hpp = require('hpp')
-require('dotenv').config()
+require('dotenv').config({ path: path.join(__dirname, '.env') })
 
 // ============================================
 // SECURITY: Enhanced Security Middlewares
@@ -41,12 +41,10 @@ app.use(checkIpBlocklist)
 // ============================================
 app.use((req, res, next) => {
   const incomingId = req.headers['x-request-id']
-  const requestId =
-    typeof incomingId === 'string' && incomingId.trim()
-      ? incomingId.trim()
-      : (typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`)
+  const isValidIncomingId = typeof incomingId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(incomingId.trim())
+  const requestId = isValidIncomingId
+    ? incomingId.trim()
+    : crypto.randomUUID()
 
   req.id = requestId
   res.setHeader('x-request-id', requestId)
@@ -223,7 +221,20 @@ const otpLimiter = rateLimit({
 app.use('/api/auth/send-otp', otpLimiter)
 app.use('/api/auth/verify-otp', otpLimiter)
 app.use('/api/auth/bind-mobile/send-otp', otpLimiter)
+app.use('/api/auth/bind-mobile/verify', otpLimiter)
 app.use('/api/auth/change-email/send-otp', otpLimiter)
+app.use('/api/auth/change-email/verify', otpLimiter)
+
+const captchaLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: rateLimitKey,
+  skip: (req) => req.method === 'OPTIONS',
+  message: { success: false, message: 'تعداد درخواست‌های دریافت کپچا بیش از حد مجاز است.' },
+})
+app.use('/api/auth/captcha', captchaLimiter)
 
 // Password reset limiter (3 requests per hour)
 const passwordResetLimiter = rateLimit({
@@ -289,11 +300,13 @@ const allowedOrigins = [
   ] : []),
 ]
 
-// اگر یکی از مقادیر دقیقاً برابر "*" باشد، همه origin ها مجاز هستند
-const allowAllOrigins = allowedOriginInputs
-  .flatMap((value) => (typeof value === 'string' ? value.split(',') : []))
-  .map((value) => value.trim())
-  .some((value) => value === '*')
+// Wildcard CORS is never permitted in production (never reflect arbitrary origins with credentials)
+const allowAllOrigins =
+  process.env.NODE_ENV !== 'production' &&
+  allowedOriginInputs
+    .flatMap((value) => (typeof value === 'string' ? value.split(',') : []))
+    .map((value) => value.trim())
+    .some((value) => value === '*')
 
 // NOTE: Preview-deployment origin support removed (VPS deployment)
 
@@ -348,16 +361,23 @@ app.use((err, req, res, next) => {
   return next(err)
 })
 
-// Body Parser with Limits
-// Keep this slightly above typical payloads to avoid false 413s on metadata-heavy requests.
-app.use(express.json({ limit: '15mb' }))
-app.use(express.urlencoded({ extended: true, limit: '15mb' }))
+// Body Parser with Limits:
+// Higher 15mb limit ONLY for product/CMS endpoints that receive rich HTML or metadata
+app.use(
+  ['/api/products', '/api/v1/admin/products', '/api/pages', '/api/blog'],
+  express.json({ limit: '15mb' }),
+  express.urlencoded({ extended: true, limit: '15mb' }),
+)
+// Tight 1mb limit everywhere else
+app.use(express.json({ limit: '1mb' }))
+app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
 // ============================================
 // 5. Data Sanitization & Security Middleware
 // ============================================
-app.use(mongoSanitize()) // NoSQL injection prevention (basic)
+// Run strict NoSQL & prototype-pollution rejection BEFORE mongoSanitize strips '$' keys
 app.use(noSqlInjectionPrevention()) // Enhanced NoSQL injection prevention
+app.use(mongoSanitize()) // NoSQL injection prevention (defense-in-depth)
 // SECURITY NOTE: xss-clean removed - use express-validator for input sanitization
 // XSS protection is handled by:
 // 1. Helmet CSP headers (prevents inline script execution)
@@ -471,8 +491,8 @@ app.use('/api/torob', torobLimiter, torobAuth, torobRoutes)
 // SECURITY: checkProductAccess blocks non-admin access to admin-only filters
 const productsRoutes = require('./routes/products')
 app.use('/api/products', optional, checkProductAccess, productsRoutes)
-// Admin panel create endpoint: /api/v1/admin/products -> same router
-app.use('/api/v1/admin/products', productsRoutes)
+// Admin panel create endpoint: /api/v1/admin/products -> same router, guarded identically
+app.use('/api/v1/admin/products', productLimiter, optional, checkProductAccess, productsRoutes)
 
 // Search Routes (Trending, Tracking, Suggestions)
 const searchRoutes = require('./routes/search')
@@ -522,11 +542,11 @@ app.use('/api/reviews', reviewRoutes)
 const saleRoutes = require('./routes/sales')
 app.use('/api/sales', saleRoutes)
 
-// Blog & CMS Routes
-const blogRoutes = require('./routes/blog')
-app.use('/api/blog', blogRoutes)
+// Blog & CMS Routes (mount specific /api/blog/categories before /api/blog/:id)
 const blogCategoryRoutes = require('./routes/blogCategories')
 app.use('/api/blog/categories', blogCategoryRoutes)
+const blogRoutes = require('./routes/blog')
+app.use('/api/blog', blogRoutes)
 const pageRoutes = require('./routes/pages')
 app.use('/api/pages', pageRoutes)
 const bannerRoutes = require('./routes/banners')
@@ -568,9 +588,11 @@ app.use('/api/admin/setup', adminSetupRoutes)
 const settingsRoutes = require('./routes/settings')
 app.use('/api/settings', settingsRoutes)
 
-// Admin Test Routes (با احراز هویت - برای تست پیامک در production)
-const adminTestRoutes = require('./routes/admin/test')
-app.use('/api/admin/test', adminTestRoutes)
+// Admin Test Routes (disabled in production unless explicitly enabled via env)
+if (process.env.ENABLE_ADMIN_TEST_ROUTES === 'true' || process.env.NODE_ENV === 'development') {
+  const adminTestRoutes = require('./routes/admin/test')
+  app.use('/api/admin/test', adminTestRoutes)
+}
 
 // Audit Logs Routes
 const auditLogRoutes = require('./routes/auditLogs')
@@ -649,7 +671,8 @@ const connectDB = async () => {
       const seedPages = require('./seeders/pageSeeder')
       seedPages()
 
-      const server = app.listen(PORT, () => {
+      const bindHost = process.env.BIND_HOST || (process.env.NODE_ENV === 'production' ? '127.0.0.1' : undefined)
+      const onListen = () => {
         console.log(`🚀 Server running on port ${PORT}`)
         console.log(`API: http://localhost:${PORT}/api`)
         console.log(`Uploads: http://localhost:${PORT}/uploads`)
@@ -660,13 +683,12 @@ const connectDB = async () => {
           process.send('ready')
           console.log('📡 PM2 ready signal sent')
         }
-      })
+      }
+      const server = bindHost ? app.listen(PORT, bindHost, onListen) : app.listen(PORT, onListen)
 
-      // Increase Timeouts for Long Operations (e.g. CSV Import)
-      // Default is 120000 (2 minutes)
-      // Set to 10 minutes (600000 ms)
-      server.keepAliveTimeout = 600000
-      server.headersTimeout = 610000 // Must be greater than keepAliveTimeout
+      // Standard keep-alive timeouts (long CSV imports set req.setTimeout per-request)
+      server.keepAliveTimeout = 65000
+      server.headersTimeout = 66000
 
       // Start Jobs
       const startOrderAutoCompleter = require('./jobs/orderAutoCompleter')

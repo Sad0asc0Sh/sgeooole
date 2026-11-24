@@ -255,15 +255,17 @@ const findMatchingVariant = (product, variantOptions) => {
     !product ||
     product.productType !== 'variable' ||
     !Array.isArray(product.variants) ||
-    !Array.isArray(variantOptions) ||
-    variantOptions.length === 0
+    product.variants.length === 0
   ) {
     return null
   }
 
-  return product.variants.find((variant) => {
-    if (!Array.isArray(variant.options) || variant.options.length === 0) return false
+  if (!Array.isArray(variantOptions) || variantOptions.length === 0) {
+    return product.variants.length === 1 ? product.variants[0] : null
+  }
 
+  const normalizedMatches = (variant) => {
+    if (!Array.isArray(variant.options) || variant.options.length === 0) return false
     return variant.options.every((opt) =>
       variantOptions.some(
         (vo) =>
@@ -273,7 +275,16 @@ const findMatchingVariant = (product, variantOptions) => {
           String(vo.value).trim() === String(opt.value).trim(),
       ),
     )
-  })
+  }
+
+  return (
+    product.variants.find(
+      (variant) =>
+        Array.isArray(variant.options) &&
+        variant.options.length === variantOptions.length &&
+        normalizedMatches(variant),
+    ) || product.variants.find(normalizedMatches)
+  )
 }
 
 const getAllDescendantCategoryIds = async (categoryId) => {

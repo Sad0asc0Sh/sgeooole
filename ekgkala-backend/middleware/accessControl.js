@@ -26,6 +26,11 @@ const ADMIN_ONLY_FILTERS = [
     'isDeleted',
     'isHidden',
     'isBanned',
+    'includeInactive',
+    'skipDiscount',
+    'stock',
+    'views',
+    'clickCount',
     'salesCount',
     'viewCount',
     'internalNotes',
@@ -99,7 +104,7 @@ const ADMIN_ONLY_SORT_FIELDS = [
  * Check if user has admin privileges
  */
 const isAdmin = (user) => {
-    if (!user) return false
+    if (!user || user._authType === 'customer') return false
     const adminRoles = ['admin', 'manager', 'superadmin', 'editor']
     return adminRoles.includes(user.role)
 }

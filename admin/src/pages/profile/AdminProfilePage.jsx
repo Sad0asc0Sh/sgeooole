@@ -38,7 +38,7 @@ const roleLabels = {
 
 const AdminProfilePage = () => {
     const [form] = Form.useForm()
-    const { user, setUser } = useAuthStore()
+    const { user, permissions, setUser, setAuth } = useAuthStore()
     const [loading, setLoading] = useState(false)
     const [avatarLoading, setAvatarLoading] = useState(false)
 
@@ -62,13 +62,19 @@ const AdminProfilePage = () => {
 
             if (values.password && values.password.trim()) {
                 submitData.password = values.password
+                submitData.currentPassword = values.currentPassword
             }
 
             const res = await api.put('/auth/admin/profile', submitData)
             if (res.data.success) {
                 message.success('اطلاعات پروفایل با موفقیت به‌روزرسانی شد')
-                setUser(res.data.data)
-                // پاک کردن فیلد رمز عبور بعد از ذخیره موفق
+                if (res.data.token) {
+                    setAuth(res.data.data, res.data.token, permissions)
+                } else {
+                    setUser(res.data.data)
+                }
+                // پاک کردن فیلدهای رمز عبور بعد از ذخیره موفق
+                form.setFieldValue('currentPassword', '')
                 form.setFieldValue('password', '')
                 form.setFieldValue('confirmPassword', '')
             }
@@ -184,22 +190,48 @@ const AdminProfilePage = () => {
                     </Text>
 
                     <Row gutter={24}>
-                        <Col xs={24} md={12}>
+                        <Col xs={24} md={8}>
                             <Form.Item
-                                name="password"
-                                label="رمز عبور جدید"
+                                name="currentPassword"
+                                label="رمز عبور فعلی"
+                                dependencies={['password']}
                                 rules={[
-                                    { min: 6, message: 'رمز عبور باید حداقل ۶ کاراکتر باشد' }
+                                    ({ getFieldValue }) => ({
+                                        validator(_, value) {
+                                            const nextPassword = getFieldValue('password')
+                                            if (!nextPassword || !nextPassword.trim() || (value && value.length > 0)) {
+                                                return Promise.resolve()
+                                            }
+                                            return Promise.reject(new Error('برای تغییر رمز عبور، رمز فعلی الزامی است'))
+                                        },
+                                    }),
                                 ]}
                             >
                                 <Input.Password
                                     prefix={<SafetyCertificateOutlined />}
-                                    placeholder="رمز عبور جدید"
+                                    placeholder="رمز عبور فعلی"
+                                    autoComplete="current-password"
                                     size="large"
                                 />
                             </Form.Item>
                         </Col>
-                        <Col xs={24} md={12}>
+                        <Col xs={24} md={8}>
+                            <Form.Item
+                                name="password"
+                                label="رمز عبور جدید"
+                                rules={[
+                                    { min: 8, message: 'رمز عبور باید حداقل ۸ کاراکتر باشد' }
+                                ]}
+                            >
+                                <Input.Password
+                                    prefix={<SafetyCertificateOutlined />}
+                                    placeholder="رمز عبور جدید (حداقل ۸ کاراکتر)"
+                                    autoComplete="new-password"
+                                    size="large"
+                                />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} md={8}>
                             <Form.Item
                                 name="confirmPassword"
                                 label="تکرار رمز عبور جدید"
@@ -218,6 +250,7 @@ const AdminProfilePage = () => {
                                 <Input.Password
                                     prefix={<SafetyCertificateOutlined />}
                                     placeholder="تکرار رمز عبور"
+                                    autoComplete="new-password"
                                     size="large"
                                 />
                             </Form.Item>

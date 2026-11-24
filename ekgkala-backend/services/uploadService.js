@@ -34,12 +34,12 @@ const UPLOAD_CONFIG = {
   },
   category: {
     maxSize: 1 * 1024 * 1024,
-    allowedFormats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
     size: { width: 200, height: 200 },
   },
   brand: {
     maxSize: 1 * 1024 * 1024,
-    allowedFormats: ['jpg', 'jpeg', 'png', 'webp', 'svg'],
+    allowedFormats: ['jpg', 'jpeg', 'png', 'webp'],
     size: { width: 300, height: 150 },
   },
 };
@@ -76,7 +76,6 @@ const validateImage = (file, type = 'product') => {
     'image/jpg',
     'image/png',
     'image/webp',
-    'image/svg+xml'
   ];
   if (!allowedMimeTypes.includes(file.mimetype)) {
     return { valid: false, error: 'نوع فایل نامعتبر است' };

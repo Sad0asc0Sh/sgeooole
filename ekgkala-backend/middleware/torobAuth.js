@@ -9,6 +9,18 @@ const decodeBase64Url = (value) => {
 
 const parseJsonSegment = (value) => JSON.parse(decodeBase64Url(value).toString('utf8'))
 
+const getExpectedTorobHost = () => {
+  const raw = process.env.TOROB_EXPECTED_HOST || process.env.FRONTEND_URL || process.env.BASE_URL || ''
+  const trimmed = String(raw).trim()
+  if (!trimmed) return ''
+  try {
+    const host = trimmed.includes('://') ? new URL(trimmed).hostname : trimmed.split('/')[0]
+    return host.toLowerCase().replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
 const verifyEdDsaJwt = (token, publicKeyPem, reqHostname) => {
   const parts = String(token || '').split('.')
   if (parts.length !== 3) throw new Error('invalid jwt format')
@@ -42,19 +54,31 @@ const verifyEdDsaJwt = (token, publicKeyPem, reqHostname) => {
   if (!Number.isFinite(payload.nbf) || now < Number(payload.nbf))
     throw new Error('jwt not active')
 
-  // normalize hostname (www.ekgkala.ir -> ekgkala.ir)
-  const normalizedHost = String(reqHostname || '').replace(/^www\./i, '')
-  const normalizedAud = String(payload.aud || '').replace(/^www\./i, '')
+  // Verify audience against server-configured canonical domain (never trust Host header in production)
+  const expectedHost = getExpectedTorobHost()
+  const normalizedHost = String(reqHostname || '').trim().toLowerCase().replace(/^www\./, '')
+  const normalizedAud = String(payload.aud || '').trim().toLowerCase().replace(/^www\./, '')
 
-  console.error("[TOROB DEBUG]", {
-    host: reqHostname,
-    normalizedHost,
-    aud: payload.aud,
-    normalizedAud
-  });
+  if (!normalizedAud) {
+    throw new Error('jwt audience missing')
+  }
 
-  if (normalizedAud !== normalizedHost)
-    throw new Error('jwt audience mismatch')
+  if (process.env.NODE_ENV === 'production') {
+    if (!expectedHost) {
+      throw new Error('torob expected host not configured')
+    }
+    if (normalizedAud !== expectedHost) {
+      throw new Error('jwt audience mismatch')
+    }
+  } else {
+    const isLocalLoopback =
+      (normalizedAud === '127.0.0.1' || normalizedAud === 'localhost') &&
+      (normalizedHost === '127.0.0.1' || normalizedHost === 'localhost')
+    const matchesConfigured = expectedHost ? normalizedAud === expectedHost : normalizedAud === normalizedHost
+    if (!matchesConfigured && !isLocalLoopback) {
+      throw new Error('jwt audience mismatch')
+    }
+  }
 
   return payload
 }

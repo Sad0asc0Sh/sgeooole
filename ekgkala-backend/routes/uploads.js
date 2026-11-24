@@ -14,6 +14,16 @@ const {
 } = require("../lib/parspackS3");
 const { protect, checkPermission, checkAnyPermission, PERMISSIONS } = require("../middleware/auth");
 
+const SAFE_OBJECT_KEY_RE = /^[A-Za-z0-9._-]+$/;
+const isSafeUploadKey = (rawKey) => {
+  if (typeof rawKey !== "string") return false;
+  const trimmed = rawKey.trim();
+  if (!trimmed || trimmed.includes("..") || trimmed.includes("/") || trimmed.includes("\\")) {
+    return false;
+  }
+  return SAFE_OBJECT_KEY_RE.test(trimmed);
+};
+
 // ============================================
 // Stream handling middleware for ParsPack upload
 // ============================================
@@ -162,8 +172,11 @@ router.post(
         });
       }
 
-      // Validate file
+      // Validate file (including magic bytes)
       validateFile(req.file);
+      if (req.cardFile) {
+        validateFile(req.cardFile);
+      }
 
       // Upload to ParsPack S3 (main + lightweight card variant)
       const result = await uploadToParsPack(req.file.buffer, req.file.originalname, {
@@ -266,8 +279,11 @@ router.post(
         });
       }
 
-      // Validate file
+      // Validate file (including magic bytes)
       validateFile(req.file);
+      if (req.cardFile) {
+        validateFile(req.cardFile);
+      }
 
       // Upload to ParsPack S3 — نسخه‌ی دسکتاپ 1920×600 q85 + کارت 960×480 q84
       // (فاز ۲: فرانت برای موبایل/بنر میانی از cardUrl سبک استفاده می‌کند).
@@ -313,10 +329,10 @@ router.delete(
     try {
       const { key } = req.params;
 
-      if (!key) {
+      if (!isSafeUploadKey(key)) {
         return res.status(400).json({
           success: false,
-          message: "شناسه فایل مشخص نشده است",
+          message: "شناسه فایل نامعتبر است",
         });
       }
 
@@ -349,8 +365,8 @@ router.delete(
   async (req, res) => {
     try {
       const { key } = req.params;
-      if (!key) {
-        return res.status(400).json({ success: false, message: "شناسه فایل مشخص نشده است" });
+      if (!isSafeUploadKey(key)) {
+        return res.status(400).json({ success: false, message: "شناسه فایل نامعتبر است" });
       }
       await deleteFromParsPack(key);
       res.json({ success: true, message: "تصویر بنر با موفقیت حذف شد" });

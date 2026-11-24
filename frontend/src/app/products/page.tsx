@@ -12,6 +12,7 @@ import {
   type InitialProductListing,
 } from "@/lib/productListingState";
 import { brandService } from "@/services/brandService";
+import { safeJsonLd } from "@/lib/sanitizeHtml";
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "");
 
@@ -259,7 +260,7 @@ export default async function ProductListingPage({
       {itemListSchema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(itemListSchema) }}
         />
       )}
       {listing && listing.products.length > 0 && (

@@ -49,8 +49,14 @@ exports.createAddress = async (req, res) => {
       })
     }
 
-    // اگر کاربر هیچ آدرسی ندارد، اولین آدرس را به عنوان پیش‌فرض قرار بده
+    // محدودیت تعداد آدرس برای هر کاربر (جلوگیری از رشد نامحدود)
     const addressCount = await Address.countDocuments({ user: userId })
+    if (addressCount >= 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'حداکثر ۲۰ آدرس قابل ثبت است',
+      })
+    }
     const shouldBeDefault = addressCount === 0 ? true : isDefault
 
     const newAddress = new Address({

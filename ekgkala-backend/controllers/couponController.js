@@ -79,8 +79,8 @@ exports.createCoupon = async (req, res) => {
 // ============================================
 exports.getAllCoupons = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = {}
@@ -91,13 +91,16 @@ exports.getAllCoupons = async (req, res) => {
     }
 
     // فیلتر بر اساس نوع تخفیف
-    if (req.query.discountType) {
-      filter.discountType = req.query.discountType
+    if (req.query.discountType && ['percent', 'fixed'].includes(String(req.query.discountType))) {
+      filter.discountType = String(req.query.discountType)
     }
 
-    // جستجو در کد
-    if (req.query.search) {
-      filter.code = { $regex: req.query.search, $options: 'i' }
+    // جستجو در کد (escaped)
+    if (req.query.search && typeof req.query.search === 'string') {
+      const escapedSearch = req.query.search.trim().slice(0, 64).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      if (escapedSearch) {
+        filter.code = { $regex: escapedSearch, $options: 'i' }
+      }
     }
 
     const totalCoupons = await Coupon.countDocuments(filter)

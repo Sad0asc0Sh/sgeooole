@@ -1,5 +1,8 @@
 import Script from "next/script";
 
+const isValidTrackingId = (val: string | undefined, pattern: RegExp): val is string =>
+    typeof val === "string" && pattern.test(val.trim());
+
 /**
  * Third-Party Scripts Component
  * 
@@ -7,13 +10,22 @@ import Script from "next/script";
  * و از استراتژی‌های بهینه برای لود کردن آن‌ها استفاده می‌کند
  */
 export default function ThirdPartyScripts() {
+    const gaId = isValidTrackingId(process.env.NEXT_PUBLIC_GA_ID, /^G-[A-Z0-9]+$/i) ? process.env.NEXT_PUBLIC_GA_ID.trim() : null;
+    const gtmId = isValidTrackingId(process.env.NEXT_PUBLIC_GTM_ID, /^GTM-[A-Z0-9]+$/i) ? process.env.NEXT_PUBLIC_GTM_ID.trim() : null;
+    const fbPixelId = isValidTrackingId(process.env.NEXT_PUBLIC_FB_PIXEL_ID, /^\d+$/) ? process.env.NEXT_PUBLIC_FB_PIXEL_ID.trim() : null;
+    const hotjarId = isValidTrackingId(process.env.NEXT_PUBLIC_HOTJAR_ID, /^\d+$/) ? process.env.NEXT_PUBLIC_HOTJAR_ID.trim() : null;
+    const crispId = isValidTrackingId(process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID, /^[a-z0-9-]+$/i) ? process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID.trim() : null;
+    const tawkPropId = isValidTrackingId(process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID, /^[a-z0-9]+$/i) ? process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID.trim() : null;
+    const tawkWidgetId = isValidTrackingId(process.env.NEXT_PUBLIC_TAWK_WIDGET_ID, /^[a-z0-9]+$/i) ? process.env.NEXT_PUBLIC_TAWK_WIDGET_ID.trim() : null;
+    const customScriptUrl = isValidTrackingId(process.env.NEXT_PUBLIC_CUSTOM_SCRIPT_URL, /^https:\/\/[^\s"'<>]+$/i) ? process.env.NEXT_PUBLIC_CUSTOM_SCRIPT_URL.trim() : null;
+
     return (
         <>
             {/* Google Analytics */}
-            {process.env.NEXT_PUBLIC_GA_ID && (
+            {gaId && (
                 <>
                     <Script
-                        src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+                        src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
                         strategy="afterInteractive"
                     />
                     <Script id="google-analytics" strategy="afterInteractive">
@@ -21,7 +33,7 @@ export default function ThirdPartyScripts() {
                             window.dataLayer = window.dataLayer || [];
                             function gtag(){dataLayer.push(arguments);}
                             gtag('js', new Date());
-                            gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                            gtag('config', '${gaId}', {
                                 page_path: window.location.pathname,
                             });
                         `}
@@ -30,7 +42,7 @@ export default function ThirdPartyScripts() {
             )}
 
             {/* Google Tag Manager */}
-            {process.env.NEXT_PUBLIC_GTM_ID && (
+            {gtmId && (
                 <Script
                     id="google-tag-manager"
                     strategy="afterInteractive"
@@ -40,14 +52,14 @@ export default function ThirdPartyScripts() {
                             new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
                             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
                             'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                            })(window,document,'script','dataLayer','${process.env.NEXT_PUBLIC_GTM_ID}');
+                            })(window,document,'script','dataLayer','${gtmId}');
                         `,
                     }}
                 />
             )}
 
             {/* Facebook Pixel */}
-            {process.env.NEXT_PUBLIC_FB_PIXEL_ID && (
+            {fbPixelId && (
                 <Script
                     id="facebook-pixel"
                     strategy="afterInteractive"
@@ -61,7 +73,7 @@ export default function ThirdPartyScripts() {
                             t.src=v;s=b.getElementsByTagName(e)[0];
                             s.parentNode.insertBefore(t,s)}(window, document,'script',
                             'https://connect.facebook.net/en_US/fbevents.js');
-                            fbq('init', '${process.env.NEXT_PUBLIC_FB_PIXEL_ID}');
+                            fbq('init', '${fbPixelId}');
                             fbq('track', 'PageView');
                         `,
                     }}
@@ -69,7 +81,7 @@ export default function ThirdPartyScripts() {
             )}
 
             {/* Hotjar */}
-            {process.env.NEXT_PUBLIC_HOTJAR_ID && (
+            {hotjarId && (
                 <Script
                     id="hotjar"
                     strategy="lazyOnload"
@@ -77,7 +89,7 @@ export default function ThirdPartyScripts() {
                         __html: `
                             (function(h,o,t,j,a,r){
                                 h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
-                                h._hjSettings={hjid:${process.env.NEXT_PUBLIC_HOTJAR_ID},hjsv:6};
+                                h._hjSettings={hjid:${hotjarId},hjsv:6};
                                 a=o.getElementsByTagName('head')[0];
                                 r=o.createElement('script');r.async=1;
                                 r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
@@ -89,14 +101,14 @@ export default function ThirdPartyScripts() {
             )}
 
             {/* Crisp Chat */}
-            {process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID && (
+            {crispId && (
                 <Script
                     id="crisp-chat"
                     strategy="lazyOnload"
                     dangerouslySetInnerHTML={{
                         __html: `
                             window.$crisp=[];
-                            window.CRISP_WEBSITE_ID="${process.env.NEXT_PUBLIC_CRISP_WEBSITE_ID}";
+                            window.CRISP_WEBSITE_ID="${crispId}";
                             (function(){
                                 d=document;
                                 s=d.createElement("script");
@@ -110,7 +122,7 @@ export default function ThirdPartyScripts() {
             )}
 
             {/* Tawk.to Chat */}
-            {process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID && process.env.NEXT_PUBLIC_TAWK_WIDGET_ID && (
+            {tawkPropId && tawkWidgetId && (
                 <Script
                     id="tawk-chat"
                     strategy="lazyOnload"
@@ -120,7 +132,7 @@ export default function ThirdPartyScripts() {
                             (function(){
                                 var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
                                 s1.async=true;
-                                s1.src='https://embed.tawk.to/${process.env.NEXT_PUBLIC_TAWK_PROPERTY_ID}/${process.env.NEXT_PUBLIC_TAWK_WIDGET_ID}';
+                                s1.src='https://embed.tawk.to/${tawkPropId}/${tawkWidgetId}';
                                 s1.charset='UTF-8';
                                 s1.setAttribute('crossorigin','*');
                                 s0.parentNode.insertBefore(s1,s0);
@@ -131,9 +143,9 @@ export default function ThirdPartyScripts() {
             )}
 
             {/* Custom Analytics or Scripts */}
-            {process.env.NEXT_PUBLIC_CUSTOM_SCRIPT_URL && (
+            {customScriptUrl && (
                 <Script
-                    src={process.env.NEXT_PUBLIC_CUSTOM_SCRIPT_URL}
+                    src={customScriptUrl}
                     strategy="lazyOnload"
                 />
             )}

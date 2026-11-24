@@ -43,7 +43,7 @@ async function generateCaptcha() {
  * Verify a native captcha challenge (One-time use, max 3 attempts)
  */
 async function verifyCaptcha(captchaId, text) {
-  if (!captchaId || !text) {
+  if (typeof captchaId !== 'string' || !captchaId.trim() || typeof text !== 'string' || !text.trim()) {
     return {
       success: false,
       message: 'شناسه و کد کپچا الزامی است.',
@@ -51,9 +51,31 @@ async function verifyCaptcha(captchaId, text) {
     }
   }
 
-  const captcha = await Captcha.findOne({ captchaId })
+  const normalizedId = captchaId.trim()
+  const inputHash = Captcha.hashAnswer(text)
+  const now = new Date()
 
-  if (!captcha || captcha.expiresAt < new Date()) {
+  // Atomic one-time claim on valid, unsolved, unexpired captcha
+  const matched = await Captcha.findOneAndDelete({
+    captchaId: normalizedId,
+    codeHash: inputHash,
+    solved: false,
+    attempts: { $lt: 3 },
+    expiresAt: { $gt: now },
+  })
+
+  if (matched) {
+    return { success: true }
+  }
+
+  // Otherwise atomically increment failed attempt count (if challenge still exists)
+  const updated = await Captcha.findOneAndUpdate(
+    { captchaId: normalizedId, solved: false, expiresAt: { $gt: now } },
+    { $inc: { attempts: 1 } },
+    { new: true }
+  )
+
+  if (!updated) {
     return {
       success: false,
       message: 'کپچا منقضی یا یافت نشد. لطفاً کد جدید دریافت کنید.',
@@ -61,16 +83,8 @@ async function verifyCaptcha(captchaId, text) {
     }
   }
 
-  if (captcha.solved) {
-    return {
-      success: false,
-      message: 'این کپچا قبلاً استفاده شده است. لطفاً کد جدید دریافت کنید.',
-      code: 'CAPTCHA_ALREADY_USED',
-    }
-  }
-
-  if (captcha.attempts >= 3) {
-    await Captcha.deleteOne({ _id: captcha._id })
+  if (updated.attempts >= 3) {
+    await Captcha.deleteOne({ _id: updated._id })
     return {
       success: false,
       message: 'تعداد تلاش‌های ناموفق کپچا بیش از حد است. کد جدید دریافت کنید.',
@@ -78,28 +92,11 @@ async function verifyCaptcha(captchaId, text) {
     }
   }
 
-  const inputHash = Captcha.hashAnswer(text)
-
-  if (inputHash !== captcha.codeHash) {
-    captcha.attempts += 1
-    if (captcha.attempts >= 3) {
-      await Captcha.deleteOne({ _id: captcha._id })
-    } else {
-      await captcha.save()
-    }
-    return {
-      success: false,
-      message: 'کد کپچا وارد شده اشتباه است.',
-      code: 'CAPTCHA_INVALID',
-    }
+  return {
+    success: false,
+    message: 'کد کپچا وارد شده اشتباه است.',
+    code: 'CAPTCHA_INVALID',
   }
-
-  // Mark as solved & delete/invalidate so it cannot be reused
-  captcha.solved = true
-  captcha.attempts += 1
-  await Captcha.deleteOne({ _id: captcha._id })
-
-  return { success: true }
 }
 
 module.exports = {

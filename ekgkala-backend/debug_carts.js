@@ -32,8 +32,9 @@ async function debugCarts() {
                 const userDoc = await User.findById(rawCart.user);
                 if (userDoc) {
                     console.log('User FOUND!');
+                    const maskedEmail = userDoc.email ? String(userDoc.email).replace(/(^.).*(@.*$)/, '$1***$2') : '(none)';
                     console.log(`Name: ${userDoc.name}`);
-                    console.log(`Email: ${userDoc.email}`);
+                    console.log(`Email: ${maskedEmail}`);
                 } else {
                     console.log('CRITICAL: User NOT FOUND in "users" collection!');
                     console.log('This explains why populate() returns null.');

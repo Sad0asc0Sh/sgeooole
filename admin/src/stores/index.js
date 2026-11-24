@@ -26,8 +26,25 @@ export const useAuthStore = create(
       setPermissions: (permissions) =>
         set({ permissions: Array.isArray(permissions) ? permissions : [] }),
 
-      logout: () =>
-        set({ user: null, token: null, permissions: [], isAuthenticated: false }),
+      logout: () => {
+        try {
+          const currentToken = useAuthStore.getState()?.token
+          if (currentToken && typeof window !== 'undefined') {
+            const baseUrl = (api.defaults.baseURL || '/api').replace(/\/$/, '')
+            fetch(`${baseUrl}/auth/logout`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${currentToken}`,
+                'Content-Type': 'application/json',
+              },
+              keepalive: true,
+            }).catch(() => {})
+          }
+        } catch {
+          // Ignore network errors during logout cleanup
+        }
+        set({ user: null, token: null, permissions: [], isAuthenticated: false })
+      },
     }),
     { name: 'auth-storage' },
   ),

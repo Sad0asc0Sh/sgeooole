@@ -28,6 +28,7 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons'
 import RichTextEditor from '../../components/RichTextEditor'
+import { sanitizeAdminHtml } from '../../utils/htmlSanitizer'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
@@ -296,11 +297,12 @@ function ProductForm() {
               description: (() => {
                 if (!p.description) return '';
                 try {
+                  const cleanDesc = sanitizeAdminHtml(p.description);
                   const txt = document.createElement("textarea");
-                  txt.innerHTML = p.description;
+                  txt.innerHTML = cleanDesc;
                   return txt.value;
                 } catch (e) {
-                  return p.description;
+                  return sanitizeAdminHtml(p.description);
                 }
               })(),
               productType: p.productType || 'simple',

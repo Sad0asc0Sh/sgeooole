@@ -1,27 +1,36 @@
 const Post = require('../models/Post')
+const mongoose = require('mongoose')
+const { sanitizeHtmlContent } = require('../utils/htmlSanitizer')
+
+const ALLOWED_POST_SORTS = new Set(['createdAt', '-createdAt', 'updatedAt', '-updatedAt', 'title', '-title', 'status', '-status'])
+const ALLOWED_POST_STATUSES = new Set(['draft', 'published'])
 
 // لیست پست‌ها برای ادمین (با فیلتر و صفحه‌بندی)
 exports.getAdminPosts = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = {}
 
-    if (req.query.status) {
-      filter.status = req.query.status
+    if (req.query.status && ALLOWED_POST_STATUSES.has(String(req.query.status))) {
+      filter.status = String(req.query.status)
     }
 
-    if (req.query.category) {
-      filter.category = req.query.category
+    if (req.query.category && mongoose.Types.ObjectId.isValid(String(req.query.category))) {
+      filter.category = String(req.query.category)
     }
 
-    if (req.query.search) {
-      filter.title = { $regex: req.query.search, $options: 'i' }
+    if (req.query.search && typeof req.query.search === 'string') {
+      const escapedSearch = req.query.search.trim().slice(0, 100).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      if (escapedSearch) {
+        filter.title = { $regex: escapedSearch, $options: 'i' }
+      }
     }
 
-    const sort = req.query.sort || '-createdAt'
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : '-createdAt'
+    const sort = ALLOWED_POST_SORTS.has(rawSort) ? rawSort : '-createdAt'
 
     const query = Post.find(filter)
       .populate('category', 'name')
@@ -64,13 +73,14 @@ exports.createPost = async (req, res) => {
       })
     }
 
+    const postStatus = status && ALLOWED_POST_STATUSES.has(String(status)) ? String(status) : 'draft'
     const payload = {
       title,
       slug,
-      content: content || '',
+      content: sanitizeHtmlContent(content || ''),
       category: category || undefined,
       tags: Array.isArray(tags) ? tags : [],
-      status: status || 'draft',
+      status: postStatus,
       meta: meta || {},
       featuredImage: featuredImage || null,
     }
@@ -139,12 +149,14 @@ exports.updatePost = async (req, res) => {
 
     if (updates.title !== undefined) post.title = updates.title
     if (updates.slug !== undefined) post.slug = updates.slug
-    if (updates.content !== undefined) post.content = updates.content
+    if (updates.content !== undefined) post.content = sanitizeHtmlContent(updates.content || '')
     if (updates.category !== undefined) post.category = updates.category || undefined
     if (updates.tags !== undefined) {
       post.tags = Array.isArray(updates.tags) ? updates.tags : []
     }
-    if (updates.status !== undefined) post.status = updates.status
+    if (updates.status !== undefined && ALLOWED_POST_STATUSES.has(String(updates.status))) {
+      post.status = String(updates.status)
+    }
     if (updates.meta !== undefined) post.meta = updates.meta || {}
     if (updates.featuredImage !== undefined) {
       post.featuredImage = updates.featuredImage || null

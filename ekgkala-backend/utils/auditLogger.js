@@ -6,6 +6,7 @@
  */
 
 const AuditLog = require('../models/AuditLog')
+const { getClientIp } = require('./clientIp')
 
 // ============================================
 // Security Event Types
@@ -56,11 +57,7 @@ const SECURITY_EVENTS = {
 // ============================================
 const getClientIP = (req) => {
     if (!req) return 'unknown'
-    const forwarded = req.headers?.['x-forwarded-for']
-    if (forwarded) {
-        return forwarded.split(',')[0].trim()
-    }
-    return req.connection?.remoteAddress || req.socket?.remoteAddress || req.ip || 'unknown'
+    return getClientIp(req)
 }
 
 // ============================================

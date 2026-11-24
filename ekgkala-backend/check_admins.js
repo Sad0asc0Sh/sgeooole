@@ -11,7 +11,8 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ekgkala',
         const admins = await Admin.find({})
         console.log('Found admins:', admins.length)
         admins.forEach(admin => {
-            console.log(`- Email: ${admin.email}, Role: ${admin.role}, Active: ${admin.isActive}`)
+            const maskedEmail = admin.email ? String(admin.email).replace(/(^.).*(@.*$)/, '$1***$2') : '(none)'
+            console.log(`- ID: ${admin._id}, Email: ${maskedEmail}, Role: ${admin.role}, Active: ${admin.isActive}`)
         })
         process.exit(0)
     })

@@ -46,49 +46,56 @@ const sensitiveKeys = [
 ]
 
 const sensitivePatterns = [
-  /bearer\s+[\w-]+/gi, // Bearer tokens
-  /\b\d{10}\b/g, // 10-digit national codes (keep first 3)
-  /IR\d{24}/g, // IBAN/Sheba numbers
+  { regex: /bearer\s+[A-Za-z0-9._~+/-]+=*/gi, replacement: 'Bearer [REDACTED]' },
+  { regex: /mongodb(?:\+srv)?:\/\/[^:\s/]+:[^@\s]+@/gi, replacement: 'mongodb://[REDACTED]@' },
+  { regex: /\/api\/send\/(?:shared|simple|otp)\/[A-Za-z0-9_-]+/gi, replacement: '/api/send/[REDACTED]' },
+  { regex: /\b\d{10}\b/g, replacement: '[REDACTED]' }, // 10-digit national codes
+  { regex: /IR\d{24}/g, replacement: '[REDACTED]' }, // IBAN/Sheba numbers
 ]
+
+const redactString = (value) => {
+  if (typeof value !== 'string') return value
+  let out = value
+  for (const { regex, replacement } of sensitivePatterns) {
+    out = out.replace(regex, replacement)
+  }
+  return out
+}
+
+const cloneSafe = (value, seen = new WeakSet(), depth = 0) => {
+  if (value === null || typeof value !== 'object') {
+    return typeof value === 'string' ? redactString(value) : value
+  }
+  if (depth > 6) return '[MAX_DEPTH]'
+  if (seen.has(value)) return '[CIRCULAR]'
+  seen.add(value)
+
+  if (Array.isArray(value)) {
+    const arr = value.map((item) => cloneSafe(item, seen, depth + 1))
+    seen.delete(value)
+    return arr
+  }
+
+  const out = {}
+  for (const key of Object.keys(value)) {
+    const lowerKey = key.toLowerCase()
+    if (sensitiveKeys.some((sk) => lowerKey.includes(sk))) {
+      out[key] = '[REDACTED]'
+      continue
+    }
+    if (typeof value[key] === 'function') continue
+    out[key] = cloneSafe(value[key], seen, depth + 1)
+  }
+  seen.delete(value)
+  return out
+}
 
 /**
  * Redact sensitive information from log metadata
  */
 const redact = (meta = {}) => {
   if (!meta || typeof meta !== 'object') return meta
-
-  const clone = JSON.parse(JSON.stringify(meta))
-
-  const redactObject = (obj, depth = 0) => {
-    if (depth > 5 || !obj || typeof obj !== 'object') return
-
-    for (const key of Object.keys(obj)) {
-      const lowerKey = key.toLowerCase()
-
-      // Check if key matches sensitive patterns
-      if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
-        obj[key] = '[REDACTED]'
-        continue
-      }
-
-      // Recursively check nested objects
-      if (typeof obj[key] === 'object' && obj[key] !== null) {
-        redactObject(obj[key], depth + 1)
-      }
-
-      // Redact sensitive patterns in string values
-      if (typeof obj[key] === 'string') {
-        for (const pattern of sensitivePatterns) {
-          if (pattern.test(obj[key])) {
-            obj[key] = obj[key].replace(pattern, '[REDACTED]')
-          }
-        }
-      }
-    }
-  }
-
-  redactObject(clone)
-  return clone
+  return cloneSafe(meta)
 }
 
 // ============================================
@@ -100,9 +107,11 @@ const logFormat = format.combine(
   format.printf(info => {
     const { timestamp, level, message, stack, ...meta } = info
     const safeMeta = redact(meta)
-    const base = `${timestamp} [${level.toUpperCase()}] ${message}`
+    const safeMessage = redactString(String(message || ''))
+    const safeStack = stack ? redactString(String(stack)) : ''
+    const base = `${timestamp} [${level.toUpperCase()}] ${safeMessage}`
     const metaStr = Object.keys(safeMeta).length ? ` ${JSON.stringify(safeMeta)}` : ''
-    return stack ? `${base}${metaStr}\n${stack}` : `${base}${metaStr}`
+    return safeStack ? `${base}${metaStr}\n${safeStack}` : `${base}${metaStr}`
   }),
 )
 
@@ -114,7 +123,7 @@ const consoleFormat = format.combine(
   format.timestamp({ format: 'HH:mm:ss' }),
   format.printf(info => {
     const { timestamp, level, message } = info
-    return `${timestamp} [${level}] ${message}`
+    return `${timestamp} [${level}] ${redactString(String(message || ''))}`
   }),
 )
 

@@ -95,9 +95,12 @@ const normalizeImageInput = (imageInput) => {
 
 const normalizeLink = (value) => {
   const link = String(value || '').trim().slice(0, 2048)
-  // جلوگیری از ذخیرهٔ URLهای اجرایی؛ فرانت هم این‌ها را بلاک می‌کند.
-  if (/^(javascript|data|vbscript):/i.test(link)) return ''
-  return link
+  if (!link) return ''
+  // فقط مسیر داخلی (/), لنگر (#) یا آدرس http/https مجاز است
+  if (/^(\/(?!\/)|#|https?:\/\/)/i.test(link) && !/[<>"'\s]/.test(link)) {
+    return link
+  }
+  return ''
 }
 
 const normalizeImageAlt = (value, fallback = '') => {
@@ -193,19 +196,22 @@ const resolveFit = (value, fallback = 'cover') => {
 // Controllers
 // ============================================
 
+const ALLOWED_BANNER_SORTS = new Set(['sortOrder -createdAt', 'createdAt', '-createdAt', 'sortOrder', '-sortOrder'])
+
 // GET /api/banners
 exports.getBanners = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = {}
-    if (req.query.position) filter.position = req.query.position
+    if (req.query.position) filter.position = String(req.query.position)
     if (req.query.isActive === 'true') filter.isActive = true
     else if (req.query.isActive === 'false') filter.isActive = false
 
-    const sort = req.query.sort || 'sortOrder -createdAt'
+    const rawSort = typeof req.query.sort === 'string' ? req.query.sort.trim() : 'sortOrder -createdAt'
+    const sort = ALLOWED_BANNER_SORTS.has(rawSort) ? rawSort : 'sortOrder -createdAt'
     const [items, total] = await Promise.all([
       Banner.find(filter).sort(sort).skip(skip).limit(limit).lean(),
       Banner.countDocuments(filter),

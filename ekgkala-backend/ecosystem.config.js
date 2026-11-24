@@ -1,7 +1,7 @@
 const dotenv = require('dotenv')
 const path = require('path')
 
-// Load .env file
+// Load .env file (secrets stay in .env and are loaded directly by server.js rather than persisted in PM2 dump)
 dotenv.config({ path: path.resolve(__dirname, '.env') })
 
 module.exports = {
@@ -14,12 +14,7 @@ module.exports = {
     env: {
       NODE_ENV: process.env.NODE_ENV || 'production',
       PORT: process.env.PORT || 5000,
-      JWT_SECRET: process.env.JWT_SECRET,
-      MONGODB_URI: process.env.MONGODB_URI,
-      ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
-      PARSPACK_ENDPOINT: process.env.PARSPACK_ENDPOINT,
-      PARSPACK_ACCESS_KEY: process.env.PARSPACK_ACCESS_KEY,
-      PARSPACK_SECRET_KEY: process.env.PARSPACK_SECRET_KEY,
+      CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS,
     },
     watch: false,
     max_memory_restart: '500M',

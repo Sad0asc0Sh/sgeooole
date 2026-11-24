@@ -1,6 +1,8 @@
+const crypto = require('crypto');
 const Order = require('../models/Order');
 const ChatHistory = require('../models/ChatHistory');
 const Settings = require('../models/Settings');
+const { getClientIp } = require('../utils/auditLogger');
 const {
   generateExpertResponse,
   streamExpertResponse,
@@ -52,10 +54,28 @@ const { assembleCCTVPackage } = require('../services/cctvAssemblyEngine');
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_HISTORY_MESSAGES = 20;
 const MAX_STORED_MESSAGES = 50;
+const GUEST_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const activeConversations = new Map();
+const guestIpUsageMap = new Map();
 
 function getLocalDayStart(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getGuestIpQuotaEntry(req) {
+  const ip = getClientIp(req);
+  if (!ip || ip === 'unknown') return null;
+  const dayKey = getLocalDayStart().getTime();
+  if (guestIpUsageMap.size > 10000) {
+    guestIpUsageMap.clear();
+  }
+  const existing = guestIpUsageMap.get(ip);
+  if (!existing || existing.dayKey !== dayKey) {
+    const fresh = { dayKey, count: 0 };
+    guestIpUsageMap.set(ip, fresh);
+    return fresh;
+  }
+  return existing;
 }
 
 function escapeRegex(value) {
@@ -65,7 +85,7 @@ function escapeRegex(value) {
 function getRequestId(req) {
   const raw = req.body?.requestId || req.headers['x-chat-request-id'];
   if (typeof raw === 'string' && /^[A-Za-z0-9_-]{8,128}$/.test(raw)) return raw;
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  return `${Date.now()}-${crypto.randomUUID()}`;
 }
 
 function getIdentity(req) {
@@ -142,10 +162,27 @@ async function loadConversation(req) {
     throw new AIServiceError('دستیار هوشمند فعلاً غیرفعال است.', 503);
   }
 
-  const userLimit = Number(aiConfig.userDailyLimit) || 20;
+  const userLimit = Math.max(1, Number(aiConfig.maxDailyMessages || aiConfig.userDailyLimit) || 20);
+  if (identity.type === 'guest') {
+    const ipLimit = Math.max(userLimit, Number(process.env.CHAT_GUEST_IP_DAILY_LIMIT) || 30);
+    const ipEntry = getGuestIpQuotaEntry(req);
+    if (ipEntry && ipEntry.count >= ipLimit) {
+      throw new AIServiceError(
+        'سقف مجاز پیام روزانه برای شبکه شما به پایان رسیده است. لطفاً فردا دوباره تلاش کنید.',
+        429,
+      );
+    }
+  }
+
   let chatSession = await ChatHistory.findOne(identity.query);
   if (!chatSession) {
-    chatSession = new ChatHistory({ ...identity.query, messages: [] });
+    chatSession = new ChatHistory({
+      ...identity.query,
+      messages: [],
+      ...(identity.type === 'guest' ? { expiresAt: new Date(Date.now() + GUEST_SESSION_TTL_MS) } : {}),
+    });
+  } else if (identity.type === 'guest') {
+    chatSession.expiresAt = new Date(Date.now() + GUEST_SESSION_TTL_MS);
   }
 
   const today = getLocalDayStart();
@@ -427,12 +464,13 @@ async function buildChatContext(message, settings, userId = null, history = [], 
     ordersList.push(...userOrders);
   }
 
-  const orderCodeMatches = message.match(/\b([A-Za-z]{2,4}-?\d{5,8})\b/gi);
-  if (orderCodeMatches) {
-    for (const rawCode of orderCodeMatches) {
+  const orderCodeMatches = userId ? message.match(/\b([A-Za-z]{2,4}-?\d{5,8})\b/gi) : null;
+  if (userId && orderCodeMatches) {
+    for (const rawCode of orderCodeMatches.slice(0, 3)) {
       const normalizedCode = rawCode.toUpperCase();
       const codeWithoutDash = normalizedCode.replace('-', '');
       const foundOrder = await Order.findOne({
+        user: userId,
         $or: [{ orderCode: normalizedCode }, { orderCode: codeWithoutDash }],
       })
         .select('orderCode orderStatus totalPrice createdAt trackingCode courierName preparedTrackingUrl')
@@ -488,6 +526,65 @@ async function buildChatContext(message, settings, userId = null, history = [], 
   };
 }
 
+async function claimDailyTurn(conversation, req) {
+  const { chatSession, identity, userLimit } = conversation;
+  if (!chatSession || chatSession._usageClaimed) return;
+
+  if (identity?.type === 'guest') {
+    const ipLimit = Math.max(userLimit, Number(process.env.CHAT_GUEST_IP_DAILY_LIMIT) || 30);
+    const ipEntry = getGuestIpQuotaEntry(req);
+    if (ipEntry) {
+      if (ipEntry.count >= ipLimit) {
+        throw new AIServiceError(
+          'سقف مجاز پیام روزانه برای شبکه شما به پایان رسیده است. لطفاً فردا دوباره تلاش کنید.',
+          429,
+        );
+      }
+      ipEntry.count += 1;
+    }
+  }
+
+  const today = getLocalDayStart();
+  if (chatSession.isNew || !chatSession._id) {
+    chatSession.usage = {
+      dailyCount: (Number(chatSession.usage?.dailyCount) || 0) + 1,
+      lastReset: today,
+    };
+    await chatSession.save();
+    chatSession._usageClaimed = true;
+    return;
+  }
+
+  await ChatHistory.updateOne(
+    { _id: chatSession._id, 'usage.lastReset': { $lt: today } },
+    { $set: { 'usage.dailyCount': 0, 'usage.lastReset': today } },
+  );
+
+  const claimed = await ChatHistory.findOneAndUpdate(
+    {
+      _id: chatSession._id,
+      'usage.dailyCount': { $lt: userLimit },
+    },
+    {
+      $inc: { 'usage.dailyCount': 1 },
+      ...(identity?.type === 'guest'
+        ? { $set: { expiresAt: new Date(Date.now() + GUEST_SESSION_TTL_MS) } }
+        : {}),
+    },
+    { new: true },
+  );
+
+  if (!claimed) {
+    throw new AIServiceError(
+      `شما به سقف مجاز ${userLimit} پیام در روز رسیده‌اید. لطفاً فردا مجدداً تلاش کنید.`,
+      429,
+    );
+  }
+
+  chatSession.usage = claimed.usage;
+  chatSession._usageClaimed = true;
+}
+
 async function saveCompletedTurn(chatSession, userMessage, reply, turnStartedAt = Date.now()) {
   const cleanReply = stripThinkingTags(reply);
   if (!cleanReply) return;
@@ -506,8 +603,10 @@ async function saveCompletedTurn(chatSession, userMessage, reply, turnStartedAt 
     chatSession.messages = chatSession.messages.slice(-MAX_STORED_MESSAGES);
   }
   chatSession.lastUpdated = new Date();
-  chatSession.usage = chatSession.usage || { dailyCount: 0, lastReset: getLocalDayStart() };
-  chatSession.usage.dailyCount = (Number(chatSession.usage.dailyCount) || 0) + 1;
+  if (!chatSession._usageClaimed) {
+    chatSession.usage = chatSession.usage || { dailyCount: 0, lastReset: getLocalDayStart() };
+    chatSession.usage.dailyCount = (Number(chatSession.usage.dailyCount) || 0) + 1;
+  }
   await chatSession.save();
 }
 
@@ -755,6 +854,7 @@ exports.handleChatMessage = async (req, res) => {
     }
 
     // ۲) مسیر عمومی (LLM) — همان handleMessage
+    await claimDailyTurn(conversation, req);
     const pack = await preparePackWizard(effectiveMessage, conversation.chatSession, conversation.history);
     const consult = prepareConsultation(conversation.chatSession, effectiveMessage, pack.view);
     const context = await buildChatContext(
@@ -852,6 +952,7 @@ exports.handleMessage = async (req, res) => {
       });
     }
 
+    await claimDailyTurn(conversation, req);
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
     const consult = prepareConsultation(conversation.chatSession, message, pack.view);
     const context = await buildChatContext(
@@ -961,6 +1062,7 @@ exports.handleStreamMessage = async (req, res) => {
       return;
     }
 
+    await claimDailyTurn(conversation, req);
     const pack = await preparePackWizard(message, conversation.chatSession, conversation.history);
     const consult = prepareConsultation(conversation.chatSession, message, pack.view);
     const context = await buildChatContext(

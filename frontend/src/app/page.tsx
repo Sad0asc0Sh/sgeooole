@@ -13,6 +13,7 @@ import HomeSection from "@/components/home/HomeSection";
 import type { Category } from "@/services/categoryService";
 import type { Banner } from "@/services/bannerService";
 import { mapBackendProduct } from "@/lib/productData";
+import { safeJsonLd } from "@/lib/sanitizeHtml";
 
 export const revalidate = 60;
 
@@ -318,7 +319,7 @@ export default function Home() {
       <script
         type="application/ld+json"
         suppressHydrationWarning
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }}
       />
       {/* Brand H1 for SEO: visually hidden (the design carries no visible
           heading here) but present in the rendered DOM for crawlers and

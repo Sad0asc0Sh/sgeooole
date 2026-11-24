@@ -30,7 +30,7 @@ function buildPersianSearchRegex(text) {
         const charClass = `[${group.join('')}]`
         for (const ch of group) charMap.set(ch, charClass)
     }
-    const regexSpecial = /[.*+?^${}()|[\]\\]/g
+    const regexSpecial = /[.*+?^${}()|[\]\\]/
     let pattern = ''
     for (const ch of text) {
         if (charMap.has(ch)) pattern += charMap.get(ch)
@@ -48,7 +48,7 @@ function buildPersianSearchRegex(text) {
 router.get('/trending', async (req, res) => {
     try {
         const db = req.app.locals.db;
-        const limit = parseInt(req.query.limit) || 8;
+        const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
 
         const trendingSearches = await db.collection('search_history').aggregate([
             {
@@ -104,8 +104,9 @@ router.get('/trending', async (req, res) => {
 router.post('/track', searchTrackLimiter, async (req, res) => {
     try {
         const { searchTerm } = req.body;
+        const normalizedTerm = typeof searchTerm === 'string' ? searchTerm.trim().slice(0, 120) : '';
 
-        if (!searchTerm || !searchTerm.trim()) {
+        if (!normalizedTerm) {
             return res.status(400).json({
                 success: false,
                 message: '\u0639\u0628\u0627\u0631\u062a \u062c\u0633\u062a\u062c\u0648 \u0627\u0644\u0632\u0627\u0645\u06cc \u0627\u0633\u062a'
@@ -115,7 +116,7 @@ router.post('/track', searchTrackLimiter, async (req, res) => {
         const db = req.app.locals.db;
 
         await db.collection('search_history').insertOne({
-            searchTerm: searchTerm.trim(),
+            searchTerm: normalizedTerm,
             userId: req.user?.id || null,
             createdAt: new Date()
         });
@@ -141,10 +142,10 @@ router.post('/track', searchTrackLimiter, async (req, res) => {
  */
 router.get('/suggestions', async (req, res) => {
     try {
-        const { q } = req.query;
-        const limit = parseInt(req.query.limit) || 5;
+        const rawQ = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
+        const limit = Math.min(10, Math.max(1, parseInt(req.query.limit, 10) || 5));
 
-        if (!q || !q.trim()) {
+        if (!rawQ) {
             return res.json({
                 success: true,
                 suggestions: []
@@ -152,7 +153,7 @@ router.get('/suggestions', async (req, res) => {
         }
 
         const db = req.app.locals.db;
-        const normalizedPattern = buildPersianSearchRegex(q.trim())
+        const normalizedPattern = buildPersianSearchRegex(rawQ)
 
         // Get suggestions from products with normalized search
         const productSuggestions = await db.collection('products')

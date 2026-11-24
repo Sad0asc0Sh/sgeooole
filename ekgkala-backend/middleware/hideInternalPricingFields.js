@@ -70,6 +70,17 @@ function hideInternalPricingFields(req, res, next) {
     let safe
     try {
       safe = stripSecretFields(payload)
+      if (
+        process.env.NODE_ENV === 'production' &&
+        res.statusCode >= 500 &&
+        safe &&
+        typeof safe === 'object' &&
+        !Array.isArray(safe)
+      ) {
+        delete safe.error
+        delete safe.stack
+        delete safe.details
+      }
     } catch (err) {
       // هرگز با خطای فیلتر، داده‌ی خام را نفرست
       console.error('[hideInternalPricingFields] sanitize failed:', err && err.message)

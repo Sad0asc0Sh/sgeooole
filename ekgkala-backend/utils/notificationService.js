@@ -15,13 +15,15 @@ function checkGlobalSmsCircuitBreaker() {
   const recent10Min = globalSmsTracker.filter(ts => ts > tenMinutesAgo)
   const recent24Hours = globalSmsTracker.filter(ts => ts > twentyFourHoursAgo)
 
-  // Max 20 SMS per 10 minutes across ENTIRE site
-  if (recent10Min.length >= 20) {
+  // Max SMS per 10 minutes across ENTIRE site (configurable via env)
+  const max10Min = Math.max(1, Number(process.env.SMS_MAX_PER_10_MIN) || 60)
+  if (recent10Min.length >= max10Min) {
     return { allowed: false, reason: 'global_10m_limit', count: recent10Min.length }
   }
 
-  // Max 150 SMS per 24 hours across ENTIRE site
-  if (recent24Hours.length >= 150) {
+  // Max SMS per 24 hours across ENTIRE site (configurable via env)
+  const max24Hours = Math.max(1, Number(process.env.SMS_MAX_PER_24_HOURS) || 500)
+  if (recent24Hours.length >= max24Hours) {
     return { allowed: false, reason: 'global_24h_limit', count: recent24Hours.length }
   }
 
@@ -77,18 +79,26 @@ class NotificationService {
         };
       }
 
-      // SMS config - کنسول جدید ملی پیامک
+      // SMS config - کنسول جدید ملی پیامک (fail closed without hardcoded fallback)
       const bodyIdVal = Number(settings?.notificationSettings?.smsPatternId || process.env.MELIPAYAMAK_OTP_BODY_ID || process.env.MELIPAYAMAK_PATTERN_OTP || 434916);
+      const pathToken = String(settings?.notificationSettings?.smsApiKey || process.env.MELIPAYAMAK_API_KEY || '').trim();
       this.smsConfig = {
-        pathToken: (settings?.notificationSettings?.smsApiKey) || process.env.MELIPAYAMAK_API_KEY || 'f95527ef2fa7498dbad9a0d09f2bbad2',
+        pathToken,
         bodyId: isNaN(bodyIdVal) ? 434916 : bodyIdVal,
-        enabled: true
+        enabled: Boolean(pathToken)
       };
 
     } catch (error) {
       console.error('خطا در بارگذاری تنظیمات:', error);
       throw error;
     }
+  }
+
+  invalidateConfigCache() {
+    this.smsConfig = null;
+    this.emailProvider = null;
+    this.resendClient = null;
+    this.emailTransporter = null;
   }
 
   async sendEmail(to, subject, html) {
@@ -139,6 +149,10 @@ class NotificationService {
 
     if (!this.smsConfig) {
       await this.initialize();
+    }
+
+    if (!this.smsConfig?.enabled || !this.smsConfig?.pathToken) {
+      throw new Error('تنظیمات کلید API پیامک (MELIPAYAMAK_API_KEY) پیکربندی نشده است');
     }
 
     // 🔒 Layer 0 Firewall: Global System SMS Circuit Breaker
@@ -220,13 +234,35 @@ class NotificationService {
 
 const service = new NotificationService();
 
-async function sendVerificationEmail(email, token) {
-  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-  const html = `
+const escapeHtmlValue = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+async function sendVerificationEmail(email, tokenOrCode) {
+  const raw = String(tokenOrCode ?? '').trim();
+  const isOtpCode = /^\d{4,8}$/.test(raw);
+  const safeValue = escapeHtmlValue(raw);
+  const verificationUrl = `${process.env.FRONTEND_URL || ''}/verify-email?token=${encodeURIComponent(raw)}`;
+  const html = isOtpCode
+    ? `
+    <div dir="rtl" style="font-family: Tahoma, Arial, sans-serif;">
+      <h2>تأیید ایمیل</h2>
+      <p>کد تأیید شما:</p>
+      <div style="display: inline-block; padding: 12px 24px; background-color: #f3f4f6; font-size: 24px; font-weight: bold; letter-spacing: 6px; border-radius: 8px;">
+        ${safeValue}
+      </div>
+      <p>این کد تا ۲ دقیقه معتبر است.</p>
+    </div>
+  `
+    : `
     <div dir="rtl" style="font-family: Tahoma, Arial, sans-serif;">
       <h2>تأیید ایمیل</h2>
       <p>برای تأیید ایمیل خود روی لینک زیر کلیک کنید:</p>
-      <a href="${verificationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
+      <a href="${escapeHtmlValue(verificationUrl)}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">
         تأیید ایمیل
       </a>
       <p>این لینک تا 24 ساعت معتبر است.</p>
@@ -234,6 +270,27 @@ async function sendVerificationEmail(email, token) {
   `;
 
   return service.sendEmail(email, 'تأیید ایمیل', html);
+}
+
+async function sendResetPasswordEmail(email, name, resetUrl) {
+  if (typeof resetUrl !== 'string' || !/^https?:\/\//i.test(resetUrl.trim())) {
+    throw new Error('آدرس بازنشانی رمز عبور نامعتبر است');
+  }
+  const safeName = escapeHtmlValue(name || 'کاربر گرامی');
+  const safeUrl = escapeHtmlValue(resetUrl.trim());
+  const html = `
+    <div dir="rtl" style="font-family: Tahoma, Arial, sans-serif; line-height: 1.8;">
+      <h2>بازنشانی رمز عبور</h2>
+      <p>سلام ${safeName}،</p>
+      <p>درخواست بازنشانی رمز عبور برای حساب شما ثبت شده است. برای تعیین رمز جدید روی دکمه زیر کلیک کنید:</p>
+      <a href="${safeUrl}" style="display: inline-block; padding: 10px 20px; background-color: #ef4444; color: #ffffff; text-decoration: none; border-radius: 6px;">
+        تغییر رمز عبور
+      </a>
+      <p>این لینک به مدت محدود معتبر است. در صورتی که این درخواست توسط شما ثبت نشده، این ایمیل را نادیده بگیرید.</p>
+    </div>
+  `;
+
+  return service.sendEmail(email, 'بازنشانی رمز عبور - EkgKala', html);
 }
 
 async function sendOtpSMS(phoneNumber, code) {
@@ -244,9 +301,15 @@ async function getSmsSettings() {
   return service.getSmsSettings();
 }
 
+function invalidateConfigCache() {
+  service.invalidateConfigCache();
+}
+
 module.exports = {
   sendVerificationEmail,
+  sendResetPasswordEmail,
   sendOtpSMS,
   getSmsSettings,
+  invalidateConfigCache,
   service
 };

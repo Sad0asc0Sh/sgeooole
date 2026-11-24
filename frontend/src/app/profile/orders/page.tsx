@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, Box, Clock, CheckCircle2, XCircle, Truck, AlertCircle, Search, CreditCard, Loader2, X } from "lucide-react";
 import { authService } from "@/services/authService";
+import { safePaymentRedirectUrl } from "@/lib/sanitizeHtml";
 
 interface Order {
     _id: string;
@@ -85,8 +86,9 @@ function OrdersContent() {
             const { default: api } = await import("@/lib/api");
             const response = await api.post(`/orders/${orderId}/pay`);
 
-            if (response.data.success && response.data.data.paymentUrl) {
-                window.location.href = response.data.data.paymentUrl;
+            const safePayUrl = safePaymentRedirectUrl(response.data?.data?.paymentUrl);
+            if (response.data.success && safePayUrl) {
+                window.location.href = safePayUrl;
             } else {
                 alert("خطا در ایجاد درخواست پرداخت");
             }

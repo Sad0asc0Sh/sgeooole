@@ -166,8 +166,15 @@ function DeliveredItemsReport() {
       ]
 
       const escapeCell = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          return `"${value}"`
+        }
         const str = value == null ? '' : String(value)
-        return `"${str.replace(/"/g, '""')}"`
+        const safe =
+          /^[\t\r\n ]*[=+\-@]/.test(str) || /^[\t\r]/.test(str)
+            ? `'${str}`
+            : str
+        return `"${safe.replace(/"/g, '""')}"`
       }
 
       const lines = [headers.map(escapeCell).join(',')]

@@ -18,6 +18,7 @@ const ALL_ROLES = ['user', 'support', 'editor', 'admin', 'manager', 'superadmin'
 
 const getRoleLevel = (role) => ROLE_LEVELS[role] || 0
 const getPermissionsForRole = (role) => ROLES[role] || []
+const escapeRegex = (str) => String(str || '').slice(0, 120).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 // ============================================
 // GET /api/users/admin/all
@@ -25,17 +26,18 @@ const getPermissionsForRole = (role) => ROLES[role] || []
 // ============================================
 exports.getAllUsersAsAdmin = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
-    const search = req.query.search || ''
+    const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
     const filter = {}
 
     if (search) {
+      const safeSearch = escapeRegex(search)
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { email: { $regex: safeSearch, $options: 'i' } },
       ]
     }
 
@@ -133,12 +135,35 @@ exports.updateUserAsAdmin = async (req, res) => {
     const targetCurrentLevel = getRoleLevel(user.role)
     const isSelf = user._id.toString() === req.user._id.toString()
 
+    // Editing staff accounts requires ADMIN_UPDATE permission
+    if (user.role !== 'user' && !currentPermissions.includes(PERMISSIONS.ADMIN_UPDATE) && !isSelf) {
+      return res.status(403).json({
+        success: false,
+        message: 'برای ویرایش حساب‌های مدیریتی مجوز ADMIN_UPDATE لازم است.',
+      })
+    }
+
     // Cannot edit someone with higher or equal role level (except yourself for basic info)
     if (!isSuperAdmin && targetCurrentLevel >= currentLevel && !isSelf) {
       return res.status(403).json({
         success: false,
         message: 'اجازه ویرایش کاربری با سطح دسترسی برابر یا بالاتر را ندارید.',
       })
+    }
+
+    // Protect the last active superadmin from demotion or deactivation
+    if (user.role === 'superadmin' && ((role !== undefined && role !== 'superadmin') || isActive === false)) {
+      const otherActiveSuperadmin = await User.exists({
+        _id: { $ne: user._id },
+        role: 'superadmin',
+        isActive: true,
+      })
+      if (!otherActiveSuperadmin) {
+        return res.status(400).json({
+          success: false,
+          message: 'امکان غیرفعال‌سازی یا تغییر نقش آخرین سوپرادمین فعال سیستم وجود ندارد.',
+        })
+      }
     }
 
     // Role change rules
@@ -244,6 +269,36 @@ exports.deleteUserAsAdmin = async (req, res) => {
         success: false,
         message: 'نمی‌توانید حساب کاربری خودتان را حذف کنید.',
       })
+    }
+
+    const currentRole = req.user?.role || 'user'
+    const currentPermissions = getPermissionsForRole(currentRole)
+    if (user.role !== 'user') {
+      if (!currentPermissions.includes(PERMISSIONS.ADMIN_DELETE)) {
+        return res.status(403).json({
+          success: false,
+          message: 'برای حذف حساب‌های مدیریتی مجوز ADMIN_DELETE لازم است.',
+        })
+      }
+      if (currentRole !== 'superadmin' && getRoleLevel(user.role) >= getRoleLevel(currentRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'اجازه حذف کاربری با سطح دسترسی برابر یا بالاتر را ندارید.',
+        })
+      }
+      if (user.role === 'superadmin') {
+        const otherActiveSuperadmin = await User.exists({
+          _id: { $ne: user._id },
+          role: 'superadmin',
+          isActive: true,
+        })
+        if (!otherActiveSuperadmin) {
+          return res.status(400).json({
+            success: false,
+            message: 'امکان حذف آخرین سوپرادمین فعال سیستم وجود ندارد.',
+          })
+        }
+      }
     }
 
     await User.findByIdAndDelete(req.params.id)

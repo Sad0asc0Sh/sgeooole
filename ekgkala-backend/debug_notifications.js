@@ -27,7 +27,8 @@ async function debug() {
             return;
         }
         console.log('--- Test User ---');
-        console.log(`ID: ${user._id}, Name: ${user.name}, Mobile: ${user.mobile}`);
+        const maskedMobile = user.mobile ? `${String(user.mobile).slice(0, 4)}****${String(user.mobile).slice(-2)}` : '(none)';
+        console.log(`ID: ${user._id}, Name: ${user.name}, Mobile: ${maskedMobile}`);
 
         // 3. Check Notifications for this user
         const notifications = await Notification.find({ user: user._id });

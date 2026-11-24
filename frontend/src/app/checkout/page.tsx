@@ -12,6 +12,7 @@ import api from "@/lib/api";
 import { normalizeIranMobile, toDigitsOnly } from "@/lib/normalization";
 import AddressLocationFields from "@/components/checkout/AddressLocationFields";
 import { normalizeIranLocationText } from "@/lib/iranLocations";
+import { safePaymentRedirectUrl } from "@/lib/sanitizeHtml";
 
 const isShippingMethodAvailableForAddress = (method: any, address: Address | undefined) => {
     if (method.availabilityScope !== "restricted") return true;
@@ -647,16 +648,23 @@ export default function CheckoutPage() {
                 localStorage.removeItem("appliedCoupon");
                 const orderId = response.data._id;
 
-                // Step 2: Every checkout must proceed to the online payment gateway.
+                if (response.data.isPaid || serverTotal === 0) {
+                    redirectingToGateway = true;
+                    window.location.href = `/order/${orderId}`;
+                    return;
+                }
+
+                // Step 2: Proceed to the online payment gateway.
                 try {
                     const { default: api } = await import("@/lib/api");
                     const paymentResponse = await api.post(`/orders/${orderId}/pay`, {
                         gateway: selectedGateway
                     });
 
-                    if (paymentResponse.data.success && paymentResponse.data.data.paymentUrl) {
+                    const safePayUrl = safePaymentRedirectUrl(paymentResponse.data?.data?.paymentUrl);
+                    if (paymentResponse.data.success && safePayUrl) {
                         redirectingToGateway = true;
-                        window.location.href = paymentResponse.data.data.paymentUrl;
+                        window.location.href = safePayUrl;
                         return;
                     }
 

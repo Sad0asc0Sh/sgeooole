@@ -95,6 +95,8 @@ const userUpdateSchema = Joi.object({
     isActive: Joi.boolean().optional(),
 
     isVerified: Joi.boolean().optional(),
+
+    isMashhadPickupEligible: Joi.boolean().optional(),
 });
 
 /**

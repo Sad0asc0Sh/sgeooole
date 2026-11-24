@@ -1,5 +1,6 @@
 const Newsletter = require('../models/Newsletter')
 const crypto = require('crypto')
+const { escapeHtml, sanitizeCsvCell } = require('../utils/htmlSanitizer')
 
 /**
  * Subscribe to newsletter
@@ -10,16 +11,17 @@ exports.subscribe = async (req, res) => {
     try {
         const { email, source = 'footer' } = req.body
 
-        if (!email) {
+        if (!email || typeof email !== 'string') {
             return res.status(400).json({
                 success: false,
                 message: 'لطفاً ایمیل خود را وارد کنید',
             })
         }
 
+        const normalizedEmail = email.trim().toLowerCase()
         // Validate email format
-        const emailRegex = /^\S+@\S+\.\S+$/
-        if (!emailRegex.test(email)) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        if (!emailRegex.test(normalizedEmail) || normalizedEmail.length > 254) {
             return res.status(400).json({
                 success: false,
                 message: 'فرمت ایمیل نامعتبر است',
@@ -30,7 +32,7 @@ exports.subscribe = async (req, res) => {
         const ipAddress = req.ip || req.connection?.remoteAddress || null
 
         // Check if already subscribed
-        const existingSubscriber = await Newsletter.findOne({ email: email.toLowerCase() })
+        const existingSubscriber = await Newsletter.findOne({ email: normalizedEmail })
 
         if (existingSubscriber) {
             // If already active, return success (idempotent)
@@ -100,14 +102,14 @@ exports.unsubscribe = async (req, res) => {
     try {
         const { token } = req.params
 
-        if (!token) {
+        if (!token || typeof token !== 'string' || !/^[a-f0-9]{16,128}$/i.test(token.trim())) {
             return res.status(400).json({
                 success: false,
                 message: 'توکن نامعتبر است',
             })
         }
 
-        const subscriber = await Newsletter.findOne({ unsubscribeToken: token })
+        const subscriber = await Newsletter.findOne({ unsubscribeToken: token.trim() })
 
         if (!subscriber) {
             return res.status(404).json({
@@ -148,7 +150,7 @@ exports.unsubscribe = async (req, res) => {
         <div class="card">
           <div class="icon">✅</div>
           <h1>لغو اشتراک موفق</h1>
-          <p>ایمیل <span class="email">${subscriber.email}</span> با موفقیت از خبرنامه حذف شد.</p>
+          <p>ایمیل <span class="email">${escapeHtml(subscriber.email)}</span> با موفقیت از خبرنامه حذف شد.</p>
           <p>اگر این کار را اشتباهی انجام دادید، می‌توانید دوباره در سایت عضو شوید.</p>
         </div>
       </body>
@@ -169,7 +171,9 @@ exports.unsubscribe = async (req, res) => {
  */
 exports.getSubscribers = async (req, res) => {
     try {
-        const { page = 1, limit = 20, active } = req.query
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
+        const { active } = req.query
 
         const filter = {}
         if (active !== undefined) {
@@ -179,7 +183,7 @@ exports.getSubscribers = async (req, res) => {
         const subscribers = await Newsletter.find(filter)
             .sort({ subscribedAt: -1 })
             .skip((page - 1) * limit)
-            .limit(parseInt(limit))
+            .limit(limit)
             .select('-unsubscribeToken')
 
         const total = await Newsletter.countDocuments(filter)
@@ -189,10 +193,10 @@ exports.getSubscribers = async (req, res) => {
             success: true,
             data: subscribers,
             pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
+                page,
+                limit,
                 total,
-                pages: Math.ceil(total / limit),
+                pages: Math.ceil(total / limit) || 1,
             },
             stats: {
                 total,
@@ -256,10 +260,15 @@ exports.exportSubscribers = async (req, res) => {
             .sort({ subscribedAt: -1 })
             .select('email isActive subscribedAt source')
 
-        // Generate CSV
+        // Generate CSV (formula-injection safe)
         const csvRows = ['email,isActive,subscribedAt,source']
         subscribers.forEach((sub) => {
-            csvRows.push(`${sub.email},${sub.isActive},${sub.subscribedAt.toISOString()},${sub.source}`)
+            csvRows.push([
+                sanitizeCsvCell(sub.email || ''),
+                sanitizeCsvCell(sub.isActive ? 'true' : 'false'),
+                sanitizeCsvCell(sub.subscribedAt ? sub.subscribedAt.toISOString() : ''),
+                sanitizeCsvCell(sub.source || ''),
+            ].join(','))
         })
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8')

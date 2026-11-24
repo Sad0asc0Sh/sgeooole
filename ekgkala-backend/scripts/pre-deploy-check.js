@@ -29,14 +29,20 @@ if (!fs.existsSync(envFile)) {
     const requiredVars = [
         'MONGODB_URI',
         'JWT_SECRET',
+        'ADMIN_SETUP_KEY',
+        'SGEOOOLE_PRICING_SECRET',
         'PARSPACK_ENDPOINT',
         'PARSPACK_ACCESS_KEY',
         'PARSPACK_SECRET_KEY',
     ]
 
     for (const varName of requiredVars) {
-        if (!envContent.includes(varName + '=') || envContent.includes(varName + '=your-') || envContent.includes(varName + '=CHANGE_THIS')) {
+        const lineMatch = envContent.match(new RegExp(`^${varName}=(.*)$`, 'm'))
+        const val = lineMatch ? lineMatch[1].trim() : ''
+        if (!val || /^(your-|CHANGE_THIS|CHANGE_ME|changeme|secret|default)/i.test(val)) {
             errors.push(`${varName} not properly configured in .env`)
+        } else if (varName === 'ADMIN_SETUP_KEY' && val.length < 24) {
+            errors.push(`${varName} must be at least 24 characters`)
         }
     }
 
@@ -67,7 +73,11 @@ console.log('\n🔍 Checking for debug files...')
 
 const debugPatterns = [
     'debug_*.js',
+    'debug-*.js',
     'test_*.js',
+    'test-*.js',
+    'check-*.js',
+    'reset_admin_password.js',
     '*.log',
     '*.tmp',
 ]

@@ -205,10 +205,17 @@ const userSchema = new mongoose.Schema(
     // Password Reset Token (for forgot password feature)
     resetPasswordToken: {
       type: String,
+      select: false,
     },
 
     resetPasswordExpire: {
       type: Date,
+      select: false,
+    },
+
+    passwordChangedAt: {
+      type: Date,
+      select: false,
     },
 
     // Metadata
@@ -246,6 +253,9 @@ userSchema.pre('save', async function (next) {
   try {
     const salt = await bcrypt.genSalt(10)
     this.password = await bcrypt.hash(this.password, salt)
+    if (!this.isNew) {
+      this.passwordChangedAt = new Date(Date.now() - 1000)
+    }
     next()
   } catch (error) {
     next(error)
@@ -288,8 +298,11 @@ userSchema.methods.getResetPasswordToken = function () {
 // Convert to JSON (hide sensitive fields if needed)
 userSchema.set('toJSON', {
   transform: (doc, ret) => {
-    // Remove password from JSON output
+    // Remove sensitive auth fields from JSON output
     delete ret.password
+    delete ret.resetPasswordToken
+    delete ret.resetPasswordExpire
+    delete ret.passwordChangedAt
     return ret
   },
 })

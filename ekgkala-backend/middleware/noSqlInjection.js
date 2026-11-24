@@ -26,17 +26,12 @@ const DANGEROUS_OPERATORS = [
     '$match', '$group', '$project', '$lookup',
 ]
 
+const PROTOTYPE_POLLUTION_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 /**
- * Check if a value contains dangerous operators
+ * Check if a value contains dangerous operators or prototype pollution keys
  */
 const containsDangerousOperator = (value, path = '') => {
-    if (typeof value === 'string') {
-        if (value.startsWith('$')) {
-            return { found: true, operator: value, path }
-        }
-        return { found: false }
-    }
-
     if (typeof value !== 'object' || value === null) {
         return { found: false }
     }
@@ -49,12 +44,12 @@ const containsDangerousOperator = (value, path = '') => {
         return { found: false }
     }
 
-    for (const [key, val] of Object.entries(value)) {
-        if (key.startsWith('$')) {
+    for (const key of Object.getOwnPropertyNames(value)) {
+        if (key.startsWith('$') || PROTOTYPE_POLLUTION_KEYS.has(key)) {
             return { found: true, operator: key, path: path ? `${path}.${key}` : key }
         }
 
-        const result = containsDangerousOperator(val, path ? `${path}.${key}` : key)
+        const result = containsDangerousOperator(value[key], path ? `${path}.${key}` : key)
         if (result.found) return result
     }
 
@@ -82,7 +77,8 @@ const deepSanitize = (obj, path = '', maxDepth = 10) => {
 
     const sanitized = {}
 
-    for (const [key, value] of Object.entries(obj)) {
+    for (const key of Object.getOwnPropertyNames(obj)) {
+        const value = obj[key]
         if (key.startsWith('$')) {
             logger.security('Removed dangerous operator from input', {
                 path: path ? `${path}.${key}` : key,
@@ -91,7 +87,7 @@ const deepSanitize = (obj, path = '', maxDepth = 10) => {
             continue
         }
 
-        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        if (PROTOTYPE_POLLUTION_KEYS.has(key)) {
             logger.security('Prototype pollution attempt blocked', {
                 path: path ? `${path}.${key}` : key,
             })

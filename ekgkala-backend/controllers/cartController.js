@@ -468,6 +468,13 @@ exports.syncCart = async (req, res) => {
       })
     }
 
+    if (items.length > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'تعداد اقلام سبد خرید از حد مجاز بیشتر است',
+      })
+    }
+
     // پیدا کردن یا ایجاد سبد خرید
     let cart = await Cart.findOne({ user: userId, status: 'active' })
 
@@ -484,9 +491,12 @@ exports.syncCart = async (req, res) => {
     // همگام‌سازی آیتم‌ها
     for (const incomingItem of items) {
       // اعتبارسنجی محصول
+      if (!incomingItem?.product || !mongoose.Types.ObjectId.isValid(String(incomingItem.product))) {
+        continue
+      }
       const product = await Product.findById(incomingItem.product)
-      if (!product) {
-        console.log(`Product not found: ${incomingItem.product}`)
+      if (!product || product.isActive === false) {
+        console.log(`Product not found or inactive: ${incomingItem.product}`)
         continue
       }
 
@@ -931,11 +941,11 @@ exports.addOrUpdateItem = async (req, res) => {
     const userId = req.user._id
     console.log('[CART] User ID:', userId)
 
-    if (!productId || !quantity || quantity < 1) {
+    if (!productId || !Number.isInteger(Number(quantity)) || Number(quantity) < 1 || Number(quantity) > 100) {
       console.error('[CART] Invalid input:', { productId, quantity })
       return res.status(400).json({
         success: false,
-        message: 'اطلاعات محصول نامعتبر است',
+        message: 'اطلاعات یا تعداد محصول نامعتبر است',
       })
     }
 
@@ -949,8 +959,8 @@ exports.addOrUpdateItem = async (req, res) => {
 
     // اعتبارسنجی محصول
     const product = await Product.findById(productId)
-    if (!product) {
-      console.error('[CART] Product not found:', productId)
+    if (!product || product.isActive === false) {
+      console.error('[CART] Product not found or inactive:', productId)
       return res.status(404).json({
         success: false,
         message: 'محصول یافت نشد',

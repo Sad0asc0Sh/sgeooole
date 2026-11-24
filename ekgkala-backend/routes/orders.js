@@ -59,7 +59,7 @@ router.post('/verify-payment', verifyPaymentLimiter, verifyPayment)
 
 const trackOrderLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 60, // 60 requests per 15 minutes per IP
+  max: 15, // 15 requests per 15 minutes per IP
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => getClientIp(req),

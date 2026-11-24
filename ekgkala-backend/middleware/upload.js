@@ -1,7 +1,7 @@
 const multer = require('multer')
 const crypto = require('crypto')
 const path = require('path')
-const { uploadToParsPack, deleteFromParsPack, getPublicUrl } = require('../lib/parspackS3')
+const { uploadToParsPack, deleteFromParsPack, getPublicUrl, detectImageSignature } = require('../lib/parspackS3')
 
 // ============================================
 // تنظیمات حجم فایل
@@ -134,16 +134,23 @@ const normalizeFileUrl = (req, res, next) => {
 }
 
 // ============================================
-// validateMagicNumbers middleware (log only)
+// validateMagicNumbers middleware (fail-closed)
 // ============================================
 const validateMagicNumbers = (req, res, next) => {
   if (!req.file && (!req.files || req.files.length === 0)) {
     return next()
   }
 
-  const files = req.file ? [req.file] : req.files || []
+  const files = req.file ? [req.file] : (Array.isArray(req.files) ? req.files : Object.values(req.files).flat())
   for (const file of files) {
-    console.log(`[UPLOAD] File saved: ${file.originalname} -> ${file.filename}`)
+    if (!Buffer.isBuffer(file?.buffer)) continue
+    const sig = detectImageSignature(file.buffer)
+    if (!sig) {
+      return res.status(400).json({
+        success: false,
+        message: 'محتوای فایل با فرمت تصویری مجاز مطابقت ندارد.',
+      })
+    }
   }
 
   next()

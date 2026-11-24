@@ -4,6 +4,16 @@ yarn.lock
 
 # Environment variables
 .env
+.env.*
+!.env.example
+
+# Backups & temp files
+*.backup
+*.backup-*
+*.bak
+*.old
+*.patch
+*.tmp
 
 # Uploads
 uploads/

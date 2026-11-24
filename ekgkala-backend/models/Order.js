@@ -139,11 +139,19 @@ const orderSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    paymentAuthorities: {
+      type: [String],
+      default: [],
+    },
 
     // Sadad Payment Fields
     sadadToken: {
       type: String,
       trim: true,
+    },
+    sadadTokens: {
+      type: [String],
+      default: [],
     },
     sadadOrderId: {
       type: String,
@@ -258,8 +266,8 @@ const orderSchema = new mongoose.Schema(
       unique: true,
       required: true,
       default: function () {
-        // تولید کد تصادفی: WV- به علاوه ۶ رقم تصادفی
-        return 'WV-' + Math.floor(100000 + Math.random() * 900000).toString()
+        // تولید کد تصادفی ایمن: WV- به علاوه ۶ رقم تصادفی
+        return 'WV-' + require('crypto').randomInt(100000, 1000000).toString()
       },
     },
 

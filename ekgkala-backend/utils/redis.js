@@ -84,7 +84,9 @@ const getRedisConfig = () => {
     return {
       ...baseConfig,
       // ioredis parses REDIS_URL automatically
-      tls: process.env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined,
+      tls: process.env.REDIS_TLS === 'true'
+        ? { rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false' }
+        : undefined,
     }
   }
 
@@ -93,7 +95,9 @@ const getRedisConfig = () => {
     host: process.env.REDIS_HOST || '127.0.0.1',
     port: Number(process.env.REDIS_PORT || 6379),
     password: process.env.REDIS_PASSWORD || undefined,
-    tls: process.env.REDIS_TLS === 'true' ? { rejectUnauthorized: false } : undefined,
+    tls: process.env.REDIS_TLS === 'true'
+      ? { rejectUnauthorized: process.env.REDIS_TLS_REJECT_UNAUTHORIZED !== 'false' }
+      : undefined,
   }
 }
 
@@ -277,11 +281,17 @@ const deleteCache = async (key) => {
  */
 const deleteCachePattern = async (pattern) => {
   return safeExecute('ACCELERATOR', async () => {
-    const keys = await client.keys(pattern)
-    if (keys.length > 0) {
-      await client.del(...keys)
-    }
-    return keys.length
+    let cursor = '0'
+    let deletedCount = 0
+    do {
+      const [nextCursor, keys] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 200)
+      cursor = nextCursor
+      if (Array.isArray(keys) && keys.length > 0) {
+        await client.del(...keys)
+        deletedCount += keys.length
+      }
+    } while (cursor !== '0')
+    return deletedCount
   }, 0)
 }
 

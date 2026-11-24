@@ -141,6 +141,7 @@ function AuthenticatedProfileContent() {
 
     // Change Password State
     const [passwordSheetOpen, setPasswordSheetOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordLoading, setPasswordLoading] = useState(false);
@@ -405,6 +406,10 @@ function AuthenticatedProfileContent() {
     };
 
     const handleUpdatePassword = async () => {
+        if (user?.hasPassword !== false && !currentPassword) {
+            setPasswordError("لطفاً رمز عبور فعلی خود را وارد کنید");
+            return;
+        }
         if (newPassword.length < 6) {
             setPasswordError("رمز عبور باید حداقل ۶ کاراکتر باشد");
             return;
@@ -417,8 +422,12 @@ function AuthenticatedProfileContent() {
         try {
             setPasswordLoading(true);
             setPasswordError("");
-            await authService.updateProfile({ password: newPassword });
+            await authService.updateProfile({
+                password: newPassword,
+                ...(user?.hasPassword !== false ? { currentPassword } : {}),
+            });
             setPasswordSheetOpen(false);
+            setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
             alert("رمز عبور با موفقیت تغییر کرد");
@@ -956,6 +965,21 @@ function AuthenticatedProfileContent() {
                         <SheetTitle className="text-center text-lg font-bold text-gray-800">تغییر رمز عبور</SheetTitle>
                     </SheetHeader>
                     <div className="space-y-4">
+                        {user?.hasPassword !== false && (
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 mb-1.5">رمز عبور فعلی</label>
+                                <div className="relative">
+                                    <input
+                                        type="password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 pl-10 text-sm focus:border-kala-500 focus:ring-1 focus:ring-kala-500 outline-none transition-all"
+                                        dir="ltr"
+                                    />
+                                    <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                </div>
+                            </div>
+                        )}
                         <div>
                             <label className="block text-xs font-bold text-gray-500 mb-1.5">رمز عبور جدید</label>
                             <div className="relative">

@@ -3,6 +3,8 @@ const router = express.Router()
 const ExcelJS = require('exceljs')
 const csv = require('csv-parser')
 const fs = require('fs')
+const os = require('os')
+const crypto = require('crypto')
 const multer = require('multer')
 const path = require('path')
 
@@ -18,9 +20,28 @@ const { applyPromotionOverlay, ttlUntil, sanitizeCompareAtPrice, sanitizeVariant
 const { findActiveSalesForProduct, getSaleMemberProductIds } = require('../services/campaignConflictService')
 const { applyOwnPromotionRules, deactivateCampaign } = require('../services/promotionLifecycleService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
+const { ROLES } = require('../config/rbac')
+const { sanitizeHtmlContent, sanitizeCsvCell } = require('../utils/htmlSanitizer')
 const { upload, uploadToParsPack, deleteFromParsPack } = require('../middleware/upload')
 const { cacheMiddleware, clearCacheByKey, clearCacheByPrefix, CACHE_TTL } = require('../middleware/cache')
 const { authorizePricingSync } = require('../utils/pricingSyncAuth')
+
+const isProductAdmin = (req) => {
+  if (!req?.user || req.user._authType === 'customer') return false
+  const perms = ROLES[req.user.role] || []
+  return (
+    perms.includes(PERMISSIONS.PRODUCT_READ) ||
+    perms.includes(PERMISSIONS.PRODUCT_UPDATE) ||
+    perms.includes(PERMISSIONS.PRODUCT_CREATE)
+  )
+}
+
+const isPricingManager = (req) =>
+  Boolean(
+    req?.user &&
+      req.user._authType !== 'customer' &&
+      ['superadmin', 'admin', 'manager'].includes(req.user.role),
+  )
 
 // ============================================
 // Persian/Arabic Character Normalization for Search
@@ -57,8 +78,8 @@ function buildPersianSearchRegex(text) {
     }
   }
 
-  // Special regex characters that need escaping
-  const regexSpecial = /[.*+?^${}()|[\]\\]/g
+  // Special regex characters that need escaping (no /g flag so .test doesn't skip chars)
+  const regexSpecial = /[.*+?^${}()|[\]\\]/
 
   let pattern = ''
   for (const ch of text) {
@@ -81,18 +102,19 @@ const {
   productUpdateSchema,
 } = require('../validators/joiSchemas/productSchemas')
 
-// Multer configuration for CSV upload (local storage)
+// Multer configuration for CSV/Excel upload (stored in OS temp dir outside app tree)
 const csvStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads/csv')
+    const uploadDir = path.join(os.tmpdir(), 'ekgkala-csv-uploads')
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true })
     }
     cb(null, uploadDir)
   },
   filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9)
-    cb(null, 'import-' + uniqueSuffix + path.extname(file.originalname))
+    const ext = path.extname(file.originalname || '').toLowerCase()
+    const safeExt = ['.csv', '.xlsx', '.xls'].includes(ext) ? ext : '.tmp'
+    cb(null, `import-${crypto.randomUUID()}${safeExt}`)
   },
 })
 
@@ -113,9 +135,10 @@ const csvUpload = multer({
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/octet-stream',
     ])
+    const allowedExtensions = new Set(['.csv', '.xlsx', '.xls'])
 
-    const ext = path.extname(file.originalname).toLowerCase()
-    if (allowedMimeTypes.has(file.mimetype) || ext === '.csv' || ext === '.xlsx' || ext === '.xls') {
+    const ext = path.extname(file.originalname || '').toLowerCase()
+    if (allowedMimeTypes.has(file.mimetype) && allowedExtensions.has(ext)) {
       cb(null, true)
     } else {
       cb(new Error('فقط فایل‌های CSV و Excel (.xlsx) مجاز هستند'))
@@ -490,6 +513,8 @@ const normalizeImportRow = (rawRow = {}, globalCurrency = 'toman') => {
 }
 
 const handleCsvUpload = (req, res, next) => {
+  req.setTimeout(CSV_IMPORT_TIMEOUT_MS)
+  res.setTimeout(CSV_IMPORT_TIMEOUT_MS)
   csvUpload.single('file')(req, res, (err) => {
     if (!err) return next()
 
@@ -808,12 +833,16 @@ const normalizeProductSpecPayload = async (payload, categoryId) => {
 router.get('/', cacheMiddleware(LISTING_CACHE_TTL), async (req, res) => {
   try {
     const now = new Date()
+    const canAdminPreview = isProductAdmin(req)
     const mergedQuery = { ...req.query, ...extractScopedFilterParamsFromUrl(req.originalUrl) }
+    if (!canAdminPreview) {
+      mergedQuery.skipDiscount = 'false'
+    }
     const { nextCampaignBoundary, ...result } = await listProducts(mergedQuery, { Product, Category, Brand, Sale }, now)
     // ساعت سرور برای اصلاح اختلاف ساعت کلاینت (فرانت آفست را از serverNow/هدر Date می‌سازد)
     result.serverNow = now.toISOString()
     // انقضای کش در نزدیک‌ترین شروع/پایان کمپین یا پایان پیشنهاد روی کارت.
-    if (req.query.skipDiscount !== 'true' && Array.isArray(result.data)) {
+    if ((!canAdminPreview || req.query.skipDiscount !== 'true') && Array.isArray(result.data)) {
       let expiresAt = now.getTime() + LISTING_CACHE_TTL * 1000
       if (nextCampaignBoundary) expiresAt = Math.min(expiresAt, nextCampaignBoundary.getTime())
       for (const item of result.data) {
@@ -1056,8 +1085,8 @@ router.get(
       const filter = {}
 
       // Search filter (with Persian/Arabic normalization)
-      if (req.query.search) {
-        const normalizedPattern = buildPersianSearchRegex(req.query.search.trim())
+      if (typeof req.query.search === 'string' && req.query.search.trim()) {
+        const normalizedPattern = buildPersianSearchRegex(req.query.search.trim().slice(0, 100))
         const regex = new RegExp(normalizedPattern, 'i')
         filter.$or = [{ name: regex }, { sku: regex }]
       }
@@ -1124,7 +1153,8 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
     let product;
     const mongoose = require('mongoose');
     const { id } = req.params;
-    const skipDiscount = req.query.skipDiscount === 'true';
+    const canAdminPreview = isProductAdmin(req);
+    const skipDiscount = canAdminPreview && req.query.skipDiscount === 'true';
 
     // 1. Try finding by ID if it's a valid ObjectId
     if (mongoose.Types.ObjectId.isValid(id)) {
@@ -1146,7 +1176,7 @@ router.get('/:id', cacheMiddleware(300), async (req, res) => {
         });
     }
 
-    if (!product) {
+    if (!product || (!canAdminPreview && product.isActive === false)) {
       return res.status(404).json({
         success: false,
         message: 'Product not found',
@@ -1272,9 +1302,19 @@ router.post(
         compareAtPrice,
       } = req.body
 
+      if (price !== undefined && (!Number.isFinite(Number(price)) || Number(price) < 0)) {
+        return res.status(400).json({ success: false, message: 'قیمت محصول نامعتبر است' })
+      }
+      if (stock !== undefined && (!Number.isFinite(Number(stock)) || Number(stock) < 0)) {
+        return res.status(400).json({ success: false, message: 'موجودی محصول نامعتبر است' })
+      }
+      if (discount !== undefined && (!Number.isFinite(Number(discount)) || Number(discount) < 0 || Number(discount) > 100)) {
+        return res.status(400).json({ success: false, message: 'درصد تخفیف باید بین ۰ تا ۱۰۰ باشد' })
+      }
+
       const productData = {
         name,
-        description: description || '',
+        description: sanitizeHtmlContent(description || ''),
         sku: sku || undefined,
         productType: productType || 'simple',
         isSpecialOffer: isSpecialOffer || false,
@@ -1390,7 +1430,75 @@ router.put(
   async (req, res) => {
     try {
       const body = req.body || {}
-      const { removeAllImages, imagesToRemove, ...updates } = body
+      const { removeAllImages, imagesToRemove } = body
+
+      const ALLOWED_UPDATE_FIELDS = [
+        'name',
+        'nameEn',
+        'slug',
+        'description',
+        'shortDescription',
+        'productType',
+        'price',
+        'compareAtPrice',
+        'discount',
+        'sku',
+        'barcode',
+        'category',
+        'brand',
+        'images',
+        'stock',
+        'attributes',
+        'variants',
+        'isFeatured',
+        'isOnSale',
+        'specifications',
+        'isActive',
+        'excludeFromTorob',
+        'guarantee',
+        'isFlashDeal',
+        'flashDealEndTime',
+        'isSpecialOffer',
+        'specialOfferEndTime',
+        'properties',
+        'weight',
+        'dimensions',
+        'tags',
+        'metaTitle',
+        'metaDescription',
+      ]
+      if (isPricingManager(req)) {
+        ALLOWED_UPDATE_FIELDS.push('costPrice', 'hardFloorPrice', 'supplierQuotes')
+      }
+
+      const updates = {}
+      for (const field of ALLOWED_UPDATE_FIELDS) {
+        if (Object.prototype.hasOwnProperty.call(body, field) && body[field] !== undefined) {
+          updates[field] = body[field]
+        }
+      }
+
+      if (updates.description !== undefined) {
+        updates.description = sanitizeHtmlContent(updates.description || '')
+      }
+      if (updates.price !== undefined && updates.price !== null && updates.price !== '') {
+        const parsedPrice = Number(updates.price)
+        if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+          return res.status(400).json({ success: false, message: 'قیمت محصول نامعتبر است' })
+        }
+      }
+      if (updates.stock !== undefined && updates.stock !== null && updates.stock !== '') {
+        const parsedStock = Number(updates.stock)
+        if (!Number.isFinite(parsedStock) || parsedStock < 0) {
+          return res.status(400).json({ success: false, message: 'موجودی محصول نامعتبر است' })
+        }
+      }
+      if (updates.discount !== undefined && updates.discount !== null && updates.discount !== '') {
+        const parsedDiscount = Number(updates.discount)
+        if (!Number.isFinite(parsedDiscount) || parsedDiscount < 0 || parsedDiscount > 100) {
+          return res.status(400).json({ success: false, message: 'درصد تخفیف باید بین ۰ تا ۱۰۰ باشد' })
+        }
+      }
 
       // Allow clients to send arrays either as JSON arrays or JSON strings (FormData)
       const normalizeImageList = (value) => {
@@ -1876,7 +1984,7 @@ router.post(
 router.post(
   '/bulk-delete',
   protect,
-  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  checkPermission(PERMISSIONS.PRODUCT_DELETE),
   async (req, res) => {
     try {
       const { ids } = req.body
@@ -1938,7 +2046,7 @@ router.post(
 router.delete(
   '/:id',
   protect,
-  checkPermission(PERMISSIONS.PRODUCT_UPDATE),
+  checkPermission(PERMISSIONS.PRODUCT_DELETE),
   async (req, res) => {
     try {
       const product = await Product.findById(req.params.id)
@@ -2166,13 +2274,7 @@ router.get(
         .select('sku name price')
         .lean()
 
-      const csvEscape = (val) => {
-        const str = String(val ?? '')
-        if (/[",\r\n]/.test(str)) {
-          return `"${str.replace(/"/g, '""')}"`
-        }
-        return str
-      }
+      const csvEscape = (val) => sanitizeCsvCell(val)
 
       const headers = ['sku', 'title', 'price']
       const lines = [headers.join(',')]
@@ -2222,13 +2324,7 @@ router.get(
         .populate('brand', 'name')
         .lean()
 
-      const csvEscape = (val) => {
-        const str = String(val ?? '')
-        if (/[",\r\n]/.test(str)) {
-          return `"${str.replace(/"/g, '""')}"`
-        }
-        return str
-      }
+      const csvEscape = (val) => sanitizeCsvCell(val)
 
       const headers = [
         'name', 'sku', 'productCode', 'productType', 'price', 'compareAtPrice',
@@ -2562,7 +2658,9 @@ const handleProductImport = async (req, res) => {
             }
             if (categoryId !== undefined && categoryId !== null) updateFields.category = categoryId
             if (brandId !== undefined && brandId !== null) updateFields.brand = brandId
-            if (row.description !== undefined && row.description !== '') updateFields.description = row.description
+            if (row.description !== undefined && row.description !== '') {
+              updateFields.description = sanitizeHtmlContent(row.description)
+            }
             if (row.isActive !== undefined && row.isActive !== '') updateFields.isActive = parseCsvBoolean(row.isActive)
             if (row.isFeatured !== undefined && row.isFeatured !== '') updateFields.isFeatured = parseCsvBoolean(row.isFeatured)
             if (row.sku !== undefined && row.sku !== '') updateFields.sku = rowSku
@@ -2625,7 +2723,7 @@ const handleProductImport = async (req, res) => {
               stock: stockVal,
               category: categoryId || null,
               brand: brandId || null,
-              description: row.description || '',
+              description: sanitizeHtmlContent(row.description || ''),
               isActive: row.isActive !== undefined ? parseCsvBoolean(row.isActive) : true,
               isFeatured: row.isFeatured !== undefined ? parseCsvBoolean(row.isFeatured) : false,
               images: hasImageColumn ? parseCsvImageUrls(row.rawRow, req) : [],
@@ -2756,7 +2854,7 @@ const handleProductImport = async (req, res) => {
           stock: stockVal,
           category: categoryId,
           brand: brandId,
-          description: row.description || '',
+          description: sanitizeHtmlContent(row.description || ''),
           isActive: row.isActive !== undefined ? parseCsvBoolean(row.isActive) : true,
           isFeatured: row.isFeatured !== undefined ? parseCsvBoolean(row.isFeatured) : false,
           images: hasImageColumn ? parseCsvImageUrls(row.rawRow, req) : [],
@@ -2881,14 +2979,15 @@ router.get('/code/:code', cacheMiddleware(300), async (req, res) => {
   try {
     const { code } = req.params
     const normalizedCode = code.toUpperCase()
-    const skipDiscount = req.query.skipDiscount === 'true'
+    const canAdminPreview = isProductAdmin(req)
+    const skipDiscount = canAdminPreview && req.query.skipDiscount === 'true'
 
     const product = await Product.findOne({ productCode: normalizedCode })
       .populate('category', '_id name slug parent')
       .populate('brand', '_id name slug')
       .lean()
 
-    if (!product) {
+    if (!product || (!canAdminPreview && product.isActive === false)) {
       return res.status(404).json({
         success: false,
         message: 'محصول یافت نشد',

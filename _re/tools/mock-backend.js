@@ -46,8 +46,11 @@ console.log(`mock tree: ${tree.length} roots, ${tree.reduce((a, r) => a + (r.chi
 
 function svgFor(query) {
   const params = new URLSearchParams(query);
-  const color = params.get("c") || "#ccc";
-  const text = params.get("t") || "";
+  const rawColor = params.get("c") || "#ccc";
+  const color = /^#[0-9a-fA-F]{3,8}$/.test(rawColor) ? rawColor : "#ccc";
+  const text = String(params.get("t") || "")
+    .slice(0, 16)
+    .replace(/[<>&"']/g, "");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160"><rect width="160" height="160" rx="20" fill="${color}" opacity="0.85"/><text x="80" y="90" font-size="34" text-anchor="middle" fill="#fff" font-family="sans-serif">${text}</text></svg>`;
 }
 

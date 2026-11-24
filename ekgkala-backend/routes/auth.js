@@ -3,12 +3,23 @@ const router = express.Router()
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const Admin = require('../models/Admin')
+const redis = require('../utils/redis')
 const { sendResetPasswordEmail } = require('../utils/notificationService')
 const { protect, checkPermission, PERMISSIONS } = require('../middleware/auth')
 const { requireCaptcha } = require('../middleware/requireCaptcha')
 const { generateCaptcha } = require('../utils/nativeCaptcha')
 const { getPermissions } = require('../config/rbac')
 const { upload } = require('../middleware/upload')
+
+const ROLE_LEVELS = {
+  user: 1,
+  support: 2,
+  editor: 3,
+  admin: 4,
+  manager: 5,
+  superadmin: 6,
+}
+const getRoleLevel = (role) => ROLE_LEVELS[role] || 0
 
 // Joi Validation
 const validate = require('../middleware/validate')
@@ -43,8 +54,6 @@ const {
   verifyEmailOtp,
 } = require('../controllers/customerAuthController')
 
-console.log('DEBUG: sendEmailOtp type:', typeof sendEmailOtp);
-
 // JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
@@ -58,9 +67,9 @@ const COOKIE_MAX_AGE_MS = Number(process.env.JWT_COOKIE_MAX_AGE || 24 * 60 * 60 
 // ============================================
 // Helper: generate JWT token
 // ============================================
-const generateToken = (userId, role = 'admin') => {
+const generateToken = (userId, role = 'admin', type = role === 'user' ? 'customer' : 'admin') => {
   return jwt.sign(
-    { id: userId, type: 'admin', role },
+    { id: userId, type, role },
     JWT_SECRET,
     {
       expiresIn: JWT_EXPIRE,
@@ -220,6 +229,11 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
           message: 'شما دسترسی لازم برای ورود به پنل ادمین را ندارید.',
         })
       }
+    } else if (admin.role !== 'user') {
+      return res.status(403).json({
+        success: false,
+        message: 'حساب‌های مدیریتی باید از طریق پنل ادمین وارد شوند.',
+      })
     }
 
     const isPasswordMatch = await admin.comparePassword(password)
@@ -234,7 +248,8 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
     admin.lastLogin = new Date()
     await admin.save()
 
-    const token = generateToken(admin._id, admin.role)
+    const tokenType = Array.isArray(allowedRoles) && allowedRoles.length > 0 ? 'admin' : 'customer'
+    const token = generateToken(admin._id, admin.role, tokenType)
     const adminData = admin.toJSON()
     const permissions = getPermissions(admin.role || 'guest')
 
@@ -257,8 +272,7 @@ const makeLoginHandler = (allowedRoles) => async (req, res) => {
     console.error('Error in admin login:', error)
     return res.status(500).json({
       success: false,
-      message: `خطا در ورود به سیستم: ${error.message}`,
-      error: error.message,
+      message: 'خطا در ورود به سیستم',
     })
   }
 }
@@ -279,61 +293,81 @@ router.post('/login', makeLoginHandler(null))
 // ============================================
 // GET /api/auth/me
 // ============================================
-router.get('/me', async (req, res) => {
+router.get('/me', protect, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+    if (req.userType === 'customer' || req.user.role === 'user') {
+      return res.status(403).json({
         success: false,
-        message: 'توکن ارسال نشده است.',
+        message: 'دسترسی به بخش مدیریت مجاز نیست.',
       })
     }
 
-    const token = authHeader.split(' ')[1]
-    const decoded = jwt.verify(token, JWT_SECRET)
-
-    const admin = await Admin.findById(decoded.id)
-
-    if (!admin || !admin.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'کاربر ادمین یافت نشد یا غیرفعال است.',
-      })
-    }
-
-    const permissions = getPermissions(admin.role || 'guest')
+    const permissions = getPermissions(req.user.role || 'guest')
 
     return res.json({
       success: true,
-      data: admin,
+      data: req.user,
       permissions,
     })
   } catch (error) {
     console.error('Error in /me endpoint:', error)
-
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'توکن نامعتبر است.',
-      })
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'توکن منقضی شده است - لطفاً مجدداً وارد شوید.',
-      })
-    }
-
     return res.status(500).json({
       success: false,
       message: 'خطا در دریافت کاربر فعلی',
-      error: error.message,
     })
   }
 })
 
+// ============================================
+// POST /api/auth/logout
+// ============================================
+router.post('/logout', async (req, res) => {
+  try {
+    let token
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1]
+    }
+    if (!token && req.headers.cookie) {
+      const match = req.headers.cookie.match(/(?:^|;\s*)token=([^;]+)/)
+      if (match) token = decodeURIComponent(match[1])
+    }
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET, {
+          issuer: JWT_ISSUER,
+          audience: JWT_AUDIENCE,
+          algorithms: ['HS256'],
+        })
+        const remainingSeconds = decoded?.exp
+          ? Math.max(1, decoded.exp - Math.floor(Date.now() / 1000))
+          : 86400
+        await redis.blacklistToken(token, remainingSeconds)
+      } catch (_) {
+        // Ignore invalid/expired token on logout
+      }
+    }
+
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    })
+
+    return res.json({
+      success: true,
+      message: 'خروج با موفقیت انجام شد.',
+    })
+  } catch (error) {
+    console.error('Error in logout:', error)
+    return res.status(500).json({
+      success: false,
+      message: 'خطا در خروج از سیستم',
+    })
+  }
+})
+
+// ============================================
 // ============================================
 // POST /api/auth/register
 // ============================================
@@ -345,25 +379,34 @@ router.post('/register', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), asy
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: '??â??â?? ????? ? ??â??â?? ???â??â?? ?????? ???',
+        message: 'نام، ایمیل و رمز عبور الزامی است.',
       })
     }
 
-    const existingAdmin = await Admin.findOne({ email })
+    const normalizedEmail = String(email).trim().toLowerCase()
+    const existingAdmin = await Admin.findOne({ email: normalizedEmail })
 
     if (existingAdmin) {
       return res.status(409).json({
         success: false,
-        message: '??â??â?? ????? ?? ??? ???â??â?? ???â??â?? ????',
+        message: 'کاربری با این ایمیل قبلاً ثبت شده است.',
       })
     }
 
     const allowedRoles = ['admin', 'manager', 'superadmin', 'editor', 'support']
     const safeRole = allowedRoles.includes(role) ? role : 'admin'
+    const actorRole = req.user?.role || 'user'
+
+    if (actorRole !== 'superadmin' && getRoleLevel(safeRole) >= getRoleLevel(actorRole)) {
+      return res.status(403).json({
+        success: false,
+        message: 'نمی‌توانید نقشی هم‌سطح یا بالاتر از خود اختصاص دهید.',
+      })
+    }
 
     const admin = await Admin.create({
-      name,
-      email,
+      name: String(name).trim(),
+      email: normalizedEmail,
       password,
       role: safeRole,
     })
@@ -372,7 +415,7 @@ router.post('/register', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), asy
 
     return res.status(201).json({
       success: true,
-      message: '???â??â?? ???? ?? ????â??â?? ????? ??',
+      message: 'کاربر ادمین با موفقیت ایجاد شد.',
       data: {
         user: admin,
       },
@@ -381,36 +424,40 @@ router.post('/register', protect, checkPermission(PERMISSIONS.ADMIN_CREATE), asy
     console.error('Error in admin registration:', error)
     return res.status(500).json({
       success: false,
-      message: '??? ?? ?????â??â?? ?????',
-      error: error.message,
+      message: 'خطا در ثبت‌نام ادمین',
     })
   }
 })
 // POST /api/auth/admin/forgot-password
 // درخواست بازنشانی رمز عبور (ارسال ایمیل)
 // ============================================
-router.post('/admin/forgot-password', async (req, res) => {
+router.post('/admin/forgot-password', requireCaptcha, async (req, res) => {
+  const genericResponse = {
+    success: true,
+    message: 'در صورت ثبت بودن ایمیل در سیستم مدیریتی، لینک بازنشانی رمز عبور ارسال می‌شود.',
+  }
+
   try {
     const { email } = req.body
 
-    if (!email) {
+    if (!email || typeof email !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'ایمیل الزامی است.',
       })
     }
 
+    const normalizedEmail = email.trim().toLowerCase()
+
     // پیدا کردن کاربر ادمین با این ایمیل
     const user = await Admin.findOne({
-      email,
+      email: normalizedEmail,
       role: { $in: ['admin', 'manager', 'superadmin', 'editor', 'support'] },
+      isActive: true,
     })
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'کاربر ادمین با این ایمیل یافت نشد.',
-      })
+      return res.status(200).json(genericResponse)
     }
 
     // ایجاد توکن بازنشانی
@@ -420,33 +467,23 @@ router.post('/admin/forgot-password', async (req, res) => {
     await user.save({ validateBeforeSave: false })
 
     // ساخت URL بازنشانی
-    // برای پنل ادمین که روی پورت 3000 اجرا می‌شود
-    const resetUrl = `${process.env.ADMIN_URL || 'http://localhost:3000'}/reset-password/${resetToken}`
+    const resetUrl = `${process.env.ADMIN_URL || 'http://localhost:3001'}/reset-password/${resetToken}`
 
-    // ارسال ایمیل
-    await sendResetPasswordEmail(user.email, user.name, resetUrl)
-
-    res.status(200).json({
-      success: true,
-      message: 'ایمیل بازنشانی رمز عبور با موفقیت ارسال شد. لطفاً صندوق ورودی خود را بررسی کنید.',
-    })
-  } catch (error) {
-    console.error('Error in forgot password:', error)
-
-    // در صورت خطا، توکن را پاک کنیم
-    if (req.body.email) {
-      const user = await Admin.findOne({ email: req.body.email })
-      if (user) {
-        user.resetPasswordToken = undefined
-        user.resetPasswordExpire = undefined
-        await user.save({ validateBeforeSave: false })
-      }
+    try {
+      await sendResetPasswordEmail(user.email, user.name, resetUrl)
+    } catch (emailError) {
+      console.error('Error sending admin reset password email:', emailError.message)
+      user.resetPasswordToken = undefined
+      user.resetPasswordExpire = undefined
+      await user.save({ validateBeforeSave: false })
     }
 
-    res.status(500).json({
+    return res.status(200).json(genericResponse)
+  } catch (error) {
+    console.error('Error in forgot password:', error)
+    return res.status(500).json({
       success: false,
-      message: 'خطا در ارسال ایمیل بازنشانی رمز عبور. لطفاً دوباره تلاش کنید.',
-      error: error.message,
+      message: 'خطا در پردازش درخواست بازنشانی رمز عبور.',
     })
   }
 })
@@ -459,31 +496,33 @@ router.put('/admin/reset-password/:token', async (req, res) => {
   try {
     const { password } = req.body
 
-    if (!password) {
+    if (!password || typeof password !== 'string') {
       return res.status(400).json({
         success: false,
         message: 'رمز عبور جدید الزامی است.',
       })
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
+        message: 'رمز عبور باید حداقل ۸ کاراکتر باشد.',
       })
     }
 
     // هش کردن توکن دریافتی از URL
     const resetPasswordToken = crypto
       .createHash('sha256')
-      .update(req.params.token)
+      .update(String(req.params.token || ''))
       .digest('hex')
 
     // پیدا کردن کاربر با توکن و زمان معتبر
     const user = await Admin.findOne({
       resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() }, // توکن هنوز منقضی نشده
-    })
+      role: { $in: ['admin', 'manager', 'superadmin', 'editor', 'support'] },
+      isActive: true,
+    }).select('+password +resetPasswordToken +resetPasswordExpire')
 
     if (!user) {
       return res.status(400).json({
@@ -510,7 +549,6 @@ router.put('/admin/reset-password/:token', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'خطا در بازنشانی رمز عبور. لطفاً دوباره تلاش کنید.',
-      error: error.message,
     })
   }
 })
@@ -519,22 +557,16 @@ router.put('/admin/reset-password/:token', async (req, res) => {
 // PUT /api/auth/admin/profile
 // به‌روزرسانی پروفایل ادمین (نام، ایمیل، رمز عبور)
 // ============================================
-router.put('/admin/profile', async (req, res) => {
+router.put('/admin/profile', protect, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization
-
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
+    if (req.userType === 'customer' || req.user.role === 'user') {
+      return res.status(403).json({
         success: false,
-        message: 'توکن ارسال نشده است.',
+        message: 'شما دسترسی لازم برای این عملیات را ندارید.',
       })
     }
 
-    const token = authHeader.split(' ')[1]
-    const decoded = jwt.verify(token, JWT_SECRET)
-
-    // پیدا کردن ادمین با select password برای امکان به‌روزرسانی
-    const admin = await Admin.findById(decoded.id).select('+password')
+    const admin = await Admin.findById(req.user._id).select('+password')
 
     if (!admin || !admin.isActive) {
       return res.status(401).json({
@@ -552,66 +584,75 @@ router.put('/admin/profile', async (req, res) => {
       })
     }
 
-    const { name, email, password } = req.body
+    const { name, email, password, currentPassword } = req.body
 
     // به‌روزرسانی نام
-    if (name && name.trim()) {
+    if (name && typeof name === 'string' && name.trim()) {
       admin.name = name.trim()
     }
 
     // به‌روزرسانی ایمیل (با بررسی یکتایی)
-    if (email && email.trim() && email !== admin.email) {
-      const existingAdmin = await Admin.findOne({ email: email.trim(), _id: { $ne: admin._id } })
+    if (email && typeof email === 'string' && email.trim() && email.trim().toLowerCase() !== admin.email) {
+      const normalizedEmail = email.trim().toLowerCase()
+      const existingAdmin = await Admin.findOne({ email: normalizedEmail, _id: { $ne: admin._id } })
       if (existingAdmin) {
         return res.status(409).json({
           success: false,
           message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.',
         })
       }
-      admin.email = email.trim()
+      admin.email = normalizedEmail
     }
 
-    // به‌روزرسانی رمز عبور (اگر ارسال شده باشد)
-    if (password && password.trim()) {
-      if (password.length < 6) {
+    let passwordUpdated = false
+    // به‌روزرسانی رمز عبور (با تایید رمز فعلی)
+    if (password && typeof password === 'string' && password.trim()) {
+      if (!currentPassword || typeof currentPassword !== 'string') {
         return res.status(400).json({
           success: false,
-          message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.',
+          message: 'برای تغییر رمز عبور، وارد کردن رمز عبور فعلی الزامی است.',
+        })
+      }
+      const isCurrentValid = await admin.comparePassword(currentPassword)
+      if (!isCurrentValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'رمز عبور فعلی نادرست است.',
+        })
+      }
+      if (password.length < 8) {
+        return res.status(400).json({
+          success: false,
+          message: 'رمز عبور جدید باید حداقل ۸ کاراکتر باشد.',
         })
       }
       admin.password = password
+      passwordUpdated = true
     }
 
     await admin.save()
 
     console.log('Admin profile updated:', admin.email)
 
-    res.status(200).json({
+    const responsePayload = {
       success: true,
       message: 'پروفایل با موفقیت به‌روزرسانی شد.',
       data: admin.toJSON(),
-    })
+    }
+
+    if (passwordUpdated) {
+      const newToken = generateToken(admin._id, admin.role, 'admin')
+      setAuthCookie(res, newToken)
+      responsePayload.token = newToken
+    }
+
+    res.status(200).json(responsePayload)
   } catch (error) {
     console.error('Error updating admin profile:', error)
-
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'توکن نامعتبر است.',
-      })
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'توکن منقضی شده است - لطفاً مجدداً وارد شوید.',
-      })
-    }
 
     res.status(500).json({
       success: false,
       message: 'خطا در به‌روزرسانی پروفایل.',
-      error: error.message,
     })
   }
 })

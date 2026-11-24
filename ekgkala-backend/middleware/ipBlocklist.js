@@ -3,14 +3,18 @@ const BlockedIP = require('../models/BlockedIP')
 const { getClientIp } = require('../utils/clientIp')
 const { logger } = require('../utils/logger')
 
-// Short in-memory cache for blocked IPs to prevent DB overhead on every request
+// Short in-memory cache for blocked and clean IPs to prevent DB overhead on every request
 const blockedCache = new Map() // ip -> expireTime
+const cleanCache = new Map() // ip -> expireTime (TTL 30s)
 const memoryFailureCounts = new Map() // ip -> { count, resetAt }
 
 const cleanupInterval = setInterval(() => {
   const now = Date.now()
   for (const [ip, expireTime] of blockedCache.entries()) {
     if (now > expireTime) blockedCache.delete(ip)
+  }
+  for (const [ip, expireTime] of cleanCache.entries()) {
+    if (now > expireTime) cleanCache.delete(ip)
   }
   for (const [ip, data] of memoryFailureCounts.entries()) {
     if (now > data.resetAt) memoryFailureCounts.delete(ip)
@@ -37,6 +41,11 @@ async function checkIpBlocklist(req, res, next) {
     })
   }
 
+  const cleanExpire = cleanCache.get(ip)
+  if (cleanExpire && cleanExpire > now) {
+    return next()
+  }
+
   // Fail-open: If Mongoose connection is not ready, do not block request
   if (!mongoose.connection || mongoose.connection.readyState !== 1) {
     return next()
@@ -45,6 +54,7 @@ async function checkIpBlocklist(req, res, next) {
   try {
     const blocked = await BlockedIP.findOne({ ip }).maxTimeMS(1000).lean()
     if (blocked && blocked.expiresAt > new Date()) {
+      cleanCache.delete(ip)
       blockedCache.set(ip, blocked.expiresAt.getTime())
       return res.status(403).json({
         success: false,
@@ -52,6 +62,11 @@ async function checkIpBlocklist(req, res, next) {
         code: 'IP_BLOCKED',
       })
     }
+    if (cleanCache.size >= 5000) {
+      const oldestKey = cleanCache.keys().next().value
+      if (oldestKey) cleanCache.delete(oldestKey)
+    }
+    cleanCache.set(ip, now + 30 * 1000)
   } catch (err) {
     // If DB query fails or times out, fail open
   }
@@ -76,6 +91,7 @@ async function recordIpFailure(ip, reason = 'Repeated security failure', thresho
 
   if (data.count >= threshold) {
     const expiresAt = new Date(now + blockDurationSec * 1000)
+    cleanCache.delete(ip)
     blockedCache.set(ip, expiresAt.getTime())
 
     if (mongoose.connection && mongoose.connection.readyState === 1) {

@@ -1,10 +1,17 @@
 const axios = require('axios');
+const crypto = require('crypto');
 require('dotenv').config();
 
-const testMobile = process.argv[2] || '09357510443';
-const apiKey = process.env.MELIPAYAMAK_API_KEY || process.argv[3] || 'f95527ef2fa7498dbad9a0d09f2bbad2';
+const testMobile = process.argv[2];
+const apiKey = process.env.MELIPAYAMAK_API_KEY;
 const bodyId = Number(process.env.MELIPAYAMAK_OTP_BODY_ID || 434916);
-const testCode = String(Math.floor(1000 + Math.random() * 9000));
+
+if (!testMobile || !apiKey) {
+  console.error('Usage: MELIPAYAMAK_API_KEY=<key> node scripts/test-melipayamak-otp.js <09xxxxxxxxx>');
+  process.exit(1);
+}
+
+const testCode = String(crypto.randomInt(1000, 10000));
 
 console.log(`\n============================================================`);
 console.log(`🚀 تست ارسال مستقیم پیامک کد تایید (الگو)`);

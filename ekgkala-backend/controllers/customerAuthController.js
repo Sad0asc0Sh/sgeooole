@@ -44,6 +44,23 @@ async function checkSiteWideOtpCircuitBreaker() {
 const generateToken = (userId) =>
   jwt.sign({ id: userId, type: 'customer' }, JWT_SECRET, { expiresIn: JWT_EXPIRE, issuer: JWT_ISSUER, audience: JWT_AUDIENCE })
 
+const hashOtpCode = (code) =>
+  crypto.createHash('sha256').update(String(code || '').trim()).digest('hex')
+
+const verifyOtpHash = (storedValue, submittedCode) => {
+  const normalizedStored = String(storedValue || '')
+  const submittedHash = hashOtpCode(submittedCode)
+  const expectedHash = /^[a-f0-9]{64}$/i.test(normalizedStored)
+    ? normalizedStored.toLowerCase()
+    : hashOtpCode(normalizedStored)
+  return crypto.timingSafeEqual(
+    Buffer.from(submittedHash, 'hex'),
+    Buffer.from(expectedHash, 'hex')
+  )
+}
+
+const STRICT_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
 const setAuthCookie = (res, token) => {
   res.cookie('token', token, {
     httpOnly: true,
@@ -124,12 +141,12 @@ exports.sendOtp = async (req, res) => {
 
     await OTP.cleanupOld(mobile);
 
-    const code = String(Math.floor(1000 + Math.random() * 9000));
+    const code = String(crypto.randomInt(1000, 10000));
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     const otpRecord = new OTP({
       mobile,
-      code,
+      code: hashOtpCode(code),
       expiresAt,
       verified: false,
       attempts: 0
@@ -170,15 +187,16 @@ exports.verifyOtp = async (req, res) => {
     if (!/^09\d{9}$/.test(mobile)) {
       return res.status(400).json({ success: false, message: 'شماره موبایل نامعتبر است.' })
     }
-    if (code.length !== 4 || !/^\d{4}$/.test(code)) {
+    const normalizedCode = String(code).trim()
+    if (normalizedCode.length !== 4 || !/^\d{4}$/.test(normalizedCode)) {
       return res.status(400).json({ success: false, message: 'کد باید ۴ رقمی باشد.' })
     }
 
+    const now = new Date()
     const otp = await OTP.findOne({
       mobile,
-      code,
       verified: false,
-      expiresAt: { $gt: new Date() },
+      expiresAt: { $gt: now },
     }).sort({ createdAt: -1 })
 
     if (!otp) {
@@ -189,11 +207,37 @@ exports.verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'تعداد تلاش بیش از حد مجاز.' })
     }
 
-    otp.attempts += 1
-    otp.verified = true
-    await otp.save()
+    if (!verifyOtpHash(otp.code, normalizedCode)) {
+      const nextAttempts = (otp.attempts || 0) + 1
+      await OTP.updateOne(
+        { _id: otp._id },
+        {
+          $inc: { attempts: 1 },
+          ...(nextAttempts >= 3 ? { $set: { expiresAt: new Date() } } : {}),
+        }
+      )
+      return res.status(400).json({
+        success: false,
+        message: nextAttempts >= 3 ? 'تعداد تلاش بیش از حد مجاز.' : 'کد وارد شده معتبر نیست.',
+      })
+    }
+
+    const claimedOtp = await OTP.findOneAndUpdate(
+      { _id: otp._id, verified: false, attempts: { $lt: 3 }, expiresAt: { $gt: new Date() } },
+      { $set: { verified: true }, $inc: { attempts: 1 } },
+      { new: true }
+    )
+    if (!claimedOtp) {
+      return res.status(400).json({ success: false, message: 'کد وارد شده معتبر نیست.' })
+    }
 
     let user = await User.findOne({ mobile }).select('+password')
+    if (user && user.role && user.role !== 'user') {
+      return res.status(403).json({ success: false, message: 'ورود حساب‌های مدیریتی از طریق OTP مجاز نیست.' })
+    }
+    if (user && !user.isActive) {
+      return res.status(403).json({ success: false, message: 'حساب کاربری غیرفعال است.' })
+    }
     if (!user) {
       user = new User({
         mobile,
@@ -251,7 +295,7 @@ exports.getProfile = async (req, res) => {
   try {
     const userId = req.userId || (req.user && req.user._id)
 
-    const user = await User.findById(userId)
+    const user = await User.findById(userId).select('+password')
     if (!user) {
       return res.status(404).json({ success: false, message: 'کاربر پیدا نشد.' })
     }
@@ -298,6 +342,7 @@ exports.getProfile = async (req, res) => {
         googleId: user.googleId,
         avatar: user.avatar,
         username: user.username,
+        hasPassword: Boolean(user.password),
          // Personal Info
          nationalCode: user.nationalCode,
          birthDate: user.birthDate,
@@ -336,54 +381,46 @@ exports.getProfile = async (req, res) => {
 exports.googleLogin = async (req, res) => {
   try {
     const { token } = req.body
-    console.log('[GOOGLE AUTH] Received login request')
 
-    if (!token) {
-      console.error('[GOOGLE AUTH] No token provided')
+    if (!token || typeof token !== 'string') {
       return res.status(400).json({ success: false, message: 'توکن گوگل ارسال نشده است.' })
     }
 
-    console.log('[GOOGLE AUTH] Token received, length:', token.length)
-    console.log('[GOOGLE AUTH] Client ID:', process.env.GOOGLE_CLIENT_ID)
+    const googleClientId = String(process.env.GOOGLE_CLIENT_ID || '').trim()
+    if (!googleClientId || googleClientId.startsWith('CHANGE_ME')) {
+      return res.status(503).json({ success: false, message: 'ورود با گوگل روی سرور پیکربندی نشده است.' })
+    }
 
     let ticket
     try {
-      console.log('[GOOGLE AUTH] Attempting to verify token with Google OAuth Client...')
       ticket = await googleClient.verifyIdToken({
         idToken: token,
-        audience: process.env.GOOGLE_CLIENT_ID,
+        audience: googleClientId,
       })
-      console.log('[GOOGLE AUTH] Token verification successful')
     } catch (error) {
       console.error('[GOOGLE AUTH] Token verification failed:', error?.message || error)
-      console.error('[GOOGLE AUTH] Full error:', JSON.stringify(error, null, 2))
-
-      try {
-        console.log('[GOOGLE AUTH] Trying fallback tokeninfo API...')
-        const resp = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-          params: { id_token: token },
-        })
-        console.log('[GOOGLE AUTH] Tokeninfo API response:', resp.data)
-        ticket = { getPayload: () => resp.data }
-      } catch (fallbackError) {
-        console.error('[GOOGLE AUTH] tokeninfo fallback failed:', fallbackError?.message || fallbackError)
-        console.error('[GOOGLE AUTH] Fallback error details:', fallbackError?.response?.data || fallbackError)
-        return res.status(401).json({ success: false, message: 'توکن گوگل نامعتبر است.' })
-      }
+      return res.status(401).json({ success: false, message: 'توکن گوگل نامعتبر است.' })
     }
 
     const payload = ticket.getPayload()
-    console.log('[GOOGLE AUTH] Payload extracted:', { email: payload.email, sub: payload.sub, picture: payload.picture })
+    if (!payload || !payload.email || payload.email_verified !== true) {
+      return res.status(401).json({ success: false, message: 'ایمیل حساب گوگل تایید نشده است.' })
+    }
+
     const { sub: googleId, email, name, picture } = payload
+    const normalizedEmail = String(email).trim().toLowerCase()
 
-    console.log(`[GOOGLE AUTH] Login attempt for email: ${email}`)
-
-    // Strict Email-based Login
-    // We trust the email from Google is verified.
-    let user = await User.findOne({ email }).select('+password')
+    // Strict Email-based Login (customers only)
+    let user = await User.findOne({ email: normalizedEmail }).select('+password')
 
     if (user) {
-      console.log(`[GOOGLE AUTH] Found existing user by email: ${user._id}`)
+      if (user.role && user.role !== 'user') {
+        return res.status(403).json({ success: false, message: 'ورود حساب‌های مدیریتی از طریق گوگل مجاز نیست.' })
+      }
+      if (!user.isActive) {
+        return res.status(403).json({ success: false, message: 'حساب کاربری غیرفعال است.' })
+      }
+
       let updated = false
 
       // Link Google ID if not present
@@ -391,11 +428,7 @@ exports.googleLogin = async (req, res) => {
         user.googleId = googleId
         updated = true
       } else if (user.googleId !== googleId) {
-        // This is rare: Email matches, but Google ID is different.
-        // Could happen if user deleted Google account and recreated with same email,
-        // or if we previously linked a different Google ID.
-        // We update to the new Google ID to allow login.
-        console.warn(`[GOOGLE AUTH] Updating Google ID for ${email} from ${user.googleId} to ${googleId}`)
+        console.warn(`[GOOGLE AUTH] Updating Google ID for ${normalizedEmail}`)
         user.googleId = googleId
         updated = true
       }
@@ -414,13 +447,12 @@ exports.googleLogin = async (req, res) => {
 
       if (updated) {
         await user.save()
-        console.log(`[GOOGLE AUTH] Updated user details`)
       }
     } else {
       // Create new user
       user = new User({
         googleId,
-        email,
+        email: normalizedEmail,
         name: name || 'کاربر فروشگاه',
         avatar: picture,
         wallet: 0,
@@ -428,7 +460,6 @@ exports.googleLogin = async (req, res) => {
         isActive: true,
       })
       await user.save()
-      console.log(`[GOOGLE AUTH] New user created: ${email}`)
     }
 
     await user.updateLastLogin()
@@ -475,7 +506,7 @@ exports.googleLogin = async (req, res) => {
 // ======================
 exports.completeProfile = async (req, res) => {
   try {
-    const { firstName, lastName, password } = req.body
+    const { firstName, lastName, password, currentPassword } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
     if (!userId) {
@@ -487,29 +518,42 @@ exports.completeProfile = async (req, res) => {
       return res.status(400).json({ success: false, message: 'نام، نام خانوادگی و رمز عبور الزامی است.' })
     }
 
-    if (password.length < 6) {
+    if (typeof password !== 'string' || password.length < 6) {
       return res.status(400).json({ success: false, message: 'رمز عبور باید حداقل 6 کاراکتر باشد.' })
     }
 
-    const user = await User.findById(userId)
+    const user = await User.findById(userId).select('+password')
     if (!user) {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
     }
 
+    if (user.password) {
+      if (!currentPassword || typeof currentPassword !== 'string') {
+        return res.status(400).json({ success: false, message: 'برای تغییر رمز عبور، رمز فعلی الزامی است.' })
+      }
+      const isCurrentValid = await user.comparePassword(currentPassword)
+      if (!isCurrentValid) {
+        return res.status(401).json({ success: false, message: 'رمز عبور فعلی اشتباه است.' })
+      }
+    }
+
     // Update user
-    user.name = `${firstName.trim()} ${lastName.trim()}`
+    user.name = `${String(firstName).trim()} ${String(lastName).trim()}`
     user.password = password // Will be hashed by pre-save hook
 
-    // We don't set username anymore as it's not collected
-
     await user.save()
+
+    const freshToken = generateToken(user._id)
+    setAuthCookie(res, freshToken)
 
     console.log(`[AUTH] Profile completed for user: ${user._id}`)
 
     res.json({
       success: true,
       message: 'پروفایل با موفقیت تکمیل شد.',
+      token: freshToken,
       data: {
+        token: freshToken,
         user: {
           _id: user._id,
           name: user.name,
@@ -519,12 +563,13 @@ exports.completeProfile = async (req, res) => {
           wallet: user.wallet,
           role: user.role,
           isActive: user.isActive,
+          hasPassword: true,
         },
       },
     })
   } catch (error) {
     console.error('Error completing profile:', error)
-    res.status(500).json({ success: false, message: 'خطا در تکمیل پروفایل', error: error.message })
+    res.status(500).json({ success: false, message: 'خطا در تکمیل پروفایل' })
   }
 }
 
@@ -550,20 +595,12 @@ exports.loginWithPassword = async (req, res) => {
       ],
     }).select('+password')
 
-    if (!user) {
+    if (!user || !user.isActive || !user.password) {
       return res.status(401).json({ success: false, message: 'نام کاربری یا رمز عبور اشتباه است.' })
     }
 
-    if (!user.isActive) {
-      return res.status(403).json({ success: false, message: 'حساب کاربری غیرفعال است.' })
-    }
-
-    // Check if user has a password set
-    if (!user.password) {
-      return res.status(400).json({
-        success: false,
-        message: 'شما هنوز رمز عبور تعیین نکرده‌اید. لطفاً از طریق OTP یا گوگل وارد شوید و پروفایل خود را تکمیل کنید.'
-      })
+    if (user.role && user.role !== 'user') {
+      return res.status(403).json({ success: false, message: 'لطفاً از طریق پنل مدیریت وارد شوید.' })
     }
 
     // Compare password
@@ -619,21 +656,14 @@ exports.forgotPassword = async (req, res) => {
       })
     }
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() })
+    // Find customer user by email (never allow staff reset via customer endpoint)
+    const user = await User.findOne({ email: String(email).trim().toLowerCase(), role: 'user', isActive: true })
 
     if (!user) {
-      // For security, don't reveal if email exists or not
+      // Uniform response to prevent account/status enumeration
       return res.status(200).json({
         success: true,
         message: 'اگر این ایمیل در سیستم وجود داشته باشد، لینک بازیابی برای شما ارسال می‌شود.',
-      })
-    }
-
-    if (!user.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'حساب کاربری غیرفعال است.',
       })
     }
 
@@ -704,11 +734,13 @@ exports.resetPassword = async (req, res) => {
       .update(token)
       .digest('hex')
 
-    // Find user by token and check if token is not expired
+    // Find user by token and check if token is not expired (customers only)
     const user = await User.findOne({
       resetPasswordToken,
       resetPasswordExpire: { $gt: Date.now() },
-    })
+      role: 'user',
+      isActive: true,
+    }).select('+password +resetPasswordToken +resetPasswordExpire')
 
     if (!user) {
       return res.status(400).json({
@@ -792,10 +824,10 @@ exports.sendBindOtp = async (req, res) => {
 
     await OTP.cleanupOld(mobile)
 
-    // API جدید ملی‌پیامک کد را خودش تولید و برمی‌گرداند
+    const code = String(crypto.randomInt(1000, 10000))
     let smsResult
     try {
-      smsResult = await sendOtpSMS(mobile)
+      smsResult = await sendOtpSMS(mobile, code)
     } catch (smsError) {
       console.error(`[BIND OTP] SMS sending failed for ${mobile.slice(0, 3)}****${mobile.slice(-2)}:`, smsError.message)
       const err = new Error('خطا در ارسال پیامک. لطفا دوباره تلاش کنید.')
@@ -803,10 +835,9 @@ exports.sendBindOtp = async (req, res) => {
       throw err
     }
 
-    const code = smsResult.code
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
-    const otp = new OTP({ mobile, code, expiresAt, verified: false, attempts: 0 })
+    const otp = new OTP({ mobile, code: hashOtpCode(code), expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
     const provider = smsResult?.provider ? ` (${smsResult.provider})` : ''
@@ -815,7 +846,7 @@ exports.sendBindOtp = async (req, res) => {
     res.json({ success: true, message: 'کد تایید ارسال شد', expiresIn: 120 })
   } catch (error) {
     console.error('Error sending bind OTP:', error)
-    res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })
+    res.status(500).json({ success: false, message: 'خطا در ارسال کد' })
   }
 }
 
@@ -828,13 +859,16 @@ exports.verifyBindOtp = async (req, res) => {
     const { code } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
-    if (!mobile || !code) {
+    if (!mobile || !code || typeof code !== 'string') {
       return res.status(400).json({ success: false, message: 'ورودی نامعتبر است.' })
+    }
+    const normalizedCode = code.trim()
+    if (!/^\d{4}$/.test(normalizedCode)) {
+      return res.status(400).json({ success: false, message: 'کد باید ۴ رقمی باشد.' })
     }
 
     const otp = await OTP.findOne({
       mobile,
-      code,
       verified: false,
       expiresAt: { $gt: new Date() },
     }).sort({ createdAt: -1 })
@@ -847,9 +881,29 @@ exports.verifyBindOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'تعداد تلاش بیش از حد مجاز.' })
     }
 
-    otp.attempts += 1
-    otp.verified = true
-    await otp.save()
+    if (!verifyOtpHash(otp.code, normalizedCode)) {
+      const nextAttempts = (otp.attempts || 0) + 1
+      await OTP.updateOne(
+        { _id: otp._id },
+        {
+          $inc: { attempts: 1 },
+          ...(nextAttempts >= 3 ? { $set: { expiresAt: new Date() } } : {}),
+        }
+      )
+      return res.status(400).json({
+        success: false,
+        message: nextAttempts >= 3 ? 'تعداد تلاش بیش از حد مجاز.' : 'کد وارد شده معتبر نیست.',
+      })
+    }
+
+    const claimedOtp = await OTP.findOneAndUpdate(
+      { _id: otp._id, verified: false, attempts: { $lt: 3 }, expiresAt: { $gt: new Date() } },
+      { $set: { verified: true }, $inc: { attempts: 1 } },
+      { new: true }
+    )
+    if (!claimedOtp) {
+      return res.status(400).json({ success: false, message: 'کد وارد شده معتبر نیست.' })
+    }
 
     const user = await User.findById(userId)
     if (!user) {
@@ -906,11 +960,11 @@ exports.sendEmailOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'کاربران گوگل امکان تغییر ایمیل را ندارند.' })
     }
 
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+    if (!email || typeof email !== 'string' || !STRICT_EMAIL_REGEX.test(email.trim())) {
       return res.status(400).json({ success: false, message: 'ایمیل نامعتبر است.' })
     }
 
-    const normalizedEmail = email.toLowerCase()
+    const normalizedEmail = email.trim().toLowerCase()
 
     const clientIp = getClientIp(req);
     const siteWideCheck = await checkSiteWideOtpCircuitBreaker();
@@ -947,10 +1001,10 @@ exports.sendEmailOtp = async (req, res) => {
 
     await OTP.cleanupOld(normalizedEmail)
 
-    const code = crypto.randomInt(1000, 9999).toString()
+    const code = String(crypto.randomInt(1000, 10000))
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000)
 
-    const otp = new OTP({ email: normalizedEmail, code, expiresAt, verified: false, attempts: 0 })
+    const otp = new OTP({ email: normalizedEmail, code: hashOtpCode(code), expiresAt, verified: false, attempts: 0 })
     await otp.save()
 
     console.log(`[EMAIL OTP] Code generated for email: ${normalizedEmail}`)
@@ -963,7 +1017,7 @@ exports.sendEmailOtp = async (req, res) => {
     res.json({ success: true, message: 'کد تایید به ایمیل ارسال شد', expiresIn: 120 })
   } catch (error) {
     console.error('Error sending email OTP:', error)
-    res.status(500).json({ success: false, message: 'خطا در ارسال کد', error: error.message })
+    res.status(500).json({ success: false, message: 'خطا در ارسال کد' })
   }
 }
 
@@ -975,13 +1029,18 @@ exports.verifyEmailOtp = async (req, res) => {
     const { email, code } = req.body
     const userId = req.userId || (req.user && req.user._id)
 
-    if (!email || !code) {
+    if (!email || typeof email !== 'string' || !code || typeof code !== 'string') {
+      return res.status(400).json({ success: false, message: 'ورودی نامعتبر است.' })
+    }
+
+    const normalizedEmail = email.trim().toLowerCase()
+    const normalizedCode = code.trim()
+    if (!STRICT_EMAIL_REGEX.test(normalizedEmail) || !/^\d{4}$/.test(normalizedCode)) {
       return res.status(400).json({ success: false, message: 'ورودی نامعتبر است.' })
     }
 
     const otp = await OTP.findOne({
-      email,
-      code,
+      email: normalizedEmail,
       verified: false,
       expiresAt: { $gt: new Date() },
     }).sort({ createdAt: -1 })
@@ -994,9 +1053,29 @@ exports.verifyEmailOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'تعداد تلاش بیش از حد مجاز.' })
     }
 
-    otp.attempts += 1
-    otp.verified = true
-    await otp.save()
+    if (!verifyOtpHash(otp.code, normalizedCode)) {
+      const nextAttempts = (otp.attempts || 0) + 1
+      await OTP.updateOne(
+        { _id: otp._id },
+        {
+          $inc: { attempts: 1 },
+          ...(nextAttempts >= 3 ? { $set: { expiresAt: new Date() } } : {}),
+        }
+      )
+      return res.status(400).json({
+        success: false,
+        message: nextAttempts >= 3 ? 'تعداد تلاش بیش از حد مجاز.' : 'کد وارد شده معتبر نیست.',
+      })
+    }
+
+    const claimedOtp = await OTP.findOneAndUpdate(
+      { _id: otp._id, verified: false, attempts: { $lt: 3 }, expiresAt: { $gt: new Date() } },
+      { $set: { verified: true }, $inc: { attempts: 1 } },
+      { new: true }
+    )
+    if (!claimedOtp) {
+      return res.status(400).json({ success: false, message: 'کد وارد شده معتبر نیست.' })
+    }
 
     const user = await User.findById(userId)
     if (!user) {
@@ -1008,14 +1087,14 @@ exports.verifyEmailOtp = async (req, res) => {
     }
 
     // Check again if email is taken
-    const existingUser = await User.findOne({ email })
+    const existingUser = await User.findOne({ email: normalizedEmail })
     if (existingUser && existingUser._id.toString() !== userId.toString()) {
       return res.status(400).json({ success: false, message: 'این ایمیل قبلاً توسط کاربر دیگری استفاده شده است.' })
     }
 
-    user.email = email
+    user.email = normalizedEmail
     await user.save()
-    await OTP.cleanupOld(email)
+    await OTP.cleanupOld(normalizedEmail)
 
     console.log(`[AUTH] Email updated for user: ${user._id} -> ${email}`)
 
@@ -1052,7 +1131,8 @@ exports.updateProfile = async (req, res) => {
       name,
       email,
       password,
-      mobile, // ✅ ADD: Mobile number
+      currentPassword,
+      mobile, // Blocked below unless matching existing mobile
       // Personal Info
       nationalCode,
       birthDate,
@@ -1087,30 +1167,39 @@ exports.updateProfile = async (req, res) => {
       })
     }
 
+    // Mobile update must also be done through OTP verification flow (/api/auth/bind-mobile/*)
+    if (mobile !== undefined && mobile !== '' && mobile !== user.mobile) {
+      return res.status(400).json({
+        success: false,
+        message: 'برای تغییر شماره موبایل باید از طریق تایید پیامکی اقدام کنید.',
+      })
+    }
+
     // ✅ FIX: Update all profile fields
     if (name !== undefined) user.name = name
 
-    // Email update logic REMOVED. Must use verifyEmailOtp.
-    // if (email) ...
-
+    let passwordUpdated = false
     if (password && password.trim() !== '') {
+      if (user.password) {
+        if (!currentPassword || typeof currentPassword !== 'string') {
+          return res.status(400).json({
+            success: false,
+            message: 'برای تغییر رمز عبور، وارد کردن رمز عبور فعلی الزامی است.',
+          })
+        }
+        const isCurrentValid = await user.comparePassword(currentPassword)
+        if (!isCurrentValid) {
+          return res.status(401).json({
+            success: false,
+            message: 'رمز عبور فعلی اشتباه است.',
+          })
+        }
+      }
       if (password.length < 6) {
         return res.status(400).json({ success: false, message: 'رمز عبور باید حداقل ۶ کاراکتر باشد.' })
       }
       user.password = password
-    }
-
-    // ✅ FIX: Update Mobile (with validation)
-    if (mobile !== undefined && mobile !== user.mobile) {
-      // Check if mobile already exists for another user
-      const existingUser = await User.findOne({ mobile, _id: { $ne: userId } })
-      if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'این شماره موبایل قبلاً ثبت شده است.'
-        })
-      }
-      user.mobile = mobile
+      passwordUpdated = true
     }
 
     // ✅ FIX: Update Personal Info
@@ -1147,10 +1236,17 @@ exports.updateProfile = async (req, res) => {
 
     console.log(`[AUTH] Profile updated for user: ${user._id}`)
 
+    const freshToken = passwordUpdated ? generateToken(user._id) : undefined
+    if (freshToken) {
+      setAuthCookie(res, freshToken)
+    }
+
     res.json({
       success: true,
       message: 'پروفایل با موفقیت بروزرسانی شد.',
+      ...(freshToken ? { token: freshToken } : {}),
       data: {
+        ...(freshToken ? { token: freshToken } : {}),
         user: {
           _id: user._id,
           name: user.name,
@@ -1162,6 +1258,7 @@ exports.updateProfile = async (req, res) => {
           username: user.username,
           avatar: user.avatar,
           googleId: user.googleId,
+          hasPassword: Boolean(user.password),
            // Personal Info
            nationalCode: user.nationalCode,
            birthDate: user.birthDate,
@@ -1272,6 +1369,9 @@ exports.addAddress = async (req, res) => {
     const user = await User.findById(userId)
     if (!user) {
       return res.status(404).json({ success: false, message: 'کاربر یافت نشد.' })
+    }
+    if (Array.isArray(user.addresses) && user.addresses.length >= 20) {
+      return res.status(400).json({ success: false, message: 'حداکثر ۲۰ آدرس می‌توانید ثبت کنید.' })
     }
 
     const resolvedRecipientPhone = recipientPhone || recipientMobile

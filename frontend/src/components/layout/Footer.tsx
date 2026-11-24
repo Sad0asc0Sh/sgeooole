@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import Link from "next/link";
+import { safeExternalHref } from "@/lib/sanitizeHtml";
 import {
     Send,
     Instagram,
@@ -732,7 +733,7 @@ function Footer({ className }: { className?: string }) {
                                                 <span className={styles.socialLabelInline}>شبکه‌های اجتماعی:</span>
                                                 {storeInfo.socialLinks?.telegram && (
                                                     <a
-                                                        href={storeInfo.socialLinks.telegram}
+                                                        href={safeExternalHref(storeInfo.socialLinks.telegram)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className={`${styles.socialPill} ${styles.socialPillTelegram}`}
@@ -744,7 +745,7 @@ function Footer({ className }: { className?: string }) {
                                                 )}
                                                 {storeInfo.socialLinks?.instagram && (
                                                     <a
-                                                        href={storeInfo.socialLinks.instagram}
+                                                        href={safeExternalHref(storeInfo.socialLinks.instagram)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className={`${styles.socialPill} ${styles.socialPillInstagram}`}
@@ -756,7 +757,7 @@ function Footer({ className }: { className?: string }) {
                                                 )}
                                                 {storeInfo.socialLinks?.aparat && (
                                                     <a
-                                                        href={storeInfo.socialLinks.aparat}
+                                                        href={safeExternalHref(storeInfo.socialLinks.aparat)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className={`${styles.socialPill} ${styles.socialPillAparat}`}

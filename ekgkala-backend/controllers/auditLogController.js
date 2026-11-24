@@ -3,8 +3,8 @@ const AuditLog = require('../models/AuditLog')
 // GET /api/audit-logs
 exports.getAuditLogs = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1
-        const limit = parseInt(req.query.limit) || 20
+        const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+        const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
         const skip = (page - 1) * limit
 
         const logs = await AuditLog.find()

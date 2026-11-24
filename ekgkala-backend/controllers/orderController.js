@@ -35,28 +35,33 @@ const repriceOrderItemsFromDb = async (orderItems) => {
     }
 
     const variantOptions = normalizeVariantOptions(item.variantOptions)
+    let effectiveVariantOptions = variantOptions
     const quantity = Math.max(1, Number(item.quantity) || 1)
 
-    // اعتبارسنجی موجودی variant (فقط محصول متغیر): ترکیب نامعتبر یا ناموجود
-    // قابل سفارش نیست — کسر موجودی فقط تا صفر clamp می‌شود وگرنه oversell می‌شد.
-    // محصول ساده دست‌نخورده (رفتار قبلی حفظ می‌شود).
-    if (product.productType === 'variable' && variantOptions.length > 0) {
-      const matchingVariant = findMatchingVariant(product, variantOptions)
-      if (!matchingVariant) {
-        const err = new Error(`ترکیب انتخابی برای محصول «${product.name || 'نامشخص'}» معتبر نیست`)
-        err.statusCode = 400
-        throw err
-      }
+    // اعتبارسنجی موجودی و ترکیب دقیق محصول متغیر: تمام محصولات متغیر دارای تنوع
+    // باید ترکیب معتبر (یا تک‌تنوع) داشته باشند؛ ترکیب نامعتبر یا ناموجود رد می‌شود.
+    if (product.productType === 'variable' && Array.isArray(product.variants) && product.variants.length > 0) {
+      const { variant: matchingVariant } = inventoryService.resolveVariantExact(
+        product,
+        variantOptions,
+        { strict: true },
+      )
       if (Number(matchingVariant.stock || 0) < quantity) {
         const err = new Error(`موجودی ترکیب انتخابی محصول «${product.name || 'نامشخص'}» کافی نیست`)
         err.statusCode = 400
         err.code = 'VARIANT_OUT_OF_STOCK'
         throw err
       }
+      if (Array.isArray(matchingVariant.options) && matchingVariant.options.length > 0) {
+        effectiveVariantOptions = matchingVariant.options.map((opt) => ({
+          name: String(opt.name).trim(),
+          value: String(opt.value).trim(),
+        }))
+      }
     }
 
     const pricing = computeItemPricing(
-      { product, quantity: item.quantity, variantOptions },
+      { product, quantity: item.quantity, variantOptions: effectiveVariantOptions },
       now,
       campaignContext,
     )
@@ -79,7 +84,7 @@ const repriceOrderItemsFromDb = async (orderItems) => {
       price: serverPrice,
       originalPrice: serverOriginal,
       discount: Number(pricing.discount) || 0,
-      variantOptions,
+      variantOptions: effectiveVariantOptions,
     })
   }
 
@@ -139,11 +144,8 @@ const recordSalesEvents = async (orderItems, orderId) => {
       // Invalidate bestsellers cache so new data appears
       try {
         const redis = require('../utils/redis')
-        if (redis) {
-          const keys = await redis.keys('bestsellers:*')
-          if (keys.length > 0) {
-            await redis.del(keys)
-          }
+        if (redis && typeof redis.deleteCachePattern === 'function') {
+          await redis.deleteCachePattern('bestsellers:*')
         }
       } catch (cacheErr) {
         // Cache invalidation failure is non-critical
@@ -267,20 +269,8 @@ exports.createOrder = async (req, res) => {
     }
 
     const isMashhadSpecialPickup = fulfillmentType === MASHHAD_SPECIAL_PICKUP
-    let finalShippingPrice = requestedShippingPrice
+    let finalShippingPrice = 0
     let finalShippingMethod = shippingMethod
-
-    if (isMashhadSpecialPickup) {
-      if (!isMashhadShippingAddress(shippingAddress)) {
-        return res.status(403).json({
-          success: false,
-          message: 'تحویل حضوری ویژه فقط برای نشانی شهر مشهد فعال است.',
-        })
-      }
-
-      finalShippingPrice = 0
-      finalShippingMethod = 'تحویل حضوری ویژه مشهد'
-    }
 
     // اعتبارسنجی سبد خرید
     if (!orderItems || orderItems.length === 0) {
@@ -307,6 +297,65 @@ exports.createOrder = async (req, res) => {
       })
     }
 
+    if (isMashhadSpecialPickup) {
+      if (!isMashhadShippingAddress(shippingAddress)) {
+        return res.status(403).json({
+          success: false,
+          message: 'تحویل حضوری ویژه فقط برای نشانی شهر مشهد فعال است.',
+        })
+      }
+
+      finalShippingPrice = 0
+      finalShippingMethod = 'تحویل حضوری ویژه مشهد'
+    } else {
+      const ShippingMethod = require('../models/ShippingMethod')
+      const mongoose = require('mongoose')
+      const rawShippingMethod = typeof shippingMethod === 'string' ? shippingMethod.trim() : ''
+      if (!rawShippingMethod) {
+        return res.status(400).json({
+          success: false,
+          message: 'انتخاب روش ارسال الزامی است.',
+        })
+      }
+
+      const shippingQuery = mongoose.Types.ObjectId.isValid(rawShippingMethod)
+        ? { _id: rawShippingMethod, isActive: true }
+        : { name: rawShippingMethod, isActive: true }
+      const shippingMethodDoc = await ShippingMethod.findOne(shippingQuery).lean()
+
+      if (!shippingMethodDoc) {
+        return res.status(400).json({
+          success: false,
+          message: 'روش ارسال انتخابی نامعتبر یا غیرفعال است.',
+        })
+      }
+
+      if (shippingMethodDoc.availabilityScope === 'restricted') {
+        const addressProvince = normalizeLocationName(shippingAddress?.province)
+        const addressCity = normalizeLocationName(shippingAddress?.city)
+        const rules = Array.isArray(shippingMethodDoc.destinationRules)
+          ? shippingMethodDoc.destinationRules
+          : []
+        const isEligibleDestination = rules.some((rule) => {
+          const sameProvince = normalizeLocationName(rule?.province) === addressProvince
+          const cities = Array.isArray(rule?.cities) ? rule.cities : []
+          const cityMatch =
+            cities.length === 0 ||
+            cities.some((c) => normalizeLocationName(c) === addressCity)
+          return sameProvince && cityMatch
+        })
+        if (!isEligibleDestination) {
+          return res.status(403).json({
+            success: false,
+            message: 'روش ارسال انتخابی برای استان یا شهر مقصد فعال نیست.',
+          })
+        }
+      }
+
+      finalShippingPrice = Math.max(0, Math.round(Number(shippingMethodDoc.cost) || 0))
+      finalShippingMethod = shippingMethodDoc.name
+    }
+
     // CRITICAL: Recompute all item prices from the live DB state (current
     // discounts/campaigns). Client-sent prices may be stale (browser cache)
     // and must never determine the charged amount.
@@ -327,16 +376,38 @@ exports.createOrder = async (req, res) => {
       })
     }
 
+    const serverTaxPrice = 0
+
     // Server-side coupon validation against the LIVE items total.
     // The client discount is ignored: it may be stale or tampered with.
+    const normalizedCouponCode = couponCode ? String(couponCode).trim().toUpperCase() : ''
     let effectiveCouponDiscount = 0
-    if (couponCode) {
-      const Coupon = require('../models/Coupon')
-      const coupon = await Coupon.findOne({ code: String(couponCode).toUpperCase() })
+    let CouponModel = null
+    if (normalizedCouponCode) {
+      CouponModel = require('../models/Coupon')
+      const alreadyUsed = await Order.exists({
+        user: userId,
+        couponCode: normalizedCouponCode,
+        orderStatus: { $ne: 'Cancelled' },
+      })
+      if (alreadyUsed) {
+        return res.status(400).json({
+          success: false,
+          message: 'شما قبلاً از این کد تخفیف استفاده کرده‌اید.',
+        })
+      }
+
+      const coupon = await CouponModel.findOne({ code: normalizedCouponCode })
       if (!coupon || !coupon.isValid()) {
         return res.status(400).json({
           success: false,
           message: 'کد تخفیف نامعتبر یا منقضی شده است؛ لطفاً آن را حذف و دوباره تلاش کنید.',
+        })
+      }
+      if (serverItemsPrice < (Number(coupon.minPurchase) || 0)) {
+        return res.status(400).json({
+          success: false,
+          message: `حداقل مبلغ خرید برای این کد تخفیف ${(Number(coupon.minPurchase) || 0).toLocaleString('fa-IR')} تومان است.`,
         })
       }
       effectiveCouponDiscount = Math.max(
@@ -344,10 +415,6 @@ exports.createOrder = async (req, res) => {
         Math.min(Number(coupon.calculateDiscount(serverItemsPrice)) || 0, serverItemsPrice),
       )
     }
-    const serverTotalPrice = Math.max(
-      0,
-      Math.round(serverItemsPrice + (Number(finalShippingPrice) || 0) + (Number(taxPrice) || 0) - effectiveCouponDiscount),
-    )
 
     // رزرو اتمیک موجودی — قلب اصلاح: سفارش فقط وقتی ثبت می‌شود که موجودی
     // همه‌ی اقلام (محصول ساده و ترکیب دقیق محصول متغیر، با جمع اقلام
@@ -365,6 +432,48 @@ exports.createOrder = async (req, res) => {
       })
     }
 
+    // رزرو اتمیک ظرفیت کوپن پس از رزرو موجودی (با rollback در صورت خطا)
+    let couponClaimed = false
+    if (normalizedCouponCode && CouponModel) {
+      const claimNow = new Date()
+      const claimedCoupon = await CouponModel.findOneAndUpdate(
+        {
+          code: normalizedCouponCode,
+          isActive: true,
+          expiresAt: { $gt: claimNow },
+          minPurchase: { $lte: serverItemsPrice },
+          $or: [
+            { usageLimit: null },
+            { usageLimit: { $exists: false } },
+            { $expr: { $lt: ['$usageCount', '$usageLimit'] } },
+          ],
+        },
+        { $inc: { usageCount: 1 } },
+        { new: true },
+      )
+      if (!claimedCoupon) {
+        await inventoryService.releaseStock(serverItems)
+        return res.status(400).json({
+          success: false,
+          message: 'کد تخفیف نامعتبر یا ظرفیت استفاده آن به پایان رسیده است.',
+        })
+      }
+      couponClaimed = true
+      effectiveCouponDiscount = Math.max(
+        0,
+        Math.min(Number(claimedCoupon.calculateDiscount(serverItemsPrice)) || 0, serverItemsPrice),
+      )
+    }
+
+    let serverTotalPrice = Math.max(
+      0,
+      Math.round(serverItemsPrice + (Number(finalShippingPrice) || 0) + serverTaxPrice - effectiveCouponDiscount),
+    )
+    if (serverTotalPrice > 0 && serverTotalPrice < 100) {
+      serverTotalPrice = 100
+    }
+    const isFreeOrder = serverTotalPrice === 0
+
     // ایجاد سفارش
     const order = new Order({
       user: userId,
@@ -375,11 +484,13 @@ exports.createOrder = async (req, res) => {
       shippingPrice: finalShippingPrice,
       shippingMethod: finalShippingMethod,
       fulfillmentType: isMashhadSpecialPickup ? MASHHAD_SPECIAL_PICKUP : 'shipping',
-      taxPrice: taxPrice || 0,
+      taxPrice: serverTaxPrice,
       totalPrice: serverTotalPrice,
       totalDiscount: Math.round(serverProductSavings + effectiveCouponDiscount),
-      couponCode: couponCode ? String(couponCode).toUpperCase() : undefined,
-      orderStatus: 'Pending',
+      couponCode: normalizedCouponCode || undefined,
+      isPaid: isFreeOrder,
+      paidAt: isFreeOrder ? new Date() : undefined,
+      orderStatus: isFreeOrder ? 'Processing' : 'Pending',
       stockDeducted: true,
     })
 
@@ -387,22 +498,24 @@ exports.createOrder = async (req, res) => {
     try {
       createdOrder = await order.save()
     } catch (saveErr) {
-      // سفارش ثبت نشد => رزرو موجودی نباید بماند
+      // سفارش ثبت نشد => رزرو موجودی و کوپن نباید بماند
       await inventoryService.releaseStock(serverItems)
+      if (couponClaimed && CouponModel) {
+        try {
+          await CouponModel.findOneAndUpdate(
+            { code: normalizedCouponCode, usageCount: { $gt: 0 } },
+            { $inc: { usageCount: -1 } },
+          )
+        } catch (rollbackErr) {
+          console.error('Error rolling back coupon usageCount:', rollbackErr)
+        }
+      }
       throw saveErr
     }
 
-    // If couponCode was used, increment coupon usageCount
-    if (couponCode) {
-      try {
-        const Coupon = require('../models/Coupon')
-        await Coupon.findOneAndUpdate(
-          { code: String(couponCode).toUpperCase() },
-          { $inc: { usageCount: 1 } }
-        )
-      } catch (couponErr) {
-        console.error('Error updating coupon usageCount:', couponErr)
-      }
+    if (isFreeOrder) {
+      await inventoryService.adjustSalesCount(serverItems, 1)
+      await recordSalesEvents(serverItems, createdOrder._id)
     }
 
     // پاک کردن سبد خرید کاربر بعد از ثبت سفارش
@@ -437,8 +550,8 @@ exports.createOrder = async (req, res) => {
 // ============================================
 exports.getAllOrders = async (req, res) => {
   try {
-    const page = parseInt(req.query.page, 10) || 1
-    const limit = parseInt(req.query.limit, 10) || 20
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20))
     const skip = (page - 1) * limit
 
     const filter = {}
@@ -451,22 +564,23 @@ exports.getAllOrders = async (req, res) => {
       filter.isPaid = req.query.isPaid === 'true'
     }
 
-    if (req.query.search) {
-      const searchRegex = { $regex: req.query.search, $options: 'i' }
-      const orConditions = [
-        { orderCode: searchRegex },
-        { trackingCode: searchRegex },
-      ]
+    if (req.query.search && typeof req.query.search === 'string') {
+      const trimmedSearch = req.query.search.trim().slice(0, 100)
+      if (trimmedSearch) {
+        const escapedSearch = trimmedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const searchRegex = { $regex: escapedSearch, $options: 'i' }
+        const orConditions = [
+          { orderCode: searchRegex },
+          { trackingCode: searchRegex },
+        ]
 
-      // Only search by _id if the search term is a valid ObjectId (exact match)
-      // or if we really want regex on ObjectId, we can't do it easily in find() without aggregation.
-      // Assuming exact match for ID is sufficient for admin.
-      const mongoose = require('mongoose')
-      if (mongoose.Types.ObjectId.isValid(req.query.search)) {
-        orConditions.push({ _id: req.query.search })
+        const mongoose = require('mongoose')
+        if (mongoose.Types.ObjectId.isValid(trimmedSearch)) {
+          orConditions.push({ _id: trimmedSearch })
+        }
+
+        filter.$or = orConditions
       }
-
-      filter.$or = orConditions
     }
 
     // فیلتر بر اساس کاربر (برای نمایش سفارشات یک مشتری خاص)
@@ -608,6 +722,13 @@ exports.updateOrderStatus = async (req, res) => {
 
     const previousStatus = order.orderStatus
 
+    if (['Shipped', 'Delivered'].includes(status) && !order.isPaid && order.paymentMethod !== 'cod') {
+      return res.status(400).json({
+        success: false,
+        message: 'سفارش‌های آنلاین پرداخت‌نشده قابل ارسال یا تحویل نیستند',
+      })
+    }
+
     // خروج از لغو یعنی سفارش دوباره به موجودی نیاز دارد: قبل از هر تغییری
     // رزرو اتمیک انجام می‌شود؛ اگر موجودی دیگر کافی نباشد، تغییر وضعیت
     // رد می‌شود تا سفارش لغوشده نتواند oversell بسازد.
@@ -655,7 +776,14 @@ exports.updateOrderStatus = async (req, res) => {
     }
 
     if (req.body.preparedTrackingUrl !== undefined) {
-      updates.preparedTrackingUrl = req.body.preparedTrackingUrl
+      const rawTrackingUrl = String(req.body.preparedTrackingUrl ?? '').trim()
+      if (rawTrackingUrl && !/^https?:\/\/[^\s"'<>]+$/i.test(rawTrackingUrl)) {
+        return res.status(400).json({
+          success: false,
+          message: 'لینک رهگیری باید با http:// یا https:// شروع شود',
+        })
+      }
+      updates.preparedTrackingUrl = rawTrackingUrl
     }
 
     // Auto-generate preparedTrackingUrl if courierName and trackingCode are present but preparedTrackingUrl is empty
@@ -686,10 +814,14 @@ exports.updateOrderStatus = async (req, res) => {
         const couriers = settings?.shippingSettings?.couriers || []
         const matched = couriers.find((c) => c.name === currentCourier)
         if (matched && matched.trackingUrlTemplate) {
-          const codeVal = String(currentCode).trim()
-          updates.preparedTrackingUrl = matched.trackingUrlTemplate
+          const codeVal = encodeURIComponent(String(currentCode).trim())
+          const candidateUrl = matched.trackingUrlTemplate
             .replace('{{code}}', codeVal)
             .replace('{code}', codeVal)
+            .trim()
+          if (/^https?:\/\/[^\s"'<>]+$/i.test(candidateUrl)) {
+            updates.preparedTrackingUrl = candidateUrl
+          }
         }
       } catch (err) {
         console.error('Error resolving template in updateOrderStatus:', err)
@@ -753,6 +885,17 @@ exports.updateOrderStatus = async (req, res) => {
       // است و آزادسازی فقط یک بار صدا زده می‌شود.)
       if (order.stockDeducted || order.isPaid) {
         await inventoryService.releaseStock(order.orderItems)
+      }
+      if (!order.isPaid && order.couponCode) {
+        try {
+          const Coupon = require('../models/Coupon')
+          await Coupon.findOneAndUpdate(
+            { code: order.couponCode, usageCount: { $gt: 0 } },
+            { $inc: { usageCount: -1 } },
+          )
+        } catch (couponErr) {
+          console.error('Error releasing coupon usageCount on order cancel:', couponErr)
+        }
       }
       if (order.isPaid || order.paymentMethod === 'cod') {
         await inventoryService.adjustSalesCount(order.orderItems, -1)
@@ -901,8 +1044,12 @@ exports.payOrder = async (req, res) => {
     }
 
     // بررسی مالکیت سفارش
-    const isOwner = order.user._id.toString() === req.user._id.toString()
-    const isAdmin = req.user.role === 'admin' || req.user.role === 'superadmin'
+    const orderUserId = order.user?._id
+      ? order.user._id.toString()
+      : (order.user ? order.user.toString() : '')
+    const isOwner = Boolean(orderUserId && orderUserId === req.user._id.toString())
+    const userPermissions = ROLES[req.user?.role] || []
+    const isAdmin = userPermissions.includes(PERMISSIONS.ORDER_READ_ALL)
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
@@ -924,6 +1071,13 @@ exports.payOrder = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'این سفارش لغو شده است و قابل پرداخت نیست',
+      })
+    }
+
+    if (Math.round(Number(order.totalPrice) || 0) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'مبلغ قابل پرداخت برای این سفارش وجود ندارد',
       })
     }
 
@@ -967,17 +1121,30 @@ exports.payOrder = async (req, res) => {
       gatewayName: selectedGateway, // ارسال نام درگاه انتخابی
     })
 
-    // ذخیره اطلاعات پرداخت در سفارش بر اساس درگاه
-    order.paymentGateway = paymentRequest.gateway
+    // ذخیره اتمیک اطلاعات پرداخت و تاریخچه توکن‌ها در سفارش بر اساس درگاه
+    const paySet = { paymentGateway: paymentRequest.gateway }
+    const payAddToSet = {}
 
     if (paymentRequest.gateway === 'zarinpal') {
-      order.zarinpalAuthority = paymentRequest.authority
+      paySet.zarinpalAuthority = paymentRequest.authority
+      if (paymentRequest.authority) {
+        payAddToSet.paymentAuthorities = paymentRequest.authority
+      }
     } else if (paymentRequest.gateway === 'sadad') {
-      order.sadadToken = paymentRequest.token
-      order.sadadOrderId = paymentRequest.orderId
+      paySet.sadadToken = paymentRequest.token
+      paySet.sadadOrderId = paymentRequest.orderId
+      if (paymentRequest.token) {
+        payAddToSet.sadadTokens = paymentRequest.token
+      }
     }
 
-    await order.save()
+    await Order.updateOne(
+      { _id: order._id },
+      {
+        $set: paySet,
+        ...(Object.keys(payAddToSet).length > 0 ? { $addToSet: payAddToSet } : {}),
+      },
+    )
 
     res.json({
       success: true,
@@ -1007,16 +1174,35 @@ exports.verifyPayment = async (req, res) => {
     const { Authority, Status, Token, ResCode, OrderId } = req.body
 
     let order = null
+    const authorityParam = typeof Authority === 'string' ? Authority.trim() : ''
+    const tokenParam = typeof Token === 'string' ? Token.trim() : ''
+    const orderIdParam = OrderId !== undefined && OrderId !== null ? String(OrderId).trim() : ''
 
-    // پیدا کردن سفارش بر اساس نوع درگاه
-    if (Authority) {
+    // پیدا کردن سفارش بر اساس نوع درگاه (با پشتیبانی از توکن‌های قبلی برای تب‌های همزمان)
+    if (authorityParam) {
       // ZarinPal
-      order = await Order.findOne({ zarinpalAuthority: Authority })
-    } else if (Token || OrderId) {
-      // Sadad
       order = await Order.findOne({
-        $or: [{ sadadToken: Token }, { sadadOrderId: OrderId }],
+        $or: [
+          { zarinpalAuthority: authorityParam },
+          { paymentAuthorities: authorityParam },
+        ],
+        paymentGateway: { $in: ['zarinpal', 'none'] },
       })
+    } else if (tokenParam || orderIdParam) {
+      // Sadad
+      const sadadOr = []
+      if (tokenParam) {
+        sadadOr.push({ sadadToken: tokenParam }, { sadadTokens: tokenParam })
+      }
+      if (orderIdParam) {
+        sadadOr.push({ sadadOrderId: orderIdParam })
+      }
+      if (sadadOr.length > 0) {
+        order = await Order.findOne({
+          $or: sadadOr,
+          paymentGateway: 'sadad',
+        })
+      }
     }
 
     if (!order) {
@@ -1026,8 +1212,11 @@ exports.verifyPayment = async (req, res) => {
       })
     }
 
-    // بررسی اینکه آیا کاربر لغو کرده
-    if (Status === 'NOK' || Status === 'Cancel' || ResCode === '17') {
+    // بررسی اینکه آیا کاربر لغو کرده یا درگاه وضعیت خطا برگردانده
+    if (
+      (authorityParam && Status !== undefined && Status !== null && String(Status).trim().toUpperCase() !== 'OK') ||
+      (!authorityParam && ResCode !== undefined && ResCode !== null && String(ResCode).trim() !== '0')
+    ) {
       return res.status(400).json({
         success: false,
         message: 'پرداخت توسط کاربر لغو شد',
@@ -1087,62 +1276,86 @@ exports.verifyPayment = async (req, res) => {
     }
 
     if (gateway === 'zarinpal') {
-      verifyParams.authority = Authority
+      verifyParams.authority = authorityParam || order.zarinpalAuthority
     } else if (gateway === 'sadad') {
-      verifyParams.token = Token || order.sadadToken
-      verifyParams.orderId = OrderId || order.sadadOrderId
+      verifyParams.token = tokenParam || order.sadadToken
+      verifyParams.orderId = orderIdParam || order.sadadOrderId
     }
 
     const verifyResult = await paymentService.verifyPayment(verifyParams)
 
     if (verifyResult.success) {
-      // به‌روزرسانی سفارش
-      order.isPaid = true
-      order.paidAt = new Date()
-      order.orderStatus = 'Processing' // تغییر وضعیت به "در حال پردازش"
-      if (reservedForLegacyOrder) {
-        order.stockDeducted = true
-      }
-
-      // ذخیره اطلاعات تایید بر اساس درگاه
-      if (gateway === 'zarinpal') {
-        order.zarinpalRefId = verifyResult.refId
-        order.paymentResult = {
+      const paymentSetFields = {
+        isPaid: true,
+        paidAt: new Date(),
+        orderStatus: 'Processing', // تغییر وضعیت به "در حال پردازش"
+        paymentResult: {
           id: verifyResult.refId,
           status: 'success',
           update_time: new Date().toISOString(),
-        }
-      } else if (gateway === 'sadad') {
-        order.sadadTraceNumber = verifyResult.traceNumber
-        order.paymentResult = {
-          id: verifyResult.refId,
-          status: 'success',
-          update_time: new Date().toISOString(),
-        }
+        },
+        ...(reservedForLegacyOrder ? { stockDeducted: true } : {}),
+        ...(gateway === 'zarinpal'
+          ? { zarinpalRefId: verifyResult.refId }
+          : { sadadTraceNumber: verifyResult.traceNumber }),
       }
 
-      await order.save()
+      // انتقال اتمیک برای جلوگیری از تایید همزمان یا تغییر بعد از لغو
+      const settledOrder = await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          isPaid: false,
+          orderStatus: { $ne: 'Cancelled' },
+        },
+        { $set: paymentSetFields },
+        { new: true },
+      )
+
+      if (!settledOrder) {
+        if (reservedForLegacyOrder) {
+          await inventoryService.releaseStock(order.orderItems)
+        }
+        const currentOrder = await Order.findById(order._id)
+          .select('isPaid zarinpalRefId sadadTraceNumber')
+          .lean()
+        if (currentOrder?.isPaid) {
+          return res.json({
+            success: true,
+            message: 'این سفارش قبلاً تایید شده است',
+            data: {
+              orderId: order._id,
+              refId: currentOrder.zarinpalRefId || currentOrder.sadadTraceNumber,
+              isPaid: true,
+            },
+          })
+        }
+        return res.status(400).json({
+          success: false,
+          message: 'این سفارش لغو شده است',
+          orderId: order._id,
+        })
+      }
 
       // موجودی قبلاً رزرو شده (هنگام ثبت سفارش یا همین‌جا برای سفارش
       // قدیمی) و دوباره کسر نمی‌شود؛ فقط شمارنده‌ی فروش قطعی می‌شود.
-      await inventoryService.adjustSalesCount(order.orderItems, 1)
+      await inventoryService.adjustSalesCount(settledOrder.orderItems, 1)
 
       // Record SalesEvents for Bestsellers scoring engine
-      await recordSalesEvents(order.orderItems, order._id)
+      await recordSalesEvents(settledOrder.orderItems, settledOrder._id)
 
       // Audit Log
       const { logAction } = require('../utils/auditLogger')
       await logAction({
         action: 'PAYMENT_VERIFIED',
         entity: 'Order',
-        entityId: order._id,
-        userId: order.user,
+        entityId: settledOrder._id,
+        userId: settledOrder.user,
         details: {
           gateway,
           refId: verifyResult.refId,
-          amount: order.totalPrice,
-          authority: Authority,
-          token: Token,
+          amount: settledOrder.totalPrice,
+          authority: authorityParam || undefined,
+          token: tokenParam ? tokenParam.substring(0, 10) + '***' : undefined,
         },
       })
 
@@ -1150,7 +1363,7 @@ exports.verifyPayment = async (req, res) => {
         success: true,
         message: 'پرداخت با موفقیت انجام شد',
         data: {
-          orderId: order._id,
+          orderId: settledOrder._id,
           refId: verifyResult.refId,
           isPaid: true,
           cardPan: verifyResult.cardPan,
@@ -1208,7 +1421,7 @@ exports.trackOrder = async (req, res) => {
       ? orderQuery
         .populate('user', 'mobile')
         .select('_id orderCode orderStatus createdAt totalPrice trackingCode courierName preparedTrackingUrl shippingAddress user')
-      : orderQuery.select('_id orderCode orderStatus createdAt totalPrice trackingCode courierName preparedTrackingUrl')
+      : orderQuery.select('orderCode orderStatus createdAt totalPrice trackingCode courierName preparedTrackingUrl')
     )
       .lean()
 
@@ -1243,11 +1456,11 @@ exports.trackOrder = async (req, res) => {
       }
     }
 
-    // Return limited order information for guest tracking
+    // Return limited order information for guest tracking (omit _id when phone isn't verified)
     res.json({
       success: true,
       data: {
-        _id: order._id,
+        ...(shouldVerifyPhone ? { _id: order._id } : {}),
         orderCode: order.orderCode,
         orderStatus: order.orderStatus,
         createdAt: order.createdAt,
@@ -1342,9 +1555,11 @@ exports.createOrderForUser = async (req, res) => {
         message: repriceErr.message || 'خطا در محاسبه قیمت سفارش',
       })
     }
+    const safeShippingPrice = Math.max(0, Number(shippingPrice) || 0)
+    const safeTaxPrice = Math.max(0, Number(taxPrice) || 0)
     const serverAdminTotal = Math.max(
       0,
-      Math.round(serverAdminItemsPrice + (Number(shippingPrice) || 0) + (Number(taxPrice) || 0)),
+      Math.round(serverAdminItemsPrice + safeShippingPrice + safeTaxPrice),
     )
 
     // رزرو اتمیک موجودی — سفارش ادمین هم از همان قانون سفارش مشتری پیروی
@@ -1367,9 +1582,9 @@ exports.createOrderForUser = async (req, res) => {
       shippingAddress,
       paymentMethod: 'online',
       itemsPrice: serverAdminItemsPrice,
-      shippingPrice,
+      shippingPrice: safeShippingPrice,
       shippingMethod,
-      taxPrice: taxPrice || 0,
+      taxPrice: safeTaxPrice,
       totalPrice: serverAdminTotal,
       totalDiscount: Math.round(serverAdminSavings),
       orderStatus: 'Pending',
