@@ -3,7 +3,7 @@ import { Form, Input, Button, message } from 'antd'
 import { MailOutlined, ReloadOutlined, SafetyOutlined } from '@ant-design/icons'
 import AuthShell from '../components/auth/AuthShell'
 import api from '../api'
-import { sanitizeAdminHtml } from '../utils/htmlSanitizer'
+import { sanitizeCaptchaSvg } from '../utils/htmlSanitizer'
 
 function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
@@ -17,7 +17,7 @@ function ForgotPasswordPage() {
       const res = await api.get(`/auth/captcha?_t=${Date.now()}`)
       if (res.data?.success && res.data?.captchaId && res.data?.svg) {
         setCaptchaId(res.data.captchaId)
-        setCaptchaSvg(sanitizeAdminHtml(res.data.svg))
+        setCaptchaSvg(sanitizeCaptchaSvg(res.data.svg))
         setCaptchaText('')
       }
     } catch (err) {

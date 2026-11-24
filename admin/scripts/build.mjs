@@ -1,11 +1,51 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolve(__dirname, '..')
 const viteBin = resolve(projectRoot, 'node_modules', 'vite', 'bin', 'vite.js')
+
+const runPnpm = (argsArray) => {
+  if (process.platform === 'win32') {
+    return spawnSync('cmd.exe', ['/d', '/s', '/c', `pnpm ${argsArray.join(' ')}`], {
+      cwd: projectRoot,
+      stdio: 'inherit',
+    })
+  }
+  return spawnSync('pnpm', argsArray, {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  })
+}
+
+const pkgJsonPath = resolve(projectRoot, 'package.json')
+let declaredPackages = []
+if (existsSync(pkgJsonPath)) {
+  const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'))
+  declaredPackages = [
+    ...Object.keys(pkgJson.dependencies || {}),
+    ...Object.keys(pkgJson.devDependencies || {}),
+  ]
+}
+
+const missingPackages = declaredPackages.filter(
+  (pkgName) => !existsSync(resolve(projectRoot, 'node_modules', ...pkgName.split('/'))),
+)
+
+if (missingPackages.length > 0 || !existsSync(viteBin)) {
+  console.log(
+    `Installing admin dependencies (${missingPackages.length > 0 ? `missing: ${missingPackages.join(', ')}` : 'vite CLI missing'})...`,
+  )
+  let installResult = runPnpm(['install', '--frozen-lockfile', '--prod=false'])
+  if ((installResult.status ?? 1) !== 0) {
+    installResult = runPnpm(['install', '--prod=false'])
+  }
+  if (installResult.error) {
+    console.error('Failed to execute pnpm install:', installResult.error)
+  }
+}
 
 if (!existsSync(viteBin)) {
   console.error('Vite CLI was not found. Run `pnpm install` inside the admin directory first.')

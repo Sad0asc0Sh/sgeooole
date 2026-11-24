@@ -191,3 +191,39 @@ test('Critical backend security invariants remain enforced in source', () => {
   assert.equal(kycSrc.includes("isProduction"), true)
   assert.equal(kycSrc.includes('fail-closed'), true)
 })
+
+test('admin zero-dependency htmlSanitizer strips XSS, preserves structured HTML, and validates captcha SVG & hrefs', async () => {
+  const {
+    sanitizeAdminHtml,
+    sanitizeCaptchaSvg,
+    toSafeAdminHref,
+  } = await import('../../admin/src/utils/htmlSanitizer.js')
+
+  const dirty =
+    '<!-- Header -->' +
+    '<div style="background: #f9fafb; font-family: Tahoma">' +
+    '<img src="x" onerror="alert(1)">' +
+    '<a href="&#x6a;avascript:alert(1)">link</a>' +
+    '<script>alert(1)</script>' +
+    '<svg onload="alert(1)"><circle/></svg>' +
+    '</div>'
+
+  const cleaned = sanitizeAdminHtml(dirty)
+  assert.equal(cleaned.includes('<!-- Header -->'), true)
+  assert.equal(cleaned.includes('style="background: #f9fafb; font-family: Tahoma"'), true)
+  assert.equal(cleaned.includes('<script'), false)
+  assert.equal(cleaned.includes('onerror'), false)
+  assert.equal(cleaned.toLowerCase().includes('javascript:'), false)
+  assert.equal(cleaned.includes('<svg'), false)
+
+  const validSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="140" height="44"><path d="M1 1"/></svg>'
+  assert.equal(sanitizeCaptchaSvg(validSvg), validSvg)
+  assert.equal(sanitizeCaptchaSvg('<svg onload="alert(1)"></svg>'), '')
+  assert.equal(sanitizeCaptchaSvg('<svg><script>alert(1)</script></svg>'), '')
+  assert.equal(sanitizeCaptchaSvg('<svg><foreignObject></foreignObject></svg>'), '')
+
+  assert.equal(toSafeAdminHref('javascript:alert(1)'), '#')
+  assert.equal(toSafeAdminHref('//evil.com'), '#')
+  assert.equal(toSafeAdminHref('https://ekgkala.ir/track'), 'https://ekgkala.ir/track')
+  assert.equal(toSafeAdminHref('/orders/1'), '/orders/1')
+})
