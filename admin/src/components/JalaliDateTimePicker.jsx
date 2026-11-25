@@ -1,109 +1,172 @@
-import { useEffect, useState, useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import DatePicker from 'react-multi-date-picker'
 import TimePicker from 'react-multi-date-picker/plugins/time_picker'
 import persian from 'react-date-object/calendars/persian'
 import persian_fa from 'react-date-object/locales/persian_fa'
 import DateObject from 'react-date-object'
-// تم آبی در نسخه فعلی بسته وجود ندارد؛ از تم teal استفاده می‌کنیم
-import 'react-multi-date-picker/styles/colors/teal.css'
+import { CalendarOutlined, CloseCircleFilled } from '@ant-design/icons'
+import useIsMobile from '../hooks/useIsMobile'
+import { toSafeDate } from '../utils/dateUtils'
+import 'react-multi-date-picker/styles/layouts/mobile.css'
+import './JalaliDatePicker.css'
+
+const FUTURE_PRESETS = [
+  { label: '۲۴ ساعت آینده', hours: 24 },
+  { label: '۳ روز آینده', hours: 24 * 3 },
+  { label: '۷ روز آینده', hours: 24 * 7 },
+  { label: '۱ ماه آینده', hours: 24 * 30 },
+]
 
 /**
- * Jalali (Shamsi) DateTime Picker Component
+ * Responsive Jalali (Shamsi) Date / DateTime Picker Component.
+ * Branded in saffron/warm-stone, portal-rendered on desktop, touch-modal on mobile.
  */
 export default function JalaliDateTimePicker({
   value,
   onChange,
   placeholder,
+  showTime = true,
+  allowClear = true,
+  disabled = false,
+  minDate,
+  maxDate,
+  presets = false,
+  id,
   style = {},
-  borderColor = '#d6cfc6',
-  focusColor = '#b45309',
+  className = '',
 }) {
-  const [dateValue, setDateValue] = useState(null)
-  const effectivePlaceholder = placeholder ?? 'تاریخ و ساعت را انتخاب کنید'
-  const mounted = useRef(false)
+  const isMobile = useIsMobile(768)
+  const pickerRef = useRef(null)
 
-  // Convert ISO string to DateObject when value changes (edit mode)
-  useEffect(() => {
-    mounted.current = true
-    if (value) {
-      try {
-        const jsDate = new Date(value)
-        const persianDate = new DateObject({
-          date: jsDate,
-          calendar: persian,
-          locale: persian_fa,
-        })
-        setDateValue(persianDate)
-      } catch (error) {
-        console.error('Error converting date:', error)
-        setDateValue(null)
-      }
-    } else {
-      setDateValue(null)
-    }
-    return () => {
-      mounted.current = false
+  const effectivePlaceholder =
+    placeholder ?? (showTime ? 'انتخاب تاریخ و ساعت (شمسی)' : 'انتخاب تاریخ (شمسی)')
+
+  const dateValue = useMemo(() => {
+    const safe = toSafeDate(value)
+    if (!safe) return null
+    try {
+      return new DateObject({
+        date: safe,
+        calendar: persian,
+        locale: persian_fa,
+      })
+    } catch {
+      return null
     }
   }, [value])
 
+  const minDateObj = useMemo(() => {
+    const safe = toSafeDate(minDate)
+    if (!safe) return undefined
+    try {
+      return new DateObject({ date: safe, calendar: persian, locale: persian_fa })
+    } catch {
+      return undefined
+    }
+  }, [minDate])
+
+  const maxDateObj = useMemo(() => {
+    const safe = toSafeDate(maxDate)
+    if (!safe) return undefined
+    try {
+      return new DateObject({ date: safe, calendar: persian, locale: persian_fa })
+    } catch {
+      return undefined
+    }
+  }, [maxDate])
+
   const handleChange = (dateObject) => {
+    if (!onChange) return
     if (!dateObject) {
-      setDateValue(null)
       onChange(null)
       return
     }
-
-    // Convert Persian DateObject to JavaScript Date
-    const jsDate = dateObject.toDate()
-
+    const jsDate = toSafeDate(dateObject)
     onChange(jsDate)
-    setDateValue(dateObject)
   }
 
-  return (
-    <div style={{ position: 'relative', ...style }}>
-      <DatePicker
-        value={dateValue}
-        onChange={handleChange}
-        calendar={persian}
-        locale={persian_fa}
-        format="YYYY/MM/DD HH:mm"
-        placeholder={effectivePlaceholder}
-        calendarPosition="bottom-right"
-        className="teal"
-        plugins={[<TimePicker key="time" position="bottom" hideSeconds />]}
-        containerStyle={{
-          width: '100%',
-        }}
-        style={{
-          width: '100%',
-          height: '40px',
-          padding: '8px 12px',
-          border: `1px solid ${borderColor}`,
-          borderRadius: '6px',
-          fontSize: '14px',
-          outline: 'none',
-          transition: 'border-color 0.3s',
-          fontFamily: 'inherit',
-        }}
-        inputClass="custom-jalali-input"
-        calendarStyle={{
-          fontFamily: 'inherit',
-        }}
-      />
+  const handleClear = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    pickerRef.current?.closeCalendar?.()
+    onChange?.(null)
+  }
 
-      <style jsx>{`
-        :global(.custom-jalali-input:focus) {
-          border-color: ${focusColor} !important;
-          box-shadow: 0 0 0 2px ${focusColor}20;
-        }
-        :global(.custom-jalali-input:hover) {
-          border-color: ${focusColor};
-        }
-        :global(.rmdp-container) {
-          direction: rtl;
-        }
-      `}</style>
+  const presetItems = useMemo(() => {
+    if (!presets || disabled) return []
+    if (Array.isArray(presets)) return presets
+    if (presets === 'future') {
+      return FUTURE_PRESETS.map((p) => ({
+        label: p.label,
+        getDate: () => new Date(Date.now() + p.hours * 3600 * 1000),
+      }))
+    }
+    return []
+  }, [presets, disabled])
+
+  const plugins = useMemo(
+    () => (showTime ? [<TimePicker key="time" position="bottom" hideSeconds />] : []),
+    [showTime],
+  )
+
+  return (
+    <div
+      className={`ekg-jalali-wrap${disabled ? ' is-disabled' : ''}${className ? ` ${className}` : ''}`}
+      style={style}
+    >
+      <div className={`ekg-jalali-field${disabled ? ' is-disabled' : ''}`}>
+        <span className="ekg-jalali-icon" aria-hidden="true">
+          <CalendarOutlined />
+        </span>
+
+        <DatePicker
+          ref={pickerRef}
+          id={id}
+          value={dateValue}
+          onChange={handleChange}
+          calendar={persian}
+          locale={persian_fa}
+          format={showTime ? 'YYYY/MM/DD - HH:mm' : 'YYYY/MM/DD'}
+          placeholder={effectivePlaceholder}
+          disabled={disabled}
+          minDate={minDateObj}
+          maxDate={maxDateObj}
+          editable={false}
+          portal={!isMobile}
+          portalTarget={typeof document !== 'undefined' ? document.body : undefined}
+          calendarPosition="bottom-right"
+          className={`ekg-rmdp${isMobile ? ' rmdp-mobile' : ''}`}
+          plugins={plugins}
+          inputClass="ekg-jalali-input"
+          containerStyle={{ width: '100%' }}
+        />
+
+        {allowClear && !disabled && dateValue && (
+          <button
+            type="button"
+            className="ekg-jalali-clear"
+            onClick={handleClear}
+            aria-label="پاک کردن تاریخ"
+          >
+            <CloseCircleFilled />
+          </button>
+        )}
+      </div>
+
+      {presetItems.length > 0 && (
+        <div className="ekg-jalali-presets">
+          {presetItems.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className="ekg-jalali-preset-btn"
+              onClick={() => onChange?.(item.getDate())}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

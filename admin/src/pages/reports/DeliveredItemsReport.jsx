@@ -1,36 +1,26 @@
 import { useEffect, useState, useCallback } from 'react'
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  DatePicker,
-  Input,
-  Button,
-  Space,
-  Tag,
-  message,
-} from 'antd'
+import { Card, Input, Button, Tag, message } from 'antd'
 import {
   SearchOutlined,
   ReloadOutlined,
   DownloadOutlined,
   EyeOutlined,
+  ShoppingOutlined,
+  InboxOutlined,
+  DollarOutlined,
+  TruckOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
 import dayjs from 'dayjs'
-import jalaliday from 'jalaliday'
 import api from '../../api'
 import ResponsiveTable from '../../components/ResponsiveTable'
-import { formatPersianDate } from '../../utils/dateUtils'
+import { formatPersianDate, toSafeDate } from '../../utils/dateUtils'
 import { formatCurrency, formatNumber } from '../../utils/formatters'
 import PageHeader from '../../components/ui/PageHeader'
-
-const { RangePicker } = DatePicker
-
-// فعال‌سازی تقویم جلالی
-dayjs.extend(jalaliday)
-dayjs.calendar('jalali')
+import StatTile from '../../components/ui/StatTile'
+import JalaliRangePicker from '../../components/JalaliRangePicker'
+import './Reports.css'
 
 const DEFAULT_PAGE_SIZE = 20
 const EXPORT_LIMIT = 2000
@@ -58,14 +48,11 @@ function DeliveredItemsReport() {
 
   const buildParams = useCallback(
     (page, pageSize, overrideFilters = filters) => {
-      const params = {
-        page,
-        limit: pageSize,
-      }
-      if (overrideFilters.search) {
-        params.search = overrideFilters.search
-      }
-      const [start, end] = overrideFilters.range || []
+      const params = { page, limit: pageSize }
+      if (overrideFilters.search) params.search = overrideFilters.search
+      const [rawStart, rawEnd] = overrideFilters.range || []
+      const start = toSafeDate(rawStart)
+      const end = toSafeDate(rawEnd)
       if (start) params.startDate = start.toISOString()
       if (end) params.endDate = end.toISOString()
       return params
@@ -122,7 +109,7 @@ function DeliveredItemsReport() {
   }
 
   const handleRangeChange = (values) => {
-    const next = { ...filters, range: values || [] }
+    const next = { ...filters, range: Array.isArray(values) ? values : [] }
     setFilters(next)
     fetchReport(1, pagination.pageSize, next)
   }
@@ -137,7 +124,6 @@ function DeliveredItemsReport() {
     fetchReport(pg.current, pg.pageSize)
   }
 
-  // خروجی CSV با همان فیلترهای جاری (حداکثر ۲۰۰۰ ردیف)
   const handleExport = async () => {
     setExporting(true)
     try {
@@ -211,14 +197,11 @@ function DeliveredItemsReport() {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      message.success(`${rows.length} ردیف خروجی گرفته شد`)
+      message.success(`${formatNumber(rows.length)} ردیف خروجی گرفته شد`)
     } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.userMessage ||
-        err?.message ||
-        'خطا در تهیه فایل خروجی'
-      message.error(msg)
+      message.error(
+        err?.response?.data?.message || err?.userMessage || err?.message || 'خطا در تهیه فایل خروجی',
+      )
     } finally {
       setExporting(false)
     }
@@ -246,9 +229,7 @@ function DeliveredItemsReport() {
         <div>
           <div style={{ fontWeight: 600 }}>{name}</div>
           {record.variantLabel ? (
-            <div style={{ fontSize: 12, color: '#57534e' }}>
-              {record.variantLabel}
-            </div>
+            <div style={{ fontSize: 12, color: 'var(--ink-500)' }}>{record.variantLabel}</div>
           ) : null}
         </div>
       ),
@@ -257,9 +238,9 @@ function DeliveredItemsReport() {
       title: 'تعداد',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 80,
+      width: 85,
       align: 'center',
-      render: (qty) => formatNumber(qty),
+      render: (qty) => `${formatNumber(qty)} عدد`,
     },
     {
       title: 'قیمت واحد',
@@ -275,7 +256,7 @@ function DeliveredItemsReport() {
       key: 'lineTotal',
       width: 140,
       render: (total) => (
-        <span style={{ fontWeight: 600, color: '#3f8600' }}>
+        <span className="money-cell" style={{ color: 'var(--ok)' }}>
           {formatCurrency(total)}
         </span>
       ),
@@ -287,12 +268,10 @@ function DeliveredItemsReport() {
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 600 }}>{record.customerName || '—'}</div>
-          <div style={{ fontSize: 12, color: '#57534e' }} dir="ltr">
+          <div style={{ fontSize: 12, color: 'var(--ink-500)' }} dir="ltr">
             {record.customerPhone || ''}
           </div>
-          {record.customerCity ? (
-            <Tag style={{ marginTop: 4 }}>{record.customerCity}</Tag>
-          ) : null}
+          {record.customerCity ? <Tag style={{ marginTop: 4 }}>{record.customerCity}</Tag> : null}
         </div>
       ),
     },
@@ -319,105 +298,84 @@ function DeliveredItemsReport() {
   ]
 
   return (
-    <div>
+    <div className="report-page">
       <PageHeader
-         title="تاریخچه تحویل محصولات"
-         actions={
-           <>
-<Button
-                       type="primary"
-                       icon={<DownloadOutlined />}
-                       loading={exporting}
-                       onClick={handleExport}
-                     >
-                       خروجی اکسل (CSV)
-                     </Button>
-           </>
-         }
-       />
+        title="تاریخچه تحویل محصولات"
+        subtitle="پیگیری دقیق اقلام تحویل‌شده به مشتریان به تفکیک سفارش و زمان تحویل"
+        actions={
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            onClick={handleExport}
+          >
+            خروجی اکسل (CSV)
+          </Button>
+        }
+      />
 
-      {/* فیلترها */}
-      <Card style={{ marginBottom: 16 }}>
-        <Space wrap size="middle">
-          <Input.Search
-            placeholder="جست‌وجو: کد سفارش، نام محصول، نام/تلفن/شهر مشتری"
-            allowClear
-            enterButton={<SearchOutlined />}
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-            onSearch={handleSearch}
-            style={{ width: 340, maxWidth: '100%' }}
-          />
-          <RangePicker
+      <div className="filter-bar">
+        <Input.Search
+          placeholder="جست‌وجو: کد سفارش، نام محصول، نام/تلفن/شهر مشتری"
+          allowClear
+          enterButton={<SearchOutlined />}
+          value={filters.search}
+          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+          onSearch={handleSearch}
+          style={{ width: 340, maxWidth: '100%' }}
+        />
+        <div style={{ minWidth: 260, flex: '1 1 300px', maxWidth: 440 }}>
+          <JalaliRangePicker
             value={filters.range}
             onChange={handleRangeChange}
-            allowClear
-            placeholder={['از تاریخ تحویل', 'تا تاریخ تحویل']}
+            presets="analytics"
+            placeholder="بازه تاریخ تحویل (شمسی)"
           />
-          <Button icon={<ReloadOutlined />} onClick={handleReset}>
-            حذف فیلترها
-          </Button>
-        </Space>
-      </Card>
+        </div>
+        <Button icon={<ReloadOutlined />} onClick={handleReset}>
+          حذف فیلترها
+        </Button>
+      </div>
 
-      {/* آمار کلی */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} md={8} lg={5}>
-          <Card>
-            <Statistic
-              title="اقلام تحویل‌شده"
-              value={summary.totalRows}
-              valueStyle={{ color: '#b45309' }}
-              formatter={(v) => formatNumber(v)}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} md={8} lg={5}>
-          <Card>
-            <Statistic
-              title="مجموع واحدها"
-              value={summary.totalUnits}
-              valueStyle={{ color: '#722ed1' }}
-              formatter={(v) => formatNumber(v)}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} md={8} lg={5}>
-          <Card>
-            <Statistic
-              title="ارزش اقلام تحویل‌شده"
-              value={summary.totalRevenue}
-              precision={0}
-              valueStyle={{ color: '#3f8600' }}
-              suffix="تومان"
-              formatter={(v) => formatNumber(v)}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} md={8} lg={5}>
-          <Card>
-            <Statistic
-              title="سفارش‌های تحویل‌شده"
-              value={summary.ordersCount}
-              valueStyle={{ color: '#8a6200' }}
-              formatter={(v) => formatNumber(v)}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} md={8} lg={4}>
-          <Card>
-            <Statistic
-              title="مشتریان"
-              value={summary.customersCount}
-              valueStyle={{ color: '#eb2f96' }}
-              formatter={(v) => formatNumber(v)}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="kpi-grid-5">
+        <StatTile
+          loading={loading}
+          label="اقلام تحویل‌شده"
+          value={formatNumber(summary.totalRows)}
+          icon={<ShoppingOutlined />}
+          tone="brand"
+        />
+        <StatTile
+          loading={loading}
+          label="مجموع واحدها"
+          value={formatNumber(summary.totalUnits)}
+          icon={<InboxOutlined />}
+          tone="info"
+        />
+        <StatTile
+          loading={loading}
+          label="ارزش اقلام تحویل‌شده"
+          value={formatCurrency(summary.totalRevenue)}
+          icon={<DollarOutlined />}
+          tone="ok"
+        />
+        <StatTile
+          loading={loading}
+          label="سفارش‌های تحویل‌شده"
+          value={formatNumber(summary.ordersCount)}
+          icon={<TruckOutlined />}
+          tone="warn"
+        />
+        <StatTile
+          loading={loading}
+          label="مشتریان"
+          value={formatNumber(summary.customersCount)}
+          icon={<UserOutlined />}
+          tone="neutral"
+        />
+      </div>
 
-      {/* جدول */}
-      <Card title="جزئیات اقلام تحویل‌شده (جدیدترین‌ها اول)">
+      <Card className="report-card" title="جزئیات اقلام تحویل‌شده (جدیدترین‌ها اول)">
         <ResponsiveTable
           columns={columns}
           dataSource={items}

@@ -151,20 +151,100 @@ code {
   .filter-bar > .ant-input-affix-wrapper,
   .filter-bar > .ant-input,
   .filter-bar > .ant-select,
-  .filter-bar > .ant-picker {
+  .filter-bar > .ant-picker,
+  .filter-bar > .ekg-jalali-wrap {
     flex: 1 1 calc(50% - 6px);
     width: auto !important;
     min-width: calc(50% - 6px);
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 576px) {
   .filter-bar > .ant-input-affix-wrapper,
   .filter-bar > .ant-input,
   .filter-bar > .ant-select,
-  .filter-bar > .ant-picker {
+  .filter-bar > .ant-picker,
+  .filter-bar > .ekg-jalali-wrap {
     flex: 1 1 100%;
     min-width: 100%;
+  }
+}
+
+/* ═══ ENTERPRISE GRIDS & STRIPS ══════════════════════════════════════ */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.kpi-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.kpi-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-4);
+}
+
+.panel-section-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-4);
+  align-items: stretch;
+}
+
+.quick-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 1280px) {
+  .kpi-grid-5 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1200px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 992px) {
+  .panel-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kpi-grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .kpi-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-3);
+  }
+}
+
+@media (max-width: 576px) {
+  .kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-grid-5 {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

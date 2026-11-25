@@ -47,12 +47,12 @@
 
 .rt-clickable:hover {
   border-color: var(--brand-200);
-  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.1);
+  box-shadow: 0 3px 10px rgba(180, 83, 9, 0.12);
 }
 
 .rt-card-selected {
   border-color: var(--brand-600) !important;
-  background: #f5f6ff;
+  background: var(--brand-50);
 }
 
 /* Head row: title + badges */
@@ -96,7 +96,7 @@
   height: 46px;
   border-radius: 10px;
   overflow: hidden;
-  background: #f8fafc;
+  background: var(--surface-inset);
   border: 1px solid var(--line);
   display: inline-flex;
   align-items: center;
@@ -120,7 +120,7 @@
   display: block;
   font-weight: 400;
   font-size: 12px;
-  color: #64748b;
+  color: var(--ink-500);
   margin-top: 3px;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -157,14 +157,14 @@
 }
 
 .rt-field-label {
-  color: #94a3b8;
+  color: var(--ink-400);
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.2px;
 }
 
 .rt-field-value {
-  color: #1e293b;
+  color: var(--ink-900);
   font-size: 13px;
   font-weight: 600;
   text-align: right;

@@ -1,46 +1,24 @@
-import PageHeader from '../../components/ui/PageHeader'
 import { useEffect, useState } from 'react'
-import { Card, Tag, Input, Select, Space, message } from 'antd'
-import ResponsiveTable from '../../components/ResponsiveTable'
+import { Card, Input, Select, message } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 import { Link } from 'react-router-dom'
-import dayjs from 'dayjs'
-import jalaliday from 'jalaliday'
+import PageHeader from '../../components/ui/PageHeader'
+import StatusPill from '../../components/ui/StatusPill'
+import ResponsiveTable from '../../components/ResponsiveTable'
+import { formatPersianDate } from '../../utils/dateUtils'
+import { formatNumber } from '../../utils/formatters'
 import api from '../../api'
 
-// فعال‌سازی تقویم جلالی
-dayjs.extend(jalaliday)
-dayjs.calendar('jalali')
+const STATUS_META = {
+  open: { label: 'باز', tone: 'warn' },
+  pending: { label: 'در انتظار بررسی', tone: 'info' },
+  closed: { label: 'بسته‌شده', tone: 'neutral' },
+}
 
-// نام ماه‌های شمسی
-const persianMonths = [
-  'فروردین',
-  'اردیبهشت',
-  'خرداد',
-  'تیر',
-  'مرداد',
-  'شهریور',
-  'مهر',
-  'آبان',
-  'آذر',
-  'دی',
-  'بهمن',
-  'اسفند',
-]
-
-// تابع برای فرمت کردن تاریخ با نام ماه فارسی
-const formatPersianDate = (date, includeTime = false) => {
-  if (!date) return '—'
-  const jalaliDate = dayjs(date).calendar('jalali').locale('fa')
-  const year = jalaliDate.format('YYYY')
-  const month = persianMonths[parseInt(jalaliDate.format('M')) - 1]
-  const day = jalaliDate.format('DD')
-
-  if (includeTime) {
-    const time = jalaliDate.format('HH:mm')
-    return `${day} ${month} ${year} - ساعت ${time}`
-  }
-  return `${day} ${month} ${year}`
+const PRIORITY_META = {
+  high: { label: 'فوری', tone: 'err' },
+  medium: { label: 'متوسط', tone: 'warn' },
+  low: { label: 'عادی', tone: 'ok' },
 }
 
 function TicketsList() {
@@ -62,7 +40,13 @@ function TicketsList() {
       const list = res?.data?.data || []
       const pg = res?.data?.pagination
       setData(list)
-      if (pg) setPagination({ current: pg.currentPage || page, pageSize, total: pg.totalItems || list.length })
+      if (pg) {
+        setPagination({
+          current: pg.currentPage || page,
+          pageSize,
+          total: pg.totalItems || list.length,
+        })
+      }
     } catch (err) {
       message.error(err?.message || 'خطا در دریافت تیکت‌ها')
     } finally {
@@ -70,42 +54,57 @@ function TicketsList() {
     }
   }
 
-  useEffect(() => { fetchTickets(1, pagination.pageSize) }, [status, priority])
+  useEffect(() => {
+    fetchTickets(1, pagination.pageSize)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, priority])
 
   const columns = [
     {
       title: 'موضوع',
       dataIndex: 'subject',
       key: 'subject',
-      render: (v, r) => <Link to={`/tickets/${r._id}`}>{v}</Link>,
+      mobileTitle: true,
+      render: (v, r) => (
+        <Link to={`/tickets/${r._id}`} style={{ fontWeight: 600 }}>
+          {v}
+        </Link>
+      ),
     },
     {
       title: 'کاربر',
       dataIndex: ['user', 'name'],
       key: 'user',
-      render: (_, r) => r.user ? `${r.user.name} (${r.user.email})` : '-',
+      mobileSubtitle: true,
+      render: (_, r) => (r.user ? `${r.user.name || 'کاربر'} (${r.user.email || r.user.mobile || '—'})` : '—'),
     },
     {
-      title: 'سفارش',
+      title: 'سفارش مرتبط',
       dataIndex: ['order', 'orderNumber'],
       key: 'order',
-      render: (_, r) => r.order?.orderNumber || '-',
+      render: (_, r) => r.order?.orderNumber || r.order?.orderCode || '—',
     },
     {
       title: 'اولویت',
       dataIndex: 'priority',
       key: 'priority',
-      render: (p) => <Tag color={p==='high'?'red':p==='medium'?'orange':'green'}>{p}</Tag>,
+      render: (p) => {
+        const meta = PRIORITY_META[p] || { label: p || 'عادی', tone: 'neutral' }
+        return <StatusPill size="sm" tone={meta.tone} label={meta.label} />
+      },
     },
     {
       title: 'وضعیت',
       mobileBadge: true,
       dataIndex: 'status',
       key: 'status',
-      render: (s) => <Tag color={s==='closed'?'red':s==='pending'?'blue':'green'}>{s}</Tag>,
+      render: (s) => {
+        const meta = STATUS_META[s] || { label: s || '—', tone: 'neutral' }
+        return <StatusPill tone={meta.tone} label={meta.label} />
+      },
     },
     {
-      title: 'تاریخ',
+      title: 'تاریخ ثبت',
       dataIndex: 'createdAt',
       key: 'createdAt',
       render: (d) => formatPersianDate(d, true),
@@ -118,29 +117,47 @@ function TicketsList() {
   }
 
   return (
-    <div>
-      <PageHeader title="تیکت‌ها" subtitle="پیام‌ها و درخواست‌های مشتریان" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+      <PageHeader
+        title="پشتیبانی و تیکت‌ها"
+        subtitle="پیام‌ها، پیگیری‌ها و درخواست‌های پشتیبانی مشتریان"
+        count={pagination.total}
+      />
+
       <div className="filter-bar">
         <Input
-          placeholder="جستجو (موضوع/پیام)"
+          placeholder="جستجو در موضوع یا متن پیام..."
           prefix={<SearchOutlined />}
-          style={{ width: 320 }}
+          style={{ width: 300, maxWidth: '100%' }}
           allowClear
           onChange={(e) => setSearch(e.target.value)}
           onPressEnter={() => fetchTickets(1, pagination.pageSize)}
           onBlur={() => fetchTickets(1, pagination.pageSize)}
         />
-        <Select placeholder="وضعیت" style={{ width: 150 }} allowClear onChange={setStatus}>
-          {['open', 'pending', 'closed'].map((s) => (
-            <Select.Option key={s} value={s}>{s}</Select.Option>
-          ))}
+        <Select
+          placeholder="وضعیت تیکت"
+          style={{ width: 170 }}
+          allowClear
+          value={status}
+          onChange={setStatus}
+        >
+          <Select.Option value="open">باز</Select.Option>
+          <Select.Option value="pending">در انتظار بررسی</Select.Option>
+          <Select.Option value="closed">بسته‌شده</Select.Option>
         </Select>
-        <Select placeholder="اولویت" style={{ width: 150 }} allowClear onChange={setPriority}>
-          {['low', 'medium', 'high'].map((p) => (
-            <Select.Option key={p} value={p}>{p}</Select.Option>
-          ))}
+        <Select
+          placeholder="اولویت"
+          style={{ width: 150 }}
+          allowClear
+          value={priority}
+          onChange={setPriority}
+        >
+          <Select.Option value="high">فوری</Select.Option>
+          <Select.Option value="medium">متوسط</Select.Option>
+          <Select.Option value="low">عادی</Select.Option>
         </Select>
       </div>
+
       <Card>
         <ResponsiveTable
           columns={columns}
@@ -148,7 +165,13 @@ function TicketsList() {
           loading={loading}
           rowKey="_id"
           scroll={{ x: 'max-content' }}
-          pagination={{ current: pagination.current, pageSize: pagination.pageSize, total: pagination.total, showSizeChanger: true }}
+          pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
+            showSizeChanger: true,
+            showTotal: (t) => `${formatNumber(t)} تیکت`,
+          }}
           onChange={onTableChange}
         />
       </Card>
@@ -157,4 +180,3 @@ function TicketsList() {
 }
 
 export default TicketsList
-

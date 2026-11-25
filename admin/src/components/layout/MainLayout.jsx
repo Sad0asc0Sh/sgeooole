@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer, Input, Tooltip } from 'antd'
+import { Layout, Menu, Badge, Dropdown, Avatar, Button, Drawer, Tooltip } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LogoutOutlined,
@@ -11,52 +11,70 @@ import {
   UserOutlined,
   SettingOutlined,
   HomeOutlined,
+  PushpinOutlined,
+  PushpinFilled,
+  CalendarOutlined,
 } from '@ant-design/icons'
 import { useAuthStore, useNotificationStore } from '../../stores'
 import { hasPermission } from '../../rbac/access'
 import useIsMobile from '../../hooks/useIsMobile'
-import { NAV_TREE, trailFor, ROLE_LABELS } from '../../theme/navConfig'
+import { NAV_SECTIONS, NAV_TREE, trailFor, ROLE_LABELS } from '../../theme/navConfig'
+import { formatRelativeTime, getTodayJalaliLabel } from '../../utils/dateUtils'
 import { GlobalSearch } from './GlobalSearch'
 import './MainLayout.css'
 
 const { Header, Sider, Content } = Layout
 
-const COLLAPSE_STORAGE_KEY = 'ekg-admin-sider-collapsed'
+const PIN_STORAGE_KEY = 'ekg-admin-sider-pinned'
 
-/** Read a persisted preference, defaulting when absent or unreadable. */
-function readCollapsed() {
+/** Read persisted pin preference; defaults to false (auto hover-expandable icon rail). */
+function readPinned() {
   try {
-    const raw = window.localStorage.getItem(COLLAPSE_STORAGE_KEY)
-    return raw === null ? false : raw === '1'
+    const raw = window.localStorage.getItem(PIN_STORAGE_KEY)
+    return raw === '1'
   } catch {
     return false
   }
 }
 
 function MainLayout({ children }) {
-  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const [pinned, setPinned] = useState(readPinned)
+  const [hovered, setHovered] = useState(false)
+  const [focusWithin, setFocusWithin] = useState(false)
+  const [operatorMenuOpen, setOperatorMenuOpen] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const [drawerOpenKeys, setDrawerOpenKeys] = useState([])
   const [searchOpen, setSearchOpen] = useState(false)
+
   const location = useLocation()
   const navigate = useNavigate()
   const isDesktopLayout = !useIsMobile(992)
   const drawerButtonRef = useRef(null)
   const previouslyFocused = useRef(null)
+  const hoverCloseTimer = useRef(null)
 
   useEffect(() => {
     if (isDesktopLayout) setMobileDrawerOpen(false)
   }, [isDesktopLayout])
 
-  // Remember the collapse choice — the rail is a working surface people
-  // tune once and expect to keep.
   useEffect(() => {
     try {
-      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, collapsed ? '1' : '0')
+      window.localStorage.setItem(PIN_STORAGE_KEY, pinned ? '1' : '0')
     } catch {
       /* private mode — preference simply won't persist */
     }
-  }, [collapsed])
+  }, [pinned])
+
+  useEffect(() => {
+    return () => {
+      if (hoverCloseTimer.current) window.clearTimeout(hoverCloseTimer.current)
+    }
+  }, [])
+
+  // Collapse floating hover state when navigating if not pinned (keeps mobile/desktop clean)
+  useEffect(() => {
+    setMobileDrawerOpen(false)
+  }, [location.pathname])
 
   const { user, permissions, logout } = useAuthStore()
   const { notifications, markAllAsRead, deleteNotification } = useNotificationStore()
@@ -66,10 +84,9 @@ function MainLayout({ children }) {
   const resolvedPermissions = Array.isArray(permissions) ? permissions : []
   const can = useCallback(
     (permission) => hasPermission(resolvedPermissions, permission),
-    [resolvedPermissions]
+    [resolvedPermissions],
   )
 
-  /** An entry is visible when it has no permission gate, or the gate passes. */
   const isVisible = useCallback(
     (entry) => {
       if (!entry) return false
@@ -77,47 +94,71 @@ function MainLayout({ children }) {
       if (entry.permission && !can(entry.permission)) return false
       return true
     },
-    [can, role]
+    [can, role],
   )
 
-  /** Build antd menu items from the nav tree, dropping what you can't reach. */
-  const menuItems = useMemo(
-    () =>
-      NAV_TREE.map((node) => {
-        if (node.children) {
-          const children = node.children.filter(isVisible).map((child) => ({
-            key: child.path,
-            icon: <child.icon />,
-            label: <Link to={child.path}>{child.label}</Link>,
-          }))
-          // A group with nothing left to show shouldn't leave an empty shell.
-          if (children.length === 0) return null
-          return {
-            key: node.key,
-            icon: <node.icon />,
-            label: node.label,
-            children,
+  const isExpanded = pinned || hovered || focusWithin || operatorMenuOpen
+
+  const buildMenuItems = useCallback(
+    (expandedMode) => {
+      const items = []
+      NAV_SECTIONS.forEach((section, sectionIdx) => {
+        const sectionNodes = NAV_TREE.filter((n) => n.section === section.key)
+        const childrenItems = []
+
+        for (const node of sectionNodes) {
+          if (node.children) {
+            const visibleChildren = node.children.filter(isVisible).map((child) => ({
+              key: child.path,
+              icon: <child.icon />,
+              label: <Link to={child.path}>{child.label}</Link>,
+            }))
+            if (visibleChildren.length > 0) {
+              childrenItems.push({
+                key: node.key,
+                icon: <node.icon />,
+                label: node.label,
+                children: visibleChildren,
+              })
+            }
+          } else if (isVisible(node)) {
+            childrenItems.push({
+              key: node.path,
+              icon: <node.icon />,
+              label: <Link to={node.path}>{node.label}</Link>,
+            })
           }
         }
-        if (!isVisible(node)) return null
-        return {
-          key: node.path,
-          icon: <node.icon />,
-          label: <Link to={node.path}>{node.label}</Link>,
+
+        if (childrenItems.length === 0) return
+
+        if (expandedMode) {
+          items.push({
+            type: 'group',
+            key: `section-${section.key}`,
+            label: section.label,
+            children: childrenItems,
+          })
+        } else {
+          if (sectionIdx > 0 && items.length > 0) {
+            items.push({ type: 'divider', key: `div-${section.key}` })
+          }
+          items.push(...childrenItems)
         }
-      }).filter(Boolean),
-    [isVisible]
+      })
+      return items
+    },
+    [isVisible],
   )
 
-  /**
-   * Open submenu keys. Controlled (not `defaultOpenKeys`) so the rail
-   * follows navigation: landing on a nested page expands its section
-   * even if you arrived by URL or a search result. The route-derived
-   * section is merged with the sections the operator opened by hand,
-   * so manual expand/collapse keeps working alongside the
-   * navigation-following behavior.
-   */
+  const desktopMenuItems = useMemo(
+    () => buildMenuItems(isExpanded),
+    [buildMenuItems, isExpanded],
+  )
+  const mobileMenuItems = useMemo(() => buildMenuItems(true), [buildMenuItems])
+
   const trail = useMemo(() => trailFor(location.pathname), [location.pathname])
+  const selectedKey = trail?.path || location.pathname
 
   const [manualOpenKeys, setManualOpenKeys] = useState([])
 
@@ -127,16 +168,16 @@ function MainLayout({ children }) {
   }, [trail])
 
   const openKeys = useMemo(() => {
-    if (collapsed) return []
+    if (!isExpanded) return []
     return Array.from(new Set([...manualOpenKeys, ...routeOpenKeys]))
-  }, [manualOpenKeys, routeOpenKeys, collapsed])
+  }, [manualOpenKeys, routeOpenKeys, isExpanded])
 
   useEffect(() => {
-    setDrawerOpenKeys((prev) => Array.from(new Set([...prev, ...openKeys])))
-  }, [openKeys])
+    if (routeOpenKeys.length > 0) {
+      setDrawerOpenKeys((prev) => Array.from(new Set([...prev, ...routeOpenKeys])))
+    }
+  }, [routeOpenKeys])
 
-  // Breadcrumb: section → group → page. The current page is plain text
-  // because you're already there; ancestors stay clickable.
   const breadcrumb = useMemo(() => {
     const items = [{ title: <Link to="/"><HomeOutlined /></Link> }]
     if (!trail) return items
@@ -149,8 +190,40 @@ function MainLayout({ children }) {
     return items
   }, [trail])
 
-  // ⌘K / Ctrl-K opens search; Escape closes it. The panel is used all
-  // day, so the route in front of you should be one keystroke away.
+  // Hover handlers for desktop auto-expandable rail
+  const handleSiderMouseEnter = () => {
+    if (!isDesktopLayout) return
+    if (hoverCloseTimer.current) {
+      window.clearTimeout(hoverCloseTimer.current)
+      hoverCloseTimer.current = null
+    }
+    setHovered(true)
+  }
+
+  const handleSiderMouseLeave = () => {
+    if (!isDesktopLayout) return
+    if (hoverCloseTimer.current) window.clearTimeout(hoverCloseTimer.current)
+    hoverCloseTimer.current = window.setTimeout(() => {
+      setHovered(false)
+    }, 180)
+  }
+
+  const handleSiderFocus = () => {
+    if (!isDesktopLayout) return
+    if (hoverCloseTimer.current) {
+      window.clearTimeout(hoverCloseTimer.current)
+      hoverCloseTimer.current = null
+    }
+    setFocusWithin(true)
+  }
+
+  const handleSiderBlur = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setFocusWithin(false)
+    }
+  }
+
+  // Ctrl+K / Cmd+K search palette
   useEffect(() => {
     const onKeyDown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -162,8 +235,7 @@ function MainLayout({ children }) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // Move focus into the drawer when it opens so keyboard and screen
-  // reader users land inside the navigation they just asked for.
+  // Focus management for mobile drawer
   useEffect(() => {
     if (mobileDrawerOpen) {
       previouslyFocused.current = document.activeElement
@@ -174,23 +246,10 @@ function MainLayout({ children }) {
     return undefined
   }, [mobileDrawerOpen])
 
-  const formatRelativeTime = (timestamp) => {
-    if (!timestamp) return ''
-    const date = new Date(timestamp)
-    if (Number.isNaN(date.getTime())) return ''
-
-    const diffSec = Math.floor((Date.now() - date.getTime()) / 1000)
-    if (diffSec < 60) return 'چند لحظه پیش'
-    const diffMin = Math.floor(diffSec / 60)
-    if (diffMin < 60) return `${diffMin} دقیقه پیش`
-    const diffHour = Math.floor(diffMin / 60)
-    if (diffHour < 24) return `${diffHour} ساعت پیش`
-    return `${Math.floor(diffHour / 24)} روز پیش`
-  }
+  const todayJalali = useMemo(() => getTodayJalaliLabel(), [])
 
   const openNotification = (n) => {
     if (!n.read) {
-      // Marking read on open is the behaviour people expect from a bell.
       const { markAsRead } = useNotificationStore.getState()
       markAsRead(n.id)
     }
@@ -272,29 +331,54 @@ function MainLayout({ children }) {
     onClick: handleUserMenuClick,
   }
 
+  const isHoverOverlay = isExpanded && !pinned
+
   return (
-    <Layout className="admin-root-layout">
-      {/* ── Dark rail: identity bar, nav, operator card ── */}
+    <Layout className={`admin-root-layout${pinned ? ' is-sider-pinned' : ''}`}>
+      {/* ── Dark rail: auto-expands on hover, optional pin ── */}
       <Sider
         trigger={null}
         collapsible
-        collapsed={collapsed}
-        collapsedWidth={72}
-        width={236}
-        className="admin-sider"
+        collapsed={!isExpanded}
+        collapsedWidth={68}
+        width={256}
+        className={`admin-sider${isHoverOverlay ? ' is-hover-expanded' : ''}${pinned ? ' is-pinned' : ''}`}
+        onMouseEnter={handleSiderMouseEnter}
+        onMouseLeave={handleSiderMouseLeave}
+        onFocus={handleSiderFocus}
+        onBlur={handleSiderBlur}
       >
         <div className="admin-sider-inner">
-          <Link to="/" className="admin-brand" aria-label="پنل مدیریت — صفحه اصلی">
-            <span className="admin-brand-mark" aria-hidden="true">
-              <span className="admin-brand-dot" />
-            </span>
-            {!collapsed && (
-              <span className="admin-brand-text">
-                <span className="admin-brand-name">ای‌کا کالا</span>
-                <span className="admin-brand-role">پنل مدیریت</span>
+          <div className="admin-brand-row">
+            <Link to="/" className="admin-brand" aria-label="پنل مدیریت — صفحه اصلی">
+              <span className="admin-brand-mark" aria-hidden="true">
+                <span className="admin-brand-dot" />
               </span>
+              {isExpanded && (
+                <span className="admin-brand-text">
+                  <span className="admin-brand-name">ای‌کا کالا</span>
+                  <span className="admin-brand-role">پنل مدیریت سازمانی</span>
+                </span>
+              )}
+            </Link>
+
+            {isExpanded && (
+              <Tooltip
+                title={pinned ? 'بازشدن خودکار با ماوس (رها کردن منو)' : 'ثابت نگه‌داشتن منو'}
+                placement="left"
+              >
+                <button
+                  type="button"
+                  className={`sider-pin-btn${pinned ? ' is-active' : ''}`}
+                  onClick={() => setPinned((v) => !v)}
+                  aria-label={pinned ? 'آزاد کردن منوی کناری' : 'ثابت کردن منوی کناری'}
+                  aria-pressed={pinned}
+                >
+                  {pinned ? <PushpinFilled /> : <PushpinOutlined />}
+                </button>
+              </Tooltip>
             )}
-          </Link>
+          </div>
 
           <div className="admin-sider-menu-wrap">
             <Menu
@@ -302,23 +386,27 @@ function MainLayout({ children }) {
               mode="inline"
               className="admin-sider-menu"
               popupClassName="admin-sider-popup"
-              selectedKeys={[location.pathname]}
+              selectedKeys={[selectedKey]}
               openKeys={openKeys}
               onOpenChange={setManualOpenKeys}
-              items={menuItems}
+              items={desktopMenuItems}
             />
           </div>
 
-          {/* Operator card — who you are and how you leave, always in view. */}
           <div className="admin-sider-foot">
-            <Dropdown menu={userMenu} trigger={['click']} placement="topRight">
+            <Dropdown
+              menu={userMenu}
+              trigger={['click']}
+              placement="topRight"
+              onOpenChange={setOperatorMenuOpen}
+            >
               <button type="button" className="admin-operator" aria-label="حساب کاربری">
                 <Avatar
-                  size={collapsed ? 34 : 30}
+                  size={isExpanded ? 32 : 34}
                   src={user?.avatar?.url}
                   icon={!user?.avatar?.url && <UserOutlined />}
                 />
-                {!collapsed && (
+                {isExpanded && (
                   <span className="admin-operator-meta">
                     <span className="admin-operator-name">{user?.name || 'کاربر'}</span>
                     <span className="admin-operator-role">{roleLabel}</span>
@@ -336,7 +424,7 @@ function MainLayout({ children }) {
         onClose={() => setMobileDrawerOpen(false)}
         open={mobileDrawerOpen}
         className="mobile-drawer"
-        width={288}
+        width={296}
         closable={false}
         styles={{ body: { padding: 0 } }}
       >
@@ -344,7 +432,10 @@ function MainLayout({ children }) {
           <span className="admin-brand-mark" aria-hidden="true">
             <span className="admin-brand-dot" />
           </span>
-          <span className="mobile-drawer-title">ای‌کا کالا</span>
+          <div className="mobile-drawer-brand-text">
+            <span className="mobile-drawer-title">ای‌کا کالا</span>
+            <span className="mobile-drawer-sub">پنل مدیریت</span>
+          </div>
           <button
             type="button"
             className="mobile-drawer-close"
@@ -356,27 +447,47 @@ function MainLayout({ children }) {
           </button>
         </div>
 
+        <div className="mobile-drawer-search-wrap">
+          <button
+            type="button"
+            className="mobile-drawer-search-btn"
+            onClick={() => {
+              setMobileDrawerOpen(false)
+              setSearchOpen(true)
+            }}
+          >
+            <SearchOutlined />
+            <span>جستجوی سریع صفحات…</span>
+          </button>
+        </div>
+
         <Menu
           theme="dark"
           mode="inline"
           className="mobile-drawer-menu"
-          selectedKeys={[location.pathname]}
+          selectedKeys={[selectedKey]}
           openKeys={drawerOpenKeys}
           onOpenChange={setDrawerOpenKeys}
-          items={menuItems}
+          items={mobileMenuItems}
           onClick={() => setMobileDrawerOpen(false)}
         />
 
         <div className="mobile-drawer-footer">
-          <Avatar
-            size={34}
-            src={user?.avatar?.url}
-            icon={!user?.avatar?.url && <UserOutlined />}
-          />
-          <span className="user-meta">
-            <span className="u-name">{user?.name || 'کاربر'}</span>
-            <span className="u-role">{roleLabel}</span>
-          </span>
+          <Link
+            to="/profile"
+            className="mobile-drawer-profile-link"
+            onClick={() => setMobileDrawerOpen(false)}
+          >
+            <Avatar
+              size={34}
+              src={user?.avatar?.url}
+              icon={!user?.avatar?.url && <UserOutlined />}
+            />
+            <span className="user-meta">
+              <span className="u-name">{user?.name || 'کاربر'}</span>
+              <span className="u-role">{roleLabel}</span>
+            </span>
+          </Link>
           <Tooltip title="خروج از حساب" placement="left">
             <Button
               type="text"
@@ -396,15 +507,17 @@ function MainLayout({ children }) {
       <Layout className="admin-main-layout">
         <Header className="admin-header">
           <div className="header-left">
-            <button
-              type="button"
-              className="header-icon-btn collapse-btn"
-              onClick={() => setCollapsed((v) => !v)}
-              aria-label={collapsed ? 'باز کردن منوی کناری' : 'بستن منوی کناری'}
-              aria-expanded={!collapsed}
-            >
-              {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            </button>
+            <Tooltip title={pinned ? 'جمع کردن منوی ثابت' : 'ثابت کردن منوی کناری'}>
+              <button
+                type="button"
+                className="header-icon-btn collapse-btn"
+                onClick={() => setPinned((v) => !v)}
+                aria-label={pinned ? 'آزاد کردن منوی کناری' : 'ثابت کردن منوی کناری'}
+                aria-pressed={pinned}
+              >
+                {pinned ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+              </button>
+            </Tooltip>
 
             <button
               type="button"
@@ -416,9 +529,6 @@ function MainLayout({ children }) {
               <MenuOutlined />
             </button>
 
-            {/* On wide screens the rail has no room for a title, so the
-                trail lives in the header. Below that it moves into the
-                content area where it has room to wrap. */}
             <nav className="header-trail" aria-label="مسیر صفحه">
               {breadcrumb.map((item, i) => (
                 <span key={i} className="crumb-node">
@@ -430,6 +540,13 @@ function MainLayout({ children }) {
           </div>
 
           <div className="header-right">
+            {todayJalali && (
+              <span className="header-date-chip" title="تاریخ امروز">
+                <CalendarOutlined />
+                <span>{todayJalali}</span>
+              </span>
+            )}
+
             <button
               type="button"
               className="header-search-trigger"
@@ -479,7 +596,6 @@ function MainLayout({ children }) {
 
         <Content className="admin-content-area">
           <div className="admin-content-inner">
-            {/* Trail repeats below 992px, where the header drops it. */}
             <nav className="content-trail" aria-label="مسیر صفحه">
               {breadcrumb.map((item, i) => (
                 <span key={i} className="crumb-node">

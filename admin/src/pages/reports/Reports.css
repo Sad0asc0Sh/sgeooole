@@ -1,0 +1,104 @@
+/* Shared Enterprise Styles for All Report Pages */
+
+.report-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.report-chart-card,
+.report-card {
+  border-color: var(--line);
+  box-shadow: var(--shadow-sm);
+}
+
+.report-chart-wrap {
+  width: 100%;
+  height: 310px;
+}
+
+.report-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-breakdown-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.report-breakdown-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.report-breakdown-label {
+  color: var(--ink-700);
+  font-weight: 500;
+}
+
+.report-breakdown-val {
+  color: var(--ink-900);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-breakdown-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--surface-inset);
+  overflow: hidden;
+}
+
+.report-breakdown-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand-600);
+}
+
+.report-rank-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface-inset);
+  color: var(--ink-700);
+  font-variant-numeric: tabular-nums;
+}
+
+.report-rank-badge.is-top {
+  background: var(--brand-50);
+  color: var(--brand-700);
+}
+
+.audit-json-pre {
+  margin: 0;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--surface-inset);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  direction: ltr;
+  text-align: left;
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 576px) {
+  .report-chart-wrap {
+    height: 240px;
+  }
+}

@@ -1,28 +1,20 @@
-import PageHeader from '../../components/ui/PageHeader'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Card,
-  Table,
-  Tag,
   Select,
   Space,
   Button,
-  Popconfirm,
   message,
   Rate,
   Typography,
-  Form,
   Input,
-  Divider,
   Modal,
-  Statistic,
   Row,
   Col,
   Avatar,
   Tooltip,
-  Image
+  Image,
 } from 'antd'
-import ResponsiveTable from '../../components/ResponsiveTable'
 import {
   ReloadOutlined,
   DeleteOutlined,
@@ -34,33 +26,20 @@ import {
   UserOutlined,
   ShoppingOutlined,
   StarFilled,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
-import jalaliday from 'jalaliday'
-import api from '../../api'
+import ResponsiveTable from '../../components/ResponsiveTable'
+import PageHeader from '../../components/ui/PageHeader'
+import StatTile from '../../components/ui/StatTile'
+import StatusPill from '../../components/ui/StatusPill'
+import { formatPersianDate } from '../../utils/dateUtils'
+import { formatNumber } from '../../utils/formatters'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
-
-dayjs.extend(jalaliday)
-dayjs.calendar('jalali')
+import api from '../../api'
 
 const { Title, Text, Paragraph } = Typography
 const { TextArea } = Input
-
-const formatPersianDate = (date, includeTime = false) => {
-  if (!date) return '-'
-  const jalaliDate = dayjs(date).calendar('jalali').locale('fa')
-  const year = jalaliDate.format('YYYY')
-  const month = jalaliDate.format('MM')
-  const day = jalaliDate.format('DD')
-
-  if (includeTime) {
-    const time = jalaliDate.format('HH:mm')
-    return `${year}/${month}/${day} - ${time}`
-  }
-  return `${year}/${month}/${day}`
-}
 
 function ReviewsPage() {
   const { can } = useCan()
@@ -73,10 +52,6 @@ function ReviewsPage() {
   const [filters, setFilters] = useState({ isApproved: null })
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 })
 
-  // Stats
-  const [stats, setStats] = useState({ total: 0, pending: 0, avgRating: 0 })
-
-  // Modal State
   const [modalVisible, setModalVisible] = useState(false)
   const [selectedReview, setSelectedReview] = useState(null)
   const [replyText, setReplyText] = useState('')
@@ -90,7 +65,7 @@ function ReviewsPage() {
       params.set('page', String(page))
       params.set('limit', String(pageSize))
 
-      if (filters.isApproved !== null) {
+      if (filters.isApproved !== null && filters.isApproved !== undefined) {
         params.set('isApproved', String(filters.isApproved))
       }
 
@@ -98,18 +73,12 @@ function ReviewsPage() {
       const list = res?.data?.data || []
       const pg = res?.data?.pagination
 
-      setReviews(list)
+      setReviews(Array.isArray(list) ? list : [])
       if (pg) {
         setPagination({
           current: pg.currentPage || page,
           pageSize: pg.itemsPerPage || pageSize,
           total: pg.totalItems || list.length,
-        })
-        // Update stats roughly based on current fetch (ideal would be separate API)
-        setStats({
-          total: pg.totalItems || 0,
-          pending: filters.isApproved === false ? pg.totalItems : '-', // Placeholder
-          avgRating: 4.8 // Placeholder
         })
       }
     } catch (err) {
@@ -124,6 +93,19 @@ function ReviewsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.isApproved])
 
+  const stats = useMemo(() => {
+    const pendingInPage = reviews.filter((r) => !r.isApproved).length
+    const rated = reviews.filter((r) => Number(r.rating) > 0)
+    const avg = rated.length
+      ? (rated.reduce((sum, r) => sum + Number(r.rating), 0) / rated.length).toFixed(1)
+      : '۰'
+    return {
+      total: pagination.total || reviews.length,
+      pending: filters.isApproved === false ? pagination.total : pendingInPage,
+      avgRating: avg,
+    }
+  }, [reviews, pagination.total, filters.isApproved])
+
   const handleStatusUpdate = async (reviewId, isApproved) => {
     if (!canModerate) {
       message.error('شما مجوز تغییر وضعیت نظرات را ندارید.')
@@ -135,13 +117,11 @@ function ReviewsPage() {
       await api.put(`/reviews/${reviewId}/status`, { isApproved })
       message.success('وضعیت نظر به‌روزرسانی شد')
 
-      // Update local state
-      setReviews(prev => prev.map(r => r._id === reviewId ? { ...r, isApproved } : r))
+      setReviews((prev) => prev.map((r) => (r._id === reviewId ? { ...r, isApproved } : r)))
       if (selectedReview && selectedReview._id === reviewId) {
-        setSelectedReview(prev => ({ ...prev, isApproved }))
+        setSelectedReview((prev) => ({ ...prev, isApproved }))
       }
 
-      // If filtering by status, refresh might be needed, but local update is smoother
       if (filters.isApproved !== null) {
         fetchReviews(pagination.current)
       }
@@ -179,7 +159,6 @@ function ReviewsPage() {
       message.error('شما مجوز ثبت پاسخ برای نظرات را ندارید.')
       return
     }
-
     if (!replyText.trim()) return message.warning('متن پاسخ نمی‌تواند خالی باشد')
 
     setReplyLoading(true)
@@ -189,10 +168,10 @@ function ReviewsPage() {
 
       const updatedReview = {
         ...selectedReview,
-        adminReply: { message: replyText.trim(), repliedAt: new Date().toISOString() }
+        adminReply: { message: replyText.trim(), repliedAt: new Date().toISOString() },
       }
 
-      setReviews(prev => prev.map(r => r._id === selectedReview._id ? updatedReview : r))
+      setReviews((prev) => prev.map((r) => (r._id === selectedReview._id ? updatedReview : r)))
       setSelectedReview(updatedReview)
     } catch (err) {
       message.error('خطا در ثبت پاسخ')
@@ -207,38 +186,41 @@ function ReviewsPage() {
       dataIndex: ['product', 'name'],
       key: 'product',
       width: 250,
-      render: (name, record) => (
-        <Space>
-          <Avatar
-            shape="square"
-            size={48}
-            src={record.product?.images?.[0]}
-            icon={<ShoppingOutlined />}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <Text strong style={{ maxWidth: 180 }} ellipsis={{ tooltip: name }}>
-              {name || 'محصول حذف شده'}
-            </Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              کد: {record.product?.sku || record.product?._id?.substring(0, 8) || '-'}
-            </Text>
-          </div>
-        </Space>
-      ),
+      mobileTitle: true,
+      render: (name, record) => {
+        const img = record.product?.images?.[0]
+        const src = typeof img === 'string' ? img : img?.url
+        return (
+          <Space>
+            <Avatar shape="square" size={44} src={src} icon={<ShoppingOutlined />} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <Text strong style={{ maxWidth: 180 }} ellipsis={{ tooltip: name }}>
+                {name || 'محصول حذف شده'}
+              </Text>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                کد: {record.product?.sku || record.product?._id?.substring(0, 8) || '—'}
+              </Text>
+            </div>
+          </Space>
+        )
+      },
     },
     {
       title: 'کاربر',
       dataIndex: ['user', 'name'],
       key: 'user',
       width: 200,
+      mobileSubtitle: true,
       render: (name, record) => (
         <Space>
-          <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#f56a00' }}>
+          <Avatar icon={<UserOutlined />} style={{ backgroundColor: 'var(--brand-600)' }}>
             {name?.[0]}
           </Avatar>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <Text strong>{name || 'ناشناس'}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>{record.user?.email}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {record.user?.email || record.user?.mobile || '—'}
+            </Text>
           </div>
         </Space>
       ),
@@ -247,28 +229,29 @@ function ReviewsPage() {
       title: 'امتیاز',
       dataIndex: 'rating',
       key: 'rating',
-      width: 150,
+      width: 145,
       align: 'center',
-      render: (rating) => <Rate disabled defaultValue={rating} style={{ fontSize: 14 }} />,
+      render: (rating) => <Rate disabled value={rating} style={{ fontSize: 14 }} />,
     },
     {
       title: 'وضعیت',
       mobileBadge: true,
       dataIndex: 'isApproved',
       key: 'isApproved',
-      width: 120,
+      width: 125,
       align: 'center',
       render: (isApproved) => (
-        <Tag color={isApproved ? 'success' : 'warning'} icon={isApproved ? <CheckOutlined /> : <ExclamationCircleOutlined />}>
-          {isApproved ? 'تأیید شده' : 'در انتظار'}
-        </Tag>
+        <StatusPill
+          tone={isApproved ? 'ok' : 'warn'}
+          label={isApproved ? 'تأیید شده' : 'در انتظار تأیید'}
+        />
       ),
     },
     {
-      title: 'تاریخ',
+      title: 'تاریخ ثبت',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 150,
+      width: 160,
       align: 'center',
       render: (date) => <Text type="secondary">{formatPersianDate(date)}</Text>,
     },
@@ -277,79 +260,54 @@ function ReviewsPage() {
       key: 'actions',
       width: 100,
       align: 'center',
-      fixed: 'right',
       render: (_, record) => (
-        <Tooltip title="مشاهده جزئیات و مدیریت">
+        <Tooltip title="مشاهده جزئیات و پاسخ">
           <Button
             type="primary"
-            shape="circle"
+            size="small"
             icon={<EyeOutlined />}
             onClick={() => openModal(record)}
-          />
+          >
+            بررسی
+          </Button>
         </Tooltip>
       ),
     },
   ]
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
       <PageHeader
-        title="مدیریت نظرات"
-        subtitle="بررسی و پاسخ‌دهی به نظرات کاربران"
+        title="مدیریت دیدگاه‌ها و نظرات"
+        subtitle="بررسی، تأیید و پاسخ‌گویی به نظرات ثبت‌شده کاربران"
+        count={pagination.total}
         actions={
-          <Button icon={<ReloadOutlined />} onClick={() => fetchReviews()}>بروزرسانی</Button>
+          <Button icon={<ReloadOutlined spin={loading} />} onClick={() => fetchReviews()}>
+            به‌روزرسانی
+          </Button>
         }
       />
 
-      {/* Stats Cards */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={8}>
-          <Card bordered={false}>
-            <Statistic
-              title="کل نظرات"
-              value={pagination.total}
-              prefix={<MessageOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card bordered={false}>
-            <Statistic
-              title="در انتظار بررسی"
-              value={filters.isApproved === false ? pagination.total : '-'} // Approximate
-              prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#8a6200' }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card bordered={false}>
-            <Statistic
-              title="میانگین امتیاز"
-              value={4.8}
-              precision={1}
-              prefix={<StarFilled style={{ color: '#fadb14' }} />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div className="kpi-grid-3">
+        <StatTile label="کل نظرات" value={formatNumber(stats.total)} icon={<MessageOutlined />} tone="brand" />
+        <StatTile label="در انتظار تأیید" value={formatNumber(stats.pending)} icon={<ExclamationCircleOutlined />} tone={stats.pending > 0 ? 'warn' : 'ok'} />
+        <StatTile label="میانگین امتیاز (صفحه)" value={`${stats.avgRating} از ۵`} icon={<StarFilled />} tone="info" />
+      </div>
 
-      {/* Filter & Table */}
-      <Card bordered={false} className="shadow-sm">
-        <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
-          <Select
-            style={{ width: 200, maxWidth: '100%' }}
-            placeholder="فیلتر وضعیت"
-            allowClear
-            value={filters.isApproved}
-            onChange={(val) => setFilters({ ...filters, isApproved: val })}
-          >
-            <Select.Option value={true}>تأیید شده</Select.Option>
-            <Select.Option value={false}>در انتظار تأیید</Select.Option>
-          </Select>
-        </div>
+      <div className="filter-bar">
+        <Select
+          style={{ width: 200, maxWidth: '100%' }}
+          placeholder="فیلتر وضعیت"
+          allowClear
+          value={filters.isApproved}
+          onChange={(val) => setFilters({ ...filters, isApproved: val ?? null })}
+        >
+          <Select.Option value={true}>تأیید شده</Select.Option>
+          <Select.Option value={false}>در انتظار تأیید</Select.Option>
+        </Select>
+      </div>
 
+      <Card>
         <ResponsiveTable
           columns={columns}
           dataSource={reviews}
@@ -357,23 +315,25 @@ function ReviewsPage() {
           loading={loading}
           pagination={pagination}
           onChange={(pag) => {
-            setPagination(prev => ({ ...prev, current: pag.current, pageSize: pag.pageSize }))
+            setPagination((prev) => ({ ...prev, current: pag.current, pageSize: pag.pageSize }))
             fetchReviews(pag.current, pag.pageSize)
           }}
           scroll={{ x: 1000 }}
         />
       </Card>
 
-      {/* Detail Modal */}
       <Modal
         title={
           <Space>
             <MessageOutlined />
             <span>جزئیات نظر</span>
-            {selectedReview?.isApproved ?
-              <Tag color="success">تأیید شده</Tag> :
-              <Tag color="warning">در انتظار تأیید</Tag>
-            }
+            {selectedReview && (
+              <StatusPill
+                size="sm"
+                tone={selectedReview.isApproved ? 'ok' : 'warn'}
+                label={selectedReview.isApproved ? 'تأیید شده' : 'در انتظار تأیید'}
+              />
+            )}
           </Space>
         }
         open={modalVisible}
@@ -381,16 +341,21 @@ function ReviewsPage() {
         width={800}
         footer={[
           canDelete && (
-            <Button key="delete" danger icon={<DeleteOutlined />} onClick={() => handleDelete(selectedReview._id)}>
+            <Button
+              key="delete"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(selectedReview._id)}
+            >
               حذف
             </Button>
           ),
-          canModerate && (
-            !selectedReview?.isApproved ? (
+          canModerate &&
+            (!selectedReview?.isApproved ? (
               <Button
                 key="approve"
                 type="primary"
-                style={{ backgroundColor: '#0f6b33' }}
+                style={{ backgroundColor: '#0f6b33', borderColor: '#0f6b33' }}
                 icon={<CheckOutlined />}
                 loading={actionLoading}
                 onClick={() => handleStatusUpdate(selectedReview._id, true)}
@@ -400,7 +365,6 @@ function ReviewsPage() {
             ) : (
               <Button
                 key="reject"
-                type="default"
                 danger
                 icon={<CloseOutlined />}
                 loading={actionLoading}
@@ -408,17 +372,15 @@ function ReviewsPage() {
               >
                 رد کردن
               </Button>
-            )
-          ),
+            )),
           <Button key="close" onClick={() => setModalVisible(false)}>
             بستن
-          </Button>
+          </Button>,
         ]}
       >
         {selectedReview && (
-          <Row gutter={24}>
-            {/* Left: Review & Reply */}
-            <Col span={14}>
+          <Row gutter={[20, 16]}>
+            <Col xs={24} md={14}>
               <Card type="inner" title="متن نظر" size="small" style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <Rate disabled value={selectedReview.rating} style={{ fontSize: 14 }} />
@@ -426,7 +388,7 @@ function ReviewsPage() {
                     {formatPersianDate(selectedReview.createdAt, true)}
                   </Text>
                 </div>
-                <Paragraph style={{ fontSize: 15, lineHeight: 1.6 }}>
+                <Paragraph style={{ fontSize: 14.5, lineHeight: 1.7 }}>
                   {selectedReview.comment}
                 </Paragraph>
               </Card>
@@ -440,7 +402,7 @@ function ReviewsPage() {
                   style={{ marginBottom: 12 }}
                   disabled={!canReply}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                   {selectedReview.adminReply?.repliedAt && (
                     <Text type="secondary" style={{ fontSize: 12 }}>
                       آخرین پاسخ: {formatPersianDate(selectedReview.adminReply.repliedAt, true)}
@@ -459,21 +421,26 @@ function ReviewsPage() {
               </Card>
             </Col>
 
-            {/* Right: Info */}
-            <Col span={10}>
+            <Col xs={24} md={10}>
               <Card size="small" style={{ marginBottom: 16, textAlign: 'center' }}>
-                <Avatar size={64} style={{ backgroundColor: '#f56a00', marginBottom: 12 }}>
+                <Avatar size={60} style={{ backgroundColor: 'var(--brand-600)', marginBottom: 10 }}>
                   {selectedReview.user?.name?.[0]}
                 </Avatar>
-                <Title level={5} style={{ margin: 0 }}>{selectedReview.user?.name}</Title>
-                <Text type="secondary">{selectedReview.user?.email}</Text>
+                <Title level={5} style={{ margin: 0 }}>
+                  {selectedReview.user?.name || 'ناشناس'}
+                </Title>
+                <Text type="secondary">{selectedReview.user?.email || selectedReview.user?.mobile || '—'}</Text>
               </Card>
 
               <Card size="small" title="محصول مرتبط">
                 <div style={{ textAlign: 'center' }}>
                   <Image
-                    width={120}
-                    src={selectedReview.product?.images?.[0]}
+                    width={110}
+                    src={
+                      typeof selectedReview.product?.images?.[0] === 'string'
+                        ? selectedReview.product.images[0]
+                        : selectedReview.product?.images?.[0]?.url
+                    }
                     fallback="https://via.placeholder.com/150"
                     style={{ borderRadius: 8, marginBottom: 8 }}
                   />

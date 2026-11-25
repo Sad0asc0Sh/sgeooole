@@ -11,35 +11,50 @@ import {
   Space,
   Popconfirm,
   message,
-  DatePicker,
   Switch,
-  Radio,
   Alert,
+  Segmented,
+  Table,
+  Row,
+  Col,
 } from 'antd'
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ClockCircleOutlined,
+  GiftOutlined,
+  ThunderboltOutlined,
+  SearchOutlined,
+  ShoppingOutlined,
+  CalendarOutlined,
+  CloseOutlined,
+} from '@ant-design/icons'
 import ResponsiveTable from '../../components/ResponsiveTable'
-import { PlusOutlined, EditOutlined, DeleteOutlined, ClockCircleOutlined } from '@ant-design/icons'
-import dayjs from 'dayjs'
-import jalaliday from 'jalaliday'
-import api from '../../api'
 import PageHeader from '../../components/ui/PageHeader'
+import StatTile from '../../components/ui/StatTile'
+import StatusPill from '../../components/ui/StatusPill'
+import JalaliRangePicker from '../../components/JalaliRangePicker'
+import PromotionBadgePreview from '../../components/promotions/PromotionBadgePreview'
+import {
+  SALE_BADGE_THEMES,
+  getSaleBadgeTheme,
+  calculateDiscountPricing,
+  getProductBasePriceRange,
+} from '../../utils/promotionPricing'
+import { formatPersianShortDate, toSafeDate } from '../../utils/dateUtils'
+import { formatCurrency, formatNumber, parseNumericInput } from '../../utils/formatters'
+import api from '../../api'
 
-dayjs.extend(jalaliday)
-dayjs.calendar('jalali')
+function getSaleStatus(sale) {
+  const now = new Date()
+  const start = new Date(sale.startDate)
+  const end = new Date(sale.endDate)
 
-const { RangePicker } = DatePicker
-
-const formatPersianDate = (date, includeTime = false) => {
-  if (!date) return '-'
-  const jalaliDate = dayjs(date).calendar('jalali').locale('fa')
-  const year = jalaliDate.format('YYYY')
-  const month = jalaliDate.format('MM')
-  const day = jalaliDate.format('DD')
-
-  if (includeTime) {
-    const time = jalaliDate.format('HH:mm')
-    return `${year}/${month}/${day} - ${time}`
-  }
-  return `${year}/${month}/${day}`
+  if (!sale.isActive) return { key: 'inactive', text: 'غیرفعال', tone: 'neutral' }
+  if (now < start) return { key: 'scheduled', text: 'در انتظار شروع', tone: 'info' }
+  if (now >= start && now <= end) return { key: 'running', text: 'در حال اجرا', tone: 'ok' }
+  return { key: 'ended', text: 'پایان یافته', tone: 'err' }
 }
 
 function SalesPage() {
@@ -50,11 +65,18 @@ function SalesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [editingSale, setEditingSale] = useState(null)
-  // محصولاتی که قبلاً در «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» فعال شده‌اند: { [productId]: [{type,label,endTime}] }
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [search, setSearch] = useState('')
   const [conflictMap, setConflictMap] = useState({})
   const [conflictsLoading, setConflictsLoading] = useState(false)
+
   const [form] = Form.useForm()
   const watchedRange = Form.useWatch('dateRange', form)
+  const watchedName = Form.useWatch('name', form)
+  const watchedDiscount = Form.useWatch('discountPercentage', form)
+  const watchedBadgeTheme = Form.useWatch('badgeTheme', form)
+  const watchedShowInFeatured = Form.useWatch('showInFeatured', form)
+  const watchedProductIds = Form.useWatch('products', form)
 
   const fetchSales = async () => {
     setLoading(true)
@@ -73,7 +95,11 @@ function SalesPage() {
     setProductsLoading(true)
     try {
       const res = await api.get('/products', {
-        params: { limit: 1000, fields: 'name,_id,sku' },
+        params: {
+          limit: 1000,
+          skipDiscount: 'true',
+          fields: 'name,_id,sku,price,productType,variants,stock',
+        },
       })
       const data = res?.data?.data || []
       setProducts(Array.isArray(data) ? data : [])
@@ -114,22 +140,32 @@ function SalesPage() {
     fetchProducts()
   }, [])
 
-  // با باز بودن مودال و تغییر بازه زمانی، فهرست محصولات درگیر را به‌روز نگه می‌داریم
+  const watchedStartTs = toSafeDate(watchedRange?.[0])?.getTime() || null
+
   useEffect(() => {
     if (!modalOpen) return
-    const start = watchedRange?.[0]
+    const start = toSafeDate(watchedRange?.[0])
     fetchConflicts(editingSale?._id, start ? start.toISOString() : undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalOpen, editingSale?._id, watchedRange?.[0]?.valueOf?.()])
+  }, [modalOpen, editingSale?._id, watchedStartTs])
+
+  const productMap = useMemo(() => {
+    const map = new Map()
+    products.forEach((p) => map.set(p._id, p))
+    return map
+  }, [products])
 
   const productOptions = useMemo(
     () =>
       products.map((p) => {
         const conflicts = conflictMap[p._id] || []
+        const priceRange = getProductBasePriceRange(p)
         return {
           label: p.sku ? `${p.name} (${p.sku})` : p.name,
           value: p._id,
           sku: p.sku || '',
+          basePrice: priceRange.minPrice,
+          isVariable: priceRange.isVariable,
           disabled: conflicts.length > 0,
           conflicts,
         }
@@ -137,12 +173,68 @@ function SalesPage() {
     [products, conflictMap],
   )
 
+  const selectedProductsPreview = useMemo(() => {
+    const ids = Array.isArray(watchedProductIds) ? watchedProductIds : []
+    const pct = Number(watchedDiscount) || 0
+    return ids
+      .map((id) => {
+        const prod = productMap.get(id)
+        if (!prod) return null
+        const range = getProductBasePriceRange(prod)
+        const minCalc = calculateDiscountPricing(range.minPrice, pct)
+        const maxCalc = calculateDiscountPricing(range.maxPrice, pct)
+        return {
+          _id: prod._id,
+          name: prod.name,
+          sku: prod.sku,
+          isVariable: range.isVariable,
+          minBase: range.minPrice,
+          maxBase: range.maxPrice,
+          minFinal: minCalc.finalPrice,
+          maxFinal: maxCalc.finalPrice,
+          savings: minCalc.savings,
+        }
+      })
+      .filter(Boolean)
+  }, [watchedProductIds, watchedDiscount, productMap])
+
+  const previewBasePrice =
+    selectedProductsPreview[0]?.minBase > 0 ? selectedProductsPreview[0].minBase : 2500000
+  const isSamplePreviewPrice = !(selectedProductsPreview[0]?.minBase > 0)
+
+  const kpiStats = useMemo(() => {
+    let running = 0
+    let scheduled = 0
+    const coveredIds = new Set()
+    sales.forEach((s) => {
+      const st = getSaleStatus(s)
+      if (st.key === 'running') running++
+      if (st.key === 'scheduled') scheduled++
+      if (st.key === 'running' && Array.isArray(s.products)) {
+        s.products.forEach((p) => coveredIds.add(typeof p === 'object' ? p._id : p))
+      }
+    })
+    return { total: sales.length, running, scheduled, covered: coveredIds.size }
+  }, [sales])
+
+  const filteredSales = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return sales.filter((s) => {
+      if (statusFilter !== 'all' && getSaleStatus(s).key !== statusFilter) return false
+      if (q && !String(s.name || '').toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [sales, statusFilter, search])
+
   const openCreateModal = () => {
     setEditingSale(null)
     form.resetFields()
     form.setFieldsValue({
       isActive: true,
       showInFeatured: true,
+      badgeTheme: 'lime-blue',
+      discountPercentage: 15,
+      products: [],
     })
     setModalOpen(true)
   }
@@ -153,8 +245,8 @@ function SalesPage() {
     form.setFieldsValue({
       name: sale.name,
       discountPercentage: sale.discountPercentage,
-      dateRange: [dayjs(sale.startDate), dayjs(sale.endDate)],
-      products: sale.products?.map((p) => (typeof p === 'object' ? p._id : p)),
+      dateRange: [new Date(sale.startDate), new Date(sale.endDate)],
+      products: sale.products?.map((p) => (typeof p === 'object' ? p._id : p)) || [],
       isActive: sale.isActive,
       badgeTheme: sale.badgeTheme || 'lime-blue',
       showInFeatured: sale.showInFeatured !== false,
@@ -165,12 +257,23 @@ function SalesPage() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
+      const startDate = toSafeDate(values.dateRange?.[0])
+      const endDate = toSafeDate(values.dateRange?.[1])
+
+      if (!startDate || !endDate) {
+        message.error('لطفاً تاریخ شروع و پایان را به‌درستی انتخاب کنید')
+        return
+      }
+      if (endDate <= startDate) {
+        message.error('تاریخ پایان باید بعد از تاریخ شروع باشد')
+        return
+      }
 
       const payload = {
         name: values.name,
         discountPercentage: values.discountPercentage,
-        startDate: values.dateRange[0].toISOString(),
-        endDate: values.dateRange[1].toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
         products: values.products || [],
         isActive: values.isActive,
         badgeTheme: values.badgeTheme,
@@ -192,20 +295,16 @@ function SalesPage() {
       form.resetFields()
       fetchSales()
     } catch (err) {
-      if (err?.errorFields) {
-        return
-      }
-
+      if (err?.errorFields) return
       if (err?.response?.status === 409) {
-        const start = form.getFieldValue('dateRange')?.[0]
+        const start = toSafeDate(form.getFieldValue('dateRange')?.[0])
         fetchConflicts(editingSale?._id, start ? start.toISOString() : undefined)
       }
-
-      const msg =
+      message.error(
         err?.response?.data?.message ||
-        err?.message ||
-        (editingSale ? 'خطا در به‌روزرسانی تخفیف' : 'خطا در ایجاد تخفیف')
-      message.error(msg)
+          err?.message ||
+          (editingSale ? 'خطا در به‌روزرسانی تخفیف' : 'خطا در ایجاد تخفیف'),
+      )
     } finally {
       setSaving(false)
     }
@@ -221,68 +320,75 @@ function SalesPage() {
     }
   }
 
-  const getSaleStatus = (sale) => {
-    const now = new Date()
-    const start = new Date(sale.startDate)
-    const end = new Date(sale.endDate)
-
-    if (!sale.isActive) {
-      return { text: 'غیرفعال', color: 'default' }
-    }
-
-    if (now < start) {
-      return { text: 'در انتظار شروع', color: 'blue' }
-    }
-
-    if (now >= start && now <= end) {
-      return { text: 'در حال اجرا', color: 'green' }
-    }
-
-    if (now > end) {
-      return { text: 'پایان یافته', color: 'red' }
-    }
-
-    return { text: 'نامشخص', color: 'default' }
-  }
-
   const columns = [
     {
-      title: 'نام تخفیف',
+      title: 'نام و لیبل کمپین',
       dataIndex: 'name',
       key: 'name',
+      mobileTitle: true,
+      render: (name, record) => {
+        const theme = getSaleBadgeTheme(record.badgeTheme)
+        return (
+          <Space direction="vertical" size={4}>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '3px 10px',
+                borderRadius: 999,
+                color: '#fff',
+                fontSize: 12,
+                fontWeight: 700,
+                background: theme.gradient,
+              }}
+            >
+              {name}
+            </span>
+            <span style={{ fontSize: 11.5, color: 'var(--ink-400)' }}>{theme.label}</span>
+          </Space>
+        )
+      },
     },
     {
       title: 'درصد تخفیف',
       dataIndex: 'discountPercentage',
       key: 'discountPercentage',
-      render: (value) => <Tag color="orange">{value}%</Tag>,
+      render: (value) => (
+        <StatusPill size="sm" tone="brand" label={`${formatNumber(value)}٪ تخفیف`} />
+      ),
     },
     {
       title: 'تاریخ شروع',
       dataIndex: 'startDate',
       key: 'startDate',
-      render: (date) => formatPersianDate(date, true),
+      render: (date) => formatPersianShortDate(date, true),
     },
     {
       title: 'تاریخ پایان',
       dataIndex: 'endDate',
       key: 'endDate',
-      render: (date) => formatPersianDate(date, true),
+      render: (date) => formatPersianShortDate(date, true),
     },
     {
-      title: 'تعداد محصولات',
+      title: 'محصولات',
       dataIndex: 'products',
       key: 'products',
-      render: (products) => (
-        <Tag color="blue">{Array.isArray(products) ? products.length : 0} محصول</Tag>
+      align: 'center',
+      render: (list) => (
+        <Tag color="blue">{formatNumber(Array.isArray(list) ? list.length : 0)} محصول</Tag>
       ),
     },
     {
-      title: 'منتخب‌ها',
+      title: 'نمایش در منتخب‌ها',
       dataIndex: 'showInFeatured',
       key: 'showInFeatured',
       render: (value) =>
-        value === false ? <Tag>عدم نمایش</Tag> : <Tag color="purple">نمایش در منتخب‌ها</Tag>,
+        value === false ? (
+          <StatusPill size="sm" tone="neutral" label="فقط قیمت تخفیفی" />
+        ) : (
+          <StatusPill size="sm" tone="ok" label="منتخب‌های صفحه اصلی" />
+        ),
     },
     {
       title: 'وضعیت',
@@ -290,11 +396,7 @@ function SalesPage() {
       key: 'status',
       render: (_, record) => {
         const status = getSaleStatus(record)
-        return (
-          <Tag color={status.color} icon={<ClockCircleOutlined />}>
-            {status.text}
-          </Tag>
-        )
+        return <StatusPill tone={status.tone} label={status.text} />
       },
     },
     {
@@ -322,21 +424,57 @@ function SalesPage() {
   ]
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
       <PageHeader
-         title="مدیریت تخفیف‌های زمان‌دار"
-         actions={
-           <>
-<Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-                       ایجاد تخفیف جدید
-                     </Button>
-           </>
-         }
-       />
+        title="تخفیف‌های زمان‌دار و کمپین‌های لیبل سفارشی"
+        subtitle="ساخت کمپین با لیبل و رنگ دلخواه، پیش‌نمایش قیمت نهایی محصولات و کنترل نمایش در منتخب‌های صفحه اصلی"
+        count={sales.length}
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+            ایجاد کمپین جدید
+          </Button>
+        }
+      />
+
+      <div className="kpi-grid">
+        <StatTile label="کل کمپین‌ها" value={formatNumber(kpiStats.total)} icon={<GiftOutlined />} tone="neutral" />
+        <StatTile label="در حال اجرا" value={formatNumber(kpiStats.running)} icon={<ThunderboltOutlined />} tone="ok" />
+        <StatTile label="زمان‌بندی‌شده" value={formatNumber(kpiStats.scheduled)} icon={<CalendarOutlined />} tone="info" />
+        <StatTile label="محصولات در تخفیف فعال" value={formatNumber(kpiStats.covered)} icon={<ShoppingOutlined />} tone="brand" />
+      </div>
+
+      <div className="filter-bar">
+        <Input
+          placeholder="جستجو در نام کمپین..."
+          prefix={<SearchOutlined />}
+          allowClear
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ width: 240 }}
+        />
+        <div className="quick-tabs-bar">
+          <Segmented
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { label: 'همه', value: 'all' },
+              { label: 'در حال اجرا', value: 'running' },
+              { label: 'در انتظار شروع', value: 'scheduled' },
+              { label: 'پایان یافته', value: 'ended' },
+              { label: 'غیرفعال', value: 'inactive' },
+            ]}
+          />
+        </div>
+      </div>
 
       <Card>
-        <ResponsiveTable columns={columns} dataSource={sales} loading={loading} rowKey="_id"
- scroll={{ x: 'max-content' }} />
+        <ResponsiveTable
+          columns={columns}
+          dataSource={filteredSales}
+          loading={loading}
+          rowKey="_id"
+          scroll={{ x: 'max-content' }}
+        />
       </Card>
 
       <Modal
@@ -348,75 +486,108 @@ function SalesPage() {
         }}
         onOk={handleSubmit}
         confirmLoading={saving}
-        title={editingSale ? 'ویرایش تخفیف' : 'ایجاد تخفیف جدید'}
-        okText="ذخیره"
+        title={editingSale ? 'ویرایش کمپین تخفیف زمان‌دار' : 'ایجاد کمپین تخفیف زمان‌دار جدید'}
+        okText="ذخیره کمپین"
         cancelText="انصراف"
-        width={700}
+        width={840}
       >
         <Form layout="vertical" form={form}>
-          <Form.Item
-            name="name"
-            label="نام تخفیف"
-            rules={[{ required: true, message: 'لطفاً نام تخفیف را وارد کنید' }]}
-          >
-            <Input placeholder="مثلاً: فروش ویژه عید نوروز" />
-          </Form.Item>
-
-          <Form.Item
-            name="discountPercentage"
-            label="درصد تخفیف"
-            rules={[
-              { required: true, message: 'لطفاً درصد تخفیف را وارد کنید' },
-              {
-                type: 'number',
-                min: 1,
-                max: 99,
-                message: 'درصد تخفیف باید بین ۱ تا ۹۹ باشد',
-              },
-            ]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              min={1}
-              max={99}
-              placeholder="مثلاً: 20"
-              addonAfter="%"
-            />
-          </Form.Item>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} md={14}>
+              <Form.Item
+                name="name"
+                label="نام و متن لیبل کمپین"
+                rules={[{ required: true, message: 'لطفاً نام تخفیف را وارد کنید' }]}
+              >
+                <Input placeholder="مثلاً: حراج ویژه پایان فصل" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={10}>
+              <Form.Item
+                name="discountPercentage"
+                label="درصد تخفیف (%)"
+                rules={[
+                  { required: true, message: 'لطفاً درصد تخفیف را وارد کنید' },
+                  { type: 'number', min: 1, max: 99, message: 'درصد تخفیف باید بین ۱ تا ۹۹ باشد' },
+                ]}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={1}
+                  max={99}
+                  placeholder="مثلاً: ۲۰"
+                  addonAfter="%"
+                  parser={parseNumericInput}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             name="dateRange"
-            label="بازه زمانی تخفیف"
-            rules={[{ required: true, message: 'لطفاً بازه زمانی را انتخاب کنید' }]}
+            label="بازه زمانی اجرا (تاریخ و ساعت شمسی)"
+            rules={[
+              {
+                validator: (_, val) => {
+                  if (Array.isArray(val) && toSafeDate(val[0]) && toSafeDate(val[1])) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('لطفاً تاریخ و ساعت شروع و پایان را انتخاب کنید'))
+                },
+              },
+            ]}
           >
-            <RangePicker
-              showTime
-              format="YYYY/MM/DD HH:mm"
-              style={{ width: '100%' }}
-              placeholder={['تاریخ شروع', 'تاریخ پایان']}
-            />
+            <JalaliRangePicker showTime presets />
           </Form.Item>
 
           <Form.Item
+            name="badgeTheme"
+            label="رنگ و تم لیبل روی کارت محصول"
+            initialValue="lime-blue"
+          >
+            <ThemeSwatchSelector />
+          </Form.Item>
+
+          {/* Live Storefront Card & Badge Preview */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ink-700)', marginBottom: 6 }}>
+              پیش‌نمایش زنده لیبل و قیمت در ویترین فروشگاه:
+            </div>
+            <PromotionBadgePreview
+              mode="custom"
+              label={watchedName}
+              themeKey={watchedBadgeTheme}
+              discountPercent={watchedDiscount || 0}
+              basePrice={previewBasePrice}
+              showInFeatured={watchedShowInFeatured !== false}
+              isSamplePrice={isSamplePreviewPrice}
+            />
+          </div>
+
+          <Form.Item
             name="products"
-            label="محصولات شامل تخفیف"
-            extra="محصولاتی که قبلاً در «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» فعال شده‌اند غیرقابل انتخاب هستند. برای انتخاب آن‌ها، ابتدا کمپین قبلی را از صفحه‌ی ویرایش محصول غیرفعال کنید."
+            label="محصولات شامل کمپین"
+            extra="محصولاتی که در «زمان‌دار (لحظه‌ای)» یا «شگفت‌انگیز» فعال‌اند غیرقابل انتخاب هستند."
           >
             <Select
               mode="multiple"
-              placeholder="انتخاب محصولات..."
+              placeholder="جستجو و انتخاب محصولات..."
               loading={productsLoading || conflictsLoading}
               showSearch
               optionLabelProp="label"
               filterOption={(input, option) => {
-                const search = (input || '').toString().toLowerCase()
-                const label = (option?.label ?? '').toString().toLowerCase()
-                const sku = (option?.sku ?? '').toString().toLowerCase()
-                return label.includes(search) || sku.includes(search)
+                const s = (input || '').toString().toLowerCase()
+                return (
+                  (option?.label ?? '').toString().toLowerCase().includes(s) ||
+                  (option?.sku ?? '').toString().toLowerCase().includes(s)
+                )
               }}
               options={productOptions}
               optionRender={(option) => {
                 const conflicts = option.data.conflicts || []
+                const base = option.data.basePrice || 0
+                const pct = Number(watchedDiscount) || 0
+                const calc = calculateDiscountPricing(base, pct)
                 return (
                   <div
                     style={{
@@ -424,14 +595,23 @@ function SalesPage() {
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       gap: 8,
+                      flexWrap: 'wrap',
                     }}
                   >
                     <span>{option.data.label}</span>
-                    {conflicts.map((c) => (
-                      <Tag key={c.type} color={c.type === 'flash' ? 'gold' : 'red'} style={{ marginInlineEnd: 0 }}>
-                        {c.label} فعال است
-                      </Tag>
-                    ))}
+                    <Space size={6}>
+                      {base > 0 && (
+                        <span style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>
+                          {formatCurrency(base)}
+                          {pct > 0 ? ` ← ${formatCurrency(calc.finalPrice)}` : ''}
+                        </span>
+                      )}
+                      {conflicts.map((c) => (
+                        <Tag key={c.type} color={c.type === 'flash' ? 'gold' : 'red'} style={{ marginInlineEnd: 0 }}>
+                          {c.label} فعال است
+                        </Tag>
+                      ))}
+                    </Space>
                   </div>
                 )
               }}
@@ -443,71 +623,175 @@ function SalesPage() {
               type="info"
               showIcon
               style={{ marginBottom: 16 }}
-              message={`${Object.keys(conflictMap).length.toLocaleString('fa-IR')} محصول در پیشنهاد لحظه‌ای یا شگفت‌انگیز فعال هستند و در این فهرست غیرفعال شده‌اند.`}
+              message={`${formatNumber(Object.keys(conflictMap).length)} محصول در پیشنهاد لحظه‌ای یا شگفت‌انگیز فعال هستند و در این فهرست غیرفعال شده‌اند.`}
             />
           )}
 
-          <Form.Item name="badgeTheme" label="رنگ نشان (Badge Color)">
-            <Radio.Group>
-              <Radio value="lime-blue">
-                <span style={{ color: '#65a30d' }}>●</span> بهاره
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 32,
-                    height: 12,
-                    borderRadius: 6,
-                    marginInlineStart: 8,
-                    verticalAlign: 'middle',
-                    background: 'linear-gradient(to left, #65a30d, #16a34a, #2563eb)',
-                  }}
-                />
-              </Radio>
-              <Radio value="gold-red">
-                <span style={{ color: '#a65f00' }}>●</span> طلایی (نوروز/لوکس)
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 32,
-                    height: 12,
-                    borderRadius: 6,
-                    marginInlineStart: 8,
-                    verticalAlign: 'middle',
-                    background: 'linear-gradient(to left, #fff085, #f0b100, #894b00)',
-                  }}
-                />
-              </Radio>
-              <Radio value="red-purple">
-                <span style={{ color: '#dc2626' }}>●</span> آتشین (حراج ویژه)
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: 32,
-                    height: 12,
-                    borderRadius: 6,
-                    marginInlineStart: 8,
-                    verticalAlign: 'middle',
-                    background: 'linear-gradient(to left, #f43f5e, #7e22ce)',
-                  }}
-                />
-              </Radio>
-            </Radio.Group>
-          </Form.Item>
+          {/* Live Selected Products Final Price Preview Table */}
+          {selectedProductsPreview.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--ink-800)', marginBottom: 8 }}>
+                محاسبه قیمت نهایی تمام‌شده محصولات انتخاب‌شده ({formatNumber(selectedProductsPreview.length)} محصول):
+              </div>
+              <Table
+                size="small"
+                bordered
+                rowKey="_id"
+                pagination={false}
+                scroll={{ y: 220, x: 'max-content' }}
+                dataSource={selectedProductsPreview}
+                columns={[
+                  {
+                    title: 'محصول',
+                    dataIndex: 'name',
+                    key: 'name',
+                    render: (name, r) => (
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 12.5 }}>{name}</div>
+                        {r.sku && (
+                          <div style={{ fontSize: 11, color: 'var(--ink-400)', fontFamily: 'monospace' }}>
+                            {r.sku}
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'قیمت پایه',
+                    key: 'base',
+                    render: (_, r) =>
+                      r.isVariable && r.minBase !== r.maxBase
+                        ? `از ${formatCurrency(r.minBase)}`
+                        : formatCurrency(r.minBase),
+                  },
+                  {
+                    title: 'قیمت نهایی پس از تخفیف',
+                    key: 'final',
+                    render: (_, r) => (
+                      <strong style={{ color: 'var(--ok)' }}>
+                        {r.isVariable && r.minFinal !== r.maxFinal
+                          ? `از ${formatCurrency(r.minFinal)}`
+                          : formatCurrency(r.minFinal)}
+                      </strong>
+                    ),
+                  },
+                  {
+                    title: 'حذف',
+                    key: 'rm',
+                    width: 60,
+                    align: 'center',
+                    render: (_, r) => (
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<CloseOutlined />}
+                        onClick={() => {
+                          const cur = form.getFieldValue('products') || []
+                          form.setFieldValue(
+                            'products',
+                            cur.filter((pid) => pid !== r._id),
+                          )
+                        }}
+                      />
+                    ),
+                  },
+                ]}
+              />
+            </div>
+          )}
 
-          <Form.Item
-            name="showInFeatured"
-            label="نمایش در منتخب‌های صفحه اصلی"
-            valuePropName="checked"
-            extra="اگر فعال باشد، محصولات این تخفیف با لیبل همین تخفیف (نام تخفیف) در بخش «پیشنهادهای منتخب» صفحه‌ی اصلی نمایش داده می‌شوند. اگر خاموش باشد فقط قیمت تخفیفی اعمال می‌شود."
-          >
-            <Switch checkedChildren="نمایش" unCheckedChildren="عدم نمایش" />
-          </Form.Item>
-
-          <Form.Item name="isActive" label="وضعیت" valuePropName="checked">
-            <Switch checkedChildren="فعال" unCheckedChildren="غیرفعال" />
-          </Form.Item>
+          <Row gutter={[16, 12]}>
+            <Col xs={24} md={14}>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  border: '1px solid var(--line)',
+                  background: 'var(--surface-sunken)',
+                }}
+              >
+                <Form.Item
+                  name="showInFeatured"
+                  label="نمایش در بخش منتخب‌های صفحه اصلی"
+                  valuePropName="checked"
+                  style={{ marginBottom: 4 }}
+                >
+                  <Switch checkedChildren="نمایش داده شود" unCheckedChildren="فقط قیمت تخفیفی" />
+                </Form.Item>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-500)', lineHeight: 1.6 }}>
+                  اختیاری: اگر روشن باشد محصولات با لیبل همین کمپین در بخش «پیشنهادهای منتخب» صفحه اصلی نمایش داده می‌شوند.
+                </div>
+              </div>
+            </Col>
+            <Col xs={24} md={10}>
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 10,
+                  border: '1px solid var(--line)',
+                  background: 'var(--surface-sunken)',
+                  height: '100%',
+                }}
+              >
+                <Form.Item name="isActive" label="وضعیت کمپین" valuePropName="checked" style={{ marginBottom: 4 }}>
+                  <Switch checkedChildren="فعال" unCheckedChildren="غیرفعال" />
+                </Form.Item>
+                <div style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>
+                  کمپین‌های غیرفعال تا زمان فعال‌سازی روی قیمت‌ها اعمال نمی‌شوند.
+                </div>
+              </div>
+            </Col>
+          </Row>
         </Form>
       </Modal>
+    </div>
+  )
+}
+
+function ThemeSwatchSelector({ value = 'lime-blue', onChange }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+        gap: 10,
+      }}
+    >
+      {SALE_BADGE_THEMES.map((theme) => {
+        const selected = value === theme.value
+        return (
+          <button
+            key={theme.value}
+            type="button"
+            onClick={() => onChange?.(theme.value)}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+              padding: 10,
+              borderRadius: 10,
+              border: selected ? '2px solid var(--brand-600)' : '1px solid var(--line)',
+              background: selected ? 'var(--brand-50)' : '#ffffff',
+              cursor: 'pointer',
+              textAlign: 'start',
+              fontFamily: 'inherit',
+            }}
+          >
+            <div
+              style={{
+                width: '100%',
+                height: 12,
+                borderRadius: 999,
+                background: theme.gradient,
+              }}
+            />
+            <span style={{ fontSize: 12.5, fontWeight: selected ? 700 : 500, color: 'var(--ink-800)' }}>
+              {theme.label}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }

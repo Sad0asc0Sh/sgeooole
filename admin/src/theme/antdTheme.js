@@ -27,7 +27,7 @@ const INK_300 = '#b5aea6'
 const LINE = '#e2ddd6'
 const LINE_SOFT = '#efece7'
 const LINE_STRONG = '#d6cfc6'
-const CANVAS = '#f2f1ef'
+const CANVAS = '#f4f2ee'
 const INSET = '#f7f6f4'
 const SUNKEN = '#faf9f7'
 
@@ -121,7 +121,7 @@ export const adminTheme = {
       headerBg: '#ffffff',
       headerHeight: 60,
       headerPadding: '0 24px',
-      siderBg: '#1c1917',
+      siderBg: '#181512',
       bodyBg: CANVAS,
     },
 
@@ -159,6 +159,7 @@ export const adminTheme = {
       headerBg: 'transparent',
       headerFontSize: 15,
       paddingLG: 20,
+      borderRadiusLG: 12,
       colorBorderSecondary: LINE,
     },
 

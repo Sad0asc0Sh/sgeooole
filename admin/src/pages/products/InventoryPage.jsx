@@ -1,24 +1,35 @@
-import PageHeader from '../../components/ui/PageHeader'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Card,
   InputNumber,
   Button,
   message,
-  Tag,
-  Space,
   Input,
   Select,
   Alert,
+  Space,
 } from 'antd'
+import {
+  SearchOutlined,
+  SaveOutlined,
+  ReloadOutlined,
+  InfoCircleOutlined,
+  InboxOutlined,
+  WarningOutlined,
+  EditOutlined,
+} from '@ant-design/icons'
 import ResponsiveTable from '../../components/ResponsiveTable'
-import { SearchOutlined, SaveOutlined, ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons'
-import api from '../../api'
+import PageHeader from '../../components/ui/PageHeader'
+import StatTile from '../../components/ui/StatTile'
+import StatusPill from '../../components/ui/StatusPill'
 import S3AdminImage from '../../components/S3AdminImage'
+import { formatNumber, parseNumericInput } from '../../utils/formatters'
+import api from '../../api'
 
 function InventoryPage() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
   const [updatingIds, setUpdatingIds] = useState(new Set())
   const [editedStocks, setEditedStocks] = useState({})
   const [filters, setFilters] = useState({
@@ -39,19 +50,14 @@ function InventoryPage() {
       params.set('limit', String(pageSize))
       params.set('sort', 'name')
       params.set('fields', 'name,sku,stock,images,_id,isActive,productType')
-
-      // فقط محصولات ساده را واکشی کن (محصولات متغیر موجودی در variants دارند)
       params.set('productType', 'simple')
 
-      if (filters.search) {
-        params.set('search', filters.search)
-      }
+      if (filters.search) params.set('search', filters.search)
 
       const res = await api.get('/products', { params })
       const list = res?.data?.data || []
       const pg = res?.data?.pagination
 
-      // Apply stock filter on client side if needed
       let filteredList = list
       if (filters.stockStatus === 'low') {
         filteredList = list.filter((p) => p.stock > 0 && p.stock <= 10)
@@ -81,6 +87,19 @@ function InventoryPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.search, filters.stockStatus])
 
+  const kpiStats = useMemo(() => {
+    let low = 0
+    let out = 0
+    products.forEach((p) => {
+      if ((p.stock || 0) <= 0) out++
+      else if (p.stock <= 10) low++
+    })
+    const dirtyCount = products.filter(
+      (p) => editedStocks[p._id] !== undefined && editedStocks[p._id] !== p.stock,
+    ).length
+    return { pageCount: products.length, low, out, dirtyCount }
+  }, [products, editedStocks])
+
   const handleStockChange = (productId, value) => {
     setEditedStocks((prev) => ({
       ...prev,
@@ -90,41 +109,29 @@ function InventoryPage() {
 
   const handleUpdateStock = async (product) => {
     const newStock = editedStocks[product._id]
-
     if (newStock === undefined || newStock === product.stock) {
       message.warning('مقدار موجودی تغییری نکرده است')
       return
     }
-
     if (newStock < 0) {
       message.error('موجودی نمی‌تواند منفی باشد')
       return
     }
 
     setUpdatingIds((prev) => new Set(prev).add(product._id))
-
     try {
-      await api.put(`/products/${product._id}/stock`, {
-        stock: newStock,
-      })
-
-      // Update local state
+      await api.put(`/products/${product._id}/stock`, { stock: newStock })
       setProducts((prev) =>
         prev.map((p) => (p._id === product._id ? { ...p, stock: newStock } : p)),
       )
-
-      // Remove from edited stocks
       setEditedStocks((prev) => {
         const updated = { ...prev }
         delete updated[product._id]
         return updated
       })
-
       message.success(`موجودی محصول "${product.name}" به‌روزرسانی شد`)
     } catch (err) {
-      const errorMsg = err?.response?.data?.message || err?.message || 'خطا در به‌روزرسانی موجودی'
-      message.error(errorMsg)
-      console.error('Stock update error:', err)
+      message.error(err?.response?.data?.message || err?.message || 'خطا در به‌روزرسانی موجودی')
     } finally {
       setUpdatingIds((prev) => {
         const updated = new Set(prev)
@@ -134,10 +141,38 @@ function InventoryPage() {
     }
   }
 
-  const getStockColor = (stock) => {
-    if (stock === 0) return 'red'
-    if (stock <= 10) return 'orange'
-    return 'green'
+  const handleBulkSave = async () => {
+    const changed = products.filter(
+      (p) =>
+        editedStocks[p._id] !== undefined &&
+        editedStocks[p._id] !== p.stock &&
+        editedStocks[p._id] >= 0,
+    )
+    if (changed.length === 0) return
+
+    setBulkSaving(true)
+    let saved = 0
+    let failed = 0
+    for (const product of changed) {
+      try {
+        const newStock = editedStocks[product._id]
+        await api.put(`/products/${product._id}/stock`, { stock: newStock })
+        saved++
+        setProducts((prev) =>
+          prev.map((p) => (p._id === product._id ? { ...p, stock: newStock } : p)),
+        )
+        setEditedStocks((prev) => {
+          const next = { ...prev }
+          delete next[product._id]
+          return next
+        })
+      } catch {
+        failed++
+      }
+    }
+    setBulkSaving(false)
+    if (saved > 0) message.success(`موجودی ${formatNumber(saved)} محصول با موفقیت ذخیره شد`)
+    if (failed > 0) message.error(`ذخیره موجودی ${formatNumber(failed)} محصول ناموفق بود`)
   }
 
   const columns = [
@@ -146,9 +181,9 @@ function InventoryPage() {
       dataIndex: 'images',
       key: 'image',
       width: 80,
+      mobileThumb: true,
       render: (images) => {
         let url = null
-
         if (Array.isArray(images) && images.length > 0) {
           const first = images[0]
           url = typeof first === 'string' ? first : first?.url
@@ -165,13 +200,13 @@ function InventoryPage() {
             style={{
               width: 50,
               height: 50,
-              background: '#f0f0f0',
-              borderRadius: 4,
+              background: 'var(--surface-inset)',
+              borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 12,
-              color: '#999',
+              fontSize: 11,
+              color: 'var(--ink-400)',
             }}
           >
             بدون تصویر
@@ -184,23 +219,27 @@ function InventoryPage() {
       dataIndex: 'name',
       key: 'name',
       ellipsis: true,
+      mobileTitle: true,
     },
     {
       title: 'SKU',
       dataIndex: 'sku',
       key: 'sku',
-      width: 150,
-      render: (sku) => sku || <span style={{ color: '#999' }}>—</span>,
+      width: 140,
+      render: (sku) => <span style={{ fontFamily: 'monospace' }}>{sku || '—'}</span>,
     },
     {
       title: 'موجودی فعلی',
       dataIndex: 'stock',
       key: 'currentStock',
-      width: 120,
+      width: 130,
+      mobileBadge: true,
       render: (stock) => (
-        <Tag color={getStockColor(stock)}>
-          {stock} عدد
-        </Tag>
+        <StatusPill
+          size="sm"
+          tone={stock === 0 ? 'err' : stock <= 10 ? 'warn' : 'ok'}
+          label={stock === 0 ? 'ناموجود' : `${formatNumber(stock)} عدد`}
+        />
       ),
     },
     {
@@ -213,7 +252,8 @@ function InventoryPage() {
           value={editedStocks[record._id] ?? record.stock}
           onChange={(value) => handleStockChange(record._id, value)}
           style={{ width: '100%' }}
-          disabled={updatingIds.has(record._id)}
+          disabled={updatingIds.has(record._id) || bulkSaving}
+          parser={parseNumericInput}
         />
       ),
     },
@@ -222,17 +262,15 @@ function InventoryPage() {
       key: 'actions',
       width: 120,
       render: (_, record) => {
-        const hasChanges = editedStocks[record._id] !== undefined &&
-                          editedStocks[record._id] !== record.stock
-        const isUpdating = updatingIds.has(record._id)
-
+        const hasChanges =
+          editedStocks[record._id] !== undefined && editedStocks[record._id] !== record.stock
         return (
           <Button
             type="primary"
             size="small"
             icon={<SaveOutlined />}
-            loading={isUpdating}
-            disabled={!hasChanges}
+            loading={updatingIds.has(record._id)}
+            disabled={!hasChanges || bulkSaving}
             onClick={() => handleUpdateStock(record)}
           >
             ذخیره
@@ -252,49 +290,59 @@ function InventoryPage() {
   }
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
       <PageHeader
-        title="مدیریت موجودی"
-        subtitle="تنظیم تعداد موجودی محصولات ساده"
+        title="مدیریت موجودی و انبار"
+        subtitle="تنظیم سریع و گروهی تعداد موجودی محصولات ساده"
+        count={pagination.total}
         actions={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => {
-              setEditedStocks({})
-              fetchProducts()
-            }}
-          >
-            بارگذاری مجدد
-          </Button>
+          <Space wrap>
+            {kpiStats.dirtyCount > 0 && (
+              <Button
+                type="primary"
+                icon={<SaveOutlined />}
+                loading={bulkSaving}
+                onClick={handleBulkSave}
+              >
+                ذخیره همه تغییرات ({formatNumber(kpiStats.dirtyCount)})
+              </Button>
+            )}
+            <Button
+              icon={<ReloadOutlined spin={loading} />}
+              onClick={() => {
+                setEditedStocks({})
+                fetchProducts()
+              }}
+            >
+              به‌روزرسانی
+            </Button>
+          </Space>
         }
       />
 
+      <div className="kpi-grid">
+        <StatTile label="محصولات این صفحه" value={formatNumber(kpiStats.pageCount)} icon={<InboxOutlined />} tone="info" />
+        <StatTile label="موجودی کم (۱ تا ۱۰)" value={formatNumber(kpiStats.low)} icon={<WarningOutlined />} tone="warn" />
+        <StatTile label="ناموجود (۰)" value={formatNumber(kpiStats.out)} icon={<InboxOutlined />} tone={kpiStats.out > 0 ? 'err' : 'ok'} />
+        <StatTile label="تغییرات ذخیره‌نشده" value={formatNumber(kpiStats.dirtyCount)} icon={<EditOutlined />} tone={kpiStats.dirtyCount > 0 ? 'brand' : 'neutral'} />
+      </div>
+
       <Alert
         message="توجه"
-        description="این صفحه فقط برای مدیریت موجودی محصولات ساده است. برای محصولات متغیر، موجودی باید در سطح هر variant در صفحه ویرایش محصول تنظیم شود."
+        description="این صفحه برای مدیریت موجودی محصولات ساده است. موجودی محصولات متغیر در تب «ویژگی‌ها و متغیرها»ی صفحه ویرایش همان محصول تنظیم می‌شود."
         type="info"
         showIcon
         icon={<InfoCircleOutlined />}
-        style={{ marginBottom: 16 }}
         closable
       />
 
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="filter-bar">
         <Input
           placeholder="جستجو بر اساس نام یا SKU..."
           prefix={<SearchOutlined />}
           style={{ width: 300, maxWidth: '100%' }}
           allowClear
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, search: e.target.value }))
-          }
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
           onPressEnter={() => fetchProducts(1, pagination.pageSize)}
           onBlur={() => fetchProducts(1, pagination.pageSize)}
         />
@@ -302,9 +350,7 @@ function InventoryPage() {
           placeholder="وضعیت موجودی"
           style={{ width: 200, maxWidth: '100%' }}
           allowClear
-          onChange={(value) =>
-            setFilters((prev) => ({ ...prev, stockStatus: value || null }))
-          }
+          onChange={(value) => setFilters((prev) => ({ ...prev, stockStatus: value || null }))}
         >
           <Select.Option value="in">موجود (بیش از ۱۰)</Select.Option>
           <Select.Option value="low">کم (۱ تا ۱۰)</Select.Option>
@@ -324,22 +370,9 @@ function InventoryPage() {
             pageSize: pagination.pageSize,
             total: pagination.total,
             showSizeChanger: true,
-            showTotal: (total) => `${total} محصول`,
+            showTotal: (total) => `${formatNumber(total)} محصول`,
           }}
           onChange={onTableChange}
-          locale={{
-            emptyText: (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '40px 0',
-                  color: '#999',
-                }}
-              >
-                <p>هیچ محصولی یافت نشد</p>
-              </div>
-            ),
-          }}
         />
       </Card>
     </div>

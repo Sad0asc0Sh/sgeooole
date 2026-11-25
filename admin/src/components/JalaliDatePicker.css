@@ -1,0 +1,337 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   EKG Kala — Responsive Jalali Date & Range Picker Styles
+   Unified saffron/warm-stone styling for react-multi-date-picker
+   across desktop, mobile modals, and filter bars.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.ekg-jalali-wrap {
+  position: relative;
+  width: 100%;
+  font-family: var(--font-sans);
+}
+
+.ekg-jalali-wrap.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ekg-jalali-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  transition: border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+
+.ekg-jalali-field:hover {
+  border-color: #b9b1a8;
+}
+
+.ekg-jalali-field:focus-within {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.12);
+}
+
+.ekg-jalali-field.is-disabled {
+  background: var(--surface-inset);
+  cursor: not-allowed;
+}
+
+.ekg-jalali-field .rmdp-container {
+  width: 100%;
+  display: flex !important;
+  align-items: center;
+  direction: rtl;
+}
+
+.ekg-jalali-input {
+  width: 100%;
+  height: 34px;
+  padding-inline: 34px 30px;
+  border: none !important;
+  outline: none !important;
+  background: transparent;
+  color: var(--ink-900);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  cursor: pointer;
+}
+
+.ekg-jalali-input::placeholder {
+  color: var(--ink-400);
+  font-weight: 400;
+}
+
+.ekg-jalali-input:disabled {
+  cursor: not-allowed;
+  color: var(--ink-400);
+}
+
+.ekg-jalali-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--ink-400);
+  font-size: 14px;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ekg-jalali-clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-400);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.ekg-jalali-clear:hover {
+  color: var(--err);
+  background: var(--err-bg);
+}
+
+/* ── Quick Presets ── */
+.ekg-jalali-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ekg-jalali-preset-btn {
+  border: 1px solid var(--line);
+  background: var(--surface-sunken);
+  color: var(--ink-700);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.7;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.ekg-jalali-preset-btn:hover {
+  border-color: var(--brand-600);
+  color: var(--brand-700);
+  background: var(--brand-50);
+}
+
+.ekg-jalali-preset-btn.is-active {
+  border-color: var(--brand-600);
+  background: var(--brand-600);
+  color: #ffffff;
+}
+
+/* ── Paired Range (Campaign DateTime Range) ── */
+.ekg-jalali-paired-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ekg-jalali-paired-col {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ekg-jalali-paired-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-600);
+}
+
+@media (max-width: 640px) {
+  .ekg-jalali-paired-range {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+
+/* ── Popup / Portal Overrides (above AntD Modals & Drawers) ── */
+.rmdp-portal,
+.ekg-rmdp.rmdp-wrapper,
+.ep-arrow {
+  z-index: 2200 !important;
+}
+
+.ekg-rmdp.rmdp-wrapper {
+  font-family: var(--font-sans) !important;
+  direction: rtl;
+  border-radius: 12px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--shadow-lg) !important;
+  background: #ffffff !important;
+  color: var(--ink-900) !important;
+  overflow: hidden;
+}
+
+.ekg-rmdp .rmdp-calendar {
+  font-family: var(--font-sans) !important;
+  padding: 10px 12px !important;
+}
+
+.ekg-rmdp .rmdp-header {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: var(--ink-900) !important;
+  margin-top: 2px !important;
+}
+
+.ekg-rmdp .rmdp-header-values {
+  color: var(--ink-900) !important;
+}
+
+.ekg-rmdp .rmdp-header-values span:hover {
+  background-color: var(--brand-50) !important;
+  color: var(--brand-700) !important;
+  border-radius: 6px;
+}
+
+.ekg-rmdp .rmdp-arrow {
+  border-color: var(--ink-600) !important;
+}
+
+.ekg-rmdp .rmdp-arrow-container:hover {
+  background-color: var(--brand-50) !important;
+  box-shadow: none !important;
+}
+
+.ekg-rmdp .rmdp-arrow-container:hover .rmdp-arrow {
+  border-color: var(--brand-600) !important;
+}
+
+.ekg-rmdp .rmdp-week-day {
+  color: var(--brand-700) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.ekg-rmdp .rmdp-day span {
+  font-family: var(--font-sans) !important;
+  font-size: 12.5px !important;
+  border-radius: 8px !important;
+  color: var(--ink-800);
+}
+
+.ekg-rmdp .rmdp-day:not(.rmdp-disabled, .rmdp-day-hidden) span:hover {
+  background-color: var(--brand-50) !important;
+  color: var(--brand-700) !important;
+}
+
+.ekg-rmdp .rmdp-day.rmdp-today span {
+  background-color: var(--brand-100) !important;
+  color: var(--brand-800) !important;
+  font-weight: 700 !important;
+}
+
+.ekg-rmdp .rmdp-day.rmdp-selected span:not(.highlight),
+.ekg-rmdp .rmdp-day.rmdp-range.start span,
+.ekg-rmdp .rmdp-day.rmdp-range.end span {
+  background-color: var(--brand-600) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.28) !important;
+  font-weight: 600 !important;
+}
+
+.ekg-rmdp .rmdp-day.rmdp-range {
+  background-color: var(--brand-50) !important;
+  color: var(--brand-800) !important;
+  box-shadow: none !important;
+}
+
+.ekg-rmdp .rmdp-day.rmdp-range span {
+  color: var(--brand-800) !important;
+}
+
+.ekg-rmdp .rmdp-day.rmdp-disabled span {
+  color: var(--ink-300) !important;
+}
+
+/* Time Picker inside RMDP */
+.ekg-rmdp .rmdp-time-picker {
+  border-top: 1px solid var(--line-soft) !important;
+  margin-top: 8px;
+  padding-top: 10px !important;
+  direction: ltr;
+}
+
+.ekg-rmdp .rmdp-time-picker input {
+  font-family: var(--font-numeric) !important;
+  font-weight: 700 !important;
+  color: var(--ink-900) !important;
+  border-radius: 6px;
+  border: 1px solid var(--line) !important;
+  background: var(--surface-sunken) !important;
+}
+
+.ekg-rmdp .rmdp-time-picker input:focus {
+  border-color: var(--brand-600) !important;
+}
+
+.ekg-rmdp .rmdp-action-buttons {
+  border-top: 1px solid var(--line-soft);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ekg-rmdp .rmdp-button {
+  font-family: var(--font-sans) !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  border-radius: 7px !important;
+  padding: 5px 14px !important;
+  color: var(--brand-700) !important;
+}
+
+.ekg-rmdp .rmdp-button:hover {
+  background-color: var(--brand-50) !important;
+}
+
+/* ── Mobile Calendar Dialog Optimization ── */
+@media (max-width: 768px) {
+  .ekg-rmdp.rmdp-mobile {
+    width: min(344px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .ekg-rmdp.rmdp-mobile .rmdp-day,
+  .ekg-rmdp.rmdp-mobile .rmdp-week-day {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .ekg-rmdp.rmdp-mobile .rmdp-day span {
+    font-size: 13px !important;
+  }
+}

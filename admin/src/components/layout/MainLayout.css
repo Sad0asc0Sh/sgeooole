@@ -1,18 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════════════
    ADMIN LAYOUT
    ───────────────────────────────────────────────────────────────────────
-   Structure: a deep warm-ink rail on the right, a white working
-   surface on the left. The saffron brand appears exactly once at the
-   top of the rail as the mark, and again as the selected-row colour —
-   so "where am I" is answered by a single hue cue, not by gradients on
-   every surface. Chrome is separated by hairlines rather than shadow,
-   which keeps dense tables readable.
+   Structure: warm-obsidian rail on the right (compact 68px icon rail by
+   default that auto-expands smoothly on hover without reflowing content,
+   with optional Pin), clean alabaster canvas + white working surfaces on
+   the left, and a touch-optimized drawer on < 992px viewports.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ─── ROOT ──────────────────────────────────────────────────────────
-   Real mobile viewport height: JS publishes --app-vh (1% of
-   window.innerHeight); modern browsers get exact 100dvh via
-   @supports. Stops the page bottom hiding under browser chrome. */
 .admin-root-layout {
   height: calc(var(--app-vh, 1vh) * 100) !important;
   overflow: hidden !important;
@@ -30,11 +24,18 @@
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: 101;
-  background: #1c1917 !important;
+  z-index: 120;
+  background: var(--sider-bg, #181512) !important;
   box-shadow: none;
   border-inline-start: 1px solid #0d0b0a;
-  transition: width var(--dur-slow) var(--ease);
+  transition: width 220ms var(--ease), box-shadow 220ms var(--ease) !important;
+  will-change: width;
+}
+
+.admin-sider.is-hover-expanded {
+  z-index: 150 !important;
+  box-shadow: -16px 0 44px rgba(18, 15, 12, 0.36);
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-sider .admin-sider-inner {
@@ -44,28 +45,47 @@
   background: transparent;
 }
 
-/* ── Identity bar ──
-   The one place the brand mark appears. A saffron disc with an ink
-   notch reads as a shop badge at a glance and holds the row's height
-   steady when the rail collapses. */
-.admin-brand {
+/* ── Identity + Pin bar ── */
+.admin-brand-row {
   height: var(--header-h);
   min-height: var(--header-h);
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding-inline: 12px;
+  border-bottom: 1px solid var(--sider-border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+}
+
+.admin-sider.ant-layout-sider-collapsed .admin-brand-row {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
   gap: 10px;
-  padding: 0 14px;
+  min-width: 0;
+  flex: 1;
   color: #fff;
   text-decoration: none;
-  flex-shrink: 0;
   white-space: nowrap;
   overflow: hidden;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 6px 4px;
+  border-radius: 8px;
   transition: background var(--dur) var(--ease);
 }
 
+.admin-sider.ant-layout-sider-collapsed .admin-brand {
+  flex: 0 0 auto;
+  justify-content: center;
+  padding: 6px;
+}
+
 .admin-brand:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .admin-brand-mark {
@@ -84,8 +104,8 @@
   width: 11px;
   height: 11px;
   border-radius: 3px;
-  background: #1c1917;
-  opacity: 0.86;
+  background: #181512;
+  opacity: 0.88;
 }
 
 .admin-brand-text {
@@ -103,10 +123,37 @@
 }
 
 .admin-brand-role {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
-  color: #8a817a;
-  letter-spacing: 0.2px;
+  color: #9e958d;
+  letter-spacing: 0.1px;
+}
+
+.sider-pin-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #9e958d;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+}
+
+.sider-pin-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.sider-pin-btn.is-active {
+  background: rgba(231, 157, 19, 0.16);
+  border-color: rgba(231, 157, 19, 0.4);
+  color: #e79d13;
 }
 
 /* ── Nav scroll region ── */
@@ -115,9 +162,9 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-block: 10px 6px;
+  padding-block: 8px 10px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.13) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.14) transparent;
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar {
@@ -129,15 +176,15 @@
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 999px;
 }
 
 .admin-sider .admin-sider-menu-wrap::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.24);
 }
 
-/* ── Menu ── */
+/* ── Menu & Section Headers ── */
 .admin-sider .ant-menu {
   border-inline-end: none !important;
   background: transparent !important;
@@ -148,6 +195,30 @@
   padding-inline: 10px !important;
 }
 
+.admin-sider .ant-menu-item-group-title,
+.mobile-drawer .ant-menu-item-group-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #7a7169 !important;
+  padding: 12px 10px 4px !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-sider .ant-menu-item-group:first-child .ant-menu-item-group-title,
+.mobile-drawer .ant-menu-item-group:first-child .ant-menu-item-group-title {
+  padding-top: 4px !important;
+}
+
+.admin-sider .ant-menu-item-divider {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+  margin-block: 6px !important;
+  margin-inline: 10px !important;
+}
+
 .admin-sider .ant-menu-item,
 .admin-sider .ant-menu-submenu > .ant-menu-submenu-title {
   height: 38px !important;
@@ -155,7 +226,7 @@
   margin-block: 1px !important;
   margin-inline: 0 !important;
   border-radius: 8px !important;
-  color: #b5aea6 !important; /* 8.2:1 on ink — comfortably readable */
+  color: #c2bbb3 !important;
   font-size: 13.5px !important;
   font-weight: 500 !important;
   transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
@@ -164,7 +235,7 @@
 .admin-sider .ant-menu-item .anticon,
 .admin-sider .ant-menu-submenu > .ant-menu-submenu-title .anticon {
   font-size: 16px !important;
-  color: #8a817a !important;
+  color: #948b83 !important;
   transition: color var(--dur-fast) var(--ease);
 }
 
@@ -175,21 +246,20 @@
 }
 
 .admin-sider .ant-menu-submenu-arrow {
-  color: #6b625c !important;
+  color: #786f67 !important;
 }
 
-/* Hover: brighten text AND icon, lift the surface a step. */
 .admin-sider .ant-menu-item:hover,
 .admin-sider .ant-menu-submenu-title:hover,
 .admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title {
   color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
 }
 
 .admin-sider .ant-menu-item:hover .anticon,
 .admin-sider .ant-menu-submenu:hover > .ant-menu-submenu-title .anticon,
 .admin-sider .ant-menu-submenu-title:hover .anticon {
-  color: #d6d0c8 !important;
+  color: #e7dfd6 !important;
 }
 
 .admin-sider .ant-menu-submenu-title:hover .ant-menu-submenu-arrow {
@@ -202,9 +272,6 @@
   outline-offset: -2px;
 }
 
-/* Selected: the saffron. A 2px saffron rail on the right edge marks the
-   row as well as the fill, so it stays obvious even on the collapsed
-   rail where the fill is only 52px wide. */
 .admin-sider .ant-menu-item.ant-menu-item-selected {
   background: #b45309 !important;
   color: #ffffff !important;
@@ -237,8 +304,6 @@
   color: #ffffff !important;
 }
 
-/* Open group title: a step up, not a full highlight — the child carries
-   the weight. */
 .admin-sider .ant-menu-submenu-open > .ant-menu-submenu-title {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.05) !important;
@@ -248,11 +313,11 @@
   color: #e9b84e !important;
 }
 
-/* ── Nested items: recessed tray, no extra card chrome ── */
+/* ── Nested items ── */
 .admin-sider .ant-menu-sub.ant-menu-inline {
-  background: rgba(0, 0, 0, 0.24) !important;
+  background: rgba(0, 0, 0, 0.26) !important;
   border-radius: 8px !important;
-  margin-inline: 4px !important;
+  margin-inline: 2px !important;
   padding-block: 4px !important;
 }
 
@@ -262,12 +327,12 @@
   margin-block: 1px !important;
   font-size: 13px !important;
   font-weight: 500 !important;
-  color: #a29b92 !important;
+  color: #ada69e !important;
 }
 
 .admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item .anticon {
   font-size: 14px !important;
-  color: #6b625c !important;
+  color: #786f67 !important;
 }
 
 .admin-sider .ant-menu-sub.ant-menu-inline .ant-menu-item:hover {
@@ -281,7 +346,7 @@
   background: #b45309 !important;
 }
 
-/* ── Collapsed rail ── */
+/* ── Collapsed rail (68px compact strip) ── */
 .admin-sider.ant-layout-sider-collapsed .admin-sider-menu.ant-menu {
   padding-inline: 8px !important;
 }
@@ -304,13 +369,11 @@
   height: 22px;
 }
 
-/* ── Operator card ──
-   Pins identity to the bottom of the rail. Logout lives in its menu,
-   so the rail never shows a destructive control by accident. */
+/* ── Operator card ── */
 .admin-sider-foot {
   flex-shrink: 0;
   padding: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  border-top: 1px solid var(--sider-border, rgba(255, 255, 255, 0.08));
 }
 
 .admin-operator {
@@ -362,10 +425,14 @@
   white-space: nowrap;
 }
 
-/* ─── MAIN COLUMN ───────────────────────────────────────────────────── */
+/* ─── MAIN COLUMN ─────────────────────────────────────────────────────
+   Defaults to collapsed rail width (68px) so hover-expanding the rail
+   NEVER triggers layout shift or chart/table reflow; pinning locks it
+   to full --sider-w (256px).
+   ─────────────────────────────────────────────────────────────────── */
 .admin-main-layout {
-  margin-right: var(--sider-w) !important;
-  transition: margin-right var(--dur-slow) var(--ease);
+  margin-right: var(--sider-collapsed-w) !important;
+  transition: margin-right 220ms var(--ease);
   height: calc(var(--app-vh, 1vh) * 100);
   display: flex;
   flex-direction: column;
@@ -378,13 +445,8 @@
   }
 }
 
-.admin-root-layout
-  .ant-layout-sider-collapsed
-  + .admin-main-layout,
-.admin-root-layout
-  .ant-layout-sider-collapsed
-  ~ .admin-main-layout {
-  margin-right: var(--sider-collapsed-w) !important;
+.admin-root-layout.is-sider-pinned .admin-main-layout {
+  margin-right: var(--sider-w) !important;
 }
 
 /* ─── HEADER ────────────────────────────────────────────────────────── */
@@ -414,12 +476,36 @@
 .header-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
-/* Shared icon-button treatment. A real <button> so it takes focus and
-   responds to Enter/Space without extra wiring. */
+.header-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-soft);
+  color: var(--ink-600);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.header-date-chip .anticon {
+  color: var(--brand-600);
+  font-size: 13px;
+}
+
+@media (max-width: 1120px) {
+  .header-date-chip {
+    display: none;
+  }
+}
+
 .header-icon-btn {
   width: 36px;
   height: 36px;
@@ -511,9 +597,7 @@
   border-bottom: 1px solid var(--line-soft);
 }
 
-/* ── Search trigger ──
-   Looks like a field, opens the palette. Labelled with a kbd hint so
-   the shortcut is discoverable without a tooltip. */
+/* ── Search trigger ── */
 .header-search-trigger {
   display: inline-flex;
   align-items: center;
@@ -756,7 +840,7 @@
 
 /* ─── MOBILE DRAWER ─────────────────────────────────────────────────── */
 .mobile-drawer .ant-drawer-content {
-  background: #1c1917 !important;
+  background: var(--sider-bg, #181512) !important;
 }
 
 .mobile-drawer .ant-drawer-content-wrapper {
@@ -783,9 +867,20 @@
   flex-shrink: 0;
 }
 
+.mobile-drawer-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
 .mobile-drawer-title {
   font-size: 14.5px;
   font-weight: 700;
+}
+
+.mobile-drawer-sub {
+  font-size: 11px;
+  color: #9e958d;
 }
 
 .mobile-drawer-close {
@@ -808,12 +903,39 @@
   color: #fff;
 }
 
+.mobile-drawer-search-wrap {
+  padding: 10px 12px 4px;
+  flex-shrink: 0;
+}
+
+.mobile-drawer-search-btn {
+  width: 100%;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #b5aea6;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+
+.mobile-drawer-search-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
 .mobile-drawer .mobile-drawer-menu {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-block: 8px;
+  padding-block: 6px;
   padding-inline: 10px;
   background: transparent !important;
   border-inline-end: none !important;
@@ -829,7 +951,7 @@
   height: 44px !important;
   line-height: 44px !important;
   margin-block: 2px !important;
-  font-size: 14.5px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
 }
 
@@ -843,10 +965,20 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 10px 14px;
   padding-bottom: max(10px, env(safe-area-inset-bottom));
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-drawer-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  text-decoration: none;
 }
 
 .mobile-drawer-footer .user-meta {
@@ -871,7 +1003,7 @@
   color: #8a817a;
 }
 
-/* ─── COLLAPSED-MODE FLYOUTS (rendered in a body portal) ────────────── */
+/* ─── COLLAPSED-MODE FLYOUTS ────────────────────────────────────────── */
 .admin-sider-popup.ant-menu-submenu.ant-menu-submenu-popup {
   background: #232019 !important;
   border-radius: 10px !important;
@@ -927,7 +1059,8 @@
     display: none !important;
   }
 
-  .admin-main-layout {
+  .admin-main-layout,
+  .admin-root-layout.is-sider-pinned .admin-main-layout {
     margin-right: 0 !important;
   }
 
@@ -939,8 +1072,6 @@
     display: none !important;
   }
 
-  /* The header no longer has room for the trail — it moves into the
-     content area where it can wrap instead of truncating. */
   .header-trail {
     display: none;
   }

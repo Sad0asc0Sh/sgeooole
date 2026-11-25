@@ -1,16 +1,9 @@
 /**
  * Navigation — the single source of truth for the panel's structure.
  *
- * This replaces three hand-maintained maps that had to be kept in sync
- * by hand (menu items, menu→permission, path→parent-group). Because
- * they drifted, several pages had to be special-cased: `/customers`
- * alone appeared as both a group and an item, and the parent lookup
- * for it pointed at itself.
- *
- * One entry now describes a destination completely: its path, label,
- * icon, the permission that reveals it, and where it sits in the tree.
- * The rail, the mobile drawer and the breadcrumb trail all read from
- * this one structure, so adding a page is a single edit.
+ * Organized into 6 clear executive sections so operators can immediately
+ * locate Overview, Sales & Support, Catalog & Stock, Marketing & Storefront,
+ * Reports & Analytics, and System Administration.
  */
 import {
   DashboardOutlined,
@@ -36,14 +29,12 @@ import {
   EditOutlined,
   PercentageOutlined,
   TruckOutlined,
-  UserSwitchOutlined,
   WarningOutlined,
   BulbOutlined,
   FallOutlined,
   RiseOutlined,
   ProfileOutlined,
   LogoutOutlined,
-  HomeOutlined,
 } from '@ant-design/icons'
 import { PERMISSIONS } from '../rbac/permissions'
 
@@ -51,14 +42,16 @@ import { PERMISSIONS } from '../rbac/permissions'
 const NEWSLETTER_ROLES = ['admin', 'manager', 'superadmin']
 
 /**
- * Sections group the rail into scannable bands. `key` links a section
- * to the nav entries it contains; the order here is the reading order.
+ * Sections group the rail into scannable bands.
+ * Order here defines reading order in both desktop rail and mobile drawer.
  */
 export const NAV_SECTIONS = [
-  { key: 'main', label: 'اصلی' },
-  { key: 'trade', label: 'فروش' },
-  { key: 'contentGroup', label: 'محتوا' },
-  { key: 'system', label: 'سیستم' },
+  { key: 'overview', label: 'نمای کلی' },
+  { key: 'salesOps', label: 'فروش و پشتیبانی' },
+  { key: 'catalog', label: 'کاتالوگ و انبار' },
+  { key: 'marketing', label: 'تخفیف، مالی و ویترین' },
+  { key: 'analytics', label: 'گزارش‌ها و تحلیل' },
+  { key: 'system', label: 'مدیریت سیستم' },
 ]
 
 const nav = {
@@ -66,134 +59,136 @@ const nav = {
     path: '/',
     label: 'داشبورد',
     icon: DashboardOutlined,
-    section: 'main',
+    section: 'overview',
     permission: PERMISSIONS.DASHBOARD_VIEW,
-    keywords: 'home overview آمار خلاصه',
-  },
-
-  products: {
-    key: 'products',
-    label: 'محصولات',
-    icon: ShoppingOutlined,
-    section: 'trade',
-    children: [
-      {
-        path: '/products',
-        label: 'لیست محصولات',
-        icon: AppstoreOutlined,
-        permission: PERMISSIONS.PRODUCT_READ,
-        keywords: 'کالا list همه محصولات',
-      },
-      {
-        path: '/products/variable',
-        label: 'محصولات متغیر',
-        icon: TagsOutlined,
-        permission: PERMISSIONS.PRODUCT_READ,
-        keywords: 'variable واریانت تنوع',
-      },
-      {
-        path: '/products/new',
-        label: 'افزودن محصول',
-        icon: PlusCircleOutlined,
-        permission: PERMISSIONS.PRODUCT_CREATE,
-        keywords: 'new create ثبت کالا',
-      },
-      {
-        path: '/categories',
-        label: 'دسته‌بندی‌ها',
-        icon: DatabaseOutlined,
-        permission: PERMISSIONS.CATEGORY_READ,
-        keywords: 'category گروه درخت',
-      },
-      {
-        path: '/brands',
-        label: 'برندها',
-        icon: StarOutlined,
-        permission: PERMISSIONS.BRAND_READ,
-        keywords: 'brand سازنده',
-      },
-      {
-        path: '/inventory',
-        label: 'موجودی',
-        icon: ThunderboltOutlined,
-        permission: PERMISSIONS.PRODUCT_MANAGE_STOCK,
-        keywords: 'stock انبار کم',
-      },
-      {
-        path: '/reviews',
-        label: 'نظرات',
-        icon: EditOutlined,
-        permission: PERMISSIONS.REVIEW_READ,
-        keywords: 'review comment دیدگاه امتیاز',
-      },
-    ],
+    keywords: 'home overview داشبورد آمار خلاصه مدیریت',
   },
 
   orders: {
     key: 'orders',
     label: 'سفارش‌ها',
     icon: ShoppingCartOutlined,
-    section: 'trade',
+    section: 'salesOps',
     children: [
       {
         path: '/orders',
         label: 'لیست سفارش‌ها',
         icon: FileDoneOutlined,
         permission: PERMISSIONS.ORDER_READ_ALL,
-        keywords: 'order سفارش خرید',
+        keywords: 'order سفارش خرید لیست پیگیری',
       },
       {
         path: '/orders/create',
-        label: 'ثبت سفارش',
+        label: 'ثبت سفارش دستی',
         icon: PlusCircleOutlined,
         permission: PERMISSIONS.ORDER_CREATE,
-        keywords: 'new create ثبت دستی',
+        keywords: 'new create ثبت دستی سفارش',
       },
       {
         path: '/abandoned-carts',
         label: 'سبدهای رهاشده',
         icon: WarningOutlined,
         permission: PERMISSIONS.CART_READ,
-        keywords: 'cart abandoned رها شده ریزش',
+        keywords: 'cart abandoned سبد رها شده ریزش',
       },
     ],
   },
 
   customers: {
-    key: 'customers',
+    path: '/customers',
     label: 'مشتریان',
     icon: UserOutlined,
-    section: 'trade',
+    section: 'salesOps',
+    permission: PERMISSIONS.USER_READ_ALL,
+    keywords: 'customer user کاربر خریدار مشتریان پروفایل',
+  },
+
+  tickets: {
+    path: '/tickets',
+    label: 'پشتیبانی و تیکت‌ها',
+    icon: CustomerServiceOutlined,
+    section: 'salesOps',
+    permission: PERMISSIONS.TICKET_READ_ALL,
+    keywords: 'ticket support تیکت پشتیبانی مشتری پیام',
+  },
+
+  products: {
+    key: 'products',
+    label: 'محصولات و انبار',
+    icon: ShoppingOutlined,
+    section: 'catalog',
     children: [
       {
-        path: '/customers',
-        label: 'لیست مشتریان',
-        icon: UserSwitchOutlined,
-        permission: PERMISSIONS.USER_READ_ALL,
-        keywords: 'customer user کاربر خریدار',
+        path: '/products',
+        label: 'همه محصولات',
+        icon: AppstoreOutlined,
+        permission: PERMISSIONS.PRODUCT_READ,
+        keywords: 'کالا list همه محصولات قیمت تخفیف',
+      },
+      {
+        path: '/products/variable',
+        label: 'محصولات متغیر',
+        icon: TagsOutlined,
+        permission: PERMISSIONS.PRODUCT_READ,
+        keywords: 'variable واریانت تنوع مدل',
+      },
+      {
+        path: '/products/new',
+        label: 'افزودن محصول',
+        icon: PlusCircleOutlined,
+        permission: PERMISSIONS.PRODUCT_CREATE,
+        keywords: 'new create ثبت کالا جدید',
+      },
+      {
+        path: '/inventory',
+        label: 'موجودی و انبار',
+        icon: ThunderboltOutlined,
+        permission: PERMISSIONS.PRODUCT_MANAGE_STOCK,
+        keywords: 'stock انبار موجودی کم ناموجود',
+      },
+      {
+        path: '/categories',
+        label: 'دسته‌بندی‌ها',
+        icon: DatabaseOutlined,
+        permission: PERMISSIONS.CATEGORY_READ,
+        keywords: 'category گروه درخت دسته',
+      },
+      {
+        path: '/brands',
+        label: 'برندها',
+        icon: StarOutlined,
+        permission: PERMISSIONS.BRAND_READ,
+        keywords: 'brand سازنده تولیدکننده',
+      },
+      {
+        path: '/reviews',
+        label: 'دیدگاه و نظرات',
+        icon: EditOutlined,
+        permission: PERMISSIONS.REVIEW_READ,
+        keywords: 'review comment دیدگاه امتیاز نظر',
       },
     ],
   },
 
   finance: {
     key: 'finance',
-    label: 'مالی',
+    label: 'تخفیف و ارسال',
     icon: GiftOutlined,
-    section: 'trade',
+    section: 'marketing',
     children: [
+      {
+        path: '/sales',
+        label: 'تخفیف‌های زمان‌دار و کمپین‌ها',
+        icon: FallOutlined,
+        permission: PERMISSIONS.SALE_READ,
+        keywords: 'sale flash campaign تخفیف زمان دار حراج کمپین لیبل',
+      },
       {
         path: '/coupons',
         label: 'کدهای تخفیف',
         icon: PercentageOutlined,
         permission: PERMISSIONS.COUPON_READ,
-        keywords: 'coupon discount کد تخفیف',
-      },
-      {
-        path: '/sales',
-        label: 'تخفیف‌های زمان‌دار',
-        icon: FallOutlined,
-        permission: PERMISSIONS.SALE_READ,
-        keywords: 'sale flash تخفیف موقت حراج',
+        keywords: 'coupon discount کد تخفیف کوپن',
       },
       {
         path: '/shipping',
@@ -207,30 +202,16 @@ const nav = {
 
   content: {
     key: 'content',
-    label: 'محتوا و سئو',
+    label: 'محتوا و ویترین',
     icon: FileTextOutlined,
-    section: 'contentGroup',
+    section: 'marketing',
     children: [
       {
-        path: '/pages',
-        label: 'صفحات',
-        icon: FileTextOutlined,
-        permission: PERMISSIONS.PAGE_READ,
-        keywords: 'page صفحه سئو لندینگ',
-      },
-      {
-        path: '/blog/posts',
-        label: 'مقالات',
-        icon: EditOutlined,
-        permission: PERMISSIONS.BLOG_READ,
-        keywords: 'blog post مقاله وبلاگ',
-      },
-      {
         path: '/banners',
-        label: 'بنرها',
+        label: 'بنرها و اسلایدر',
         icon: PictureOutlined,
         permission: PERMISSIONS.BANNER_READ,
-        keywords: 'banner اسلایدر تصویر',
+        keywords: 'banner اسلایدر تصویر ویترین',
       },
       {
         path: '/announcements',
@@ -238,6 +219,20 @@ const nav = {
         icon: NotificationOutlined,
         permission: PERMISSIONS.ANNOUNCEMENT_READ,
         keywords: 'announcement اعلان اطلاعیه نوار',
+      },
+      {
+        path: '/blog/posts',
+        label: 'مقالات وبلاگ',
+        icon: EditOutlined,
+        permission: PERMISSIONS.BLOG_READ,
+        keywords: 'blog post مقاله وبلاگ',
+      },
+      {
+        path: '/pages',
+        label: 'صفحات و سئو',
+        icon: FileTextOutlined,
+        permission: PERMISSIONS.PAGE_READ,
+        keywords: 'page صفحه سئو لندینگ',
       },
       {
         path: '/newsletter',
@@ -249,45 +244,36 @@ const nav = {
     ],
   },
 
-  tickets: {
-    path: '/tickets',
-    label: 'پشتیبانی',
-    icon: CustomerServiceOutlined,
-    section: 'trade',
-    permission: PERMISSIONS.TICKET_READ_ALL,
-    keywords: 'ticket support تیکت پشتیبانی مشتری',
-  },
-
   reports: {
     key: 'reports',
     label: 'گزارش‌ها',
     icon: BarChartOutlined,
-    section: 'contentGroup',
+    section: 'analytics',
     children: [
       {
         path: '/reports/sales',
-        label: 'فروش',
+        label: 'فروش و درآمد',
         icon: RiseOutlined,
         permission: PERMISSIONS.REPORT_READ_SALES,
-        keywords: 'report sales فروش درآمد',
+        keywords: 'report sales فروش درآمد نمودار',
       },
       {
         path: '/reports/products',
-        label: 'محصولات',
+        label: 'محصولات و انبار',
         icon: ShoppingOutlined,
         permission: PERMISSIONS.REPORT_READ_PRODUCTS,
-        keywords: 'report product گزارش کالا',
+        keywords: 'report product گزارش کالا پرفروش موجودی',
       },
       {
         path: '/reports/customers',
-        label: 'مشتریان',
+        label: 'مشتریان و وفاداری',
         icon: UserOutlined,
         permission: PERMISSIONS.REPORT_READ_CUSTOMERS,
-        keywords: 'report customer مشتری',
+        keywords: 'report customer مشتری خریداران',
       },
       {
         path: '/reports/delivered-items',
-        label: 'تحویل‌شده‌ها',
+        label: 'اقلام تحویل‌شده',
         icon: TruckOutlined,
         permission: PERMISSIONS.REPORT_READ_DELIVERED,
         keywords: 'report delivered تحویل تاریخچه',
@@ -297,14 +283,14 @@ const nav = {
         label: 'گزارش سیستم',
         icon: ProfileOutlined,
         permission: PERMISSIONS.ADMIN_READ,
-        keywords: 'audit log فعالیت سیستم',
+        keywords: 'audit log فعالیت سیستم رویداد',
       },
     ],
   },
 
   settings: {
     path: '/settings',
-    label: 'تنظیمات',
+    label: 'تنظیمات فروشگاه',
     icon: SettingOutlined,
     section: 'system',
     permission: PERMISSIONS.SETTINGS_READ,
@@ -313,11 +299,11 @@ const nav = {
 
   aiProviders: {
     path: '/settings/ai-providers',
-    label: 'سرویس‌های هوش مصنوعی',
+    label: 'هوش مصنوعی',
     icon: BulbOutlined,
     section: 'system',
     permission: PERMISSIONS.SETTINGS_UPDATE,
-    keywords: 'ai provider chat gpt مدل',
+    keywords: 'ai provider chat gpt مدل هوشمند',
   },
 
   admins: {
@@ -330,16 +316,22 @@ const nav = {
   },
 }
 
-// Order the top-level groups as they appear in the rail.
-const GROUP_ORDER = ['products', 'orders', 'customers', 'finance', 'content', 'tickets', 'reports']
-const LEAF_ORDER = ['dashboard', 'settings', 'aiProviders', 'admins']
-
-/** Flat list of every node, in rail order. */
-export const NAV_TREE = [
-  ...LEAF_ORDER.filter((k) => k === 'dashboard').map((k) => nav[k]),
-  ...GROUP_ORDER.map((k) => nav[k]),
-  ...LEAF_ORDER.filter((k) => k !== 'dashboard').map((k) => nav[k]),
+const NODE_ORDER = [
+  'dashboard',
+  'orders',
+  'customers',
+  'tickets',
+  'products',
+  'finance',
+  'content',
+  'reports',
+  'settings',
+  'aiProviders',
+  'admins',
 ]
+
+/** Flat list of every node, in executive reading order. */
+export const NAV_TREE = NODE_ORDER.map((k) => nav[k])
 
 /** Every leaf (a real page) with its owning group attached. */
 export const NAV_PAGES = (() => {
@@ -356,7 +348,7 @@ export const NAV_PAGES = (() => {
 
 /**
  * Longest-prefix match for the current path, so `/products/edit/123`
- * still resolves to the "لیست محصولات" trail.
+ * still resolves to "همه محصولات" and `/orders/123` to "لیست سفارش‌ها".
  */
 export function findTrail(pathname) {
   let best = null
@@ -365,8 +357,6 @@ export function findTrail(pathname) {
       return { page, exact: true }
     }
     if (pathname.startsWith(`${page.path}/`)) {
-      // Prefer the most specific path so detail pages inherit the right
-      // parent instead of a shorter sibling.
       if (!best || page.path.length > best.page.path.length) {
         best = { page, exact: false }
       }
@@ -391,6 +381,8 @@ export const ROLE_LABELS = {
   manager: 'مدیر',
   admin: 'ادمین',
   staff: 'کارشناس',
+  support: 'پشتیبان',
+  editor: 'ویرایشگر',
   user: 'کاربر',
 }
 

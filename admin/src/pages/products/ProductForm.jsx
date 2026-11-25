@@ -20,20 +20,35 @@ import {
   Alert,
   Checkbox,
   Tooltip,
+  Switch,
+  Row,
+  Col,
 } from 'antd'
 import {
   InboxOutlined,
   PlusOutlined,
   DeleteOutlined,
   ThunderboltOutlined,
+  TagOutlined,
+  ClockCircleOutlined,
+  FireOutlined,
+  PercentageOutlined,
+  LinkOutlined,
 } from '@ant-design/icons'
 import RichTextEditor from '../../components/RichTextEditor'
 import { sanitizeAdminHtml } from '../../utils/htmlSanitizer'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCategoryStore, useBrandStore } from '../../stores'
 import api from '../../api'
 import { createBlobPreview, createProductImageVariants } from '../../utils/imageOptimizer'
-import { parseNumericInput } from '../../utils/formatters'
+import { parseNumericInput, formatCurrency, formatNumber } from '../../utils/formatters'
+import { formatPersianDate } from '../../utils/dateUtils'
+import {
+  calculateDiscountPricing,
+  calculatePercentFromFinalPrice,
+  FIXED_PROMOTION_THEMES,
+} from '../../utils/promotionPricing'
+import PromotionBadgePreview from '../../components/promotions/PromotionBadgePreview'
 import { normSpecKey } from '../../utils/specKey'
 import JalaliDateTimePicker from '../../components/JalaliDateTimePicker'
 
@@ -200,6 +215,7 @@ function ProductForm() {
   }, [form])
 
   const descriptionValue = Form.useWatch('description', form)
+  const watchedPrice = Form.useWatch('price', form)
   useEffect(() => {
     handleDescriptionChange(descriptionValue)
   }, [descriptionValue, handleDescriptionChange])
@@ -548,6 +564,15 @@ function ProductForm() {
               {record.price > basePrice ? '+' : '−'}{Math.abs(record.price - basePrice).toLocaleString('fa-IR')}
             </Tag>
           )}
+          {(isFlashDeal || isSpecialOffer) &&
+            discount > 0 &&
+            record.excludeFromPromotion !== true &&
+            Number(record.price) > 0 && (
+              <div style={{ fontSize: 11.5, color: 'var(--ok)', fontWeight: 600 }}>
+                نهایی: {formatCurrency(calculateDiscountPricing(record.price, discount).finalPrice)} (
+                {formatNumber(discount)}٪-)
+              </div>
+            )}
         </Space>
       ),
     },
@@ -1321,275 +1346,490 @@ function ProductForm() {
               {
                 key: 'promotions',
                 label: 'فروش ویژه و تخفیف',
-                children: (
-                  <Space direction="vertical" style={{ width: '100%' }} size="large">
-                    {/* بخش تخفیف محصول */}
-                    <Card title="تخفیف محصول" size="small">
-                      <Form.Item label="درصد تخفیف (%)">
-                        <InputNumber
-                          value={discount}
-                          onChange={(value) => setDiscount(value || 0)}
-                          min={0}
-                          max={100}
-                          disabled={!isFlashDeal && !isSpecialOffer}
-                          style={{ width: '200px' }}
-                          placeholder={(!isFlashDeal && !isSpecialOffer) ? "ابتدا یک پیشنهاد را فعال کنید" : "مثلاً: 20"}
-                          parser={parseNumericInput}
-                        />
-                        <p style={{ marginTop: 8, color: '#888', fontSize: '13px' }}>
-                          {(!isFlashDeal && !isSpecialOffer)
-                            ? '⚠️ درصد تخفیف فقط با فعال‌سازی «پیشنهاد لحظه‌ای» یا «شگفت‌انگیز» اعمال می‌شود. با غیرفعال‌سازی آن‌ها، تخفیف به طور خودکار حذف می‌شود.'
-                            : 'این درصد روی پیشنهاد فعال (لحظه‌ای یا شگفت‌انگیز) اعمال خواهد شد.'}
-                        </p>
-                      </Form.Item>
-                    </Card>
+                children: (() => {
+                  const hasPromo = Boolean(isFlashDeal || isSpecialOffer)
+                  const numericBasePrice = Number(watchedPrice) || 0
+                  const simplePricing = calculateDiscountPricing(numericBasePrice, discount)
+                  const activePromoMode = isFlashDeal
+                    ? 'flash'
+                    : isSpecialOffer
+                      ? 'special'
+                      : 'custom'
 
-                    {/* بخش پیشنهاد لحظه‌ای (Flash Deal) */}
-                    <Card
-                      title="پیشنهاد لحظه‌ای (Flash Deal)"
-                      size="small"
-                      style={{
-                        marginBottom: '16px',
-                        borderLeft: isFlashDeal ? '4px solid #8a6200' : 'none'
-                      }}
-                    >
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <input
-                            type="checkbox"
-                            id="flashDeal"
-                            checked={isFlashDeal}
-                            disabled={isSpecialOffer}
-                            onChange={(e) => {
-                              if (e.target.checked && isSpecialOffer) {
-                                message.warning('یک محصول نمی‌تواند همزمان در کمپین پیشنهاد لحظه‌ای و شگفت‌انگیز باشد.')
-                                return
-                              }
-                              setIsFlashDeal(e.target.checked)
-                              if (!e.target.checked) {
-                                setFlashDealEndTime('')
-                                if (!isSpecialOffer) {
-                                  setDiscount(0)
-                                }
-                              }
-                            }}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              cursor: isSpecialOffer ? 'not-allowed' : 'pointer',
-                              opacity: isSpecialOffer ? 0.5 : 1
-                            }}
-                          />
-                          <label
-                            htmlFor="flashDeal"
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              cursor: isSpecialOffer ? 'not-allowed' : 'pointer',
-                              userSelect: 'none',
-                              opacity: isSpecialOffer ? 0.5 : 1
-                            }}
-                          >
-                            فعال‌سازی پیشنهاد لحظه‌ای
-                          </label>
-                          {isSpecialOffer && (
-                            <span style={{
-                              fontSize: '12px',
-                              color: '#b3261e',
-                              fontWeight: 'normal'
-                            }}>
-                              (غیرفعال - شگفت‌انگیز فعال است)
-                            </span>
-                          )}
-                        </div>
+                  const toggleFlash = (checked) => {
+                    if (checked && isSpecialOffer) {
+                      message.warning('یک محصول نمی‌تواند همزمان در پیشنهاد زمان‌دار و شگفت‌انگیز باشد.')
+                      return
+                    }
+                    setIsFlashDeal(checked)
+                    if (!checked) {
+                      setFlashDealEndTime('')
+                      if (!isSpecialOffer) setDiscount(0)
+                    }
+                  }
 
-                        {isFlashDeal && (
-                          <div
-                            style={{
-                              marginTop: '16px',
-                              padding: '16px',
-                              background: '#fffbe6',
-                              borderRadius: '8px',
-                              animation: 'fadeIn 0.3s ease-in'
-                            }}
-                          >
-                            <Form.Item
-                              label="زمان پایان (تاریخ شمسی)"
-                              style={{ marginBottom: 0 }}
+                  const toggleSpecial = (checked) => {
+                    if (checked && isFlashDeal) {
+                      message.warning('یک محصول نمی‌تواند همزمان در پیشنهاد زمان‌دار و شگفت‌انگیز باشد.')
+                      return
+                    }
+                    setIsSpecialOffer(checked)
+                    if (!checked) {
+                      setSpecialOfferEndTime('')
+                      if (!isFlashDeal) setDiscount(0)
+                    }
+                  }
+
+                  return (
+                    <Space direction="vertical" style={{ width: '100%' }} size="large">
+                      {/* گام ۱: انتخاب نوع لیبل تخفیف */}
+                      <Card
+                        size="small"
+                        title={
+                          <Space>
+                            <TagOutlined style={{ color: 'var(--brand-600)' }} />
+                            <span>۱. انتخاب نوع تخفیف لیبلی (سه ساختار مجزا)</span>
+                          </Space>
+                        }
+                      >
+                        <Row gutter={[14, 14]}>
+                          {/* نوع ۱: زمان‌دار / لحظه‌ای */}
+                          <Col xs={24} md={8}>
+                            <div
+                              style={{
+                                height: '100%',
+                                padding: 14,
+                                borderRadius: 10,
+                                border: isFlashDeal
+                                  ? '2px solid #ff6900'
+                                  : '1px solid var(--line)',
+                                background: isFlashDeal ? '#fff7ed' : 'var(--surface-sunken)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 10,
+                                opacity: isSpecialOffer ? 0.6 : 1,
+                              }}
                             >
-                              {activeGlobalFlashDealTime ? (
-                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #8a6200', borderRadius: '6px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8a6200', fontWeight: 'bold', fontSize: '13px' }}>
-                                    <span>⚡ زمان با سایر پیشنهادهای لحظه‌ای هماهنگ است</span>
-                                  </div>
-                                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
-                                    زمان پایان: {new Date(activeGlobalFlashDealTime).toLocaleString('fa-IR')}
-                                  </div>
-                                  <div style={{ display: 'none' }}>
-                                    <JalaliDateTimePicker
-                                      value={activeGlobalFlashDealTime}
-                                      onChange={() => { }}
-                                    />
-                                  </div>
-                                </div>
-                              ) : (
-                                <JalaliDateTimePicker
-                                  value={flashDealEndTime}
-                                  onChange={(date) => setFlashDealEndTime(date)}
-                                  placeholder="انتخاب تاریخ و زمان پایان"
-                                  borderColor="#d9d9d9"
-                                  focusColor="#8a6200"
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <span
+                                  style={{
+                                    padding: '3px 10px',
+                                    borderRadius: 999,
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    background: FIXED_PROMOTION_THEMES.flash.gradient,
+                                  }}
+                                >
+                                  <ClockCircleOutlined /> زمان‌دار (لحظه‌ای)
+                                </span>
+                                <Switch
+                                  checked={isFlashDeal}
+                                  disabled={isSpecialOffer}
+                                  onChange={toggleFlash}
+                                  checkedChildren="فعال"
+                                  unCheckedChildren="خاموش"
                                 />
-                              )}
-                              <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
-                                {activeGlobalFlashDealTime
-                                  ? "این محصول به طور خودکار به تایمر فعال پیشنهاد لحظه‌ای می‌پیوندد."
-                                  : "این اولین پیشنهاد لحظه‌ای است. زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود."}
-                              </p>
-                            </Form.Item>
+                              </div>
+                              <div style={{ fontSize: 12.5, color: 'var(--ink-600)', lineHeight: 1.65 }}>
+                                نمایش در بخش <strong>«فرصت‌های زمان‌دار»</strong> صفحه اصلی با تایمر هماهنگ.
+                              </div>
+                            </div>
+                          </Col>
 
-                          </div>
-                        )}
-                      </Space>
-                    </Card>
+                          {/* نوع ۲: شگفت‌انگیز */}
+                          <Col xs={24} md={8}>
+                            <div
+                              style={{
+                                height: '100%',
+                                padding: 14,
+                                borderRadius: 10,
+                                border: isSpecialOffer
+                                  ? '2px solid #e7000b'
+                                  : '1px solid var(--line)',
+                                background: isSpecialOffer ? '#fef2f2' : 'var(--surface-sunken)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 10,
+                                opacity: isFlashDeal ? 0.6 : 1,
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                <span
+                                  style={{
+                                    padding: '3px 10px',
+                                    borderRadius: 999,
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    background: FIXED_PROMOTION_THEMES.special.gradient,
+                                  }}
+                                >
+                                  <FireOutlined /> شگفت‌انگیز
+                                </span>
+                                <Switch
+                                  checked={isSpecialOffer}
+                                  disabled={isFlashDeal}
+                                  onChange={toggleSpecial}
+                                  checkedChildren="فعال"
+                                  unCheckedChildren="خاموش"
+                                />
+                              </div>
+                              <div style={{ fontSize: 12.5, color: 'var(--ink-600)', lineHeight: 1.65 }}>
+                                نمایش در بخش <strong>«پیشنهادهای منتخب»</strong> صفحه اصلی با لیبل قرمز شگفت‌انگیز.
+                              </div>
+                            </div>
+                          </Col>
 
-                    {/* بخش شگفت‌انگیز (Special Offer) */}
-                    <Card
-                      title="شگفت‌انگیز (Special Offer)"
-                      size="small"
-                      style={{
-                        borderLeft: isSpecialOffer ? '4px solid #b3261e' : 'none'
-                      }}
-                    >
-                      <Space direction="vertical" style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <input
-                            type="checkbox"
-                            id="specialOffer"
-                            checked={isSpecialOffer}
-                            disabled={isFlashDeal}
-                            onChange={(e) => {
-                              if (e.target.checked && isFlashDeal) {
-                                message.warning('یک محصول نمی‌تواند همزمان در کمپین پیشنهاد لحظه‌ای و شگفت‌انگیز باشد.')
-                                return
-                              }
-                              setIsSpecialOffer(e.target.checked)
-                              if (!e.target.checked) {
-                                setSpecialOfferEndTime('')
-                                if (!isFlashDeal) {
-                                  setDiscount(0)
-                                }
-                              }
-                            }}
-                            style={{
-                              width: '18px',
-                              height: '18px',
-                              cursor: isFlashDeal ? 'not-allowed' : 'pointer',
-                              opacity: isFlashDeal ? 0.5 : 1
-                            }}
-                          />
-                          <label
-                            htmlFor="specialOffer"
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              cursor: isFlashDeal ? 'not-allowed' : 'pointer',
-                              userSelect: 'none',
-                              opacity: isFlashDeal ? 0.5 : 1
-                            }}
-                          >
-                            فعال‌سازی‌شگفت‌انگیز
-                          </label>
-                          {isFlashDeal && (
-                            <span style={{
-                              fontSize: '12px',
-                              color: '#8a6200',
-                              fontWeight: 'normal'
-                            }}>
-                              (غیرفعال - پیشنهاد لحظه‌ای فعال است)
-                            </span>
-                          )}
-                        </div>
+                          {/* نوع ۳: کمپین زمان‌دار با لیبل و رنگ سفارشی */}
+                          <Col xs={24} md={8}>
+                            <div
+                              style={{
+                                height: '100%',
+                                padding: 14,
+                                borderRadius: 10,
+                                border: isFromActiveSale
+                                  ? '2px solid var(--brand-600)'
+                                  : '1px solid var(--line)',
+                                background: isFromActiveSale ? 'var(--brand-50)' : 'var(--surface-sunken)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: 10,
+                              }}
+                            >
+                              <div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
+                                  <Tag color="gold" style={{ margin: 0, fontWeight: 700 }}>
+                                    لیبل و رنگ سفارشی
+                                  </Tag>
+                                  {isFromActiveSale && <Tag color="green">عضو کمپین فعال</Tag>}
+                                </div>
+                                <div style={{ fontSize: 12.5, color: 'var(--ink-600)', lineHeight: 1.65 }}>
+                                  {isFromActiveSale
+                                    ? `این محصول در کمپین «${campaignLabel}» قرار دارد. ویرایش نام لیبل، رنگ و نمایش در منتخب‌ها از بخش مالی انجام می‌شود.`
+                                    : 'کمپین‌های لیبل‌دار با رنگ سفارشی و نمایش اختیاری در منتخب‌های صفحه اصلی از بخش تخفیف‌های زمان‌دار مدیریت می‌شوند.'}
+                                </div>
+                              </div>
+                              <Link to="/sales">
+                                <Button size="small" icon={<LinkOutlined />} block>
+                                  مدیریت تخفیف‌های زمان‌دار و کمپین‌ها
+                                </Button>
+                              </Link>
+                            </div>
+                          </Col>
+                        </Row>
 
                         {isFromActiveSale && (
-                          <div style={{ marginTop: '12px', padding: '8px', background: '#e6f7ff', border: '1px solid #91d5ff', borderRadius: '4px', fontSize: '12px' }}>
-                            این محصول در کمپین فعال <strong>{campaignLabel}</strong> قرار دارد و وضعیت شگفت‌انگیز آن توسط کمپین کنترل می‌شود.
-                          </div>
+                          <Alert
+                            type="info"
+                            showIcon
+                            style={{ marginTop: 14 }}
+                            message={`کمپین فعال «${campaignLabel}» روی این محصول اعمال شده و کنترل شگفت‌انگیز را بر عهده دارد.`}
+                          />
                         )}
+                      </Card>
 
-                        {isSpecialOffer && !isFromActiveSale && (
-                          <div
-                            style={{
-                              marginTop: '16px',
-                              padding: '16px',
-                              background: '#fff1f0',
-                              borderRadius: '8px',
-                              animation: 'fadeIn 0.3s ease-in'
-                            }}
-                          >
-                            <Form.Item
-                              label="زمان پایان کمپین (تاریخ شمسی)"
-                              style={{ marginBottom: 0 }}
-                            >
-                              {activeGlobalOfferTime ? (
-                                <div style={{ background: '#fff', padding: '10px', border: '1px dashed #b3261e', borderRadius: '6px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b3261e', fontWeight: 'bold', fontSize: '13px' }}>
-                                    <span>⏰ زمان با سایر محصولات شگفت‌انگیز هماهنگ است</span>
-                                  </div>
-                                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#666' }}>
-                                    زمان پایان: {new Date(activeGlobalOfferTime).toLocaleString('fa-IR')}
-                                  </div>
-                                  <div style={{ display: 'none' }}>
-                                    {/* Hidden input to ensure value is passed if needed, though backend handles sync */}
-                                    <JalaliDateTimePicker
-                                      value={activeGlobalOfferTime}
-                                      onChange={() => { }}
+                      {/* گام ۲: درصد تخفیف و محاسبه قیمت نهایی تمام‌شده */}
+                      <Card
+                        size="small"
+                        title={
+                          <Space>
+                            <PercentageOutlined style={{ color: 'var(--brand-600)' }} />
+                            <span>۲. تنظیم درصد تخفیف و مشاهده قیمت نهایی تمام‌شده</span>
+                          </Space>
+                        }
+                      >
+                        <Row gutter={[20, 16]} align="top">
+                          <Col xs={24} lg={13}>
+                            <Row gutter={[12, 12]}>
+                              <Col xs={24} sm={productType === 'simple' && numericBasePrice > 0 ? 12 : 24}>
+                                <Form.Item label="درصد تخفیف (%)" style={{ marginBottom: 8 }}>
+                                  <InputNumber
+                                    value={discount}
+                                    onChange={(value) => {
+                                      const n = Math.min(99, Math.max(0, Number(value) || 0))
+                                      setDiscount(n)
+                                    }}
+                                    min={0}
+                                    max={99}
+                                    disabled={!hasPromo}
+                                    style={{ width: '100%' }}
+                                    addonAfter="%"
+                                    placeholder={!hasPromo ? 'ابتدا یک نوع تخفیف را فعال کنید' : 'مثلاً: ۲۰'}
+                                    parser={parseNumericInput}
+                                  />
+                                </Form.Item>
+                              </Col>
+
+                              {productType === 'simple' && numericBasePrice > 0 && (
+                                <Col xs={24} sm={12}>
+                                  <Form.Item
+                                    label="قیمت نهایی تمام‌شده (تومان)"
+                                    tooltip="با وارد کردن قیمت نهایی دلخواه، درصد تخفیف متناظر به‌صورت خودکار محاسبه می‌شود"
+                                    style={{ marginBottom: 8 }}
+                                  >
+                                    <InputNumber
+                                      value={hasPromo ? simplePricing.finalPrice : numericBasePrice}
+                                      onChange={(val) => {
+                                        if (!hasPromo || val == null) return
+                                        const calc = calculatePercentFromFinalPrice(numericBasePrice, val)
+                                        setDiscount(calc.discountPercent)
+                                      }}
+                                      min={0}
+                                      max={numericBasePrice}
+                                      step={10000}
+                                      disabled={!hasPromo}
+                                      style={{ width: '100%' }}
+                                      formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                                      parser={parseNumericInput}
                                     />
+                                  </Form.Item>
+                                </Col>
+                              )}
+                            </Row>
+
+                            <div className="ekg-jalali-presets" style={{ marginBottom: 12 }}>
+                              {[5, 10, 15, 20, 25, 30, 50].map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  disabled={!hasPromo}
+                                  className={`ekg-jalali-preset-btn${Number(discount) === pct ? ' is-active' : ''}`}
+                                  onClick={() => hasPromo && setDiscount(pct)}
+                                  style={!hasPromo ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+                                >
+                                  {formatNumber(pct)}٪
+                                </button>
+                              ))}
+                            </div>
+
+                            {!hasPromo ? (
+                              <Alert
+                                type="warning"
+                                showIcon
+                                message="درصد تخفیف فقط با فعال‌سازی «زمان‌دار (لحظه‌ای)» یا «شگفت‌انگیز» اعمال می‌شود."
+                              />
+                            ) : productType === 'simple' && numericBasePrice <= 0 ? (
+                              <Alert
+                                type="info"
+                                showIcon
+                                message="برای مشاهده قیمت نهایی تمام‌شده، ابتدا قیمت محصول را در تب «اطلاعات پایه» وارد کنید."
+                              />
+                            ) : productType === 'simple' ? (
+                              <div
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                                  gap: 10,
+                                  padding: 12,
+                                  borderRadius: 10,
+                                  background: 'var(--surface-sunken)',
+                                  border: '1px solid var(--line)',
+                                }}
+                              >
+                                <div>
+                                  <div style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>قیمت پایه</div>
+                                  <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 2 }}>
+                                    {formatCurrency(numericBasePrice)}
                                   </div>
                                 </div>
-                              ) : (
-                                <JalaliDateTimePicker
-                                  value={specialOfferEndTime}
-                                  onChange={(date) => setSpecialOfferEndTime(date)}
-                                  placeholder="انتخاب تاریخ و زمان پایان"
-                                  borderColor="#d9d9d9"
-                                  focusColor="#b3261e"
-                                />
-                              )}
+                                <div>
+                                  <div style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>کسر تخفیف</div>
+                                  <div style={{ fontWeight: 700, fontSize: 13.5, color: 'var(--err)', marginTop: 2 }}>
+                                    {formatCurrency(simplePricing.savings)}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>قیمت نهایی مشتری</div>
+                                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--ok)', marginTop: 2 }}>
+                                    {formatCurrency(simplePricing.finalPrice)}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : null}
+                          </Col>
 
-                              <p style={{ marginTop: 8, color: '#666', fontSize: '12px' }}>
-                                {activeGlobalOfferTime
-                                  ? "این محصول به طور خودکار به تایمر فعال شگفت‌انگیز می‌پیوندد."
-                                  : "این اولین محصول شگفت‌انگیز است. زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود."}
-                              </p>
-                            </Form.Item>
+                          <Col xs={24} lg={11}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-600)', marginBottom: 6 }}>
+                              پیش‌نمایش کارت محصول در ویترین سایت:
+                            </div>
+                            <PromotionBadgePreview
+                              mode={activePromoMode}
+                              label={
+                                activePromoMode === 'flash'
+                                  ? 'پیشنهاد لحظه‌ای'
+                                  : activePromoMode === 'special'
+                                    ? 'شگفت‌انگیز'
+                                    : campaignLabel || 'لیبل سفارشی'
+                              }
+                              discountPercent={hasPromo ? discount : 0}
+                              basePrice={
+                                productType === 'simple'
+                                  ? numericBasePrice
+                                  : variants.length > 0
+                                    ? Math.min(...variants.map((v) => Number(v.price) || 0).filter((n) => n > 0), 0) || basePrice
+                                    : basePrice
+                              }
+                            />
+                          </Col>
+                        </Row>
+
+                        {/* جدول پیش‌نمایش قیمت نهایی متغیرها */}
+                        {productType === 'variable' && variants.length > 0 && (
+                          <div style={{ marginTop: 18 }}>
+                            <Divider style={{ margin: '12px 0' }} />
+                            <div style={{ fontWeight: 700, fontSize: 13.5, marginBottom: 10 }}>
+                              پیش‌نمایش قیمت نهایی تمام‌شده برای هر متغیر
+                            </div>
+                            <Table
+                              size="small"
+                              bordered
+                              pagination={false}
+                              scroll={{ x: 'max-content' }}
+                              rowKey="_id"
+                              dataSource={variants}
+                              columns={[
+                                {
+                                  title: 'متغیر',
+                                  key: 'opts',
+                                  render: (_, rec) =>
+                                    (rec.options || []).map((o, i) => (
+                                      <Tag key={i} color="blue">
+                                        {o.name}: {o.value}
+                                      </Tag>
+                                    )),
+                                },
+                                {
+                                  title: 'شامل تخفیف',
+                                  key: 'incl',
+                                  width: 110,
+                                  align: 'center',
+                                  render: (_, rec) => (
+                                    <Checkbox
+                                      checked={rec.excludeFromPromotion !== true}
+                                      onChange={(e) =>
+                                        handleVariantChange(rec._id, 'excludeFromPromotion', !e.target.checked)
+                                      }
+                                    >
+                                      فعال
+                                    </Checkbox>
+                                  ),
+                                },
+                                {
+                                  title: 'قیمت پایه',
+                                  dataIndex: 'price',
+                                  key: 'base',
+                                  render: (p) => formatCurrency(p || 0),
+                                },
+                                {
+                                  title: 'مقدار تخفیف',
+                                  key: 'sav',
+                                  render: (_, rec) => {
+                                    if (!hasPromo || rec.excludeFromPromotion === true) return '—'
+                                    const calc = calculateDiscountPricing(rec.price, discount)
+                                    return (
+                                      <span style={{ color: 'var(--err)' }}>
+                                        {formatCurrency(calc.savings)}
+                                      </span>
+                                    )
+                                  },
+                                },
+                                {
+                                  title: 'قیمت نهایی تمام‌شده',
+                                  key: 'final',
+                                  render: (_, rec) => {
+                                    const included = hasPromo && rec.excludeFromPromotion !== true
+                                    const calc = calculateDiscountPricing(
+                                      rec.price,
+                                      included ? discount : 0,
+                                    )
+                                    return (
+                                      <strong style={{ color: included ? 'var(--ok)' : 'var(--ink-800)' }}>
+                                        {formatCurrency(calc.finalPrice)}
+                                      </strong>
+                                    )
+                                  },
+                                },
+                              ]}
+                            />
                           </div>
                         )}
-                      </Space>
-                    </Card>
+                      </Card>
 
-                    {/* راهنمای استفاده */}
-                    <Card size="small" style={{ background: '#fafafa' }}>
-                      <h4 style={{ marginBottom: '12px', fontSize: '14px' }}>
-                        📌 راهنمای استفاده:
-                      </h4>
-                      <ul style={{ marginBottom: 0, paddingRight: '20px', fontSize: '13px', color: '#666' }}>
-                        <li style={{ marginBottom: '6px' }}>
-                          <strong>پیشنهاد لحظه‌ای:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
-                        </li>
-                        <li style={{ marginBottom: '6px' }}>
-                          <strong>شگفت‌انگیز:</strong> همه محصولات از یک تایمر مشترک استفاده می‌کنند
-                        </li>
-                        <li style={{ marginBottom: '6px', color: '#b3261e', fontWeight: '500' }}>
-                          ⚠️ یک محصول <strong>فقط</strong> می‌تواند در یکی از کمپین‌ها باشد (پیشنهاد لحظه‌ای یا شگفت‌انگیز)
-                        </li>
-                        <li>
-                          محصولات پس از اتمام زمان به صورت خودکار از لیست حذف می‌شوند
-                        </li>
-                      </ul>
-                    </Card>
-                  </Space>
-                ),
+                      {/* گام ۳: زمان‌بندی پایان (در صورت فعال‌بودن یکی از دو حالت محصولی) */}
+                      {isFlashDeal && (
+                        <Card
+                          size="small"
+                          title="۳. تنظیم زمان پایان پیشنهاد زمان‌دار (لحظه‌ای)"
+                          style={{ borderInlineStart: '4px solid #ff6900' }}
+                        >
+                          <Form.Item label="زمان پایان (تاریخ و ساعت شمسی)" style={{ marginBottom: 0 }}>
+                            {activeGlobalFlashDealTime ? (
+                              <div style={{ background: '#fff7ed', padding: 12, border: '1px dashed #ff6900', borderRadius: 8 }}>
+                                <div style={{ color: '#c2410c', fontWeight: 700, fontSize: 13 }}>
+                                  ⚡ زمان با سایر پیشنهادهای لحظه‌ای هماهنگ است
+                                </div>
+                                <div style={{ marginTop: 4, fontSize: 13, color: 'var(--ink-700)' }}>
+                                  زمان پایان فعال: <strong>{formatPersianDate(activeGlobalFlashDealTime, true)}</strong>
+                                </div>
+                              </div>
+                            ) : (
+                              <JalaliDateTimePicker
+                                value={flashDealEndTime}
+                                onChange={(date) => setFlashDealEndTime(date)}
+                                showTime
+                                presets="future"
+                                minDate={new Date()}
+                                placeholder="انتخاب تاریخ و ساعت پایان (شمسی)"
+                              />
+                            )}
+                            <p style={{ marginTop: 8, marginBottom: 0, color: 'var(--ink-500)', fontSize: 12 }}>
+                              {activeGlobalFlashDealTime
+                                ? 'این محصول به‌طور خودکار به تایمر مشترک فعال پیشنهاد لحظه‌ای می‌پیوندد.'
+                                : 'این اولین پیشنهاد لحظه‌ای است؛ زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود.'}
+                            </p>
+                          </Form.Item>
+                        </Card>
+                      )}
+
+                      {isSpecialOffer && !isFromActiveSale && (
+                        <Card
+                          size="small"
+                          title="۳. تنظیم زمان پایان پیشنهاد شگفت‌انگیز"
+                          style={{ borderInlineStart: '4px solid #e7000b' }}
+                        >
+                          <Form.Item label="زمان پایان کمپین (تاریخ و ساعت شمسی)" style={{ marginBottom: 0 }}>
+                            {activeGlobalOfferTime ? (
+                              <div style={{ background: '#fef2f2', padding: 12, border: '1px dashed #e7000b', borderRadius: 8 }}>
+                                <div style={{ color: '#b3261e', fontWeight: 700, fontSize: 13 }}>
+                                  ⏰ زمان با سایر محصولات شگفت‌انگیز هماهنگ است
+                                </div>
+                                <div style={{ marginTop: 4, fontSize: 13, color: 'var(--ink-700)' }}>
+                                  زمان پایان فعال: <strong>{formatPersianDate(activeGlobalOfferTime, true)}</strong>
+                                </div>
+                              </div>
+                            ) : (
+                              <JalaliDateTimePicker
+                                value={specialOfferEndTime}
+                                onChange={(date) => setSpecialOfferEndTime(date)}
+                                showTime
+                                presets="future"
+                                minDate={new Date()}
+                                placeholder="انتخاب تاریخ و ساعت پایان (شمسی)"
+                              />
+                            )}
+                            <p style={{ marginTop: 8, marginBottom: 0, color: 'var(--ink-500)', fontSize: 12 }}>
+                              {activeGlobalOfferTime
+                                ? 'این محصول به‌طور خودکار به تایمر مشترک شگفت‌انگیز می‌پیوندد.'
+                                : 'این اولین محصول شگفت‌انگیز است؛ زمانی که تنظیم کنید برای محصولات بعدی نیز اعمال می‌شود.'}
+                            </p>
+                          </Form.Item>
+                        </Card>
+                      )}
+                    </Space>
+                  )
+                })(),
               },
               // تب ویژگی‌ها و متغیرها (فقط برای محصولات متغیر)
               ...(productType === 'variable'

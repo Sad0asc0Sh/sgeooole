@@ -1,51 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Card, Input, Select, Space, Button } from 'antd'
-import ResponsiveTable from '../../components/ResponsiveTable'
+import { Card, Input, Select, Space, Button, Segmented } from 'antd'
 import { SearchOutlined, ReloadOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { Link, useNavigate } from 'react-router-dom'
-import dayjs from 'dayjs'
-import jalaliday from 'jalaliday'
-import api from '../../api'
 import Countdown from 'react-countdown'
+import ResponsiveTable from '../../components/ResponsiveTable'
+import PageHeader from '../../components/ui/PageHeader'
+import StatusPill from '../../components/ui/StatusPill'
 import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
-import StatusPill from '../../components/ui/StatusPill'
-import { getStatusLabel } from '../../utils/formatters'
-
-// فعال‌سازی تقویم جلالی
-dayjs.extend(jalaliday)
-dayjs.calendar('jalali')
-
-// نام ماه‌های شمسی
-const persianMonths = [
-  'فروردین',
-  'اردیبهشت',
-  'خرداد',
-  'تیر',
-  'مرداد',
-  'شهریور',
-  'مهر',
-  'آبان',
-  'آذر',
-  'دی',
-  'بهمن',
-  'اسفند',
-]
-
-// تابع برای فرمت کردن تاریخ با نام ماه فارسی
-const formatPersianDate = (date, includeTime = false) => {
-  if (!date) return '—'
-  const jalaliDate = dayjs(date).calendar('jalali').locale('fa')
-  const year = jalaliDate.format('YYYY')
-  const month = persianMonths[parseInt(jalaliDate.format('M')) - 1]
-  const day = jalaliDate.format('DD')
-
-  if (includeTime) {
-    const time = jalaliDate.format('HH:mm')
-    return `${day} ${month} ${year} - ساعت ${time}`
-  }
-  return `${day} ${month} ${year}`
-}
+import { formatCurrency, formatNumber, getStatusLabel } from '../../utils/formatters'
+import { formatPersianDate } from '../../utils/dateUtils'
+import api from '../../api'
 
 function OrdersList() {
   const { can } = useCan()
@@ -72,13 +37,9 @@ function OrdersList() {
       params.set('page', String(page))
       params.set('limit', String(pageSize))
 
-      if (filters.search) {
-        params.set('search', filters.search)
-      }
-      if (filters.orderStatus) {
-        params.set('orderStatus', filters.orderStatus)
-      }
-      if (filters.isPaid !== null) {
+      if (filters.search) params.set('search', filters.search)
+      if (filters.orderStatus) params.set('orderStatus', filters.orderStatus)
+      if (filters.isPaid !== null && filters.isPaid !== undefined) {
         params.set('isPaid', String(filters.isPaid))
       }
 
@@ -106,16 +67,15 @@ function OrdersList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.orderStatus, filters.isPaid])
 
-  // Status colour and label live in utils/formatters so the dashboard,
-  // order list and detail page cannot drift apart again.
   const columns = [
     {
       title: 'شماره سفارش',
-      dataIndex: 'orderCode', // Use orderCode primarily
+      dataIndex: 'orderCode',
       key: 'orderId',
       width: 150,
+      mobileTitle: true,
       render: (code, record) => (
-        <span style={{ fontFamily: 'monospace', fontSize: '0.85em', fontWeight: 'bold' }}>
+        <span style={{ fontFamily: 'monospace', fontSize: 13, fontWeight: 700 }}>
           {code || `#${record._id.slice(-8)}`}
         </span>
       ),
@@ -125,31 +85,29 @@ function OrdersList() {
       dataIndex: ['user', 'name'],
       key: 'customer',
       ellipsis: true,
-      render: (name, record) => name || record.user?.email || '—',
+      mobileSubtitle: true,
+      render: (name, record) => name || record.shippingAddress?.fullName || record.user?.email || '—',
     },
     {
       title: 'تعداد محصول',
       dataIndex: 'orderItems',
       key: 'itemsCount',
-      width: 100,
+      width: 105,
       align: 'center',
-      render: (items) => items?.length || 0,
+      render: (items) => `${formatNumber(items?.length || 0)} قلم`,
     },
     {
       title: 'مبلغ کل',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
       width: 150,
-      render: (price) =>
-        price != null
-          ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
-          : '—',
+      render: (price) => <span className="money-cell">{formatCurrency(price)}</span>,
     },
     {
       title: 'پرداخت',
       dataIndex: 'isPaid',
       key: 'isPaid',
-      width: 100,
+      width: 115,
       align: 'center',
       render: (isPaid) => (
         <StatusPill
@@ -164,15 +122,15 @@ function OrdersList() {
       mobileBadge: true,
       dataIndex: 'orderStatus',
       key: 'orderStatus',
-      width: 150,
+      width: 155,
       render: (status, record) => (
         <Space direction="vertical" size={0}>
           <StatusPill status={status} label={getStatusLabel(status)} />
           {status === 'Shipped' && record.autoCompleteAt && (
-            <div style={{ fontSize: '0.75em', color: '#b45309', marginTop: 4 }}>
+            <div style={{ fontSize: 11, color: '#b45309', marginTop: 4 }}>
               <Countdown
                 date={new Date(record.autoCompleteAt)}
-                renderer={({ days, hours, minutes, completed }) => {
+                renderer={({ days, hours, completed }) => {
                   if (completed) return <span style={{ color: '#0f6b33' }}>تکمیل شد</span>
                   return <span>{days} روز {hours} ساعت</span>
                 }}
@@ -186,13 +144,13 @@ function OrdersList() {
       title: 'تاریخ ثبت',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 180,
+      width: 185,
       render: (date) => formatPersianDate(date, true),
     },
     {
       title: 'عملیات',
       key: 'actions',
-      width: 120,
+      width: 110,
       align: 'center',
       render: (_, record) => (
         <Link to={`/orders/${record._id}`}>
@@ -214,24 +172,42 @@ function OrdersList() {
   }
 
   return (
-    <div>
-      <div className="page-header">
-        <h1>مدیریت سفارشات</h1>
-        <Space wrap>
-          {canCreate && (
-            <Link to="/orders/create">
-              <Button type="primary" icon={<PlusOutlined />}>
-                ایجاد سفارش جدید
-              </Button>
-            </Link>
-          )}
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchOrders()}
-          >
-            بارگذاری مجدد
-          </Button>
-        </Space>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
+      <PageHeader
+        title="مدیریت سفارش‌ها"
+        subtitle="پیگیری وضعیت پرداخت، پردازش بسته‌ها و ارسال سفارش‌های مشتریان"
+        count={pagination.total}
+        actions={
+          <Space wrap>
+            {canCreate && (
+              <Link to="/orders/create">
+                <Button type="primary" icon={<PlusOutlined />}>
+                  ثبت سفارش جدید
+                </Button>
+              </Link>
+            )}
+            <Button icon={<ReloadOutlined spin={loading} />} onClick={() => fetchOrders()}>
+              به‌روزرسانی
+            </Button>
+          </Space>
+        }
+      />
+
+      <div className="quick-tabs-bar">
+        <Segmented
+          value={filters.orderStatus || 'all'}
+          onChange={(val) =>
+            setFilters((prev) => ({ ...prev, orderStatus: val === 'all' ? null : val }))
+          }
+          options={[
+            { label: 'همه سفارش‌ها', value: 'all' },
+            { label: 'ثبت سفارش', value: 'Pending' },
+            { label: 'در حال پردازش', value: 'Processing' },
+            { label: 'تحویل به پست', value: 'Shipped' },
+            { label: 'تحویل شده', value: 'Delivered' },
+            { label: 'لغو شده', value: 'Cancelled' },
+          ]}
+        />
       </div>
 
       <div className="filter-bar">
@@ -240,33 +216,16 @@ function OrdersList() {
           prefix={<SearchOutlined />}
           style={{ width: 300, maxWidth: '100%' }}
           allowClear
-          onChange={(e) =>
-            setFilters((prev) => ({ ...prev, search: e.target.value }))
-          }
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
           onPressEnter={() => fetchOrders(1, pagination.pageSize)}
           onBlur={() => fetchOrders(1, pagination.pageSize)}
         />
         <Select
-          placeholder="وضعیت سفارش"
-          style={{ width: 180, maxWidth: '100%' }}
-          allowClear
-          onChange={(value) =>
-            setFilters((prev) => ({ ...prev, orderStatus: value || null }))
-          }
-        >
-          <Select.Option value="Pending">ثبت سفارش</Select.Option>
-          <Select.Option value="Processing">درحال پردازش</Select.Option>
-          <Select.Option value="Shipped">تحویل به پست</Select.Option>
-          <Select.Option value="Delivered">تحویل شده</Select.Option>
-          <Select.Option value="Cancelled">لغو شده</Select.Option>
-        </Select>
-        <Select
           placeholder="وضعیت پرداخت"
           style={{ width: 180, maxWidth: '100%' }}
           allowClear
-          onChange={(value) =>
-            setFilters((prev) => ({ ...prev, isPaid: value }))
-          }
+          value={filters.isPaid}
+          onChange={(value) => setFilters((prev) => ({ ...prev, isPaid: value ?? null }))}
         >
           <Select.Option value={true}>پرداخت شده</Select.Option>
           <Select.Option value={false}>پرداخت نشده</Select.Option>
@@ -285,26 +244,13 @@ function OrdersList() {
             pageSize: pagination.pageSize,
             total: pagination.total,
             showSizeChanger: true,
-            showTotal: (total) => `${total} سفارش`,
+            showTotal: (total) => `${formatNumber(total)} سفارش`,
           }}
           onChange={onTableChange}
           onRow={(record) => ({
-            onDoubleClick: () => navigate(`/orders/${record._id}`),
+            onClick: () => navigate(`/orders/${record._id}`),
             style: { cursor: 'pointer' },
           })}
-          locale={{
-            emptyText: (
-              <div
-                style={{
-                  textAlign: 'center',
-                  padding: '40px 0',
-                  color: '#999',
-                }}
-              >
-                <p>هیچ سفارشی یافت نشد</p>
-              </div>
-            ),
-          }}
         />
       </Card>
     </div>

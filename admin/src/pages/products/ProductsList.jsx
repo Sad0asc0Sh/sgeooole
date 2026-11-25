@@ -36,6 +36,8 @@ import { PERMISSIONS } from '../../rbac/permissions'
 import { useCan } from '../../rbac/useCan'
 import S3AdminImage from '../../components/S3AdminImage'
 import PageHeader from '../../components/ui/PageHeader'
+import { calculateDiscountPricing } from '../../utils/promotionPricing'
+import { formatCurrency, formatNumber } from '../../utils/formatters'
 
 const { Dragger } = Upload
 const CSV_DIRECT_UPLOAD_LIMIT_BYTES = 900 * 1024
@@ -225,6 +227,7 @@ function ProductsList({ mode }) {
     category: null,
     status: null,
     productType: '',
+    promo: null,
   })
   const [includeChildren, setIncludeChildren] = useState(true)
   const [pagination, setPagination] = useState({
@@ -317,6 +320,12 @@ function ProductsList({ mode }) {
         params.set('productType', filters.productType)
       }
 
+      if (filters.promo === 'special') {
+        params.set('isSpecialOffer', 'true')
+      } else if (filters.promo === 'flash') {
+        params.set('isFlashDeal', 'true')
+      }
+
       const res = await api.get('/products', { params })
       const list = res?.data?.data || []
       const pg = res?.data?.pagination
@@ -338,7 +347,7 @@ function ProductsList({ mode }) {
   useEffect(() => {
     fetchProducts(1, pagination.pageSize)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, filters.category, filters.status, filters.productType, includeChildren, dynamicFilters])
+  }, [mode, filters.category, filters.status, filters.productType, filters.promo, includeChildren, dynamicFilters])
 
   const handleBulkDelete = () => {
     if (!canDelete) {
@@ -395,6 +404,7 @@ function ProductsList({ mode }) {
       title: 'تصویر',
       dataIndex: 'images',
       key: 'image',
+      mobileThumb: true,
       render: (images) => {
         let url = null
 
@@ -416,6 +426,7 @@ function ProductsList({ mode }) {
       title: 'نام محصول',
       dataIndex: 'name',
       key: 'name',
+      mobileTitle: true,
     },
     // ستون نوع محصول (وقتی از صفحه اصلی محصولات استفاده می‌کنیم)
     ...(mode
@@ -460,23 +471,61 @@ function ProductsList({ mode }) {
       dataIndex: 'price',
       key: 'price',
       render: (price, record) => {
+        const now = new Date()
+        const isSpecialActive = Boolean(
+          record.isSpecialOffer &&
+            (!record.specialOfferEndTime || new Date(record.specialOfferEndTime) > now),
+        )
+        const isFlashActive = Boolean(
+          record.isFlashDeal &&
+            (!record.flashDealEndTime || new Date(record.flashDealEndTime) > now),
+        )
+        const activeDiscount =
+          (isSpecialActive || isFlashActive) && Number(record.discount) > 0
+            ? Number(record.discount)
+            : 0
+
         if (record.productType === 'variable') {
           if (Array.isArray(record.variants) && record.variants.length > 0) {
             const prices = record.variants.map((v) => Number(v.price) || 0).filter((p) => p > 0)
             if (prices.length > 0) {
               const minP = Math.min(...prices)
               const maxP = Math.max(...prices)
-              if (minP === maxP) {
-                return `${new Intl.NumberFormat('fa-IR').format(minP)} تومان`
+              const prefix = minP === maxP ? '' : 'از '
+              if (activeDiscount > 0) {
+                const { finalPrice } = calculateDiscountPricing(minP, activeDiscount)
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--ok)' }}>
+                      {prefix}{formatCurrency(finalPrice)}
+                    </span>
+                    <span style={{ fontSize: 11.5, color: 'var(--ink-400)', textDecoration: 'line-through' }}>
+                      {prefix}{formatCurrency(minP)}
+                    </span>
+                  </div>
+                )
               }
-              return `از ${new Intl.NumberFormat('fa-IR').format(minP)} تومان`
+              return `${prefix}${formatCurrency(minP)}`
             }
           }
           return <Tag color="blue">متغیر</Tag>
         }
-        return price != null
-          ? `${new Intl.NumberFormat('fa-IR').format(price)} تومان`
-          : '—'
+
+        if (price == null) return '—'
+        if (activeDiscount > 0) {
+          const { finalPrice } = calculateDiscountPricing(price, activeDiscount)
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontWeight: 700, color: 'var(--ok)' }}>
+                {formatCurrency(finalPrice)}
+              </span>
+              <span style={{ fontSize: 11.5, color: 'var(--ink-400)', textDecoration: 'line-through' }}>
+                {formatCurrency(price)}
+              </span>
+            </div>
+          )
+        }
+        return formatCurrency(price)
       },
     },
     {
@@ -911,14 +960,14 @@ function ProductsList({ mode }) {
       const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
       if (count > 0) {
-        message.success(`Flash Deal timer updated for ${count} products${skipNote}`)
+        message.success(`تایمر پیشنهاد زمان‌دار (لحظه‌ای) برای ${formatNumber(count)} محصول به‌روزرسانی شد${skipNote}`)
         setFlashTimerModalVisible(false)
         fetchProducts()
       } else {
-        message.warning('No products with active Flash Deal found.')
+        message.warning('هیچ محصولی با وضعیت فعال «زمان‌دار (لحظه‌ای)» پیدا نشد.')
       }
     } catch (err) {
-      message.error(err?.message || 'Failed to update Flash Deal timer')
+      message.error(err?.message || 'خطا در به‌روزرسانی تایمر پیشنهاد زمان‌دار')
     } finally {
       setLoading(false)
     }
@@ -932,11 +981,11 @@ function ProductsList({ mode }) {
       const skipped = res?.data?.data?.skippedCount || 0
       const skipNote = skipped > 0 ? `؛ ${skipped} محصول چون عضو تخفیف زمان‌دار بودند نادیده گرفته شدند` : ''
 
-      message.success(`Flash Deal timer disabled for ${count} products${skipNote}`)
+      message.success(`تایمر پیشنهاد زمان‌دار برای ${formatNumber(count)} محصول غیرفعال شد${skipNote}`)
       setFlashTimerModalVisible(false)
       fetchProducts()
     } catch (err) {
-      message.error(err?.message || 'Failed to disable Flash Deal timer')
+      message.error(err?.message || 'خطا در غیرفعال‌سازی تایمر پیشنهاد زمان‌دار')
     } finally {
       setLoading(false)
     }
@@ -1016,7 +1065,7 @@ function ProductsList({ mode }) {
                               {
                                 key: 'flash-deal-timer',
                                 icon: <FieldTimeOutlined />,
-                                label: 'Flash Deal Timer',
+                                label: 'تنظیم تایمر فرصت‌های زمان‌دار (لحظه‌ای)',
                                 onClick: () => setFlashTimerModalVisible(true),
                               },
                             ],
@@ -1039,14 +1088,7 @@ function ProductsList({ mode }) {
         }
       />
 
-      <div
-        style={{
-          marginBottom: 16,
-          display: 'flex',
-          gap: 16,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="filter-bar">
         <Input.Group compact style={{ display: 'flex', width: 420, maxWidth: '100%' }}>
           <Select
             value={filters.searchField}
@@ -1132,7 +1174,7 @@ function ProductsList({ mode }) {
         </Select>
         <Select
           placeholder="نوع محصول"
-          style={{ width: 180, maxWidth: '100%' }}
+          style={{ width: 165, maxWidth: '100%' }}
           allowClear
           onChange={(value) =>
             setFilters((prev) => ({ ...prev, productType: value || '' }))
@@ -1140,6 +1182,18 @@ function ProductsList({ mode }) {
         >
           <Select.Option value="simple">محصول ساده</Select.Option>
           <Select.Option value="variable">محصول متغیر</Select.Option>
+        </Select>
+        <Select
+          placeholder="نوع تخفیف"
+          style={{ width: 175, maxWidth: '100%' }}
+          allowClear
+          value={filters.promo || undefined}
+          onChange={(value) =>
+            setFilters((prev) => ({ ...prev, promo: value || null }))
+          }
+        >
+          <Select.Option value="special">شگفت‌انگیز</Select.Option>
+          <Select.Option value="flash">زمان‌دار (لحظه‌ای)</Select.Option>
         </Select>
 
         {/* Dynamic Filters based on Category */}
@@ -1414,42 +1468,51 @@ function ProductsList({ mode }) {
         <p style={{ marginBottom: 12, color: '#666' }}>
           این زمان برای <strong>همه</strong> محصولاتی که تیک «شگفت‌انگیز» (Special Offer) دارند اعمال خواهد شد.
         </p>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8 }}>زمان پایان:</label>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>زمان پایان (تاریخ و ساعت شمسی):</label>
           <JalaliDateTimePicker
             value={specialOfferEndTime}
             onChange={setSpecialOfferEndTime}
+            showTime
+            presets="future"
+            minDate={new Date()}
           />
         </div>
       </Modal>
 
       {/* Flash Deal Timer Modal */}
       <Modal
-        title="Flash Deal Timer"
+        title="تنظیم تایمر فرصت‌های زمان‌دار (پیشنهاد لحظه‌ای)"
         open={flashTimerModalVisible}
         onCancel={() => setFlashTimerModalVisible(false)}
         onOk={handleUpdateFlashTimer}
-        okText="Update Timer"
-        cancelText="Cancel"
+        okText="ذخیره زمان"
+        cancelText="انصراف"
         confirmLoading={loading}
         footer={[
           <Button key="disable" danger onClick={handleDisableFlashTimer} loading={loading}>
-            Disable Timer
+            غیرفعال کردن تایمر
           </Button>,
           <Button key="back" onClick={() => setFlashTimerModalVisible(false)}>
-            Cancel
+            انصراف
           </Button>,
           <Button key="submit" type="primary" onClick={handleUpdateFlashTimer} loading={loading}>
-            Update Timer
+            ذخیره زمان
           </Button>,
         ]}
       >
-        <p style={{ marginBottom: 12, color: '#666' }}>
-          This sets a shared countdown end time for all products marked as Flash Deal.
+        <p style={{ marginBottom: 12, color: 'var(--ink-500)' }}>
+          این زمان پایان برای <strong>همه</strong> محصولاتی که وضعیت «زمان‌دار / پیشنهاد لحظه‌ای» دارند اعمال خواهد شد.
         </p>
-        <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', marginBottom: 8 }}>End time:</label>
-          <JalaliDateTimePicker value={flashDealEndTime} onChange={setFlashDealEndTime} />
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>زمان پایان (تاریخ و ساعت شمسی):</label>
+          <JalaliDateTimePicker
+            value={flashDealEndTime}
+            onChange={setFlashDealEndTime}
+            showTime
+            presets="future"
+            minDate={new Date()}
+          />
         </div>
       </Modal>
     </div>

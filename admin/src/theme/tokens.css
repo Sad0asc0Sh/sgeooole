@@ -34,7 +34,10 @@
   --ink-300: #b5aea6;    /* disabled, decorative               */
 
   /* ── Surfaces ───────────────────────────────────────────────────── */
-  --surface-canvas: #f2f1ef; /* page background behind cards      */
+  --sider-bg: #181512;
+  --sider-surface: #221e1a;
+  --sider-border: rgba(255, 255, 255, 0.08);
+  --surface-canvas: #f4f2ee; /* page background behind cards      */
   --surface-sunken: #faf9f7; /* sub-toolbars, filter bars         */
   --surface-raised: #ffffff; /* cards, tables, modals             */
   --surface-inset: #f7f6f4;  /* table headers, code, wells         */
@@ -88,10 +91,10 @@
   --radius-lg: 14px;
 
   /* ── Layout ─────────────────────────────────────────────────────── */
-  --sider-w: 236px;
-  --sider-collapsed-w: 72px;
+  --sider-w: 256px;
+  --sider-collapsed-w: 68px;
   --header-h: 60px;
-  --content-max: 1560px; /* beyond this, data rows get unreadable */
+  --content-max: 1640px; /* beyond this, data rows get unreadable */
 
   /* ── Elevation: warm-tinted, quiet by default ───────────────────── */
   --shadow-xs: 0 1px 2px rgba(28, 25, 23, 0.05);
