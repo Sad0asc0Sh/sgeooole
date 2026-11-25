@@ -4,6 +4,7 @@ const mongoose = require('mongoose')
 const Settings = require('../models/Settings')
 const {
   BACKUP_STORAGE_DIR,
+  resolveWritableStorageDir,
   buildBackupFilename,
   createBackupFile,
   pruneAutoBackups,
@@ -48,8 +49,9 @@ async function runScheduledBackupTick() {
     const cfg = settings?.backupSettings
     if (!cfg || !cfg.autoBackupEnabled) return
 
+    const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
     const filename = buildBackupFilename({ trigger: 'auto', encrypted: false })
-    const outputPath = path.join(BACKUP_STORAGE_DIR, filename)
+    const outputPath = path.join(storageDir, filename)
 
     const meta = await createBackupFile({
       db: mongoose.connection.db,
@@ -61,7 +63,7 @@ async function runScheduledBackupTick() {
       writeMetaSidecar: true,
     })
 
-    await pruneAutoBackups(cfg.retentionCount || 7, BACKUP_STORAGE_DIR)
+    await pruneAutoBackups(cfg.retentionCount || 7, storageDir)
 
     await Settings.findOneAndUpdate(
       { singletonKey: 'main_settings' },

@@ -8,7 +8,40 @@ const { Transform } = require('stream')
 const { once } = require('events')
 const mongoose = require('mongoose')
 
-const { EJSON } = mongoose.mongo.BSON
+let cachedEjson = null
+function getEjson() {
+  if (cachedEjson) return cachedEjson
+  if (mongoose.mongo?.BSON?.EJSON) {
+    cachedEjson = mongoose.mongo.BSON.EJSON
+    return cachedEjson
+  }
+  if (mongoose.mongo?.EJSON) {
+    cachedEjson = mongoose.mongo.EJSON
+    return cachedEjson
+  }
+  try {
+    const direct = require('bson')
+    if (direct?.EJSON) {
+      cachedEjson = direct.EJSON
+      return cachedEjson
+    }
+  } catch {
+    // ignore and resolve relative to mongoose/mongodb
+  }
+  try {
+    const mongooseDir = path.dirname(require.resolve('mongoose'))
+    const mongodbDir = path.dirname(require.resolve('mongodb', { paths: [mongooseDir] }))
+    const bsonPath = require.resolve('bson', { paths: [__dirname, mongooseDir, mongodbDir] })
+    const mod = require(bsonPath)
+    if (mod?.EJSON) {
+      cachedEjson = mod.EJSON
+      return cachedEjson
+    }
+  } catch {
+    // handled below
+  }
+  throw createCodedError('ماژول BSON EJSON برای پردازش بکاپ در دسترس نیست', 'BSON_EJSON_UNAVAILABLE', 500)
+}
 
 const BACKUP_FORMAT = 'ekgkala-full-backup'
 const BACKUP_VERSION = 2
@@ -311,6 +344,28 @@ async function ensureDir(dirPath) {
   await fs.promises.mkdir(dirPath, { recursive: true })
 }
 
+let warnedFallbackDir = false
+async function resolveWritableStorageDir(preferredDir = BACKUP_STORAGE_DIR) {
+  const target = path.resolve(preferredDir || BACKUP_STORAGE_DIR)
+  try {
+    await ensureDir(target)
+    await fs.promises.access(target, fs.constants.W_OK)
+    return target
+  } catch (err) {
+    const isPermErr = err && (err.code === 'EACCES' || err.code === 'EPERM' || err.code === 'EROFS')
+    if (isPermErr && target === BACKUP_STORAGE_DIR) {
+      const fallbackDir = path.join(os.tmpdir(), 'ekgkala-backups')
+      if (!warnedFallbackDir) {
+        warnedFallbackDir = true
+        console.warn(`[BackupService] Storage dir ${target} not writable (${err.code}); falling back to ${fallbackDir}`)
+      }
+      await ensureDir(fallbackDir)
+      return fallbackDir
+    }
+    throw err
+  }
+}
+
 function metaSidecarPath(archivePath) {
   return `${archivePath}.meta.json`
 }
@@ -596,7 +651,7 @@ async function createBackupFile({
         options: sanitizedOptions,
         indexes: normalizedIndexes,
       }
-      await writeChunk(`${EJSON.stringify(startRecord, { relaxed: false })}\n`)
+      await writeChunk(`${getEjson().stringify(startRecord, { relaxed: false })}\n`)
 
       const colHash = crypto.createHash('sha256')
       let colCount = 0
@@ -604,7 +659,7 @@ async function createBackupFile({
       const cursor = col.find({}).batchSize(RESTORE_BATCH_SIZE)
       try {
         for await (const doc of cursor) {
-          const docJson = EJSON.stringify(doc, { relaxed: false })
+          const docJson = getEjson().stringify(doc, { relaxed: false })
           const docLine = `${DOC_LINE_PREFIX}${docJson}}\n`
           const hashChunk = `${docJson}\n`
           colHash.update(hashChunk)
@@ -922,7 +977,7 @@ function parseDocLine(line, lineNumber) {
   const rawDocJson = line.slice(DOC_LINE_PREFIX.length, -1)
   let doc
   try {
-    doc = EJSON.parse(rawDocJson, { relaxed: false })
+    doc = getEjson().parse(rawDocJson, { relaxed: false })
   } catch {
     throw createCodedError(
       `خطا در خواندن داده BSON در خط ${lineNumber}`,
@@ -1026,7 +1081,7 @@ async function inspectBackupFile({
         }
         let parsedStart
         try {
-          parsedStart = EJSON.parse(line, { relaxed: true })
+          parsedStart = getEjson().parse(line, { relaxed: true })
         } catch {
           throw createCodedError(
             `ساختار تعریف مجموعه در خط ${lineNumber} خراب است`,
@@ -1359,7 +1414,7 @@ async function restoreBackupFile({
 
         const rec = parseControlRecord(line, lineNumber)
         if (rec.$ekgRecord === 'collection_start') {
-          const parsedStart = EJSON.parse(line, { relaxed: true })
+          const parsedStart = getEjson().parse(line, { relaxed: true })
           const targetName = parsedStart.name
           const stageName = `${STAGING_PREFIX}${runId}_${targetName}`
           const opts = sanitizeCollectionOptions(parsedStart.options)
@@ -1495,15 +1550,15 @@ async function _createBackupFileInternal(opts) {
 }
 
 async function listServerBackups(storageDir = BACKUP_STORAGE_DIR) {
-  await ensureDir(storageDir)
-  const entries = await fs.promises.readdir(storageDir, { withFileTypes: true })
+  const resolvedDir = await resolveWritableStorageDir(storageDir)
+  const entries = await fs.promises.readdir(resolvedDir, { withFileTypes: true })
   const items = []
 
   for (const entry of entries) {
     if (!entry.isFile()) continue
     if (!/^[a-zA-Z0-9_-]+\.ekg\.(gz|enc)$/.test(entry.name)) continue
 
-    const fullPath = path.join(storageDir, entry.name)
+    const fullPath = path.join(resolvedDir, entry.name)
     const stat = await fs.promises.stat(fullPath)
     let meta = null
     try {
@@ -1600,4 +1655,6 @@ module.exports = {
   consumeStagedBackup,
   cleanupExpiredStagedUploads,
   safeUnlinkFile,
+  getEjson,
+  resolveWritableStorageDir,
 }

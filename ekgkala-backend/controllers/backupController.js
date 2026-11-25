@@ -8,6 +8,7 @@ const { logSecurityEvent, SECURITY_EVENTS } = require('../utils/auditLogger')
 const { reloadBackupScheduler } = require('../jobs/backupSchedulerJob')
 const {
   BACKUP_STORAGE_DIR,
+  resolveWritableStorageDir,
   safeBackupFilename,
   buildBackupFilename,
   getDatabaseOverview,
@@ -97,10 +98,11 @@ exports.listBackups = async (req, res) => {
 exports.createServerBackup = async (req, res) => {
   try {
     const db = getDbOrThrow()
+    const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
     const { password = '', note = '' } = req.body || {}
     const encrypted = typeof password === 'string' && password.length > 0
     const filename = buildBackupFilename({ trigger: 'manual', encrypted })
-    const outputPath = path.join(BACKUP_STORAGE_DIR, filename)
+    const outputPath = path.join(storageDir, filename)
 
     const metadata = await createBackupFile({
       db,
@@ -152,7 +154,7 @@ exports.exportBackup = async (req, res) => {
     const filename = buildBackupFilename({ trigger: 'manual', encrypted })
 
     const targetDir = saveOnServer
-      ? BACKUP_STORAGE_DIR
+      ? await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
       : path.join(os.tmpdir(), 'ekgkala-backup-exports')
     const outputPath = path.join(
       targetDir,
@@ -238,7 +240,8 @@ exports.exportBackup = async (req, res) => {
 
 exports.downloadServerBackup = async (req, res) => {
   try {
-    const filePath = safeBackupFilename(req.params.filename, BACKUP_STORAGE_DIR)
+    const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
+    const filePath = safeBackupFilename(req.params.filename, storageDir)
     let stat
     try {
       stat = await fs.promises.stat(filePath)
@@ -284,7 +287,8 @@ exports.downloadServerBackup = async (req, res) => {
 
 exports.deleteServerBackupHandler = async (req, res) => {
   try {
-    const result = await deleteServerBackup(req.params.filename, BACKUP_STORAGE_DIR)
+    const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
+    const result = await deleteServerBackup(req.params.filename, storageDir)
     await logSecurityEvent({
       action: SECURITY_EVENTS.BACKUP_DELETED,
       entity: 'Backup',
@@ -383,7 +387,8 @@ exports.inspectStagedBackup = async (req, res) => {
     const { stagedToken, serverFilename, password = '' } = req.body || {}
 
     if (serverFilename) {
-      const serverPath = safeBackupFilename(serverFilename, BACKUP_STORAGE_DIR)
+      const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
+      const serverPath = safeBackupFilename(serverFilename, storageDir)
       let stat
       try {
         stat = await fs.promises.stat(serverPath)
@@ -521,6 +526,7 @@ exports.executeRestore = async (req, res) => {
 
   try {
     const db = getDbOrThrow()
+    const storageDir = await resolveWritableStorageDir(BACKUP_STORAGE_DIR)
     const result = await restoreBackupFile({
       filePath: staged.filePath,
       password,
@@ -531,7 +537,7 @@ exports.executeRestore = async (req, res) => {
         id: req.user?._id ? String(req.user._id) : null,
         email: req.user?.email || null,
       },
-      storageDir: BACKUP_STORAGE_DIR,
+      storageDir,
     })
 
     await consumeStagedBackup(restoreToken, staged.source === 'upload')

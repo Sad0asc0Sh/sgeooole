@@ -731,7 +731,9 @@ const connectDB = async () => {
 
       // زمان‌بندی بکاپ‌گیری خودکار (بر اساس تنظیمات ذخیره شده در Settings)
       const { startBackupScheduler } = require('./jobs/backupSchedulerJob')
-      startBackupScheduler()
+      Promise.resolve(startBackupScheduler()).catch((err) => {
+        console.error('[BackupScheduler] Startup failed:', err.message)
+      })
 
       // Bestsellers Score Recalculation (every 30 minutes)
       const { recalculateAllScores } = require('./services/bestsellersScoreEngine')

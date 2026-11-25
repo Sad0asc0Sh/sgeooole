@@ -21,6 +21,8 @@ const {
   listServerBackups,
   deleteServerBackup,
   pruneAutoBackups,
+  getEjson,
+  resolveWritableStorageDir,
 } = require('../services/backupService')
 const { PERMISSIONS, ROLES } = require('../config/rbac')
 const { buildCronExpression } = require('../jobs/backupSchedulerJob')
@@ -537,4 +539,11 @@ test('۵. فیلتر کالکشن‌ها، پاکسازی خودکار، امن�
   const nginxConf = fs.readFileSync(path.join(__dirname, '..', '..', 'nginx-security-config.conf'), 'utf8')
   assert.equal(nginxConf.includes('location ^~ /api/backup/'), true)
   assert.equal(nginxConf.includes('client_max_body_size 500M'), true)
+
+  // EJSON & writable storage dir checks
+  const ejson = getEjson()
+  assert.equal(typeof ejson.stringify, 'function')
+  assert.equal(typeof ejson.parse, 'function')
+  const resolvedTmp = await resolveWritableStorageDir(os.tmpdir())
+  assert.equal(fs.existsSync(resolvedTmp), true)
 })
