@@ -234,7 +234,7 @@ function CustomersReports() {
           onSearch={(val) => fetchReports(range, val)}
           style={{ width: 320, maxWidth: '100%' }}
         />
-        <div style={{ minWidth: 260, flex: '1 1 300px', maxWidth: 440 }}>
+        <div className="filter-range-slot">
           <JalaliRangePicker
             value={range}
             onChange={handleRangeChange}

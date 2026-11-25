@@ -564,7 +564,7 @@ function MainLayout({ children }) {
                 className="header-icon-btn"
                 aria-label={unreadCount ? `اعلان‌ها (${unreadCount} خوانده‌نشده)` : 'اعلان‌ها'}
               >
-                <Badge count={unreadCount} size="small" offset={[4, -2]}>
+                <Badge count={unreadCount} overflowCount={99} size="small" offset={[-2, 2]}>
                   <span className="header-bell-glyph" aria-hidden="true">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                       <path

@@ -324,7 +324,7 @@ function DeliveredItemsReport() {
           onSearch={handleSearch}
           style={{ width: 340, maxWidth: '100%' }}
         />
-        <div style={{ minWidth: 260, flex: '1 1 300px', maxWidth: 440 }}>
+        <div className="filter-range-slot">
           <JalaliRangePicker
             value={filters.range}
             onChange={handleRangeChange}

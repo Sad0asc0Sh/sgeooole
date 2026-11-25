@@ -37,9 +37,11 @@
 
 .dash-op-pill {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 13px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 13px;
   background: var(--surface-raised);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -59,6 +61,13 @@
   transform: translateY(-1px);
 }
 
+.dash-op-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .dash-op-icon {
   width: 34px;
   height: 34px;
@@ -69,33 +78,36 @@
   font-size: 16px;
 }
 
-.dash-op-body {
+.dash-op-text {
   min-width: 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 2px;
 }
 
 .dash-op-count {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--ink-900);
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
+  white-space: nowrap;
 }
 
 .dash-op-label {
-  font-size: 11.5px;
-  color: var(--ink-500);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-800);
+  line-height: 1.45;
+  overflow-wrap: break-word;
 }
 
 .dash-op-sub {
-  font-size: 10.5px;
-  color: var(--ink-400);
+  display: block;
+  font-size: 11px;
+  color: var(--ink-500);
+  line-height: 1.45;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,8 +224,9 @@
 .top-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 9px 10px;
   border-radius: 9px;
   border: 1px solid var(--line-soft);
   background: var(--surface-sunken);
@@ -410,6 +423,24 @@
 }
 
 @media (max-width: 576px) {
+  .dash-header-controls {
+    width: 100%;
+  }
+
+  .dash-header-controls .ant-segmented {
+    width: 100%;
+  }
+
+  .dash-header-controls .ant-segmented-item {
+    flex: 1;
+    text-align: center;
+  }
+
+  .dash-header-controls .ant-btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+
   .stat-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--sp-3);

@@ -233,7 +233,7 @@ function AuditLogs() {
             label: ENTITY_LABELS[en] || en,
           }))}
         />
-        <div style={{ minWidth: 240, flex: '1 1 260px', maxWidth: 380 }}>
+        <div className="filter-range-slot">
           <JalaliRangePicker
             value={filters.range}
             onChange={(vals) => applyFilterChange({ range: Array.isArray(vals) ? vals : [] })}

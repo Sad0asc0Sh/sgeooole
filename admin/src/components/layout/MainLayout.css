@@ -512,6 +512,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: visible;
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
@@ -521,6 +522,20 @@
   padding: 0;
   transition: background var(--dur-fast) var(--ease),
     color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.header-icon-btn .ant-badge {
+  display: inline-flex;
+  line-height: 1;
+}
+
+.header-icon-btn .ant-badge-count {
+  font-size: 10px;
+  height: 17px;
+  min-width: 17px;
+  line-height: 17px;
+  padding: 0 4px;
+  box-shadow: 0 0 0 2px #ffffff;
 }
 
 .header-icon-btn:hover {
@@ -715,8 +730,10 @@
 }
 
 .admin-content-inner {
+  width: 100%;
   max-width: var(--content-max);
   margin-inline: auto;
+  overflow-x: hidden;
   padding: 22px 24px 28px;
   min-height: calc(calc(var(--app-vh, 1vh) * 100) - var(--header-h) - 52px);
 }
@@ -1093,6 +1110,10 @@
   .admin-header {
     padding: 0 10px !important;
     gap: 6px;
+  }
+
+  .header-right {
+    gap: 8px;
   }
 
   .header-search-label,

@@ -43,15 +43,16 @@ function GrowthFoot({ value, prefix = 'نسبت به دوره قبل', extra }) 
   const num = Number(value)
   const hasGrowth = Number.isFinite(num)
   const up = num >= 0
+  const formattedPct = Math.abs(num).toLocaleString('fa-IR', { maximumFractionDigits: 1 })
   return (
-    <span>
+    <>
       {hasGrowth && (
         <span className={up ? 'up' : 'down'}>
-          {up ? <RiseOutlined /> : <FallOutlined />} {Math.abs(num).toFixed(1)}٪ {prefix}
+          {up ? <RiseOutlined /> : <FallOutlined />} {formattedPct}٪ {prefix}
         </span>
       )}
-      {extra ? <span style={{ marginInlineStart: 8, color: 'var(--ink-400)' }}>• {extra}</span> : null}
-    </span>
+      {extra ? <span style={{ color: 'var(--ink-400)' }}>{extra}</span> : null}
+    </>
   )
 }
 
@@ -315,7 +316,7 @@ function Dashboard() {
           foot={
             <GrowthFoot
               value={stats.ordersGrowth}
-              extra={`نرخ پرداخت: ${stats.paymentConversionRate}٪`}
+              extra={`نرخ پرداخت: ${Number(stats.paymentConversionRate || 0).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪`}
             />
           }
           onClick={() => navigate('/orders')}
@@ -343,68 +344,80 @@ function Dashboard() {
       {/* ── Band 2: Operational Command Strip ── */}
       <div className="dash-ops-strip">
         <button type="button" className="dash-op-pill" onClick={() => navigate('/orders')}>
-          <span className="dash-op-icon tone-warn">
-            <ClockCircleOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-warn">
+              <ClockCircleOutlined />
+            </span>
             <span className="dash-op-count">{formatNumber(stats.attention.pendingOrders)}</span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">سفارش در انتظار</span>
             <span className="dash-op-sub">نیازمند پردازش و ارسال</span>
           </span>
         </button>
 
         <button type="button" className="dash-op-pill" onClick={() => navigate('/inventory')}>
-          <span className="dash-op-icon tone-err">
-            <InboxOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-err">
+              <InboxOutlined />
+            </span>
             <span className="dash-op-count">
               {formatNumber(stats.attention.outOfStockCount)} / {formatNumber(stats.attention.lowStockCount)}
             </span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">ناموجود / کم‌موجودی</span>
             <span className="dash-op-sub">کالاهای نیازمند شارژ</span>
           </span>
         </button>
 
         <button type="button" className="dash-op-pill" onClick={() => navigate('/tickets')}>
-          <span className="dash-op-icon tone-info">
-            <CustomerServiceOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-info">
+              <CustomerServiceOutlined />
+            </span>
             <span className="dash-op-count">{formatNumber(stats.attention.openTickets)}</span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">تیکت پشتیبانی باز</span>
             <span className="dash-op-sub">در انتظار پاسخگویی</span>
           </span>
         </button>
 
         <button type="button" className="dash-op-pill" onClick={() => navigate('/reviews')}>
-          <span className="dash-op-icon tone-brand">
-            <MessageOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-brand">
+              <MessageOutlined />
+            </span>
             <span className="dash-op-count">{formatNumber(stats.attention.pendingReviews)}</span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">دیدگاه در انتظار تایید</span>
             <span className="dash-op-sub">بررسی و انتشار نظرات</span>
           </span>
         </button>
 
         <button type="button" className="dash-op-pill" onClick={() => navigate('/abandoned-carts')}>
-          <span className="dash-op-icon tone-warn">
-            <WarningOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-warn">
+              <WarningOutlined />
+            </span>
             <span className="dash-op-count">{formatNumber(stats.attention.abandonedCartsCount)}</span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">سبد رهاشده (۷ روز)</span>
             <span className="dash-op-sub">{formatCurrency(stats.attention.abandonedCartsValue)}</span>
           </span>
         </button>
 
         <button type="button" className="dash-op-pill" onClick={() => navigate('/sales')}>
-          <span className="dash-op-icon tone-ok">
-            <TagOutlined />
-          </span>
-          <span className="dash-op-body">
+          <span className="dash-op-top">
+            <span className="dash-op-icon tone-ok">
+              <TagOutlined />
+            </span>
             <span className="dash-op-count">{formatNumber(activePromosTotal)}</span>
+          </span>
+          <span className="dash-op-text">
             <span className="dash-op-label">کمپین و تخفیف فعال</span>
             <span className="dash-op-sub">
               {formatNumber(stats.catalogHealth.activeProducts)} کالای فعال

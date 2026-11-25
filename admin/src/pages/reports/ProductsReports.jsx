@@ -253,7 +253,7 @@ function ProductsReports() {
       />
 
       <div className="filter-bar">
-        <div style={{ minWidth: 280, flex: '1 1 320px', maxWidth: 460 }}>
+        <div className="filter-range-slot">
           <JalaliRangePicker
             value={range}
             onChange={handleRangeChange}

@@ -1617,17 +1617,7 @@ function ProductForm() {
                                 message="برای مشاهده قیمت نهایی تمام‌شده، ابتدا قیمت محصول را در تب «اطلاعات پایه» وارد کنید."
                               />
                             ) : productType === 'simple' ? (
-                              <div
-                                style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                                  gap: 10,
-                                  padding: 12,
-                                  borderRadius: 10,
-                                  background: 'var(--surface-sunken)',
-                                  border: '1px solid var(--line)',
-                                }}
-                              >
+                              <div className="promo-price-summary-grid">
                                 <div>
                                   <div style={{ fontSize: 11.5, color: 'var(--ink-500)' }}>قیمت پایه</div>
                                   <div style={{ fontWeight: 700, fontSize: 13.5, marginTop: 2 }}>

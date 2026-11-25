@@ -177,7 +177,7 @@ function TicketDetail() {
               })}
             </div>
 
-            <Space.Compact style={{ marginTop: 16, width: '100%' }}>
+            <div className="ticket-reply-bar">
               <TextArea
                 rows={3}
                 value={reply}
@@ -194,7 +194,7 @@ function TicketDetail() {
               >
                 ارسال پاسخ
               </Button>
-            </Space.Compact>
+            </div>
           </>
         )}
       </Card>

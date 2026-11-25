@@ -226,7 +226,7 @@ function SalesReports() {
       />
 
       <div className="filter-bar">
-        <div style={{ minWidth: 280, flex: '1 1 320px', maxWidth: 460 }}>
+        <div className="filter-range-slot">
           <JalaliRangePicker
             value={range}
             onChange={handleRangeChange}
@@ -246,8 +246,8 @@ function SalesReports() {
           tone="ok"
           foot={
             <span className={growthUp ? 'up' : 'down'}>
-              {growthUp ? <RiseOutlined /> : <FallOutlined />} {Math.abs(growthNum).toFixed(1)}٪
-              نسبت به دوره قبل
+              {growthUp ? <RiseOutlined /> : <FallOutlined />}{' '}
+              {Math.abs(growthNum).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪ نسبت به دوره قبل
             </span>
           }
         />
@@ -278,7 +278,7 @@ function SalesReports() {
         <StatTile
           loading={loading}
           label="نرخ لغو سفارش"
-          value={`${summary.cancellationRate}٪`}
+          value={`${Number(summary.cancellationRate || 0).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}٪`}
           icon={<CloseCircleOutlined />}
           tone={summary.cancellationRate > 15 ? 'err' : 'neutral'}
           foot={`${formatNumber(summary.cancelledOrdersCount)} لغوشده • ${formatNumber(summary.unpaidOrdersCount)} پرداخت‌نشده`}
