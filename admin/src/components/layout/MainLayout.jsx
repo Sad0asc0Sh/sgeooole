@@ -11,8 +11,6 @@ import {
   UserOutlined,
   SettingOutlined,
   HomeOutlined,
-  PushpinOutlined,
-  PushpinFilled,
   CalendarOutlined,
 } from '@ant-design/icons'
 import { useAuthStore, useNotificationStore } from '../../stores'
@@ -25,33 +23,39 @@ import './MainLayout.css'
 
 const { Header, Sider, Content } = Layout
 
-const PIN_STORAGE_KEY = 'ekg-admin-sider-pinned'
+const COLLAPSE_STORAGE_KEY = 'ekg-admin-sider-collapsed'
 
-/** Read persisted pin preference; defaults to false (auto hover-expandable icon rail). */
-function readPinned() {
+/** Read persisted collapse preference; defaults to false (expanded rail on desktop). */
+function readCollapsed() {
   try {
-    const raw = window.localStorage.getItem(PIN_STORAGE_KEY)
-    return raw === '1'
+    return window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1'
   } catch {
     return false
   }
 }
 
 function MainLayout({ children }) {
-  const [pinned, setPinned] = useState(readPinned)
-  const [hovered, setHovered] = useState(false)
-  const [focusWithin, setFocusWithin] = useState(false)
-  const [operatorMenuOpen, setOperatorMenuOpen] = useState(false)
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
-  const [drawerOpenKeys, setDrawerOpenKeys] = useState([])
-  const [searchOpen, setSearchOpen] = useState(false)
-
   const location = useLocation()
   const navigate = useNavigate()
   const isDesktopLayout = !useIsMobile(992)
+
+  const trail = useMemo(() => trailFor(location.pathname), [location.pathname])
+  const selectedKey = trail?.path || location.pathname
+  const activeParentKey = trail?.parent?.key || null
+
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+  const [inlineOpenKeys, setInlineOpenKeys] = useState(() =>
+    activeParentKey ? [activeParentKey] : [],
+  )
+  const [popupOpenKeys, setPopupOpenKeys] = useState([])
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [drawerOpenKeys, setDrawerOpenKeys] = useState(() =>
+    activeParentKey ? [activeParentKey] : [],
+  )
+  const [searchOpen, setSearchOpen] = useState(false)
+
   const drawerButtonRef = useRef(null)
   const previouslyFocused = useRef(null)
-  const hoverCloseTimer = useRef(null)
 
   useEffect(() => {
     if (isDesktopLayout) setMobileDrawerOpen(false)
@@ -59,19 +63,12 @@ function MainLayout({ children }) {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(PIN_STORAGE_KEY, pinned ? '1' : '0')
+      window.localStorage.setItem(COLLAPSE_STORAGE_KEY, collapsed ? '1' : '0')
     } catch {
       /* private mode — preference simply won't persist */
     }
-  }, [pinned])
+  }, [collapsed])
 
-  useEffect(() => {
-    return () => {
-      if (hoverCloseTimer.current) window.clearTimeout(hoverCloseTimer.current)
-    }
-  }, [])
-
-  // Collapse floating hover state when navigating if not pinned (keeps mobile/desktop clean)
   useEffect(() => {
     setMobileDrawerOpen(false)
   }, [location.pathname])
@@ -96,8 +93,6 @@ function MainLayout({ children }) {
     },
     [can, role],
   )
-
-  const isExpanded = pinned || hovered || focusWithin || operatorMenuOpen
 
   const buildMenuItems = useCallback(
     (expandedMode) => {
@@ -152,31 +147,53 @@ function MainLayout({ children }) {
   )
 
   const desktopMenuItems = useMemo(
-    () => buildMenuItems(isExpanded),
-    [buildMenuItems, isExpanded],
+    () => buildMenuItems(!collapsed),
+    [buildMenuItems, collapsed],
   )
   const mobileMenuItems = useMemo(() => buildMenuItems(true), [buildMenuItems])
 
-  const trail = useMemo(() => trailFor(location.pathname), [location.pathname])
-  const selectedKey = trail?.path || location.pathname
-
-  const [manualOpenKeys, setManualOpenKeys] = useState([])
-
-  const routeOpenKeys = useMemo(() => {
-    if (trail?.parent) return [trail.parent.key]
-    return []
-  }, [trail])
-
-  const openKeys = useMemo(() => {
-    if (!isExpanded) return []
-    return Array.from(new Set([...manualOpenKeys, ...routeOpenKeys]))
-  }, [manualOpenKeys, routeOpenKeys, isExpanded])
-
+  // Auto-open the active route's parent submenu when navigating to a nested route,
+  // while still allowing the operator to manually collapse it afterward.
   useEffect(() => {
-    if (routeOpenKeys.length > 0) {
-      setDrawerOpenKeys((prev) => Array.from(new Set([...prev, ...routeOpenKeys])))
+    if (activeParentKey) {
+      setInlineOpenKeys((prev) =>
+        prev.includes(activeParentKey) ? prev : [...prev, activeParentKey],
+      )
+      setDrawerOpenKeys((prev) =>
+        prev.includes(activeParentKey) ? prev : [...prev, activeParentKey],
+      )
     }
-  }, [routeOpenKeys])
+  }, [activeParentKey])
+
+  // Clear transient flyout popups when toggling collapse state or changing route
+  useEffect(() => {
+    setPopupOpenKeys([])
+  }, [collapsed, location.pathname])
+
+  const handleDesktopOpenChange = useCallback(
+    (nextOpenKeys) => {
+      if (collapsed) {
+        setPopupOpenKeys(nextOpenKeys)
+      } else {
+        setInlineOpenKeys(nextOpenKeys)
+      }
+    },
+    [collapsed],
+  )
+
+  const handleDesktopMenuClick = useCallback(
+    ({ key, domEvent }) => {
+      if (typeof key === 'string' && key.startsWith('/')) {
+        if (!domEvent?.target?.closest?.('a')) {
+          navigate(key)
+        }
+      }
+      if (collapsed) {
+        setPopupOpenKeys([])
+      }
+    },
+    [collapsed, navigate],
+  )
 
   const breadcrumb = useMemo(() => {
     const items = [{ title: <Link to="/"><HomeOutlined /></Link> }]
@@ -189,39 +206,6 @@ function MainLayout({ children }) {
     items.push({ title: <span className="crumb-current">{trail.label}</span> })
     return items
   }, [trail])
-
-  // Hover handlers for desktop auto-expandable rail
-  const handleSiderMouseEnter = () => {
-    if (!isDesktopLayout) return
-    if (hoverCloseTimer.current) {
-      window.clearTimeout(hoverCloseTimer.current)
-      hoverCloseTimer.current = null
-    }
-    setHovered(true)
-  }
-
-  const handleSiderMouseLeave = () => {
-    if (!isDesktopLayout) return
-    if (hoverCloseTimer.current) window.clearTimeout(hoverCloseTimer.current)
-    hoverCloseTimer.current = window.setTimeout(() => {
-      setHovered(false)
-    }, 180)
-  }
-
-  const handleSiderFocus = () => {
-    if (!isDesktopLayout) return
-    if (hoverCloseTimer.current) {
-      window.clearTimeout(hoverCloseTimer.current)
-      hoverCloseTimer.current = null
-    }
-    setFocusWithin(true)
-  }
-
-  const handleSiderBlur = (e) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setFocusWithin(false)
-    }
-  }
 
   // Ctrl+K / Cmd+K search palette
   useEffect(() => {
@@ -331,22 +315,16 @@ function MainLayout({ children }) {
     onClick: handleUserMenuClick,
   }
 
-  const isHoverOverlay = isExpanded && !pinned
-
   return (
-    <Layout className={`admin-root-layout${pinned ? ' is-sider-pinned' : ''}`}>
-      {/* ── Dark rail: auto-expands on hover, optional pin ── */}
+    <Layout className={`admin-root-layout${collapsed ? ' is-sider-collapsed' : ''}`}>
+      {/* ── Dark rail: expanded by default, cleanly collapsible via header toggle ── */}
       <Sider
         trigger={null}
         collapsible
-        collapsed={!isExpanded}
+        collapsed={collapsed}
         collapsedWidth={68}
         width={256}
-        className={`admin-sider${isHoverOverlay ? ' is-hover-expanded' : ''}${pinned ? ' is-pinned' : ''}`}
-        onMouseEnter={handleSiderMouseEnter}
-        onMouseLeave={handleSiderMouseLeave}
-        onFocus={handleSiderFocus}
-        onBlur={handleSiderBlur}
+        className="admin-sider"
       >
         <div className="admin-sider-inner">
           <div className="admin-brand-row">
@@ -354,30 +332,13 @@ function MainLayout({ children }) {
               <span className="admin-brand-mark" aria-hidden="true">
                 <span className="admin-brand-dot" />
               </span>
-              {isExpanded && (
+              {!collapsed && (
                 <span className="admin-brand-text">
                   <span className="admin-brand-name">ای‌کا کالا</span>
                   <span className="admin-brand-role">پنل مدیریت سازمانی</span>
                 </span>
               )}
             </Link>
-
-            {isExpanded && (
-              <Tooltip
-                title={pinned ? 'بازشدن خودکار با ماوس (رها کردن منو)' : 'ثابت نگه‌داشتن منو'}
-                placement="left"
-              >
-                <button
-                  type="button"
-                  className={`sider-pin-btn${pinned ? ' is-active' : ''}`}
-                  onClick={() => setPinned((v) => !v)}
-                  aria-label={pinned ? 'آزاد کردن منوی کناری' : 'ثابت کردن منوی کناری'}
-                  aria-pressed={pinned}
-                >
-                  {pinned ? <PushpinFilled /> : <PushpinOutlined />}
-                </button>
-              </Tooltip>
-            )}
           </div>
 
           <div className="admin-sider-menu-wrap">
@@ -387,26 +348,22 @@ function MainLayout({ children }) {
               className="admin-sider-menu"
               popupClassName="admin-sider-popup"
               selectedKeys={[selectedKey]}
-              openKeys={openKeys}
-              onOpenChange={setManualOpenKeys}
+              openKeys={collapsed ? popupOpenKeys : inlineOpenKeys}
+              onOpenChange={handleDesktopOpenChange}
+              onClick={handleDesktopMenuClick}
               items={desktopMenuItems}
             />
           </div>
 
           <div className="admin-sider-foot">
-            <Dropdown
-              menu={userMenu}
-              trigger={['click']}
-              placement="topRight"
-              onOpenChange={setOperatorMenuOpen}
-            >
+            <Dropdown menu={userMenu} trigger={['click']} placement="topRight">
               <button type="button" className="admin-operator" aria-label="حساب کاربری">
                 <Avatar
-                  size={isExpanded ? 32 : 34}
+                  size={collapsed ? 34 : 32}
                   src={user?.avatar?.url}
                   icon={!user?.avatar?.url && <UserOutlined />}
                 />
-                {isExpanded && (
+                {!collapsed && (
                   <span className="admin-operator-meta">
                     <span className="admin-operator-name">{user?.name || 'کاربر'}</span>
                     <span className="admin-operator-role">{roleLabel}</span>
@@ -469,7 +426,12 @@ function MainLayout({ children }) {
           openKeys={drawerOpenKeys}
           onOpenChange={setDrawerOpenKeys}
           items={mobileMenuItems}
-          onClick={() => setMobileDrawerOpen(false)}
+          onClick={({ key, domEvent }) => {
+            if (typeof key === 'string' && key.startsWith('/') && !domEvent?.target?.closest?.('a')) {
+              navigate(key)
+            }
+            setMobileDrawerOpen(false)
+          }}
         />
 
         <div className="mobile-drawer-footer">
@@ -507,15 +469,15 @@ function MainLayout({ children }) {
       <Layout className="admin-main-layout">
         <Header className="admin-header">
           <div className="header-left">
-            <Tooltip title={pinned ? 'جمع کردن منوی ثابت' : 'ثابت کردن منوی کناری'}>
+            <Tooltip title={collapsed ? 'باز کردن منو' : 'جمع کردن منو'} placement="bottom">
               <button
                 type="button"
                 className="header-icon-btn collapse-btn"
-                onClick={() => setPinned((v) => !v)}
-                aria-label={pinned ? 'آزاد کردن منوی کناری' : 'ثابت کردن منوی کناری'}
-                aria-pressed={pinned}
+                onClick={() => setCollapsed((v) => !v)}
+                aria-label={collapsed ? 'باز کردن منوی کناری' : 'جمع کردن منوی کناری'}
+                aria-expanded={!collapsed}
               >
-                {pinned ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />}
+                {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               </button>
             </Tooltip>
 

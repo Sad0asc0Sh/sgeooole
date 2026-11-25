@@ -34,9 +34,21 @@
   --ink-300: #b5aea6;    /* disabled, decorative               */
 
   /* ── Surfaces ───────────────────────────────────────────────────── */
-  --sider-bg: #181512;
-  --sider-surface: #221e1a;
-  --sider-border: rgba(255, 255, 255, 0.08);
+  --sider-bg: #1c1917;
+  --sider-bg-elevated: #26221f;
+  --sider-surface: #26221f;
+  --sider-sub-bg: rgba(255, 255, 255, 0.035);
+  --sider-border: rgba(255, 255, 255, 0.09);
+  --sider-hover-bg: rgba(255, 255, 255, 0.08);
+  --sider-active-bg: rgba(255, 255, 255, 0.13);
+  --sider-text: #ebe6e0;
+  --sider-text-sub: #d7d0c8;
+  --sider-text-muted: #9e958c;
+  --sider-icon: #bfb6ac;
+  --sider-icon-sub: #a89f95;
+  --sider-selected-accent: #f3b53c;
+  --sider-parent-selected-bg: rgba(231, 157, 19, 0.14);
+  --sider-parent-selected-border: rgba(231, 157, 19, 0.28);
   --surface-canvas: #f4f2ee; /* page background behind cards      */
   --surface-sunken: #faf9f7; /* sub-toolbars, filter bars         */
   --surface-raised: #ffffff; /* cards, tables, modals             */

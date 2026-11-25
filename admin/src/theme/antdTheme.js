@@ -121,24 +121,32 @@ export const adminTheme = {
       headerBg: '#ffffff',
       headerHeight: 60,
       headerPadding: '0 24px',
-      siderBg: '#181512',
+      siderBg: '#1c1917',
       bodyBg: CANVAS,
     },
 
     Menu: {
-      // The dark rail is fully owned by MainLayout.css; these values
-      // only need to stop antd from painting its own opinion.
+      // The dark rail is styled in MainLayout.css; these values keep
+      // antd's generated tokens and popups aligned with the obsidian rail.
       darkItemBg: 'transparent',
-      darkSubMenuItemBg: 'transparent',
+      darkSubMenuItemBg: 'rgba(255, 255, 255, 0.035)',
+      darkPopupBg: '#26221f',
       darkItemSelectedBg: BRAND,
       darkItemSelectedColor: '#ffffff',
-      darkItemColor: '#b5aea6',
+      darkItemColor: '#ebe6e0',
       darkItemHoverColor: '#ffffff',
-      darkItemHoverBg: 'rgba(255, 255, 255, 0.07)',
+      darkItemHoverBg: 'rgba(255, 255, 255, 0.08)',
+      darkGroupTitleColor: '#9e958c',
       itemBorderRadius: 8,
+      subMenuItemBorderRadius: 7,
       itemHeight: 38,
+      itemMarginInline: 0,
+      itemMarginBlock: 2,
       iconSize: 16,
-      collapsedIconSize: 17,
+      collapsedIconSize: 18,
+      collapsedWidth: 68,
+      activeBarWidth: 0,
+      activeBarBorderWidth: 0,
     },
 
     Table: {
