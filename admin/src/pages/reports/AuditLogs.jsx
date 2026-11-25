@@ -17,6 +17,13 @@ const ACTION_META = {
   LOGIN: { label: 'ورود به سیستم', tone: 'brand' },
   LOGOUT: { label: 'خروج از سیستم', tone: 'neutral' },
   STATUS_CHANGE: { label: 'تغییر وضعیت', tone: 'warn' },
+  BACKUP_CREATED: { label: 'ساخت بکاپ', tone: 'ok' },
+  BACKUP_DOWNLOADED: { label: 'دانلود بکاپ', tone: 'info' },
+  BACKUP_DELETED: { label: 'حذف بکاپ', tone: 'err' },
+  BACKUP_INSPECTED: { label: 'بررسی فایل بکاپ', tone: 'info' },
+  BACKUP_RESTORED: { label: 'بازیابی کامل دیتابیس', tone: 'warn' },
+  BACKUP_RESTORE_FAILED: { label: 'خطا در بازیابی بکاپ', tone: 'err' },
+  BACKUP_SETTINGS_UPDATED: { label: 'تنظیمات بکاپ خودکار', tone: 'info' },
 }
 
 const ENTITY_LABELS = {
@@ -32,6 +39,7 @@ const ENTITY_LABELS = {
   Review: 'دیدگاه',
   Ticket: 'تیکت',
   Banner: 'بنر',
+  Backup: 'بکاپ و بازیابی',
 }
 
 function resolveActionMeta(action) {

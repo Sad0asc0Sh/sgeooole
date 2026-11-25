@@ -130,6 +130,11 @@ const PERMISSIONS = {
     // --- Cart Permissions ---
     CART_READ: 'cart:read',
     CART_MANAGE: 'cart:manage',
+
+    // --- Backup & Restore Permissions (Superadmin only) ---
+    BACKUP_READ: 'backup:read',
+    BACKUP_CREATE: 'backup:create',
+    BACKUP_RESTORE: 'backup:restore',
 }
 
 // ============================================

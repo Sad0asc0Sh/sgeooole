@@ -122,4 +122,9 @@ export const PERMISSIONS = {
 
   // Newsletter
   NEWSLETTER_READ: 'newsletter:read',
+
+  // Backup & Restore (Superadmin only)
+  BACKUP_READ: 'backup:read',
+  BACKUP_CREATE: 'backup:create',
+  BACKUP_RESTORE: 'backup:restore',
 }

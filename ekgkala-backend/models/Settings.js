@@ -301,6 +301,58 @@ const settingsSchema = new mongoose.Schema(
         }
       ]
     },
+
+    // تنظیمات بکاپ‌گیری خودکار و وضعیت آخرین پشتیبان
+    backupSettings: {
+      autoBackupEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      frequency: {
+        type: String,
+        enum: ['every_12h', 'daily', 'weekly'],
+        default: 'daily',
+      },
+      hour: {
+        type: Number,
+        default: 3,
+        min: 0,
+        max: 23,
+      },
+      dayOfWeek: {
+        type: Number,
+        default: 5, // جمعه
+        min: 0,
+        max: 6,
+      },
+      retentionCount: {
+        type: Number,
+        default: 7,
+        min: 1,
+        max: 30,
+      },
+      lastAutoBackupAt: {
+        type: Date,
+        default: null,
+      },
+      lastAutoBackupStatus: {
+        type: String,
+        enum: ['success', 'failed', null],
+        default: null,
+      },
+      lastAutoBackupFile: {
+        type: String,
+        default: null,
+      },
+      lastAutoBackupError: {
+        type: String,
+        default: null,
+      },
+      lastManualBackupAt: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   { timestamps: true },
 )

@@ -1,17 +1,38 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, Form, Input, Tabs, Button, Space, message, InputNumber, Switch, Alert, Modal, Divider, Select, Slider, Statistic, Row, Col, Tag, Radio } from 'antd'
-import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined, ThunderboltOutlined, SwapOutlined, ApiOutlined } from '@ant-design/icons'
+import { BellOutlined, RobotOutlined, LinkOutlined, SearchOutlined, ThunderboltOutlined, SwapOutlined, ApiOutlined, DatabaseOutlined } from '@ant-design/icons'
 import api from '../../api'
+import { useAuthStore } from '../../stores'
+import { useCan } from '../../rbac/useCan'
+import { PERMISSIONS } from '../../rbac/permissions'
 import PageHeader from '../../components/ui/PageHeader'
+import BackupSection from '../../components/settings/BackupSection'
 
 function SettingsPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const user = useAuthStore((state) => state.user)
+  const { can } = useCan()
+  const canAccessBackup = user?.role === 'superadmin' || can(PERMISSIONS.BACKUP_READ)
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [sendingWarnings, setSendingWarnings] = useState(false)
   const [previewExpiry, setPreviewExpiry] = useState(null)
+
+  const requestedTab = searchParams.get('tab') || 'general'
+  const activeTab = requestedTab === 'backup' && !canAccessBackup ? 'general' : requestedTab
+
+  const handleTabChange = (nextKey) => {
+    const next = new URLSearchParams(searchParams)
+    if (nextKey === 'general') {
+      next.delete('tab')
+    } else {
+      next.set('tab', nextKey)
+    }
+    setSearchParams(next, { replace: true })
+  }
 
   // محاسبه پیش‌نمایش زمان انقضا
   const calculateExpiryPreview = (hours) => {
@@ -1392,6 +1413,19 @@ function SettingsPage() {
         </>
       ),
     },
+    ...(canAccessBackup
+      ? [
+          {
+            key: 'backup',
+            label: (
+              <span>
+                <DatabaseOutlined /> بکاپ و بازیابی
+              </span>
+            ),
+            children: null,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -1399,7 +1433,8 @@ function SettingsPage() {
       <PageHeader
          title="تنظیمات فروشگاه"
          actions={
-           <>
+           activeTab !== 'backup' ? (
+             <>
 <Space>
                        <Button onClick={fetchSettings} disabled={loading || saving}>
                          بارگذاری مجدد تنظیمات
@@ -1413,14 +1448,16 @@ function SettingsPage() {
                          ذخیره تغییرات
                        </Button>
                      </Space>
-           </>
+             </>
+           ) : null
          }
        />
 
       <Card loading={loading}>
         <Form form={form} layout="vertical">
-          <Tabs defaultActiveKey="general" items={tabs} />
+          <Tabs activeKey={activeTab} onChange={handleTabChange} items={tabs} />
         </Form>
+        {activeTab === 'backup' && canAccessBackup && <BackupSection embedded />}
       </Card>
     </div>
   )

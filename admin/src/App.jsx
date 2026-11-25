@@ -52,6 +52,7 @@ const TicketDetail = lazy(() => import('./pages/tickets/TicketDetail'))
 // Settings
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'))
 const AiProvidersPage = lazy(() => import('./pages/settings/AiProvidersPage'))
+const BackupPage = lazy(() => import('./pages/settings/BackupPage'))
 
 // Reports
 const SalesReports = lazy(() => import('./pages/reports/SalesReports'))
@@ -357,6 +358,18 @@ function App() {
                         <RequirePermission permission={PERMISSIONS.SETTINGS_UPDATE}>
                           <AiProvidersPage />
                         </RequirePermission>
+                      }
+                    />
+                    <Route
+                      path="/settings/backup"
+                      element={
+                        user?.role === 'superadmin' ? (
+                          <RequirePermission permission={PERMISSIONS.BACKUP_READ}>
+                            <BackupPage />
+                          </RequirePermission>
+                        ) : (
+                          <Navigate to="/" replace />
+                        )
                       }
                     />
 

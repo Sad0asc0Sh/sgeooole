@@ -270,6 +270,13 @@ app.use(compression({
   filter: (req, res) => {
     // SSE must remain uncompressed so tokens are flushed immediately through proxies.
     if (req.path.startsWith('/api/chat/stream')) return false
+    // Backup archives are already gzip/AES-GCM compressed binary streams.
+    if (
+      req.path.startsWith('/api/backup/export') ||
+      (req.path.startsWith('/api/backup/server/') && req.path.endsWith('/download'))
+    ) {
+      return false
+    }
     // Don't compress if client doesn't want it.
     if (req.headers['x-no-compression']) return false
     // Always compress non-stream API responses.
@@ -341,7 +348,16 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control', 'Pragma', 'X-Session-Id', 'X-Chat-Request-Id'],
-  exposedHeaders: ['Content-Type', 'Content-Length', 'X-Request-Id'],
+  exposedHeaders: [
+    'Content-Type',
+    'Content-Length',
+    'X-Request-Id',
+    'Content-Disposition',
+    'X-Backup-Filename',
+    'X-Backup-Checksum',
+    'X-Backup-Collections',
+    'X-Backup-Documents',
+  ],
   optionsSuccessStatus: 204,
   maxAge: 86400,
 }
@@ -397,6 +413,7 @@ app.use('/api/auth', securityLogger('auth'))
 app.use('/api/admin', securityLogger('admin'))
 app.use('/api/users', securityLogger('user'))
 app.use('/api/orders', securityLogger('order'))
+app.use('/api/backup', securityLogger('backup'))
 
 // Static Files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
@@ -588,6 +605,10 @@ app.use('/api/admin/setup', adminSetupRoutes)
 const settingsRoutes = require('./routes/settings')
 app.use('/api/settings', settingsRoutes)
 
+// Backup & Restore Routes (Superadmin only)
+const backupRoutes = require('./routes/backup')
+app.use('/api/backup', backupRoutes)
+
 // Admin Test Routes (disabled in production unless explicitly enabled via env)
 if (process.env.ENABLE_ADMIN_TEST_ROUTES === 'true' || process.env.NODE_ENV === 'development') {
   const adminTestRoutes = require('./routes/admin/test')
@@ -707,6 +728,10 @@ const connectDB = async () => {
       // غیرفعال‌سازی خودکار پیشنهاد لحظه‌ای/شگفت‌انگیزِ منقضی + حذف تخفیف (هر دقیقه)
       const { startPromotionExpiryJob } = require('./jobs/promotionExpiryJob')
       startPromotionExpiryJob()
+
+      // زمان‌بندی بکاپ‌گیری خودکار (بر اساس تنظیمات ذخیره شده در Settings)
+      const { startBackupScheduler } = require('./jobs/backupSchedulerJob')
+      startBackupScheduler()
 
       // Bestsellers Score Recalculation (every 30 minutes)
       const { recalculateAllScores } = require('./services/bestsellersScoreEngine')

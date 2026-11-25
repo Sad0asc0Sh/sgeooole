@@ -35,6 +35,7 @@ import {
   RiseOutlined,
   ProfileOutlined,
   LogoutOutlined,
+  CloudServerOutlined,
 } from '@ant-design/icons'
 import { PERMISSIONS } from '../rbac/permissions'
 
@@ -297,6 +298,16 @@ const nav = {
     keywords: 'settings تنظیمات فروشگاه',
   },
 
+  backup: {
+    path: '/settings/backup',
+    label: 'بکاپ و بازیابی',
+    icon: CloudServerOutlined,
+    section: 'system',
+    roles: ['superadmin'],
+    permission: PERMISSIONS.BACKUP_READ,
+    keywords: 'backup restore بکاپ پشتیبان بازیابی دیتابیس ذخیره',
+  },
+
   aiProviders: {
     path: '/settings/ai-providers',
     label: 'هوش مصنوعی',
@@ -326,6 +337,7 @@ const NODE_ORDER = [
   'content',
   'reports',
   'settings',
+  'backup',
   'aiProviders',
   'admins',
 ]
