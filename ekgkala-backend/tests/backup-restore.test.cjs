@@ -25,7 +25,11 @@ const {
   resolveWritableStorageDir,
 } = require('../services/backupService')
 const { PERMISSIONS, ROLES } = require('../config/rbac')
-const { buildCronExpression } = require('../jobs/backupSchedulerJob')
+const {
+  buildCronExpression,
+  getTehranTimeParts,
+  shouldRunScheduledBackup,
+} = require('../jobs/backupSchedulerJob')
 
 /**
  * Faithful in-memory mock of MongoDB Db supporting collections, options, indexes,
@@ -486,10 +490,37 @@ test('۵. فیلتر کالکشن‌ها، پاکسازی خودکار، امن�
   assert.throws(() => safeBackupFilename('backup.json'))
   assert.throws(() => safeBackupFilename('backup.backup'))
 
-  // Cron expression checks
+  // Cron expression checks & zero-dependency Tehran scheduler checks
   assert.equal(buildCronExpression({ frequency: 'daily', hour: 3 }), '0 3 * * *')
   assert.equal(buildCronExpression({ frequency: 'every_12h', hour: 4 }), '0 4,16 * * *')
   assert.equal(buildCronExpression({ frequency: 'weekly', hour: 2, dayOfWeek: 5 }), '0 2 * * 5')
+
+  const schedulerSrc = fs.readFileSync(path.join(__dirname, '..', 'jobs', 'backupSchedulerJob.js'), 'utf8')
+  assert.equal(schedulerSrc.includes('node-cron'), false, 'backupSchedulerJob must not depend on node-cron')
+
+  // 2026-06-05T00:00:00Z is Friday 2026-06-05 03:30 Asia/Tehran (+03:30)
+  const sampleTehranFri0330 = new Date('2026-06-05T00:00:00.000Z')
+  const parts = getTehranTimeParts(sampleTehranFri0330)
+  assert.equal(parts.hour, 3)
+  assert.equal(parts.weekdayNum, 5)
+
+  assert.equal(shouldRunScheduledBackup({ autoBackupEnabled: false, frequency: 'daily', hour: 3 }, sampleTehranFri0330).due, false)
+  const dailyDue = shouldRunScheduledBackup({ autoBackupEnabled: true, frequency: 'daily', hour: 3 }, sampleTehranFri0330)
+  assert.equal(dailyDue.due, true)
+  // Deduplicated within same slot
+  assert.equal(shouldRunScheduledBackup({ autoBackupEnabled: true, frequency: 'daily', hour: 3 }, sampleTehranFri0330, dailyDue.slotKey).due, false)
+  assert.equal(shouldRunScheduledBackup({
+    autoBackupEnabled: true,
+    frequency: 'daily',
+    hour: 3,
+    lastAutoBackupStatus: 'success',
+    lastAutoBackupAt: new Date('2026-06-05T00:01:00.000Z'),
+  }, new Date('2026-06-05T00:15:00.000Z')).due, false)
+  // every_12h matches both hour and hour+12
+  assert.equal(shouldRunScheduledBackup({ autoBackupEnabled: true, frequency: 'every_12h', hour: 15 }, sampleTehranFri0330).due, true)
+  // weekly matches weekday + hour
+  assert.equal(shouldRunScheduledBackup({ autoBackupEnabled: true, frequency: 'weekly', hour: 3, dayOfWeek: 5 }, sampleTehranFri0330).due, true)
+  assert.equal(shouldRunScheduledBackup({ autoBackupEnabled: true, frequency: 'weekly', hour: 3, dayOfWeek: 4 }, sampleTehranFri0330).due, false)
 
   // RBAC: ONLY superadmin has backup permissions
   assert.ok(ROLES.superadmin.includes(PERMISSIONS.BACKUP_READ))

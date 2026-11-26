@@ -1,5 +1,4 @@
 const path = require('path')
-const cron = require('node-cron')
 const mongoose = require('mongoose')
 const Settings = require('../models/Settings')
 const {
@@ -11,8 +10,59 @@ const {
   getOperationStatus,
 } = require('../services/backupService')
 
-let currentTask = null
+const CHECK_INTERVAL_MS = 60 * 1000
+const WEEKDAY_MAP = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+}
+
+let currentTimer = null
 let isRunningTick = false
+let lastTriggeredSlotKey = null
+
+function getTehranTimeParts(date = new Date()) {
+  const safeDate = date instanceof Date ? date : new Date(date)
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tehran',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  })
+
+  const parts = {}
+  for (const part of formatter.formatToParts(safeDate)) {
+    if (part.type !== 'literal') {
+      parts[part.type] = part.value
+    }
+  }
+
+  const year = parts.year
+  const month = parts.month
+  const day = parts.day
+  const weekdayNum = WEEKDAY_MAP[parts.weekday] ?? 0
+  const hour = Number(parts.hour) % 24
+  const minute = Number(parts.minute) % 60
+  const slotKey = `${year}-${month}-${day}-${String(hour).padStart(2, '0')}`
+
+  return {
+    year,
+    month,
+    day,
+    weekdayNum,
+    hour,
+    minute,
+    slotKey,
+  }
+}
 
 function buildCronExpression(backupSettings = {}) {
   const frequency = backupSettings.frequency || 'daily'
@@ -29,8 +79,48 @@ function buildCronExpression(backupSettings = {}) {
     return `0 ${hour} * * ${dayOfWeek}`
   }
 
-  // daily
   return `0 ${hour} * * *`
+}
+
+function shouldRunScheduledBackup(
+  backupSettings = {},
+  now = new Date(),
+  inMemoryLastSlotKey = null,
+) {
+  if (!backupSettings || !backupSettings.autoBackupEnabled) {
+    return { due: false, slotKey: null }
+  }
+
+  const parts = getTehranTimeParts(now)
+  const targetHour = Math.max(0, Math.min(23, Number.parseInt(backupSettings.hour ?? 3, 10) || 0))
+  const targetDay = Math.max(0, Math.min(6, Number.parseInt(backupSettings.dayOfWeek ?? 5, 10) || 0))
+  const frequency = backupSettings.frequency || 'daily'
+
+  let hourMatches = false
+  if (frequency === 'every_12h') {
+    hourMatches = parts.hour === targetHour || parts.hour === (targetHour + 12) % 24
+  } else if (frequency === 'weekly') {
+    hourMatches = parts.weekdayNum === targetDay && parts.hour === targetHour
+  } else {
+    hourMatches = parts.hour === targetHour
+  }
+
+  if (!hourMatches) {
+    return { due: false, slotKey: parts.slotKey }
+  }
+
+  if (inMemoryLastSlotKey && inMemoryLastSlotKey === parts.slotKey) {
+    return { due: false, slotKey: parts.slotKey }
+  }
+
+  if (backupSettings.lastAutoBackupStatus === 'success' && backupSettings.lastAutoBackupAt) {
+    const lastParts = getTehranTimeParts(new Date(backupSettings.lastAutoBackupAt))
+    if (lastParts.slotKey === parts.slotKey) {
+      return { due: false, slotKey: parts.slotKey }
+    }
+  }
+
+  return { due: true, slotKey: parts.slotKey }
 }
 
 async function runScheduledBackupTick() {
@@ -97,17 +187,27 @@ async function runScheduledBackupTick() {
   }
 }
 
+async function checkAndRunScheduledBackup() {
+  if (isRunningTick) return
+  if (mongoose.connection.readyState !== 1 || !mongoose.connection.db) return
+
+  try {
+    const settings = await Settings.findOne({ singletonKey: 'main_settings' }).lean()
+    const cfg = settings?.backupSettings
+    const check = shouldRunScheduledBackup(cfg, new Date(), lastTriggeredSlotKey)
+    if (!check.due) return
+
+    lastTriggeredSlotKey = check.slotKey
+    await runScheduledBackupTick()
+  } catch (err) {
+    console.error('[BackupScheduler] Schedule check error:', err.message)
+  }
+}
+
 function stopBackupScheduler() {
-  if (currentTask) {
-    try {
-      currentTask.stop()
-      if (typeof currentTask.destroy === 'function') {
-        currentTask.destroy()
-      }
-    } catch {
-      // ignore
-    }
-    currentTask = null
+  if (currentTimer) {
+    clearInterval(currentTimer)
+    currentTimer = null
   }
 }
 
@@ -122,10 +222,12 @@ async function reloadBackupScheduler() {
     }
 
     const expr = buildCronExpression(cfg)
-    currentTask = cron.schedule(expr, runScheduledBackupTick, {
-      scheduled: true,
-      timezone: 'Asia/Tehran',
-    })
+    currentTimer = setInterval(() => {
+      void checkAndRunScheduledBackup()
+    }, CHECK_INTERVAL_MS)
+    if (typeof currentTimer.unref === 'function') {
+      currentTimer.unref()
+    }
     console.log(`[BackupScheduler] Scheduled auto backups (${expr}, Asia/Tehran)`)
     return expr
   } catch (err) {
@@ -140,7 +242,10 @@ function startBackupScheduler() {
 
 module.exports = {
   buildCronExpression,
+  getTehranTimeParts,
+  shouldRunScheduledBackup,
   runScheduledBackupTick,
+  checkAndRunScheduledBackup,
   startBackupScheduler,
   reloadBackupScheduler,
   stopBackupScheduler,
