@@ -1,8 +1,66 @@
 import React from "react";
+import { readFileSync } from "fs";
+import { join } from "path";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { SWRConfig } from "swr";
 import HomeCategoryShowcase from "@/components/home/HomeCategoryShowcase";
 import { categoryService, type Category } from "@/services/categoryService";
+
+const mockSwiperState = {
+  isBeginning: true,
+  isEnd: false,
+  isLocked: false,
+  slidePrev: jest.fn(),
+  slideNext: jest.fn(),
+};
+
+let lastSwiperProps: Record<string, unknown> = {};
+
+jest.mock("swiper/react", () => ({
+  Swiper: ({
+    children,
+    id,
+    dir,
+    slidesPerView,
+    autoplay,
+    className,
+    onSwiper,
+  }: {
+    children: React.ReactNode;
+    id?: string;
+    dir?: string;
+    slidesPerView?: string | number;
+    autoplay?: unknown;
+    className?: string;
+    onSwiper?: (swiper: typeof mockSwiperState) => void;
+  }) => {
+    lastSwiperProps = { id, dir, slidesPerView, autoplay, className };
+    React.useEffect(() => {
+      onSwiper?.(mockSwiperState);
+    }, [onSwiper]);
+    return (
+      <div
+        id={id}
+        data-testid="category-carousel"
+        data-dir={dir}
+        data-slides-per-view={String(slidesPerView)}
+        data-autoplay={JSON.stringify(autoplay)}
+        className={className}
+      >
+        {children}
+      </div>
+    );
+  },
+  SwiperSlide: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <div className={className}>{children}</div>,
+}));
+
+jest.mock("swiper/modules", () => ({ A11y: {}, Autoplay: {} }));
 
 jest.mock("@/services/categoryService", () => ({
   categoryService: { getHomepage: jest.fn() },
@@ -46,6 +104,13 @@ function mount(categories: Category[] | null) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockSwiperState.isBeginning = true;
+  mockSwiperState.isEnd = false;
+  mockSwiperState.isLocked = false;
+  mockSwiperState.slidePrev.mockReset();
+  mockSwiperState.slideNext.mockReset();
+  lastSwiperProps = {};
+  delete (window as unknown as { matchMedia?: unknown }).matchMedia;
 });
 
 test("renders the curated homepage categories as a carousel", async () => {
@@ -140,4 +205,97 @@ test("shows a loading state while recovery is pending", () => {
   expect(
     screen.getByRole("status", { name: "در حال بارگذاری دسته‌بندی‌ها" })
   ).toBeInTheDocument();
+});
+
+test("configures RTL Swiper with auto slide sizing and 6000ms pause-on-hover autoplay", () => {
+  mount([camera, dvr, lock]);
+
+  const carousel = screen.getByTestId("category-carousel");
+  expect(carousel).toHaveAttribute("data-dir", "rtl");
+  expect(carousel).toHaveAttribute("data-slides-per-view", "auto");
+  expect(lastSwiperProps.autoplay).toEqual({
+    delay: 6000,
+    disableOnInteraction: false,
+    pauseOnMouseEnter: true,
+  });
+});
+
+test("navigates via prev/next buttons and respects start/end edge states", () => {
+  mockSwiperState.isBeginning = false;
+  mockSwiperState.isEnd = false;
+
+  mount([camera, dvr, lock]);
+
+  const prevBtn = screen.getByRole("button", { name: "دسته‌بندی‌های قبلی" });
+  const nextBtn = screen.getByRole("button", { name: "دسته‌بندی‌های بعدی" });
+
+  expect(prevBtn).toBeEnabled();
+  expect(nextBtn).toBeEnabled();
+
+  fireEvent.click(nextBtn);
+  fireEvent.click(prevBtn);
+
+  expect(mockSwiperState.slideNext).toHaveBeenCalledTimes(1);
+  expect(mockSwiperState.slidePrev).toHaveBeenCalledTimes(1);
+
+  mockSwiperState.isBeginning = true;
+  mockSwiperState.isEnd = true;
+  mount([camera, dvr, lock]);
+
+  const prevButtons = screen.getAllByRole("button", { name: "دسته‌بندی‌های قبلی" });
+  const nextButtons = screen.getAllByRole("button", { name: "دسته‌بندی‌های بعدی" });
+  expect(prevButtons[prevButtons.length - 1]).toBeDisabled();
+  expect(nextButtons[nextButtons.length - 1]).toBeDisabled();
+});
+
+test("hides navigation controls with locked class when all categories fit", () => {
+  mockSwiperState.isLocked = true;
+
+  mount([camera, dvr, lock]);
+
+  const prevBtn = screen.getByRole("button", { name: "دسته‌بندی‌های قبلی" });
+  const nextBtn = screen.getByRole("button", { name: "دسته‌بندی‌های بعدی" });
+
+  expect(prevBtn).toBeDisabled();
+  expect(nextBtn).toBeDisabled();
+  expect(prevBtn).toHaveClass("navHidden");
+  expect(nextBtn).toHaveClass("navHidden");
+});
+
+test("disables autoplay when prefers-reduced-motion is enabled", async () => {
+  window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+    matches: query === "(prefers-reduced-motion: reduce)",
+    media: query,
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+  }));
+
+  mount([camera, dvr, lock]);
+
+  await waitFor(() => {
+    expect(screen.getByTestId("category-carousel")).toHaveAttribute("data-autoplay", "false");
+  });
+});
+
+test("preserves Technolife responsive CSS contract, concentric rings, and physical RTL arrows", () => {
+  const css = readFileSync(
+    join(__dirname, "../src/components/home/HomeCategoryShowcase.module.css"),
+    "utf8"
+  );
+
+  // Physical RTL arrow placement & mobile arrow suppression
+  expect(css).toMatch(/\.nav\s*\{\s*display:\s*none;\s*\}/);
+  expect(css).toContain("@media (min-width: 992px)");
+  expect(css).toMatch(/\.navPrev\s*\{\s*right:\s*8px;/);
+  expect(css).toMatch(/\.navNext\s*\{\s*left:\s*8px;/);
+
+  // Technolife responsive slides-per-view ladder
+  for (const count of ["3.5", "4.5", "5", "5.5", "6", "7", "8"]) {
+    expect(css).toContain(`--cat-slides: ${count};`);
+  }
+
+  // 3-layer concentric ring geometry (86/82/76 mobile, 128/124/114 + 120 hover desktop)
+  for (const size of ["86px", "82px", "76px", "128px", "124px", "114px", "120px"]) {
+    expect(css).toContain(size);
+  }
 });

@@ -1,15 +1,32 @@
 /* ============================================================
-   Homepage category strip — mechanism faithfully rebuilt from
-   technolife.com's CircleCategories (values inspected live):
-     slide 96px / 195px, badge 86/128px (2px ring), disc 82/124px
-     (hover 120px), hairline 76/114px (1px), nav 32px circles.
-   Palette localized to saffron (kala) + warm stone (ekg).
+   Homepage category strip — reverse-engineered from live
+   technolife.com (CircleCategories / #stories, module 528)
+   and localized to ekgkala's saffron (kala) + warm stone (ekg)
+   palette and 1536px page container.
+
+   Responsive slides-per-view ladder (exact Technolife cadence):
+     < 360px  : 3.2 slides (86px circles, compact-phone safety)
+     >= 360px : 3.5 slides (3 full + 4th peeking, 390px: 102.3px/slide)
+     >= 576px : 4.5 slides
+     >= 768px : 5   slides
+     >= 992px : 5.5 slides (upgrades to 128px circles + desktop arrows)
+     >= 1200px: 6   slides
+     >= 1400px: 7   slides (1440px: 7 full circles across)
+     >= 1600px: 8   slides (1600px+: 8 full circles across)
    ============================================================ */
 
 .section {
   position: relative;
   width: 100%;
-  padding: 10px 0 6px;
+  overflow-x: hidden;
+  overflow-x: clip;
+  padding: 14px 0 10px;
+}
+
+@media (min-width: 992px) {
+  .section {
+    padding: 28px 0 24px;
+  }
 }
 
 /* Screen-reader-only heading — technolife's strip has no visible title */
@@ -27,38 +44,128 @@
 
 .stage {
   position: relative;
+  width: 100%;
   max-width: 1536px;
-  margin-inline: auto;
-  padding-inline: 12px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 360px) {
   .stage {
-    padding-inline: 24px;
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }
 
-/* ---------- rail (RTL scroll, fixed-width slides like the reference) ---------- */
+@media (min-width: 992px) {
+  .stage {
+    padding-left: 36px;
+    padding-right: 36px;
+  }
+}
 
-.rail {
+@media (min-width: 1200px) {
+  .stage {
+    padding-left: 44px;
+    padding-right: 44px;
+  }
+}
+
+@media (min-width: 1640px) {
+  .stage {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+/* ---------- responsive Swiper & SSR-parity rail ---------- */
+
+.carousel,
+.skeletonRail {
+  --cat-slides: 3.2;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+@media (min-width: 360px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 3.5;
+  }
+}
+
+@media (min-width: 576px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 4.5;
+  }
+}
+
+@media (min-width: 768px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 5;
+  }
+}
+
+@media (min-width: 992px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 5.5;
+  }
+}
+
+@media (min-width: 1200px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 6;
+  }
+}
+
+@media (min-width: 1400px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 7;
+  }
+}
+
+@media (min-width: 1600px) {
+  .carousel,
+  .skeletonRail {
+    --cat-slides: 8;
+  }
+}
+
+.skeletonRail {
   display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  margin: 0;
-  padding: 0;
-  list-style: none;
+  flex-direction: row;
 }
 
-.rail::-webkit-scrollbar {
-  display: none;
+.carousel:not(:global(.swiper-initialized)) :global(.swiper-wrapper) {
+  display: flex;
+  flex-direction: row;
 }
 
-.item {
+/* Higher specificity (0,2,0) guarantees slide widths beat .swiper-slide { width: 100% } */
+.carousel .slide,
+.skeletonRail .skeletonItem {
   flex: 0 0 auto;
-  width: 96px;
-  scroll-snap-align: start;
+  width: calc(100% / var(--cat-slides));
+  min-width: 0;
+  box-sizing: border-box;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+@media (min-width: 992px) {
+  .carousel .slide,
+  .skeletonRail .skeletonItem {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
 }
 
 .category {
@@ -66,16 +173,20 @@
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  text-decoration: none;
+  border-radius: 16px;
+  outline: none;
 }
 
-@media (min-width: 1024px) {
-  .item {
-    width: 195px;
-  }
-
+@media (min-width: 992px) {
   .category {
     gap: 20px;
   }
+}
+
+.category:focus-visible .badge {
+  outline: 2px solid #b45309;
+  outline-offset: 3px;
 }
 
 /* ---------- concentric badge (technolife's 3-layer circle) ---------- */
@@ -91,6 +202,8 @@
   border-radius: 9999px;
   background: #fbbf24; /* kala-400 */
   cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 200ms ease;
 }
 
 /* Layer 2 — white disc; shrinks 4px on hover so the ring thickens */
@@ -102,11 +215,12 @@
   height: 82px;
   border-radius: 9999px;
   background: #ffffff;
-  transition: width 0.2s ease, height 0.2s ease;
+  transition: width 200ms ease, height 200ms ease;
 }
 
 /* Layer 3 — hairline ring hugging the image */
 .hairline {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -114,6 +228,7 @@
   height: 76px;
   border-radius: 9999px;
   border: 1px solid #fde68a; /* kala-200 */
+  background: #faf9f7; /* ekg-50 */
   overflow: hidden;
 }
 
@@ -121,6 +236,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .fallbackIcon {
@@ -129,7 +247,7 @@
   color: #b45309; /* kala-700 */
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
   .badge {
     width: 128px;
     height: 128px;
@@ -150,6 +268,11 @@
     height: 52px;
   }
 
+  .category:hover .badge,
+  .category:focus-visible .badge {
+    background: #f59e0b; /* kala-500 */
+  }
+
   .category:hover .disc,
   .category:focus-visible .disc {
     width: 120px;
@@ -160,107 +283,119 @@
 /* ---------- label ---------- */
 
 .label {
-  max-width: 120px;
+  width: 100%;
+  max-width: 100%;
+  min-height: 3.3em;
   font-size: 12px;
   font-weight: 600;
-  line-height: 1.7;
+  line-height: 1.65;
   color: #292524; /* ekg-800 */
   text-align: center;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  transition: color 150ms ease;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
   .label {
-    max-width: 180px;
-    font-size: 16px;
+    min-height: 1.6em;
+    font-size: 15px;
     font-weight: 500;
+    line-height: 1.6;
   }
 }
 
-/* ---------- mobile label separation ----------
-   Root cause of the run-together titles on phones: on mobile a slide
-   is 96px wide and the rail has no gap, but the label box was 120px
-   wide, single-line and centred — so every label spilled 12px into
-   each neighbour and long Persian titles visually merged into one
-   continuous line (desktop is unaffected: 180px label < 195px slide).
-   Fix, mobile only: the label may never be wider than its own slide,
-   the rail gains a real gap between slides, and a title wraps to at
-   most two balanced lines instead of being cut to one line. The
-   2-line minimum height keeps the strip height stable while scrolling,
-   so one-line and two-line titles never shift the row. */
-@media (max-width: 1023px) {
-  .rail {
-    gap: 8px;
-  }
-
+@media (min-width: 1200px) {
   .label {
-    max-width: 100%;
-    min-height: 3.4em; /* 2 lines at line-height 1.7 */
-    white-space: normal;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow-wrap: anywhere;
+    font-size: 16px;
   }
 }
 
-/* ---------- floating nav circles (32px, like the reference) ---------- */
-
-.nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
-  background: #ffffff;
-  border: none;
-  color: #44403c; /* ekg-700 */
-  box-shadow: 0 0 14px -3px rgba(0, 0, 0, 0.22);
-  cursor: pointer;
-  transition: opacity 0.2s ease, color 0.15s ease;
-}
-
-.nav:hover:not(:disabled) {
+.category:hover .label,
+.category:focus-visible .label {
   color: #b45309; /* kala-700 */
 }
 
-.nav:disabled {
-  opacity: 0;
-  pointer-events: none;
+/* ---------- floating nav circles (desktop only, physical RTL sides) ---------- */
+
+.nav {
+  display: none;
 }
 
-/* RTL: "previous" sits at the right edge, "next" at the left edge */
-.navPrev {
-  inset-inline-end: 4px;
+@media (min-width: 992px) {
+  .nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 1px solid #f3f1ed; /* ekg-100 */
+    color: #44403c; /* ekg-700 */
+    box-shadow: 0 0 14px -3px rgba(0, 0, 0, 0.22);
+    cursor: pointer;
+    transition: opacity 200ms ease, color 150ms ease, box-shadow 150ms ease;
+  }
+
+  /* Physical RTL placement matching technolife: prev on right, next on left */
+  .navPrev {
+    right: 8px;
+  }
+
+  .navNext {
+    left: 8px;
+  }
+
+  .nav:hover:not(:disabled) {
+    color: #b45309; /* kala-700 */
+    box-shadow: 0 2px 16px -2px rgba(28, 25, 23, 0.24);
+  }
+
+  .nav:focus-visible {
+    outline: 2px solid #b45309;
+    outline-offset: 2px;
+  }
+
+  .nav:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  .nav.navHidden {
+    display: none;
+  }
 }
 
-.navNext {
-  inset-inline-start: 4px;
+@media (min-width: 1640px) {
+  .navPrev {
+    right: -20px;
+  }
+
+  .navNext {
+    left: -20px;
+  }
 }
 
 /* ---------- skeleton ---------- */
 
 .skeletonItem {
-  flex: 0 0 auto;
-  width: 96px;
-  scroll-snap-align: start;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
   .skeletonItem {
-    width: 195px;
     gap: 20px;
   }
 }
@@ -269,13 +404,15 @@
   width: 86px;
   height: 86px;
   border-radius: 9999px;
+  flex-shrink: 0;
   background: linear-gradient(100deg, #f3f1ed 40%, #faf9f7 50%, #f3f1ed 60%);
   background-size: 200% 100%;
   animation: tlShimmer 1.4s ease-in-out infinite;
 }
 
 .skeletonLabel {
-  min-height: 3.4em;
+  width: 100%;
+  min-height: 3.3em;
   font-size: 12px;
 }
 
@@ -284,19 +421,27 @@
   display: block;
   width: 60px;
   height: 10px;
+  margin: 4px auto 0;
   border-radius: 999px;
   background: linear-gradient(100deg, #f3f1ed 40%, #faf9f7 50%, #f3f1ed 60%);
   background-size: 200% 100%;
   animation: tlShimmer 1.4s ease-in-out infinite;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
   .skeletonBadge {
     width: 128px;
     height: 128px;
   }
+
   .skeletonLabel {
-    min-height: 1.7em;
+    min-height: 1.6em;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .skeletonLabel {
     font-size: 16px;
   }
 }
@@ -304,6 +449,26 @@
 @keyframes tlShimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+/* ---------- reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .badge,
+  .disc,
+  .label,
+  .nav {
+    transition: none;
+  }
+
+  .skeletonBadge,
+  .skeletonLabel::before {
+    animation: none;
+  }
+
+  .carousel :global(.swiper-wrapper) {
+    transition-duration: 0ms !important;
   }
 }
 

@@ -1,9 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ChevronLeft, ChevronRight, Shapes } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { A11y, Autoplay } from "swiper/modules";
+import type { Swiper as SwiperInstance } from "swiper";
+import "swiper/css";
 import { categoryImageSources, categoryProductHref } from "@/lib/categoryNavigation";
 import { categoryService, type Category } from "@/services/categoryService";
 import HomeImage from "./HomeImage";
@@ -14,14 +18,14 @@ type HomeCategoryShowcaseProps = {
   categories: Category[] | null;
 };
 
-const SCROLL_STEP_FACTOR = 0.75;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 export function HomeCategoryPlaceholder() {
   return (
     <section className={styles.section} aria-busy="true">
       <div className={styles.stage}>
-        <div className={styles.rail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
-          {Array.from({ length: 9 }, (_, index) => (
+        <div className={styles.skeletonRail} role="status" aria-label="در حال بارگذاری دسته‌بندی‌ها">
+          {Array.from({ length: 8 }, (_, index) => (
             <span key={index} className={styles.skeletonItem} aria-hidden="true">
               <span className={styles.skeletonBadge} />
               <span className={styles.skeletonLabel} />
@@ -34,23 +38,24 @@ export function HomeCategoryPlaceholder() {
 }
 
 /**
- * Homepage category strip — a faithful rebuild of technolife.com's
- * "CircleCategories" mechanism, inspected live from the target site:
+ * Homepage category strip — reverse-engineered from technolife.com's
+ * "CircleCategories" (#stories) component and localized to ekgkala's
+ * saffron (kala) and warm stone (ekg) tokens:
  *
- *   slide   : fixed-width column (circle + label), snap-aligned, RTL rail
- *   badge   : outer circle with 2px brand-colored padding → thin ring
- *   disc    : white circle that SHRINKS 4px on hover → the ring thickens
+ *   carousel: RTL Swiper with fluid CSS `--cat-slides` breakpoints
+ *             (3.2 -> 3.5 -> 4.5 -> 5 -> 5.5 -> 6 -> 7 -> 8 slides)
+ *             for zero-CLS SSR parity, 6000ms hover-pausing autoplay
+ *   badge   : outer circle with 2px brand-colored padding -> thin ring
+ *   disc    : white circle that shrinks 4px on desktop hover -> thicker ring
  *   hairline: 1px light-tint border circle holding the image
- *   label   : separate line under the circle (12px mobile / 16px desktop)
- *   nav     : 32px floating white circle buttons at the strip edges
- *
- * The layout sits directly on the page background — no card, no title,
- * exactly like the reference. Only the palette is localized to the
- * store's saffron (kala) and warm stone (ekg) tokens.
+ *   label   : 12px mobile (2-line clamp) / 15-16px desktop below the ring
+ *   nav     : 32px desktop-only white circle buttons (prev right, next left)
  */
 export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcaseProps) {
-  const railRef = useRef<HTMLUListElement>(null);
-  const [edge, setEdge] = useState<{ start: boolean; end: boolean }>({ start: true, end: false });
+  const carouselId = useId();
+  const swiperRef = useRef<SwiperInstance | null>(null);
+  const [edges, setEdges] = useState({ beginning: true, end: false, locked: false });
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   // وقتی داده از SSR آمده، هیچ درخواست تکراری در mount نزن
   // (قبلاً revalidateOnMount: true باعث دانلود دوباره‌ی همان لیست می‌شد).
@@ -76,30 +81,42 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
   // a failed background refresh must not blank out server-rendered items.
   const showSkeleton = isLoading && items.length === 0;
   const showError = Boolean(error) && items.length === 0;
-  const isScrollable = !showSkeleton && !showError && items.length > 1;
-
-  const updateEdges = useCallback(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const maxScroll = rail.scrollWidth - rail.clientWidth;
-    // RTL rails: scrollLeft is 0 at the right edge and negative towards the left.
-    const offset = Math.abs(rail.scrollLeft);
-    setEdge({ start: offset <= 1, end: offset >= maxScroll - 1 });
-  }, []);
+  const hasMultipleItems = !showSkeleton && !showError && items.length > 1;
 
   useEffect(() => {
-    updateEdges();
-    window.addEventListener("resize", updateEdges);
-    return () => window.removeEventListener("resize", updateEdges);
-  }, [updateEdges, items.length]);
+    const media = window.matchMedia?.(REDUCED_MOTION_QUERY);
+    if (!media) return;
+    const syncMotion = () => {
+      setReducedMotion(media.matches);
+      if (media.matches) {
+        swiperRef.current?.autoplay?.stop();
+      } else if (hasMultipleItems) {
+        swiperRef.current?.autoplay?.start();
+      }
+    };
+    syncMotion();
+    if (media.addEventListener) {
+      media.addEventListener("change", syncMotion);
+      return () => media.removeEventListener("change", syncMotion);
+    }
+    media.addListener?.(syncMotion);
+    return () => media.removeListener?.(syncMotion);
+  }, [hasMultipleItems]);
 
-  const scrollRail = (direction: "next" | "prev") => {
-    const rail = railRef.current;
-    if (!rail) return;
-    const amount = rail.clientWidth * SCROLL_STEP_FACTOR;
-    // In RTL, moving to the next items means scrolling towards negative left.
-    rail.scrollBy({ left: direction === "next" ? -amount : amount, behavior: "smooth" });
-  };
+  const syncEdges = useCallback((swiper: SwiperInstance) => {
+    const next = {
+      beginning: swiper.isBeginning,
+      end: swiper.isEnd,
+      locked: Boolean(swiper.isLocked),
+    };
+    setEdges((prev) =>
+      prev.beginning === next.beginning &&
+      prev.end === next.end &&
+      prev.locked === next.locked
+        ? prev
+        : next
+    );
+  }, []);
 
   // A successful, genuinely empty feed should remove the section entirely.
   if (showSkeleton) return <HomeCategoryPlaceholder />;
@@ -125,11 +142,47 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
             </button>
           </div>
         ) : (
-          <ul ref={railRef} className={styles.rail} onScroll={updateEdges} aria-label="دسته‌بندی‌های فروشگاه">
+          <Swiper
+            id={carouselId}
+            dir="rtl"
+            modules={[A11y, Autoplay]}
+            a11y={{
+              prevSlideMessage: "دسته‌بندی قبلی",
+              nextSlideMessage: "دسته‌بندی بعدی",
+              slideLabelMessage: "{{index}} از {{slidesLength}}",
+            }}
+            slidesPerView="auto"
+            spaceBetween={0}
+            speed={350}
+            grabCursor
+            watchOverflow
+            centerInsufficientSlides
+            resistanceRatio={0.65}
+            autoplay={
+              reducedMotion || items.length <= 1
+                ? false
+                : {
+                    delay: 6000,
+                    disableOnInteraction: false,
+                    pauseOnMouseEnter: true,
+                  }
+            }
+            onSwiper={(swiper) => {
+              swiperRef.current = swiper;
+              syncEdges(swiper);
+            }}
+            onSlideChange={syncEdges}
+            onResize={syncEdges}
+            onUpdate={syncEdges}
+            onLock={syncEdges}
+            onUnlock={syncEdges}
+            onBreakpoint={syncEdges}
+            className={styles.carousel}
+          >
             {items.map((category, index) => {
               const [url, ...backups] = categoryImageSources(category);
               return (
-                <li key={category._id || category.slug} className={styles.item}>
+                <SwiperSlide key={category._id || category.slug} className={styles.slide}>
                   <Link
                     href={categoryProductHref(category)}
                     className={styles.category}
@@ -140,8 +193,14 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
                       <span className={styles.disc}>
                         <span className={styles.hairline}>
                           {url ? (
-                            <HomeImage src={url} backupSources={backups} alt={category.name}
-                              width={114} height={114} loading={index < 4 ? "eager" : "lazy"} />
+                            <HomeImage
+                              src={url}
+                              backupSources={backups}
+                              alt={category.name}
+                              width={114}
+                              height={114}
+                              loading={index < 4 ? "eager" : "lazy"}
+                            />
                           ) : (
                             <Shapes className={styles.fallbackIcon} strokeWidth={1.5} aria-hidden="true" />
                           )}
@@ -150,31 +209,33 @@ export default function HomeCategoryShowcase({ categories }: HomeCategoryShowcas
                     </span>
                     <span className={styles.label}>{category.name}</span>
                   </Link>
-                </li>
+                </SwiperSlide>
               );
             })}
-          </ul>
+          </Swiper>
         )}
 
-        {isScrollable && (
+        {hasMultipleItems && (
           <>
             <button
               type="button"
-              className={`${styles.nav} ${styles.navPrev}`}
-              onClick={() => scrollRail("prev")}
-              disabled={edge.start}
+              className={`${styles.nav} ${styles.navPrev}${edges.locked ? ` ${styles.navHidden}` : ""}`}
+              onClick={() => swiperRef.current?.slidePrev()}
+              disabled={edges.beginning || edges.locked}
               aria-label="دسته‌بندی‌های قبلی"
+              aria-controls={carouselId}
             >
-              <ChevronRight size={22} aria-hidden="true" />
+              <ChevronRight size={20} aria-hidden="true" />
             </button>
             <button
               type="button"
-              className={`${styles.nav} ${styles.navNext}`}
-              onClick={() => scrollRail("next")}
-              disabled={edge.end}
+              className={`${styles.nav} ${styles.navNext}${edges.locked ? ` ${styles.navHidden}` : ""}`}
+              onClick={() => swiperRef.current?.slideNext()}
+              disabled={edges.end || edges.locked}
               aria-label="دسته‌بندی‌های بعدی"
+              aria-controls={carouselId}
             >
-              <ChevronLeft size={22} aria-hidden="true" />
+              <ChevronLeft size={20} aria-hidden="true" />
             </button>
           </>
         )}
